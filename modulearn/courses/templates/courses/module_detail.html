@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ module.title }} - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mt-4">{{ module.title }}</h1>
+  <p>{{ module.description }}</p>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <a href="{% url 'content:module_render' module.id %}" class="btn btn-primary">Start Module</a>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Courses - ModuLearn{% endblock %}
+
+{% block content %}
+<h1>Available Courses</h1>
+{% if courses %}
+  <div class="row">
+    {% for course in courses %}
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">{{ course.title }}</h5>
+            <p class="card-text">{{ course.description|truncatewords:20 }}</p>
+            <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-primary">View Course</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No courses are available at this time.</p>
+{% endif %}
+{% endblock %}

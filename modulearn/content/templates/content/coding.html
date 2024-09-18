@@ -1,0 +1,22 @@
+<div id="editor" style="height: 500px;"></div>
+<button id="run-code" class="btn btn-success mt-3">Run Code</button>
+
+{% block extra_js %}
+<!-- Include Monaco Editor or other code editor scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.21.2/min/vs/loader.js"></script>
+<script>
+  // Initialize the code editor
+  require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.21.2/min/vs' }});
+  require(['vs/editor/editor.main'], function() {
+    var editor = monaco.editor.create(document.getElementById('editor'), {
+      value: '// Write your code here',
+      language: 'python'
+    });
+    document.getElementById('run-code').addEventListener('click', function() {
+      // Handle code execution
+      var code = editor.getValue();
+      // Send code to server or execute it
+    });
+  });
+</script>
+{% endblock %}

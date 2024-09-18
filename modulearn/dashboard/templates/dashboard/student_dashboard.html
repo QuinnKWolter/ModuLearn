@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - ModuLearn{% endblock %}
+
+{% block content %}
+<h1>Welcome, {{ user.first_name }}!</h1>
+<h2>Your Courses</h2>
+{% if enrollments %}
+  <div class="list-group">
+    {% for enrollment in enrollments %}
+      <a href="{% url 'courses:course_detail' enrollment.course.id %}" class="list-group-item list-group-item-action">
+        {{ enrollment.course.title }}
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>You are not enrolled in any courses yet.</p>
+{% endif %}
+{% endblock %}

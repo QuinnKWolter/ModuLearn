@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="jumbotron text-center">
+  <h1 class="display-4">Welcome to ModuLearn</h1>
+  <p class="lead">A platform for secure, modular delivery of smart eLearning content.</p>
+  <hr class="my-4">
+  <p>Get started by exploring our courses or logging in.</p>
+  <a class="btn btn-primary btn-lg" href="{% url 'courses:course_list' %}" role="button">Browse Courses</a>
+</div>
+{% endblock %}

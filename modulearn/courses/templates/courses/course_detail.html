@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.title }} - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mt-4">{{ course.title }}</h1>
+  <p>{{ course.description }}</p>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if not enrolled and user.is_authenticated and user.is_student %}
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success">Enroll in Course</button>
+    </form>
+  {% elif enrolled %}
+    <h2 class="mt-4">Modules</h2>
+    {% if course.modules.all %}
+      <ul class="list-group">
+        {% for module in course.modules.all %}
+          <li class="list-group-item">
+            <a href="{% url 'courses:module_detail' course.id module.id %}">{{ module.title }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No modules are available for this course yet.</p>
+    {% endif %}
+  {% else %}
+    <p>You must be logged in as a student to enroll in this course.</p>
+  {% endif %}
+</div>
+{% endblock %}

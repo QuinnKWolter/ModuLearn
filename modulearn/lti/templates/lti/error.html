@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block title %}LTI Error - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mt-4 text-danger">LTI Launch Error</h1>
+  <p>{{ message }}</p>
+  <p>Please contact the system administrator for assistance.</p>
+</div>
+{% endblock %}
