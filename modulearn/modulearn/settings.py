@@ -20,11 +20,10 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'your-domain.com',  # Replace with your domain
+    '34eb-173-75-1-223.ngrok-free.app',
 ]
 
 # Application definition
-
 INSTALLED_APPS = [
     # Default Django apps
     'django.contrib.admin',
@@ -77,8 +76,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'modulearn.wsgi.application'
 
 # Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -87,8 +84,6 @@ DATABASES = {
 }
 
 # Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -105,21 +100,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -128,12 +115,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
+LOGIN_URL = 'accounts:login'
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
@@ -149,7 +135,6 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',       # Render responses in JSON
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
-    # Add other REST framework settings as needed
 }
 
 # OAuth2 Provider Settings (using django-oauth-toolkit)
@@ -167,7 +152,6 @@ OAUTH2_PROVIDER = {
 # CORS Headers Configuration
 CORS_ALLOWED_ORIGINS = [
     'https://your-canvas-domain.com',  # Add Canvas domain for LTI integration
-    # Add other allowed origins
 ]
 
 # Security Settings
@@ -177,8 +161,6 @@ CSRF_COOKIE_SECURE = not DEBUG           # Secure CSRF cookies in production
 X_FRAME_OPTIONS = 'ALLOW-ALL'
 
 # Logging Configuration
-# https://docs.djangoproject.com/en/5.1/topics/logging/
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -192,7 +174,6 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
         },
-        # Add file handlers if needed
     },
     'root': {
         'handlers': ['console'],
@@ -201,8 +182,6 @@ LOGGING = {
 }
 
 # Email Configuration
-# Configure email settings if needed (for password reset, notifications, etc.)
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'       # Replace with your email host
 EMAIL_PORT = 587
@@ -210,11 +189,10 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@example.com'     # Replace with your email
 EMAIL_HOST_PASSWORD = 'your-email-password'    # Replace with your email password
 
-# Additional Settings
-# Include any additional settings required by your application
-
 # Import local settings if present (useful for overriding settings locally)
 try:
     from .local_settings import *
 except ImportError:
     pass
+
+LOGIN_URL = 'accounts:login'

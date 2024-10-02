@@ -7,7 +7,7 @@ User = get_user_model()
 class Course(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True})
+    instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True}, null=True, blank=True)
     external_id = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
@@ -18,6 +18,7 @@ class Module(models.Model):
         ('quiz', 'Quiz'),
         ('coding', 'Coding Challenge'),
         ('simulation', 'Simulation'),
+        ('external_iframe', 'External IFrame'),
     ]
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
     title = models.CharField(max_length=255)
@@ -25,6 +26,10 @@ class Module(models.Model):
     module_type = models.CharField(max_length=50, choices=MODULE_TYPES)
     content_data = models.JSONField(blank=True, null=True)
     content_url = models.URLField(blank=True, null=True)
+    iframe_url = models.URLField(blank=True, null=True)
+    keywords = models.CharField(max_length=500, blank=True)
+    platform_name = models.CharField(max_length=255, blank=True)
+    author = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return f"{self.course.title} - {self.title}"

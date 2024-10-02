@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mt-4">Login</h1>
+  {% if form.errors %}
+    <div class="alert alert-danger" role="alert">
+      Please correct the errors below.
+    </div>
+  {% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Login</button>
+  </form>
+  <p class="mt-2">
+    Don't have an account? <a href="{% url 'accounts:signup' %}">Sign up here</a>.
+  </p>
+</div>
+{% endblock %}
