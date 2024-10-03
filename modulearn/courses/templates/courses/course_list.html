@@ -2,6 +2,11 @@
 
 {% block title %}Courses - ModuLearn{% endblock %}
 
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="{% url 'main:home' %}">Home</a></li>
+  <li class="breadcrumb-item active" aria-current="page">Courses</li>
+{% endblock %}
+
 {% block content %}
 <h1>Available Courses</h1>
 {% if courses %}
@@ -13,6 +18,12 @@
             <h5 class="card-title">{{ course.title }}</h5>
             <p class="card-text">{{ course.description|truncatewords:20 }}</p>
             <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-primary">View Course</a>
+            {% if course in user.enrollments.all %}
+              <form method="post" action="{% url 'courses:unenroll' course.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Unenroll</button>
+              </form>
+            {% endif %}
           </div>
         </div>
       </div>

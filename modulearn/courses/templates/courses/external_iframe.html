@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ module.title }} - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="module-content">
+  <h1>{{ module.title }}</h1>
+  <p>{{ module.description }}</p>
+
+  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-secondary mb-3">Return to Course</a>
+
+  <iframe src="{{ module.iframe_url }}" width="100%" height="800px" frameborder="0" allowfullscreen style="background-color: white; border: 2px solid #ccc;">
+    Your browser doesn't support iframes.
+  </iframe>
+
+  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-secondary mt-3">Return to Course</a>
+</div>
+{% endblock %}

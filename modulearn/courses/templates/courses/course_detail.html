@@ -2,39 +2,60 @@
 
 {% block title %}{{ course.title }} - ModuLearn{% endblock %}
 
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'main:home' %}">Home</a></li>
+  <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
+  <li class="breadcrumb-item active" aria-current="page">{{ course.title }}</li>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-  <h1 class="mt-4">{{ course.title }}</h1>
-  <p>{{ course.description }}</p>
-
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}" role="alert">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-
+<div class="container py-5">
+  <div class="text-center mb-4">
+    <h1 class="display-4">{{ course.title }}</h1>
+    <p class="lead">{{ course.description }}</p>
+  </div>
+  
   {% if not enrolled and user.is_authenticated and user.is_student %}
-    <form method="post">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-success">Enroll in Course</button>
-    </form>
+    <div class="text-center mb-5">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-lg btn-success shadow-sm">Enroll in Course</button>
+      </form>
+    </div>
   {% elif enrolled %}
-    <h2 class="mt-4">Modules</h2>
-    {% if course.modules.all %}
-      <ul class="list-group">
-        {% for module in course.modules.all %}
-          <li class="list-group-item">
-            <a href="{% url 'courses:module_detail' course.id module.id %}">{{ module.title }}</a>
+    <h2 class="mt-5 text-primary">Units</h2>
+    
+    {% if units %}
+      <ul class="list-group list-group-flush mt-3">
+        {% for unit in units %}
+          <li class="list-group-item border-0 bg-light p-4 rounded mb-3 shadow-sm">
+            <h3 class="h5 text-dark">{{ unit.title }}</h3>
+            <p class="text-muted small">{{ unit.description }}</p>
+            <ul class="list-unstyled">
+              {% for module in unit.modules.all %}
+                <li class="mb-2">
+                  <a href="{% url 'courses:module_detail' course.id unit.id module.id %}" class="text-decoration-none text-primary">{{ module.title }}</a>
+                  {% if module.module_type == 'external_iframe' %}
+                    <span class="badge bg-info text-dark ms-2">External Content</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
           </li>
         {% endfor %}
       </ul>
     {% else %}
-      <p>No modules are available for this course yet.</p>
+      <p class="text-muted">No units are available for this course yet.</p>
     {% endif %}
+    
+    <div class="text-center mt-4">
+      <form method="post" action="{% url 'courses:unenroll' course.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Unenroll from Course</button>
+      </form>
+    </div>
   {% else %}
-    <p>You must be logged in as a student to enroll in this course.</p>
+    <p class="text-muted">You must be logged in as a student to enroll in this course.</p>
   {% endif %}
 </div>
 {% endblock %}

@@ -18,9 +18,6 @@ urlpatterns = [
     # Dashboard
     path('dashboard/', include('dashboard.urls', namespace='dashboard')),
 
-    # Content Rendering
-    path('content/', include('content.urls', namespace='content')),
-
     # API Endpoints
     path('api/', include('api.urls', namespace='api')),
 

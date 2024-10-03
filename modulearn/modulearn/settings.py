@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'accounts',
     'lti',
     'courses',
-    'content',
+    'dashboard',
     'api',
     'main',
 ]

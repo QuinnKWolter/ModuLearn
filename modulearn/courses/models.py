@@ -7,11 +7,19 @@ User = get_user_model()
 class Course(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True}, null=True, blank=True)
+    instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True}, blank=True)
     external_id = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.title
+
+class Unit(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='units')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"
 
 class Module(models.Model):
     MODULE_TYPES = [
@@ -20,7 +28,7 @@ class Module(models.Model):
         ('simulation', 'Simulation'),
         ('external_iframe', 'External IFrame'),
     ]
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='modules', null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     module_type = models.CharField(max_length=50, choices=MODULE_TYPES)
@@ -32,7 +40,9 @@ class Module(models.Model):
     author = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return f"{self.course.title} - {self.title}"
+        course_title = self.unit.course.title if self.unit and self.unit.course else "No Course"
+        unit_title = self.unit.title if self.unit else "No Unit"
+        return f"{course_title} - {unit_title} - {self.title}"
 
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'is_student': True})
