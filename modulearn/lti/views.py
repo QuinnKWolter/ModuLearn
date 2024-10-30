@@ -54,10 +54,10 @@ def lti_login(request):
     tool_conf = ToolConfDict(settings.LTI_CONFIG)
     # Use DjangoOIDCLogin for Django integration
     oidc_login = DjangoOIDCLogin(request, tool_conf)
-    # Redirect to the launch URL after OIDC login
-    return oidc_login\
-        .enable_check_cookies()\
-        .redirect(reverse('lti:launch'))
+    # Build the absolute URI for the launch URL
+    launch_url = request.build_absolute_uri(reverse('lti:launch'))
+    # Redirect to the platform's OIDC authentication endpoint
+    return oidc_login.enable_check_cookies().redirect(launch_url)
 
 def lti_config(request):
     # Build the tool configuration
