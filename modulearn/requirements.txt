@@ -1,4 +1,7 @@
-Django>=5.1,<6.0
-djangorestframework>=3.14,<4.0
-django-cors-headers>=3.13,<4.0
-django-oauth-toolkit>=2.0,<3.0
+Django
+djangorestframework
+django-cors-headers
+django-oauth-toolkit
+django-crispy-forms
+crispy-bootstrap5
+PyLTI1p3==2.0.0

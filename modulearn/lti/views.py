@@ -1,55 +1,86 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, get_user_model
-from django.views.decorators.csrf import csrf_exempt
-from django.urls import reverse
-from .models import LTILaunch
-from django.contrib import messages
+from django.shortcuts import redirect
 from django.conf import settings
-from django.http import HttpResponse
-from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+from jwcrypto import jwk
+from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+import json
 
-User = get_user_model()
+# Import Django-specific classes from PyLTI1p3
+from pylti1p3.contrib.django import (
+    DjangoMessageLaunch,
+    DjangoOIDCLogin,
+    DjangoCacheDataStorage,
+)
+from pylti1p3.tool_config import ToolConfDict
 
-@csrf_exempt  # LTI launches may not include CSRF tokens
+def lti_jwks(request):
+    with open(settings.LTI_CONFIG['public_key_file'], 'rb') as f:
+        public_key_pem = f.read()
+    key = jwk.JWK.from_pem(public_key_pem)
+    public_key_json = key.export_public()
+    public_key_dict = json.loads(public_key_json)
+    return JsonResponse({'keys': [public_key_dict]})
+
+@csrf_exempt  # Exempt from CSRF checks if necessary
 def lti_launch(request):
-    """
-    Handles LTI launch requests from Canvas.
-    """
-    if request.method == 'POST':
-        # Extract LTI parameters
-        lti_user_id = request.POST.get('user_id')
-        email = request.POST.get('lis_person_contact_email_primary')
-        first_name = request.POST.get('lis_person_name_given')
-        last_name = request.POST.get('lis_person_name_family')
-        roles = request.POST.get('roles', '')
-        is_instructor = 'Instructor' in roles
+    # Use ToolConfDict to hold your LTI configuration
+    tool_conf = ToolConfDict(settings.LTI_CONFIG)
+    storage = DjangoCacheDataStorage()
+    # Use DjangoMessageLaunch for Django integration
+    message_launch = DjangoMessageLaunch(request, tool_conf, cache_storage=storage)
+    # Validate and get launch data
+    message_launch = message_launch.validate()
+    launch_data = message_launch.get_launch_data()
 
-        # Authenticate or create user
-        user, created = User.objects.get_or_create(username=lti_user_id)
-        user.email = email
-        user.first_name = first_name
-        user.last_name = last_name
-        user.is_instructor = is_instructor
-        user.is_student = not is_instructor
-        user.save()
+    # Authenticate the user or create a new one
+    sub = launch_data['sub']
+    user = authenticate(request, sub=sub)
+    if user is None:
+        user = User.objects.create_user(username=sub)
+    login(request, user)
 
-        # Log in the user
-        user.backend = 'django.contrib.auth.backends.ModelBackend'
-        login(request, user)
+    # Store launch data in session
+    request.session['launch_data'] = launch_data
 
-        # Save LTI launch data if needed
-        LTILaunch.objects.create(
-            user=user,
-            id_token=request.POST.get('id_token', ''),
-            state=request.POST.get('state', ''),
-            nonce=request.POST.get('nonce', ''),
-            # Include other fields as necessary
-        )
+    # Redirect to the desired view
+    return redirect('courses:course_list')
 
-        # Redirect to appropriate dashboard
-        if is_instructor:
-            return redirect('dashboard:instructor_dashboard')
-        else:
-            return redirect('dashboard:student_dashboard')
-    else:
-        return HttpResponse('Invalid LTI launch request.', status=400)
+@csrf_exempt
+def lti_login(request):
+    # Use ToolConfDict to hold your LTI configuration
+    tool_conf = ToolConfDict(settings.LTI_CONFIG)
+    # Use DjangoOIDCLogin for Django integration
+    oidc_login = DjangoOIDCLogin(request, tool_conf)
+    # Redirect to the launch URL after OIDC login
+    return oidc_login\
+        .enable_check_cookies()\
+        .redirect(reverse('lti:launch'))
+
+def lti_config(request):
+    # Build the tool configuration
+    from django.urls import reverse
+    issuer = settings.LTI_CONFIG['issuer']
+    oidc_login_url = request.build_absolute_uri(reverse('lti:login'))
+    launch_url = request.build_absolute_uri(reverse('lti:launch'))
+    jwks_url = request.build_absolute_uri(reverse('lti:jwks'))
+
+    tool_config = {
+        "title": "ModuLearn",
+        "description": "An LTI 1.3 tool built with Django.",
+        "scopes": [
+            "https://purl.imsglobal.org/spec/lti-ags/scope/score",
+            "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
+            # Add other scopes as needed
+        ],
+        "extensions": [],
+        "public_jwk_url": jwks_url,
+        "custom_fields": {},
+        "target_link_uri": launch_url,
+        "oidc_initiation_url": oidc_login_url,
+        "custom_parameters": {},
+    }
+
+    return JsonResponse(tool_config)

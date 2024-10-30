@@ -21,6 +21,9 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '34eb-173-75-1-223.ngrok-free.app',
+    'dd84-173-75-130-111.ngrok-free.app',
+    '880c-173-75-130-111.ngrok-free.app',
+    'saltire.lti.app'
 ]
 
 # Application definition
@@ -33,15 +36,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party apps
-    # 'rest_framework',
+    'lti_tool',
     # Your apps
     'modulearn',
     'accounts',
-    'lti',
     'courses',
     'dashboard',
-    'api',
     'main',
+    'lti'
 ]
 
 MIDDLEWARE = [
@@ -53,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'lti_tool.middleware.LtiLaunchMiddleware'
 ]
 
 ROOT_URLCONF = 'modulearn.urls'
@@ -189,10 +192,22 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@example.com'     # Replace with your email
 EMAIL_HOST_PASSWORD = 'your-email-password'    # Replace with your email password
 
-# Import local settings if present (useful for overriding settings locally)
-try:
-    from .local_settings import *
-except ImportError:
-    pass
-
 LOGIN_URL = 'accounts:login'
+
+# LTI 1.3 Configuration
+LTI_CONFIG = {
+    'https://saltire.lti.app/platform': {
+        'client_id': 'saltire.lti.app',
+        'auth_login_url': 'https://saltire.lti.app/platform/auth',
+        'auth_token_url': 'https://saltire.lti.app/platform/token/3b4f2aae79ac1d451a4911ac3bc00145',
+        'key_set_url': 'https://saltire.lti.app/platform/jwks/3b4f2aae79ac1d451a4911ac3bc00145',
+        'auth_audience': 'https://saltire.lti.app/platform',
+        'deployment_ids': ['6eb84c059ff928e88f0b734420330efa09905105'],
+        'public_key': {
+            'key_file': './modulearn/public.key',
+        },
+        'private_key': {
+            'key_file': './modulearn/private.key',
+        },
+    }
+}

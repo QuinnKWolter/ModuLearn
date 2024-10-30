@@ -10,16 +10,13 @@ urlpatterns = [
     path('accounts/', include('accounts.urls', namespace='accounts')),
 
     # LTI URLs
-    path('lti/', include('lti.urls', namespace='lti')),
+    path('lti/', include('lti.urls')),
 
     # Courses and Modules
     path('courses/', include('courses.urls', namespace='courses')),
 
     # Dashboard
     path('dashboard/', include('dashboard.urls', namespace='dashboard')),
-
-    # API Endpoints
-    path('api/', include('api.urls', namespace='api')),
 
     # Static Pages
     path('', include('main.urls', namespace='main')),
