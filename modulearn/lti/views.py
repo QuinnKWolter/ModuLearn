@@ -71,16 +71,30 @@ def lti_launch(request):
         print(f"Nonce validation error: {e}")
         return HttpResponse(f"Nonce validation error: {e}", status=400)
 
-    # Proceed with normal processing if validation passes...
+    # Get launch data
     launch_data = message_launch.get_launch_data()
     print("Launch Data:", launch_data)
-
+    
     # Authenticate the user
     sub = launch_data.get('sub')
     if not sub:
         return HttpResponse('Missing "sub" in launch data.', status=400)
 
+    # Get or create user with basic info
     user, created = User.objects.get_or_create(username=sub)
+    
+    # Update user profile information if available
+    if launch_data.get('email'):
+        user.email = launch_data['email']
+    if launch_data.get('given_name'):
+        user.first_name = launch_data['given_name']
+    if launch_data.get('family_name'):
+        user.last_name = launch_data['family_name']
+    
+    # Set user role based on LTI roles
+    roles = launch_data.get('https://purl.imsglobal.org/spec/lti/claim/roles', [])
+    user.is_instructor = any('Instructor' in role for role in roles)
+    user.is_student = any('Learner' in role for role in roles) or not user.is_instructor
     
     # Store LTI data with the user
     user.lti_data = launch_data

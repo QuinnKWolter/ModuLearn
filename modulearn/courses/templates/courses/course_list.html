@@ -11,7 +11,7 @@
 {% if lti_data %}
 <div class="card mb-4">
   <div class="card-header">
-    <h3>LTI User Information</h3>
+    <h3>User Information</h3>
   </div>
   <div class="card-body">
     <div class="row">
@@ -21,26 +21,62 @@
       </div>
       {% endif %}
       <div class="col">
-        <h4>{{ lti_data.name }}</h4>
-        <p><strong>Email:</strong> {{ lti_data.email }}</p>
+        {% if lti_data.name %}
+          <h4>{{ lti_data.name }}</h4>
+        {% else %}
+          <h4>{{ user.get_full_name|default:user.username }}</h4>
+        {% endif %}
+        
+        {% if lti_data.email or user.email %}
+          <p><strong>Email:</strong> {{ lti_data.email|default:user.email }}</p>
+        {% endif %}
+        
+        {% if lti_data.roles %}
         <p><strong>Roles:</strong> 
           {% for role in lti_data.roles %}
-            <span class="badge bg-info">{{ role|slice:"48:" }}</span>
+            {% with role_name=role|slice:"48:" %}
+              {% if role_name %}
+                <span class="badge bg-info">{{ role_name }}</span>
+              {% else %}
+                <span class="badge bg-info">{{ role }}</span>
+              {% endif %}
+            {% endwith %}
           {% endfor %}
         </p>
+        {% endif %}
+
         {% if lti_data.context %}
         <div class="mt-3">
           <h5>Course Context</h5>
-          <p><strong>Title:</strong> {{ lti_data.context.title }}</p>
-          <p><strong>Label:</strong> {{ lti_data.context.label }}</p>
+          {% if lti_data.context.title %}
+            <p><strong>Title:</strong> {{ lti_data.context.title }}</p>
+          {% endif %}
+          {% if lti_data.context.label %}
+            <p><strong>Label:</strong> {{ lti_data.context.label }}</p>
+          {% endif %}
         </div>
         {% endif %}
+
         {% if lti_data.platform %}
         <div class="mt-3">
           <h5>Platform Information</h5>
-          <p><strong>Institution:</strong> {{ lti_data.platform.name }}</p>
-          <p><strong>Description:</strong> {{ lti_data.platform.description }}</p>
+          {% if lti_data.platform.name %}
+            <p><strong>Institution:</strong> {{ lti_data.platform.name }}</p>
+          {% endif %}
+          {% if lti_data.platform.description %}
+            <p><strong>Description:</strong> {{ lti_data.platform.description }}</p>
+          {% endif %}
         </div>
+        {% endif %}
+
+        {% if user.is_instructor %}
+          <div class="mt-3">
+            <span class="badge bg-primary">Instructor Access</span>
+          </div>
+        {% elif user.is_student %}
+          <div class="mt-3">
+            <span class="badge bg-success">Student Access</span>
+          </div>
         {% endif %}
       </div>
     </div>

@@ -14,7 +14,7 @@ def course_list(request):
     
     # Get LTI context data if available
     lti_data = {}
-    if hasattr(request.user, 'lti_data'):
+    if hasattr(request.user, 'lti_data') and request.user.lti_data:
         lti_data = {
             'name': request.user.lti_data.get('name'),
             'email': request.user.lti_data.get('email'),
