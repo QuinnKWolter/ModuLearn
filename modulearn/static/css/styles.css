@@ -1,0 +1,87 @@
+/* Base layout and dark mode transition */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: background-color 0.3s, color 0.3s;
+  margin-top: 70px;
+}
+
+main {
+  flex: 1;
+}
+
+footer {
+  background-color: #007bff;
+  color: #fff;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Nav link hover effect */
+.nav-link {
+  color: #fff;
+  position: relative;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  display: block;
+  margin-top: 5px;
+  right: 50%;
+  background: #fff;
+  transition: width 0.3s ease, right 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+  right: 0;
+}
+
+/* Dark mode styling */
+.dark-mode body {
+  background-color: #333;
+  color: #fff;
+}
+
+.dark-mode footer {
+  background-color: #222 !important;
+  color: #fff;
+}
+
+.dark-mode .navbar {
+  background-color: #222 !important;
+}
+
+.dark-mode .card {
+  background-color: #444;
+  color: #fff;
+}
+
+.dark-mode .list-group-item {
+  background-color: #444;
+  color: #fff;
+}
+
+.dark-mode .btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.dark-mode .btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+.dark-mode .breadcrumb-item {
+  color: #fff;
+}
+
+/* Dark mode nav-link hover effect */
+.dark-mode .nav-link::after {
+  background: #fff;
+}
