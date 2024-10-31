@@ -8,6 +8,46 @@
 {% endblock %}
 
 {% block content %}
+{% if lti_data %}
+<div class="card mb-4">
+  <div class="card-header">
+    <h3>LTI User Information</h3>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      {% if lti_data.picture %}
+      <div class="col-md-2">
+        <img src="{{ lti_data.picture }}" alt="User Picture" class="img-fluid rounded-circle mb-3">
+      </div>
+      {% endif %}
+      <div class="col">
+        <h4>{{ lti_data.name }}</h4>
+        <p><strong>Email:</strong> {{ lti_data.email }}</p>
+        <p><strong>Roles:</strong> 
+          {% for role in lti_data.roles %}
+            <span class="badge bg-info">{{ role|slice:"48:" }}</span>
+          {% endfor %}
+        </p>
+        {% if lti_data.context %}
+        <div class="mt-3">
+          <h5>Course Context</h5>
+          <p><strong>Title:</strong> {{ lti_data.context.title }}</p>
+          <p><strong>Label:</strong> {{ lti_data.context.label }}</p>
+        </div>
+        {% endif %}
+        {% if lti_data.platform %}
+        <div class="mt-3">
+          <h5>Platform Information</h5>
+          <p><strong>Institution:</strong> {{ lti_data.platform.name }}</p>
+          <p><strong>Description:</strong> {{ lti_data.platform.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <h1>Available Courses</h1>
 {% if courses %}
   <div class="row">

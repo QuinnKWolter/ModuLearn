@@ -11,7 +11,24 @@ def course_list(request):
     Displays a list of all available courses.
     """
     courses = Course.objects.all()
-    return render(request, 'courses/course_list.html', {'courses': courses})
+    
+    # Get LTI context data if available
+    lti_data = {}
+    if hasattr(request.user, 'lti_data'):
+        lti_data = {
+            'name': request.user.lti_data.get('name'),
+            'email': request.user.lti_data.get('email'),
+            'roles': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/roles', []),
+            'context': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/context', {}),
+            'platform': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/tool_platform', {}),
+            'resource_link': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/resource_link', {}),
+            'picture': request.user.lti_data.get('picture'),
+        }
+    
+    return render(request, 'courses/course_list.html', {
+        'courses': courses,
+        'lti_data': lti_data
+    })
 
 @login_required
 def course_detail(request, course_id):

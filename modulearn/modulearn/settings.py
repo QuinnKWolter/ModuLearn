@@ -23,6 +23,7 @@ ALLOWED_HOSTS = [
     '34eb-173-75-1-223.ngrok-free.app',
     'dd84-173-75-130-111.ngrok-free.app',
     '880c-173-75-130-111.ngrok-free.app',
+    '1d4b-72-77-2-33.ngrok-free.app',
     'saltire.lti.app'
 ]
 
@@ -155,6 +156,7 @@ OAUTH2_PROVIDER = {
 # CORS Headers Configuration
 CORS_ALLOWED_ORIGINS = [
     'https://your-canvas-domain.com',  # Add Canvas domain for LTI integration
+    'https://saltire.lti.app'
 ]
 
 # Security Settings
@@ -203,11 +205,25 @@ LTI_CONFIG = {
         'key_set_url': 'https://saltire.lti.app/platform/jwks/3b4f2aae79ac1d451a4911ac3bc00145',
         'auth_audience': 'https://saltire.lti.app/platform',
         'deployment_ids': ['6eb84c059ff928e88f0b734420330efa09905105'],
-        'public_key': {
-            'key_file': './modulearn/public.key',
-        },
-        'private_key': {
-            'key_file': './modulearn/private.key',
-        },
+        'public_key_file': './modulearn/public.key',
+        'private_key_file': './modulearn/private.key',
     }
 }
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+    }
+}
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Allow session cookies to be sent in cross-site requests
+SESSION_COOKIE_SAMESITE = None
+SESSION_COOKIE_SECURE = True  # Since you're using HTTPS via NGROK
+
+# Allow CSRF cookies in cross-site requests (if needed)
+CSRF_COOKIE_SAMESITE = None
+CSRF_COOKIE_SECURE = True
