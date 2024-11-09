@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third-party apps
     'lti_tool',
+    'crispy_forms',
+    'crispy_bootstrap5',
     # Your apps
     'modulearn',
     'accounts',
@@ -184,6 +186,17 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # Set to DEBUG to see debug messages
+        },
+        'courses': {  # Use the app name here
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
 }
 
 # Email Configuration
@@ -227,3 +240,7 @@ SESSION_COOKIE_SECURE = True  # Since you're using HTTPS via NGROK
 # Allow CSRF cookies in cross-site requests (if needed)
 CSRF_COOKIE_SAMESITE = None
 CSRF_COOKIE_SECURE = True
+
+# Crispy Forms Configuration
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"

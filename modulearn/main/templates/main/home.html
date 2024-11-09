@@ -7,7 +7,20 @@
   <h1 class="display-4">Welcome to ModuLearn</h1>
   <p class="lead">A platform for secure, modular delivery of smart eLearning content.</p>
   <hr class="my-4">
-  <p>Get started by exploring our courses or logging in.</p>
-  <a class="btn btn-primary btn-lg" href="{% url 'courses:course_list' %}" role="button">Browse Courses</a>
+  <p>Get started by exploring courses or logging in.</p>
+  
+  {% if user.is_authenticated %}
+    {% if user.is_student %}
+      <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}" role="button">Student Dashboard</a>
+    {% endif %}
+    {% if user.is_instructor %}
+      <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}" role="button">Instructor Dashboard</a>
+    {% endif %}
+  {% else %}
+    <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}" role="button">Sign In</a>
+    <a class="btn btn-secondary btn-lg" href="{% url 'accounts:signup' %}" role="button">Sign Up</a>
+  {% endif %}
+  
+  <a class="btn btn-success btn-lg" href="{% url 'courses:course_list' %}" role="button">Browse Courses</a>
 </div>
 {% endblock %}

@@ -4,8 +4,8 @@
 
 {% block breadcrumbs %}
 <li class="breadcrumb-item"><a href="{% url 'main:home' %}">Home</a></li>
-  <li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
-  <li class="breadcrumb-item active" aria-current="page">{{ course.title }}</li>
+<li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ course.title }}</li>
 {% endblock %}
 
 {% block content %}
@@ -14,44 +14,39 @@
     <h1 class="display-4">{{ course.title }}</h1>
     <p class="lead">{{ course.description }}</p>
   </div>
-  
-  {% if not enrolled and user.is_authenticated and user.is_student %}
+
+  {% if is_instructor or enrolled %}
+    <h2 class="mt-5">Units</h2>
+    
+    {% if units %}
+      <div class="mt-3">
+        {% for unit in units %}
+          <div class="card mb-4">
+            <div class="card-body">
+              <h3 class="card-title">{{ unit.title }}</h3>
+              <p class="card-text">{{ unit.description }}</p>
+              <ul class="list-unstyled">
+                {% for module in unit.modules.all %}
+                  <li class="mb-2">
+                    <a href="{% url 'courses:module_detail' course.id unit.id module.id %}" class="text-decoration-none">{{ module.title }}</a>
+                    {% if module.module_type == 'external_iframe' %}
+                      <span class="badge bg-info text-dark ms-2">External Content</span>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No units are available for this course yet.</p>
+    {% endif %}
+  {% elif not enrolled and user.is_authenticated and user.is_student %}
     <div class="text-center mb-5">
       <form method="post">
         {% csrf_token %}
         <button type="submit" class="btn btn-lg btn-success shadow-sm">Enroll in Course</button>
-      </form>
-    </div>
-  {% elif enrolled %}
-    <h2 class="mt-5 text-primary">Units</h2>
-    
-    {% if units %}
-      <ul class="list-group list-group-flush mt-3">
-        {% for unit in units %}
-          <li class="list-group-item border-0 bg-light p-4 rounded mb-3 shadow-sm">
-            <h3 class="h5 text-dark">{{ unit.title }}</h3>
-            <p class="text-muted small">{{ unit.description }}</p>
-            <ul class="list-unstyled">
-              {% for module in unit.modules.all %}
-                <li class="mb-2">
-                  <a href="{% url 'courses:module_detail' course.id unit.id module.id %}" class="text-decoration-none text-primary">{{ module.title }}</a>
-                  {% if module.module_type == 'external_iframe' %}
-                    <span class="badge bg-info text-dark ms-2">External Content</span>
-                  {% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-muted">No units are available for this course yet.</p>
-    {% endif %}
-    
-    <div class="text-center mt-4">
-      <form method="post" action="{% url 'courses:unenroll' course.id %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Unenroll from Course</button>
       </form>
     </div>
   {% else %}

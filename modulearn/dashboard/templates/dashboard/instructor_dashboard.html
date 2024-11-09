@@ -4,8 +4,12 @@
 
 {% block content %}
 <h1>Instructor Dashboard</h1>
+<div class="mb-3">
+  <button class="btn btn-primary" onclick="window.open('http://adapt2.sis.pitt.edu/next.course-authoring/#/login', '_blank')">Visit Course Authoring Tool</button>
+  <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#createCourseModal">Import From Course Authoring Tool</button>
+</div>
+<br>
 <h2>Your Courses</h2>
-<a href="{% url 'courses:create_course' %}" class="btn btn-success mb-3">Create New Course</a>
 {% if courses %}
   <div class="list-group">
     {% for course in courses %}
@@ -17,4 +21,76 @@
 {% else %}
   <p>You have not created any courses yet.</p>
 {% endif %}
+
+<!-- Create Course Modal -->
+<div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createCourseModalLabel">Create New Course</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createCourseForm">
+          <div class="mb-3">
+            <label for="newCourseId" class="form-label">Course ID</label>
+            <input type="text" class="form-control" id="newCourseId">
+          </div>
+          <div class="text-center mb-3">or</div>
+          <div class="mb-3">
+            <label for="rawJson" class="form-label">Raw JSON</label>
+            <textarea class="form-control" id="rawJson" rows="5"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('createCourseForm').addEventListener('submit', function(event) {
+  event.preventDefault();
+  const courseId = document.getElementById('newCourseId').value.trim();
+  const rawJson = document.getElementById('rawJson').value.trim();
+  
+  let payload = {};
+  if (rawJson) {
+    try {
+      payload = { course_data: JSON.parse(rawJson) };
+    } catch (e) {
+      alert('Invalid JSON format. Please correct it and try again.');
+      return;
+    }
+  } else if (courseId) {
+    payload = { course_id: courseId };
+  } else {
+    alert('Please provide either a Course ID or Raw JSON.');
+    return;
+  }
+  
+  fetch("{% url 'courses:create_course' %}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Course created successfully!');
+      location.reload(); // Reload the page to show the new course
+    } else {
+      console.error('Failed to create course:', data.error); // Log error to console
+      alert('Failed to create course: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error creating course:', error); // Log error to console
+    alert('An error occurred while creating the course.');
+  });
+});
+</script>
 {% endblock %}

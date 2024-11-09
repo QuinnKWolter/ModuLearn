@@ -5,8 +5,7 @@ urlpatterns = [
     # Admin site
     path('admin/', admin.site.urls),
 
-    # Authentication URLs
-    path('accounts/', include('django.contrib.auth.urls')),
+    # Custom Authentication URLs
     path('accounts/', include('accounts.urls', namespace='accounts')),
 
     # LTI URLs

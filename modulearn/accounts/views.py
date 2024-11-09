@@ -12,12 +12,12 @@ def signup(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            # Set user role based on form input or default to student
-            user.is_student = True
+            user.is_instructor = form.cleaned_data.get('is_instructor', False)
+            user.is_student = form.cleaned_data.get('is_student', True)
             user.save()
             login(request, user)
             messages.success(request, 'Registration successful.')
-            return redirect('dashboard:student_dashboard')
+            return redirect('dashboard:student_dashboard' if user.is_student else 'dashboard:instructor_dashboard')
     else:
         form = SignUpForm()
     return render(request, 'accounts/signup.html', {'form': form})
@@ -30,7 +30,7 @@ def login_view(request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             login(request, form.get_user())
-            return redirect('dashboard:student_dashboard')
+            return redirect('main:home')
         else:
             messages.error(request, 'Invalid username or password.')
     else:
@@ -38,12 +38,8 @@ def login_view(request):
     return render(request, 'accounts/login.html', {'form': form})
 
 def logout_view(request):
-    if request.method == 'POST':
-        logout(request)
-        messages.success(request, 'You have been logged out.')
-        return redirect('main:home')
-    else:
-        return redirect('main:home')
+    logout(request)
+    return redirect('main:home')
 
 @login_required
 def profile_view(request):

@@ -7,12 +7,23 @@
   <h1>{{ module.title }}</h1>
   <p>{{ module.description }}</p>
 
-  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-secondary mb-3">Return to Course</a>
+  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-dark text-light mb-3">Return to Course</a>
 
-  <iframe src="{{ module.iframe_url }}" width="100%" height="800px" frameborder="0" allowfullscreen style="background-color: white; border: 2px solid #ccc;">
+  <iframe id="module-iframe" src="{{ module.iframe_url }}" width="100%" height="800px" frameborder="0" allowfullscreen style="background-color: white; border: 2px solid #ccc;">
     Your browser doesn't support iframes.
   </iframe>
 
-  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-secondary mt-3">Return to Course</a>
+  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-dark mt-3">Return to Course</a>
 </div>
+
+<script>
+  window.addEventListener('message', function(event) {
+    // Log the origin of the message for security purposes
+    console.log("Message received from:", event.origin);
+
+    if (event.data && event.data.type === 'consoleLog') {
+        console.log("Captured console log from iframe:", event.data.data);
+    }
+  });
+</script>
 {% endblock %}

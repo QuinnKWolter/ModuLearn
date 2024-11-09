@@ -5,10 +5,10 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class Course(models.Model):
+    id = models.CharField(max_length=255, primary_key=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True}, blank=True)
-    external_id = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.title

@@ -42,6 +42,10 @@ footer {
   right: 0;
 }
 
+.breadcrumb-item a {
+    text-decoration: none;
+}
+
 /* Dark mode styling */
 .dark-mode body {
   background-color: #333;
@@ -67,16 +71,6 @@ footer {
   color: #fff;
 }
 
-.dark-mode .btn-primary {
-  background-color: #007bff;
-  border-color: #007bff;
-}
-
-.dark-mode .btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-}
-
 .dark-mode .breadcrumb-item {
   color: #fff;
 }
@@ -84,4 +78,46 @@ footer {
 /* Dark mode nav-link hover effect */
 .dark-mode .nav-link::after {
   background: #fff;
+}
+
+/* Dark mode help text styling */
+.dark-mode .form-text, .dark-mode .help-text {
+  color: #bbb; /* Lighter color for help text in dark mode */
+}
+
+/* Dark mode anchor styling */
+.dark-mode a {
+  color: #1e90ff; /* DodgerBlue for unvisited links */
+  text-decoration: none;
+}
+
+.dark-mode a:visited {
+  color: #6495ed; /* CornflowerBlue for visited links */
+}
+
+.dark-mode a:hover:not(.nav-link):not(.btn) {
+  color: #00bfff; /* DeepSkyBlue for hovered links */
+}
+
+.dark-mode a:active {
+  color: #4682b4; /* SteelBlue for active links */
+}
+
+/* Dark mode modal styling */
+.dark-mode .modal-content {
+  background-color: #444;
+  color: #fff;
+}
+
+.dark-mode .modal-header, .dark-mode .modal-footer {
+  border-color: #555;
+}
+
+.dark-mode .btn-close {
+  filter: invert(1);
+}
+
+.btn {
+  color: #fff !important;
+  text-decoration: none;
 }

@@ -8,10 +8,12 @@ class SignUpForm(UserCreationForm):
         required=True,
         help_text='We\'ll never share your email with anyone else.'
     )
+    is_instructor = forms.BooleanField(required=False, label='Instructor')
+    is_student = forms.BooleanField(required=False, label='Student', initial=True)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2')
+        fields = ('username', 'email', 'password1', 'password2', 'is_instructor', 'is_student')
 
 class LoginForm(AuthenticationForm):
     class Meta:
