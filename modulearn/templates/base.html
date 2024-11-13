@@ -87,7 +87,7 @@
         </div>
       </div>
     </nav>
-    <main class="container mb-5 pb-5">
+    <main class="container">
       <nav aria-label="breadcrumb" class="mt-3">
         <ol class="breadcrumb">
           {% block breadcrumbs %}  
@@ -97,7 +97,8 @@
       {% block content %}
       {% endblock %}
     </main>
-    <footer class="bg-primary text-white py-3 mt-auto">
+    <div class="footer-spacer"></div>
+    <footer class="bg-primary text-white py-3">
       <div class="container text-center">
         <span>&copy; {{ year }} ModuLearn. All rights reserved.</span>
       </div>
