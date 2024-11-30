@@ -13,9 +13,12 @@
 {% if courses %}
   <div class="list-group">
     {% for course in courses %}
-      <a href="{% url 'courses:course_detail' course.id %}" class="list-group-item list-group-item-action">
-        {{ course.title }}
-      </a>
+      <div class="list-group-item">
+        <a href="{% url 'courses:course_detail' course.id %}" class="list-group-item-action">
+          {{ course.title }}
+        </a>
+        <button class="btn btn-info mt-2" data-bs-toggle="modal" data-bs-target="#manageEnrollmentModal-{{ course.id }}">Manage Enrollment</button>
+      </div>
     {% endfor %}
   </div>
 {% else %}
@@ -90,6 +93,89 @@ document.getElementById('createCourseForm').addEventListener('submit', function(
   .catch(error => {
     console.error('Error creating course:', error); // Log error to console
     alert('An error occurred while creating the course.');
+  });
+});
+</script>
+
+<!-- Manage Enrollment Modal -->
+<div class="modal fade" id="manageEnrollmentModal-{{ course.id }}" tabindex="-1" aria-labelledby="manageEnrollmentModalLabel-{{ course.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="manageEnrollmentModalLabel-{{ course.id }}">Manage Enrollment for {{ course.title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Enrollment Code</th>
+            </tr>
+          </thead>
+          <tbody id="enrollmentTable-{{ course.id }}">
+            {% for enrollment in course.enrollment_set.all %}
+            <tr>
+              <td>{{ enrollment.student.username }}</td>
+              <td>{{ enrollment.student.email }}</td>
+              <td>{{ enrollment.enrollmentcode_set.first.code }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <form id="addEnrollmentForm-{{ course.id }}">
+          <div class="mb-3">
+            <label for="enrollmentName-{{ course.id }}" class="form-label">Name</label>
+            <input type="text" class="form-control" id="enrollmentName-{{ course.id }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="enrollmentEmail-{{ course.id }}" class="form-label">Email</label>
+            <input type="email" class="form-control" id="enrollmentEmail-{{ course.id }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="enrollmentCode-{{ course.id }}" class="form-label">Code</label>
+            <input type="text" class="form-control" id="enrollmentCode-{{ course.id }}" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Add Enrollment</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('[id^="addEnrollmentForm-"]').forEach(form => {
+  form.addEventListener('submit', function(event) {
+    event.preventDefault();
+    const courseId = this.id.split('-')[1];
+    const name = document.getElementById(`enrollmentName-${courseId}`).value.trim();
+    const email = document.getElementById(`enrollmentEmail-${courseId}`).value.trim();
+    const code = document.getElementById(`enrollmentCode-${courseId}`).value.trim();
+
+    fetch(`/courses/${courseId}/create_enrollment_code/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ name, email, code })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const table = document.getElementById(`enrollmentTable-${courseId}`);
+        const newRow = table.insertRow();
+        newRow.innerHTML = `<td>${name}</td><td>${email}</td><td>${code}</td>`;
+        alert('Enrollment added successfully.');
+      } else {
+        alert('Error: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error adding enrollment:', error);
+      alert('An error occurred while adding the enrollment.');
+    });
   });
 });
 </script>

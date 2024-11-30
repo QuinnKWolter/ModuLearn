@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Enroll with Code - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Enroll with Code</h1>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="email" class="form-label">Email address</label>
+      <input type="email" class="form-control" id="email" name="email" required>
+    </div>
+    <div class="mb-3">
+      <label for="code" class="form-label">Enrollment Code</label>
+      <input type="text" class="form-control" id="code" name="code" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Enroll</button>
+  </form>
+</div>
+{% endblock %}

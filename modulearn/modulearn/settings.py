@@ -24,6 +24,7 @@ ALLOWED_HOSTS = [
     'dd84-173-75-130-111.ngrok-free.app',
     '880c-173-75-130-111.ngrok-free.app',
     '1d4b-72-77-2-33.ngrok-free.app',
+    'dc20-173-75-130-111.ngrok-free.app',
     'saltire.lti.app'
 ]
 
@@ -165,7 +166,7 @@ CORS_ALLOWED_ORIGINS = [
 SECURE_SSL_REDIRECT = not DEBUG          # Redirect HTTP to HTTPS in production
 SESSION_COOKIE_SECURE = not DEBUG        # Secure cookies in production
 CSRF_COOKIE_SECURE = not DEBUG           # Secure CSRF cookies in production
-X_FRAME_OPTIONS = 'ALLOW-ALL'
+X_FRAME_OPTIONS = ''
 
 # Logging Configuration
 LOGGING = {
@@ -187,15 +188,15 @@ LOGGING = {
         'level': 'INFO',
     },
     'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG',  # Set to DEBUG to see debug messages
-        },
-        'courses': {  # Use the app name here
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        # 'django': {
+        #     'handlers': ['console'],
+        #     'level': 'DEBUG',  # Set to DEBUG to see debug messages
+        # },
+        # 'courses': {  # Use the app name here
+        #     'handlers': ['console'],
+        #     'level': 'DEBUG',
+        #     'propagate': True,
+        # },
     },
 }
 
@@ -244,3 +245,11 @@ CSRF_COOKIE_SECURE = True
 # Crispy Forms Configuration
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Configuration for acting as an LTI tool consumer
+LTI_CONSUMER_CONFIG = {
+    'client_id': 'external-tool-client-id',
+    'public_key_file': './modulearn/public.key',
+    'private_key_file': './modulearn/private.key',
+    # Add any other necessary configuration specific to the external tool
+}

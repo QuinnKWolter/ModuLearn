@@ -13,6 +13,11 @@
   <div class="text-center mb-4">
     <h1 class="display-4">{{ course.title }}</h1>
     <p class="lead">{{ course.description }}</p>
+    {% if is_instructor %}
+      <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#enrollmentModal">
+        Add Enrollment
+      </button>
+    {% endif %}
   </div>
 
   {% if is_instructor or enrolled %}
@@ -53,4 +58,67 @@
     <p class="text-muted">You must be logged in as a student to enroll in this course.</p>
   {% endif %}
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="enrollmentModal" tabindex="-1" aria-labelledby="enrollmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="enrollmentModalLabel">Create Enrollment Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createEnrollmentCodeForm">
+          <div class="mb-3">
+            <label for="enrollmentName" class="form-label">Name</label>
+            <input type="text" class="form-control" id="enrollmentName" required>
+          </div>
+          <div class="mb-3">
+            <label for="enrollmentEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="enrollmentEmail" required>
+          </div>
+          <div class="mb-3">
+            <label for="enrollmentCode" class="form-label">Code</label>
+            <input type="text" class="form-control" id="enrollmentCode" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Create Code</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('createEnrollmentCodeForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('enrollmentName').value.trim();
+    const email = document.getElementById('enrollmentEmail').value.trim();
+    const code = document.getElementById('enrollmentCode').value.trim();
+
+    fetch('{% url "courses:create_enrollment_code" course.id %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ name, email, code })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Enrollment code created successfully.');
+        // Optionally, close the modal
+        var modal = bootstrap.Modal.getInstance(document.getElementById('enrollmentModal'));
+        modal.hide();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    });
+  });
+</script>
 {% endblock %}

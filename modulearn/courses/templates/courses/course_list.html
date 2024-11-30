@@ -94,12 +94,6 @@
             <h5 class="card-title">{{ course.title }}</h5>
             <p class="card-text">{{ course.description|truncatewords:20 }}</p>
             <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-primary">View Course</a>
-            {% if course in user.enrollments.all %}
-              <form method="post" action="{% url 'courses:unenroll' course.id %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Unenroll</button>
-              </form>
-            {% endif %}
           </div>
         </div>
       </div>
@@ -108,4 +102,11 @@
 {% else %}
   <p>No courses are available at this time.</p>
 {% endif %}
+
+<form method="post" action="{% url 'courses:enroll_with_code' %}" class="d-inline">
+  {% csrf_token %}
+  <input type="hidden" name="course_id" value="{{ course.id }}">
+  <button type="submit" class="btn btn-success">Enroll via Code</button>
+</form>
+
 {% endblock %}

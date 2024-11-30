@@ -9,7 +9,7 @@
 
   <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-dark text-light mb-3">Return to Course</a>
 
-  <iframe id="module-iframe" src="{{ module.iframe_url }}" width="100%" height="800px" frameborder="0" allowfullscreen style="background-color: white; border: 2px solid #ccc;">
+  <iframe id="module-iframe" src="{% url 'courses:launch_iframe_module' module.id %}" width="100%" height="800px" frameborder="0" allowfullscreen style="background-color: white; border: 2px solid #ccc;">
     Your browser doesn't support iframes.
   </iframe>
 
@@ -17,13 +17,44 @@
 </div>
 
 <script>
+  // Add a listener for messages from the iframe
+  console.log("TEST")
   window.addEventListener('message', function(event) {
-    // Log the origin of the message for security purposes
     console.log("Message received from:", event.origin);
 
-    if (event.data && event.data.type === 'consoleLog') {
-        console.log("Captured console log from iframe:", event.data.data);
+    // Validate the origin for security
+    const expectedOrigins = ['http://pawscomp2.sis.pitt.edu', 'http://127.0.0.1:8000'];
+    if (!expectedOrigins.includes(event.origin)) {
+      console.warn('Unexpected message origin:', event.origin);
+      return;
+    }
+
+    // Parse and handle the message data
+    const data = event.data;
+    if (data) {
+      console.log("LTI Response:", data);
+
+      // Example: Display the response in an alert (or handle it in another way)
+      alert(`Exercise Result: ${JSON.stringify(data)}`);
+
+      // Optional: Send the data to the server for logging or processing
+      fetch('{% url "courses:log_lti_response" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ result: data })
+      })
+      .then(response => response.json())
+      .then(serverResponse => {
+        console.log('Response logged to the server:', serverResponse);
+      })
+      .catch(error => {
+        console.error('Error logging response to server:', error);
+      });
     }
   });
 </script>
+
 {% endblock %}
