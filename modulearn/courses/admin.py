@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Course, Unit, Module, Enrollment, EnrollmentCode
+from .models import Course, Unit, Module, Enrollment, EnrollmentCode, CourseProgress, ModuleProgress, StudentScore
 
 class CourseAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'description')
@@ -15,3 +15,6 @@ admin.site.register(Unit)
 admin.site.register(Module)
 admin.site.register(Enrollment)
 admin.site.register(EnrollmentCode, EnrollmentCodeAdmin)
+admin.site.register(CourseProgress)
+admin.site.register(ModuleProgress)
+admin.site.register(StudentScore)

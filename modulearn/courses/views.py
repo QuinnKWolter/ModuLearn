@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Course, Module, Enrollment, Unit, StudentScore, CaliperEvent, EnrollmentCode
+from .models import Course, Module, Enrollment, Unit, StudentScore, CaliperEvent, EnrollmentCode, CourseProgress, ModuleProgress
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse
 import json
@@ -29,13 +29,49 @@ logger = logging.getLogger(__name__)
 
 def course_list(request):
     """
-    Displays a list of courses the user is enrolled in.
+    Displays a list of courses with enrollment and progress information.
+    Instructors see courses they teach or are enrolled in.
+    Students see only courses they are enrolled in.
     """
-    if request.user.is_authenticated and request.user.is_student:
-        enrollments = Enrollment.objects.filter(student=request.user)
-        courses = [enrollment.course for enrollment in enrollments]
-    else:
-        courses = []
+    courses = []
+    
+    if request.user.is_authenticated:
+        if request.user.is_student:
+            # Get only enrolled courses for students
+            enrollments = Enrollment.objects.filter(
+                student=request.user
+            ).select_related('course', 'course_progress')
+            
+            # Convert to list of courses with attached enrollment info
+            for enrollment in enrollments:
+                course = enrollment.course
+                course.user_enrollment = enrollment
+                course.user_enrollment.course_progress = CourseProgress.get_or_create_progress(enrollment)
+                courses.append(course)
+        elif request.user.is_instructor:
+            # Get courses where user is instructor
+            taught_courses = Course.objects.filter(instructors=request.user)
+            
+            # Get courses where instructor is enrolled
+            enrolled_courses = Course.objects.filter(
+                enrollment__student=request.user
+            ).select_related('enrollment', 'enrollment__course_progress')
+            
+            # Combine both querysets and remove duplicates
+            all_courses = taught_courses.union(enrolled_courses)
+            
+            # Attach enrollment info where it exists
+            for course in all_courses:
+                enrollment = Enrollment.objects.filter(
+                    student=request.user,
+                    course=course
+                ).first()
+                
+                if enrollment:
+                    course.user_enrollment = enrollment
+                    course.user_enrollment.course_progress = CourseProgress.get_or_create_progress(enrollment)
+                
+                courses.append(course)
 
     # Get LTI context data if available
     lti_data = {}
@@ -62,13 +98,28 @@ def course_detail(request, course_id):
     """
     course = get_object_or_404(Course, id=course_id)
     units = course.units.all()
-    enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
+    enrolled = False
+    course_progress = None
+    
+    if request.user.is_student:
+        enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
+        if enrollment:
+            enrolled = True
+            course_progress = CourseProgress.get_or_create_progress(enrollment)
+            
+            # Fetch progress for each module
+            for unit in units:
+                for module in unit.modules.all():
+                    module.progress = ModuleProgress.objects.filter(
+                        enrollment=enrollment,
+                        module=module
+                    ).first()
 
-    # Determine if the user is an instructor for this course
     is_instructor = request.user.is_instructor and course.instructors.filter(id=request.user.id).exists()
 
     if request.method == 'POST' and not enrolled and request.user.is_student:
-        Enrollment.objects.create(student=request.user, course=course)
+        enrollment = Enrollment.objects.create(student=request.user, course=course)
+        course_progress = CourseProgress.get_or_create_progress(enrollment)
         messages.success(request, f'You have enrolled in {course.title}.')
         return redirect('courses:course_detail', course_id=course_id)
 
@@ -77,6 +128,7 @@ def course_detail(request, course_id):
         'units': units,
         'enrolled': enrolled,
         'is_instructor': is_instructor,
+        'course_progress': course_progress,
         'year': datetime.now().year
     })
 
@@ -157,19 +209,21 @@ def create_course(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            if 'course_data' in data:
-                # Handle raw JSON input
-                create_course_from_json(data['course_data'], request.user)
-                return JsonResponse({'success': True})
-            elif 'course_id' in data:
-                # Handle Course ID input
-                fetch_course_details(data['course_id'])
-                return JsonResponse({'success': True})
+            
+            if 'course_id' in data:
+                # Fetch JSON from external API
+                course_data = fetch_course_details(data['course_id'])
+            elif 'course_data' in data:
+                # Use provided JSON directly
+                course_data = data['course_data']
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid input'})
-        
+            
+            # Create course from the JSON data
+            create_course_from_json(course_data, request.user)
+            return JsonResponse({'success': True})
+            
         except Exception as e:
-            # Log the exception with a stack trace
             logger.error("Error creating course: %s", str(e))
             logger.error(traceback.format_exc())
             return JsonResponse({'success': False, 'error': str(e)})
@@ -375,3 +429,65 @@ def create_enrollment_code(request, course_id):
     except Exception as e:
         logger.error("Error creating enrollment code: %s", str(e))
         return JsonResponse({'success': False, 'error': str(e)})
+
+@csrf_exempt
+def update_module_progress(request):
+    try:
+        data = json.loads(request.body)
+        logger.info("Received progress update data: %s", json.dumps(data, indent=2))
+        
+        activity_data = data.get('data', [{}])[0]
+        activity_id = activity_data.get('activityId')
+        
+        logger.info("Processing activity %s", activity_id)
+        module = get_object_or_404(Module, id=activity_id)
+        
+        enrollment = get_object_or_404(Enrollment, 
+            student=request.user, 
+            course=module.unit.course
+        )
+        
+        module_progress, created = ModuleProgress.objects.get_or_create(
+            enrollment=enrollment,
+            module=module
+        )
+        
+        # Log the previous state if updating
+        if not created:
+            logger.info("Previous progress state: progress=%s, score=%s, complete=%s",
+                       module_progress.progress,
+                       module_progress.score,
+                       module_progress.is_complete)
+        
+        module_progress.update_from_activity_attempt(activity_data)
+        logger.info("Updated module progress: progress=%s, score=%s, complete=%s",
+                   module_progress.progress,
+                   module_progress.score,
+                   module_progress.is_complete)
+        
+        course_progress = CourseProgress.get_or_create_progress(enrollment)
+        course_progress.update_progress()
+        logger.info("Updated course progress: overall_progress=%s, overall_score=%s, completed=%s/%s",
+                   course_progress.overall_progress,
+                   course_progress.overall_score,
+                   course_progress.modules_completed,
+                   course_progress.total_modules)
+        
+        return JsonResponse({
+            'success': True,
+            'module_progress': {
+                'progress': module_progress.progress,
+                'score': module_progress.score,
+                'is_complete': module_progress.is_complete
+            },
+            'course_progress': {
+                'overall_progress': course_progress.overall_progress,
+                'overall_score': course_progress.overall_score,
+                'modules_completed': course_progress.modules_completed
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating progress: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

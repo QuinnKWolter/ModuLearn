@@ -1,6 +1,10 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from datetime import timedelta
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import json
 
 User = get_user_model()
 
@@ -44,6 +48,18 @@ class Module(models.Model):
         unit_title = self.unit.title if self.unit else "No Unit"
         return f"{course_title} - {unit_title} - {self.title}"
 
+    @property
+    def course(self):
+        return self.unit.course if self.unit else None
+
+    def get_student_progress(self, student):
+        try:
+            enrollment = Enrollment.objects.get(student=student, course=self.course)
+            progress = ModuleProgress.objects.get(enrollment=enrollment, module=self)
+            return progress
+        except (Enrollment.DoesNotExist, ModuleProgress.DoesNotExist):
+            return None
+
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'is_student': True})
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
@@ -56,34 +72,51 @@ class Enrollment(models.Model):
         return f"{self.student.username} enrolled in {self.course.title}"
 
 class ModuleProgress(models.Model):
-    enrollment = models.ForeignKey(
-        Enrollment,
-        on_delete=models.CASCADE,
-        related_name='module_progress'
-    )
-    module = models.ForeignKey(
-        Module,
-        on_delete=models.CASCADE
-    )
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='module_progress')
+    module = models.ForeignKey(Module, on_delete=models.CASCADE)
+    
+    # Progress tracking
+    progress = models.FloatField(default=0.0, help_text='Progress between 0 and 1')
     is_complete = models.BooleanField(default=False)
-    score = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True
-    )
+    score = models.FloatField(null=True, blank=True)
+    success = models.BooleanField(default=False)
+    
+    # Attempt tracking
+    attempts = models.IntegerField(default=0)
+    correct_answers = models.IntegerField(default=0)
+    errors = models.IntegerField(default=0)
+    
+    # Timing tracking
+    first_accessed = models.DateTimeField(default=timezone.now)
     last_accessed = models.DateTimeField(auto_now=True)
-    progress_data = models.JSONField(
-        blank=True,
-        null=True,
-        help_text='Store state data for resuming module progress.'
-    )
-
+    total_duration = models.DurationField(default=timedelta())
+    
+    # State data
+    state_data = models.JSONField(blank=True, null=True)
+    last_response = models.TextField(blank=True)
+    
     class Meta:
         unique_together = ('enrollment', 'module')
 
-    def __str__(self):
-        return f"{self.enrollment.student.username} - {self.module.title}"
+    def update_from_activity_attempt(self, activity_data):
+        """Update progress from activity attempt data"""
+        # Update progress and completion based on the data
+        self.progress = float(activity_data.get('progress', self.progress))
+        self.is_complete = activity_data.get('completion', self.is_complete)
+        self.score = float(activity_data.get('score', self.score or 0))
+        self.success = activity_data.get('success', self.success)
+        
+        # Store the response data
+        if 'response' in activity_data:
+            try:
+                response_data = json.loads(activity_data['response'])
+                self.state_data = response_data
+                self.last_response = activity_data['response']
+            except json.JSONDecodeError:
+                self.last_response = activity_data['response']
+        
+        self.attempts += 1
+        self.save()
 
 class StudentScore(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -105,3 +138,61 @@ class EnrollmentCode(models.Model):
 
     def __str__(self):
         return f"{self.code} for {self.email} in {self.course.title}"
+
+class CourseProgress(models.Model):
+    enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='course_progress')
+    
+    overall_progress = models.FloatField(default=0.0)
+    overall_score = models.FloatField(default=0.0)
+    modules_completed = models.IntegerField(default=0)
+    total_modules = models.IntegerField(default=0)
+    
+    last_accessed = models.DateTimeField(auto_now=True)
+    
+    @classmethod
+    def get_or_create_progress(cls, enrollment):
+        """Get or create course progress with proper initialization"""
+        try:
+            progress = enrollment.course_progress
+        except CourseProgress.DoesNotExist:
+            # Create new progress and initialize it
+            progress = cls.objects.create(
+                enrollment=enrollment,
+                total_modules=Module.objects.filter(
+                    unit__course=enrollment.course
+                ).count()
+            )
+            progress.update_progress()  # Initialize progress
+        return progress
+
+    def update_progress(self):
+        """Calculate overall course progress based on module progress"""
+        module_progress = ModuleProgress.objects.filter(enrollment=self.enrollment)
+        total_modules = Module.objects.filter(
+            unit__course=self.enrollment.course
+        ).count()
+        
+        completed = module_progress.filter(is_complete=True).count()
+        total_progress = sum(mp.progress or 0 for mp in module_progress)
+        total_score = sum(mp.score or 0 for mp in module_progress)
+        
+        self.modules_completed = completed
+        self.total_modules = total_modules
+        
+        # Progress and score are already in percentages from the frontend
+        self.overall_progress = total_progress / total_modules if total_modules > 0 else 0
+        self.overall_score = total_score / total_modules if total_modules > 0 else 0
+        self.save()
+
+@receiver(post_save, sender=Enrollment)
+def create_module_progress_records(sender, instance, created, **kwargs):
+    if created:
+        # Create ModuleProgress for each module in the course
+        modules = Module.objects.filter(unit__course=instance.course)
+        ModuleProgress.objects.bulk_create([
+            ModuleProgress(enrollment=instance, module=module)
+            for module in modules
+        ])
+        
+        # Create CourseProgress
+        CourseProgress.objects.create(enrollment=instance)

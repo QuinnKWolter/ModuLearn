@@ -17,41 +17,101 @@
 </div>
 
 <script>
-  // Add a listener for messages from the iframe
-  console.log("TEST")
+  console.log("TEST");
+  
   window.addEventListener('message', function(event) {
-    console.log("Message received from:", event.origin);
-
     // Validate the origin for security
-    const expectedOrigins = ['http://pawscomp2.sis.pitt.edu', 'http://127.0.0.1:8000'];
+    const expectedOrigins = ['http://pawscomp2.sis.pitt.edu', 'http://127.0.0.1:8000', 'https://codecheck.io'];
     if (!expectedOrigins.includes(event.origin)) {
       console.warn('Unexpected message origin:', event.origin);
       return;
     }
 
-    // Parse and handle the message data
-    const data = event.data;
-    if (data) {
-      console.log("LTI Response:", data);
+    console.log("Message received from:", event.origin);
+    
+    // Skip frame resize messages
+    if (event.data.subject === 'lti.frameResize') {
+      return;
+    }
 
-      // Example: Display the response in an alert (or handle it in another way)
-      alert(`Exercise Result: ${JSON.stringify(data)}`);
+    // Handle other messages
+    console.log("LTI Response:", event.data);
 
-      // Optional: Send the data to the server for logging or processing
-      fetch('{% url "courses:log_lti_response" %}', {
+    // Only send progress updates for relevant messages
+    if (event.data.subject === 'SPLICE.reportScoreAndState') {
+      // Parse the scoreText to determine completion
+      let progress = 0;
+      if (event.data.state && event.data.state.scoreText) {
+        const scoreText = event.data.state.scoreText;
+        if (scoreText.includes('/')) {
+          // Format: "X/Y"
+          const [completed, total] = scoreText.split('/').map(num => parseInt(num));
+          progress = (completed / total) * 100;
+        } else {
+          // Format: "0" or similar
+          progress = 0;
+        }
+      }
+
+      const requestBody = {
+        data: [{
+          activityId: '{{ module.id }}',
+          completion: event.data.score === 1.0,
+          score: event.data.score * 100, // Convert 0-1 to percentage
+          success: event.data.score >= 0.7,
+          progress: progress,
+          response: JSON.stringify({
+            work: event.data.state.work,
+            scoreText: event.data.state.scoreText
+          })
+        }]
+      };
+
+      console.group('Update Progress Request Details');
+      console.log('Score Text:', event.data.state.scoreText);
+      console.log('Calculated Progress:', progress + '%');
+      console.log('Score:', (event.data.score * 100) + '%');
+      console.log('Complete:', event.data.score === 1.0);
+      console.log('Success:', event.data.score >= 0.7);
+      console.log('Request Body:', requestBody);
+      console.log('CSRF Token:', '{{ csrf_token }}');
+      console.groupEnd();
+
+      fetch('{% url "courses:update_module_progress" %}', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': '{{ csrf_token }}'
         },
-        body: JSON.stringify({ result: data })
+        body: JSON.stringify(requestBody)
       })
-      .then(response => response.json())
-      .then(serverResponse => {
-        console.log('Response logged to the server:', serverResponse);
+      .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        return response.text();
+      })
+      .then(text => {
+        console.log('Raw response:', text);
+        try {
+          const json = JSON.parse(text);
+          console.group('Progress Update Results');
+          console.log('Module Progress:', {
+            progress: json.module_progress.progress + '%',
+            score: json.module_progress.score + '%',
+            isComplete: json.module_progress.is_complete
+          });
+          console.log('Course Progress:', {
+            overallProgress: json.course_progress.overall_progress + '%',
+            overallScore: json.course_progress.overall_score + '%',
+            modulesCompleted: `${json.course_progress.modules_completed} modules`
+          });
+          console.groupEnd();
+        } catch (e) {
+          console.error('Error parsing JSON:', e);
+        }
       })
       .catch(error => {
-        console.error('Error logging response to server:', error);
+        console.error('Error updating progress:', error);
       });
     }
   });

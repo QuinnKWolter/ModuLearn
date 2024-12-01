@@ -23,7 +23,6 @@ def fetch_course_details(course_id):
         raise Exception(f"Request failed: {e}")
     
     if response.status_code != 200:
-        # Log the response content for debugging
         error_message = f"Failed to fetch course details: {response.status_code}, Response: {response.text}"
         logger.error(error_message)
         raise Exception(error_message)
@@ -31,44 +30,10 @@ def fetch_course_details(course_id):
     try:
         course_data = response.json()
         logger.debug(f"Course data received: {course_data}")
+        return course_data  # Return the JSON directly instead of creating the course
     except ValueError as e:
         logger.error(f"Failed to parse JSON response: {e}")
         raise Exception(f"Failed to parse JSON response: {e}")
-    
-    # Create the Course object
-    course, created = Course.objects.get_or_create(
-        external_id=course_data['id'],
-        defaults={
-            'title': course_data['name'],
-            'description': course_data['description']
-        }
-    )
-    logger.debug(f"Course {'created' if created else 'retrieved'}: {course}")
-    
-    # Create Unit and Module objects
-    for unit_data in course_data.get('units', []):
-        unit, created = Unit.objects.get_or_create(
-            course=course,
-            title=unit_data['name'],
-            defaults={'description': unit_data['description']}
-        )
-        logger.debug(f"Unit {'created' if created else 'retrieved'}: {unit}")
-        
-        for resource_id, activities in unit_data.get('activities', {}).items():
-            for activity in activities:
-                module, created = Module.objects.get_or_create(
-                    unit=unit,
-                    title=activity['name'],
-                    defaults={
-                        'description': f"Provider: {activity['provider_id']}, Author: {activity['author_id']}",
-                        'module_type': 'external_iframe',  # Assuming all are external iframes
-                        'iframe_url': activity['url']
-                    }
-                )
-                logger.debug(f"Module {'created' if created else 'retrieved'}: {module}")
-    
-    logger.debug(f"Finished processing course_id: {course_id}")
-    return course
 
 def create_course_from_json(course_data, current_user):
     logger.debug(f"Creating course from JSON data: {course_data}")
