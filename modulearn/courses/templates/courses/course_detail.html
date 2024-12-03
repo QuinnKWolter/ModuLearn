@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load course_tags %}
 
 {% block title %}{{ course.title }} - ModuLearn{% endblock %}
 
@@ -21,14 +22,18 @@
           <div class="row align-items-center">
             <div class="col-md-6">
               <h5 class="mb-3">Overall Progress</h5>
-              <div class="progress mb-2" style="height: 20px;">
+              <div class="progress mb-2" style="height: 25px; position: relative;">
                 <div class="progress-bar bg-success" 
                      role="progressbar" 
                      style="width: {{ course_progress.overall_progress|floatformat:0 }}%"
                      aria-valuenow="{{ course_progress.overall_progress|floatformat:0 }}"
                      aria-valuemin="0" 
                      aria-valuemax="100">
-                  {{ course_progress.overall_progress|floatformat:0 }}% Complete
+                </div>
+                <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
+                  <span style="color: #000; font-weight: 500;">
+                    {{ course_progress.overall_progress|floatformat:0 }}% Complete
+                  </span>
                 </div>
               </div>
             </div>
@@ -74,25 +79,42 @@
                 {% for module in unit.modules.all %}
                   <li class="mb-2 d-flex justify-content-between align-items-center">
                     <div>
-                      <a href="{% url 'courses:module_detail' course.id unit.id module.id %}" class="text-decoration-none">{{ module.title }}</a>
-                      {% if module.module_type == 'external_iframe' %}
-                        <span class="badge bg-info text-dark ms-2">External Content</span>
-                      {% endif %}
+                      {% with module_progress=module_progress_data|get_item:module.id %}
+                        {% if enrolled and module_progress %}
+                          {% if module_progress.is_complete %}
+                            <i class="fa-solid fa-square-check text-success me-2"></i>
+                          {% else %}
+                            <i class="fa-regular fa-square text-muted me-2"></i>
+                          {% endif %}
+                        {% else %}
+                          <i class="fa-regular fa-square text-muted me-2"></i>
+                        {% endif %}
+                      
+                        <a href="{% url 'courses:module_detail' course.id unit.id module.id %}" 
+                           class="text-decoration-none {% if enrolled and module_progress.is_complete %}text-success{% endif %}">
+                          {{ module.title }}
+                        </a>
+                        
+                        {% if module.module_type == 'external_iframe' %}
+                          <span class="badge bg-info text-dark ms-2">External Content</span>
+                        {% endif %}
+                        
+                        {% if enrolled and module_progress %}
+                          <div class="d-flex align-items-center" style="min-width: 150px">
+                            {% if module_progress.is_complete %}
+                              <span class="badge bg-success me-2">Complete</span>
+                            {% endif %}
+                            {% if module_progress.score is not None %}
+                              <span class="badge {% if module_progress.score >= 70 %}bg-success
+                                              {% elif module_progress.score >= 40 %}bg-warning
+                                              {% else %}bg-danger{% endif %} me-2">
+                                {{ module_progress.score|floatformat:0 }}%
+                              </span>
+                            {% endif %}
+                          </div>
+                        {% endif %}
+                      {% endwith %}
                     </div>
-                    {% if enrolled and module.progress %}
-                      <div class="d-flex align-items-center" style="min-width: 150px">
-                        {% if module.progress.is_complete %}
-                          <span class="badge bg-success me-2">Complete</span>
-                        {% endif %}
-                        {% if module.progress.score is not None %}
-                          <span class="badge {% if module.progress.score >= 0.7 %}bg-success
-                                          {% elif module.progress.score >= 0.4 %}bg-warning
-                                          {% else %}bg-danger{% endif %} me-2">
-                            {{ module.progress.score|floatformat:0 }}%
-                          </span>
-                        {% endif %}
-                      </div>
-                    {% endif %}
                   </li>
                 {% endfor %}
               </ul>

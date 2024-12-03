@@ -97,40 +97,42 @@ def course_detail(request, course_id):
     Displays details of a specific course and handles enrollment.
     """
     course = get_object_or_404(Course, id=course_id)
-    units = course.units.all()
-    enrolled = False
-    course_progress = None
+    enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
     
-    if request.user.is_student:
-        enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
-        if enrollment:
-            enrolled = True
-            course_progress = CourseProgress.get_or_create_progress(enrollment)
-            
-            # Fetch progress for each module
-            for unit in units:
-                for module in unit.modules.all():
-                    module.progress = ModuleProgress.objects.filter(
-                        enrollment=enrollment,
-                        module=module
-                    ).first()
+    # Get course progress through enrollment if it exists
+    course_progress = None
+    if enrolled:
+        enrollment = Enrollment.objects.get(student=request.user, course=course)
+        course_progress = CourseProgress.get_or_create_progress(enrollment)
+    
+    units = course.units.prefetch_related('modules')
 
+    # Pre-compute module progress
+    module_progress_data = {}
+    if enrolled:
+        for unit in units:
+            for module in unit.modules.all():
+                module_progress_data[module.id] = module.get_student_progress(request.user)
+    
+    # Check if user is instructor for this course
     is_instructor = request.user.is_instructor and course.instructors.filter(id=request.user.id).exists()
+    
+    context = {
+        'course': course,
+        'enrolled': enrolled,
+        'course_progress': course_progress,
+        'units': units,
+        'module_progress_data': module_progress_data,
+        'is_instructor': is_instructor,
+    }
 
+    # Handle enrollment POST request
     if request.method == 'POST' and not enrolled and request.user.is_student:
         enrollment = Enrollment.objects.create(student=request.user, course=course)
-        course_progress = CourseProgress.get_or_create_progress(enrollment)
-        messages.success(request, f'You have enrolled in {course.title}.')
+        messages.success(request, f'You have been enrolled in {course.title}')
         return redirect('courses:course_detail', course_id=course_id)
 
-    return render(request, 'courses/course_detail.html', {
-        'course': course,
-        'units': units,
-        'enrolled': enrolled,
-        'is_instructor': is_instructor,
-        'course_progress': course_progress,
-        'year': datetime.now().year
-    })
+    return render(request, 'courses/course_detail.html', context)
 
 @login_required
 def module_detail(request, course_id, unit_id, module_id):

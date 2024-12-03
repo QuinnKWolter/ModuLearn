@@ -52,12 +52,15 @@ class Module(models.Model):
     def course(self):
         return self.unit.course if self.unit else None
 
-    def get_student_progress(self, student):
+    def get_student_progress(self, user):
+        from .models import ModuleProgress
         try:
-            enrollment = Enrollment.objects.get(student=student, course=self.course)
-            progress = ModuleProgress.objects.get(enrollment=enrollment, module=self)
-            return progress
-        except (Enrollment.DoesNotExist, ModuleProgress.DoesNotExist):
+            return ModuleProgress.objects.get(
+                enrollment__student=user,
+                enrollment__course=self.unit.course,
+                module=self
+            )
+        except ModuleProgress.DoesNotExist:
             return None
 
 class Enrollment(models.Model):
