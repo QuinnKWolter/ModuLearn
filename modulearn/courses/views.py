@@ -21,6 +21,7 @@ import xml.etree.ElementTree as ET
 from django.contrib.auth import login
 from django.views.decorators.http import require_POST
 import os
+from django.core.serializers.json import DjangoJSONEncoder
 
 User = get_user_model()
 
@@ -155,7 +156,25 @@ def module_detail(request, course_id, unit_id, module_id):
     if module.module_type == 'external_iframe':
         return redirect('courses:module_render', module_id=module.id)
 
-    return render(request, 'courses/module_detail.html', {'module': module})
+    module_progress = ModuleProgress.objects.filter(
+        enrollment__student=request.user,
+        enrollment__course__id=course_id,
+        module=module
+    ).first()
+    
+    # Print the raw state data from the database
+    print("Raw module_progress:", module_progress)
+    print("Raw state_data:", module_progress.state_data if module_progress else None)
+    
+    # Properly serialize the state data
+    state_data = json.dumps(module_progress.state_data if module_progress else None, cls=DjangoJSONEncoder)
+    print("Serialized state_data:", state_data)
+    
+    return render(request, 'courses/external_iframe.html', {
+        'module': module,
+        'module_progress': module_progress,
+        'state_data': state_data
+    })
 
 @login_required
 def module_render(request, module_id):
@@ -173,14 +192,27 @@ def module_render(request, module_id):
         messages.error(request, 'You must be enrolled in the course to access this module.')
         return redirect('courses:course_detail', course_id=course.id)
 
-    # Handle module types
+    # Get module progress and state data
+    module_progress = ModuleProgress.objects.filter(
+        enrollment__student=request.user,
+        enrollment__course=course,
+        module=module
+    ).first()
+    
+    # Print the raw state data from the database
+    print("Raw module_progress:", module_progress)
+    print("Raw state_data:", module_progress.state_data if module_progress else None)
+    
+    # The state_data is already a Python dict (from JSONField)
+    state_data = module_progress.state_data if module_progress else None
+    
     if module.module_type == 'external_iframe':
-        # Generate LTI launch URL
-        lti_launch_url = request.build_absolute_uri(reverse('lti:launch'))
         template_name = 'courses/external_iframe.html'
         context = {
             'module': module,
-            'lti_launch_url': lti_launch_url,
+            'module_progress': module_progress,
+            'state_data': state_data,  # Pass the raw dict
+            'lti_launch_url': request.build_absolute_uri(reverse('lti:launch')),
             'year': datetime.now().year
         }
     else:

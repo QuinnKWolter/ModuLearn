@@ -9,7 +9,15 @@
 
   <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-dark text-light mb-3">Return to Course</a>
 
-  <iframe id="module-iframe" src="{% url 'courses:launch_iframe_module' module.id %}" width="100%" height="800px" frameborder="0" allowfullscreen style="background-color: white; border: 2px solid #ccc;">
+  {{ state_data|json_script:"state-data" }}
+  
+  <iframe id="module-iframe" 
+          src="{% url 'courses:launch_iframe_module' module.id %}" 
+          width="100%" 
+          height="800px" 
+          frameborder="0" 
+          allowfullscreen 
+          style="background-color: white; border: 2px solid #ccc;">
     Your browser doesn't support iframes.
   </iframe>
 
@@ -27,7 +35,32 @@
       return;
     }
 
-    console.log("Message received from:", event.origin);
+    if (event.data.subject !== 'lti.frameResize') {
+      console.log("Message received from:", event.origin);
+      console.log("Message data:", event.data);
+    }
+    
+    // Handle state request
+    if (event.data.subject === 'SPLICE.getState') {
+      // Get the stored state from the script tag
+      const stateScript = document.getElementById('state-data');
+      const storedState = stateScript ? JSON.parse(stateScript.textContent) : null;
+      
+      console.log("Retrieved stored state:", storedState);
+      
+      if (storedState) {
+        const stateMessage = {
+          subject: 'SPLICE.getState.response',
+          message_id: event.data.message_id,
+          state: storedState  // Already parsed, no need for JSON.parse
+        };
+        
+        console.log("Sending stored state:", stateMessage);
+        document.getElementById('module-iframe').contentWindow.postMessage(stateMessage, event.origin);
+      } else {
+        console.log("No stored state found");
+      }
+    }
     
     // Skip frame resize messages
     if (event.data.subject === 'lti.frameResize') {
