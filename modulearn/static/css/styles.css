@@ -128,4 +128,35 @@ footer {
 .btn {
   color: #fff !important;
   text-decoration: none;
+  border: none; /* Remove outline style */
+}
+
+/* Dark mode accordion styling */
+.dark-mode .accordion-button {
+  background-color: #444;
+  color: #fff;
+}
+
+.dark-mode .accordion-button:not(.collapsed) {
+  background-color: #555;
+}
+
+.dark-mode .accordion-body {
+  background-color: #333;
+  color: #fff;
+}
+
+/* Dark mode table styling */
+.dark-mode .table {
+  background-color: #444;
+  color: #fff;
+}
+
+.dark-mode .table thead {
+  background-color: #555;
+  color: #fff;
+}
+
+.dark-mode .table-hover tbody tr:hover {
+  background-color: #555;
 }

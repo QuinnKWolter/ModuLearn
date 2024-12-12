@@ -3,26 +3,69 @@
 {% block title %}Instructor Dashboard - ModuLearn{% endblock %}
 
 {% block content %}
-<h1>Instructor Dashboard</h1>
-<div class="mb-3">
-  <button class="btn btn-primary" onclick="window.open('http://adapt2.sis.pitt.edu/next.course-authoring/#/login', '_blank')">Visit Course Authoring Tool</button>
-  <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#createCourseModal">Import From Course Authoring Tool</button>
+<h1 class="display-4 mb-4">Instructor Dashboard</h1>
+<div class="d-flex justify-content-between mb-4">
+  <button class="btn btn-primary" onclick="window.open('http://adapt2.sis.pitt.edu/next.course-authoring/#/login', '_blank')">
+    <i class="bi bi-pencil-square"></i> Course Authoring Tool
+  </button>
+  <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#createCourseModal">
+    <i class="bi bi-upload"></i> Import Course
+  </button>
 </div>
-<br>
-<h2>Your Courses</h2>
+
+<h2 class="h4 mb-3">Your Courses</h2>
 {% if courses %}
-  <div class="list-group">
+  <div class="accordion" id="courseAccordion">
     {% for course in courses %}
-      <div class="list-group-item">
-        <a href="{% url 'courses:course_detail' course.id %}" class="list-group-item-action">
-          {{ course.title }}
-        </a>
-        <button class="btn btn-info mt-2" data-bs-toggle="modal" data-bs-target="#manageEnrollmentModal-{{ course.id }}">Manage Enrollment</button>
+      <div class="accordion-item mb-3">
+        <h2 class="accordion-header" id="heading{{ course.id }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ course.id }}" aria-expanded="false" aria-controls="collapse{{ course.id }}">
+            {{ course.title }}
+          </button>
+        </h2>
+        <div id="collapse{{ course.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ course.id }}" data-bs-parent="#courseAccordion">
+          <div class="accordion-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-info">
+                <i class="bi bi-info-circle"></i> Course Details
+              </a>
+              <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#manageEnrollmentModal-{{ course.id }}">
+                <i class="bi bi-people"></i> Manage Enrollment
+              </button>
+            </div>
+            
+            <!-- Collapsible Section for Students -->
+            <button class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#studentList-{{ course.id }}" aria-expanded="false" aria-controls="studentList-{{ course.id }}">
+              <i class="bi bi-chevron-down"></i> View Students
+            </button>
+            <div class="collapse" id="studentList-{{ course.id }}">
+              <table class="table table-hover mt-3">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Progress</th>
+                    <th>Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for enrollment in course.enrollment_set.all %}
+                  <tr>
+                    <td>{{ enrollment.student.username }}</td>
+                    <td>{{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}</td>
+                    <td>{{ enrollment.course_progress.overall_score|floatformat:2 }}%</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <!-- End of Collapsible Section -->
+          </div>
+        </div>
       </div>
     {% endfor %}
   </div>
 {% else %}
-  <p>You have not created any courses yet.</p>
+  <p class="text-muted">You have not created any courses yet.</p>
 {% endif %}
 
 <!-- Create Course Modal -->

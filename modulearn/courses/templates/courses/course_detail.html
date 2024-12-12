@@ -32,7 +32,7 @@
                 </div>
                 <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
                   <span style="color: #000; font-weight: 500;">
-                    {{ course_progress.overall_progress|floatformat:0 }}% Complete
+                    {{ course_progress.overall_progress|floatformat:1 }}% Complete
                   </span>
                 </div>
               </div>
@@ -49,7 +49,7 @@
                 </div>
                 <div class="col-6">
                   <h6>Modules Completed</h6>
-                  <span class="h4">{{ course_progress.modules_completed }}/{{ course_progress.total_modules }}</span>
+                  <span class="h4">{{ course_progress.modules_completed }}/{{ course.total_modules }}</span>
                 </div>
               </div>
             </div>
@@ -89,21 +89,11 @@
                         {% else %}
                           <i class="fa-regular fa-square text-muted me-2"></i>
                         {% endif %}
-                      
                         <a href="{% url 'courses:module_detail' course.id unit.id module.id %}" 
                            class="text-decoration-none {% if enrolled and module_progress.is_complete %}text-success{% endif %}">
                           {{ module.title }}
                         </a>
-                        
-                        {% if module.module_type == 'external_iframe' %}
-                          <span class="badge bg-info text-dark ms-2">External Content</span>
-                        {% endif %}
-                        
                         {% if enrolled and module_progress %}
-                          <div class="d-flex align-items-center" style="min-width: 150px">
-                            {% if module_progress.is_complete %}
-                              <span class="badge bg-success me-2">Complete</span>
-                            {% endif %}
                             {% if module_progress.score is not None %}
                               <span class="badge {% if module_progress.score >= 70 %}bg-success
                                               {% elif module_progress.score >= 40 %}bg-warning
@@ -111,7 +101,6 @@
                                 {{ module_progress.score|floatformat:0 }}%
                               </span>
                             {% endif %}
-                          </div>
                         {% endif %}
                       {% endwith %}
                     </div>

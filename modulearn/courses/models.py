@@ -17,6 +17,10 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
+    def total_modules(self):
+        """Return the total number of modules in the course."""
+        return Module.objects.filter(unit__course=self).count()
+
 class Unit(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='units')
     title = models.CharField(max_length=255)
@@ -53,7 +57,6 @@ class Module(models.Model):
         return self.unit.course if self.unit else None
 
     def get_student_progress(self, user):
-        from .models import ModuleProgress
         try:
             return ModuleProgress.objects.get(
                 enrollment__student=user,
@@ -100,6 +103,9 @@ class ModuleProgress(models.Model):
     
     class Meta:
         unique_together = ('enrollment', 'module')
+
+    def __str__(self):
+        return f"{self.enrollment.student.username} ({self.module}): {self.progress:.2f}% & {self.score or 0:.2f}"
 
     def update_from_activity_attempt(self, activity_data):
         """Update progress from activity attempt data"""
