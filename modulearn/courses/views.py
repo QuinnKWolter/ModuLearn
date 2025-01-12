@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Course, Module, Enrollment, Unit, StudentScore, CaliperEvent, EnrollmentCode, CourseProgress, ModuleProgress
 from django.contrib.auth import get_user_model
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import json
 from .utils import fetch_course_details, create_course_from_json
 import logging
@@ -22,12 +22,15 @@ from django.contrib.auth import login
 from django.views.decorators.http import require_POST
 import os
 from django.core.serializers.json import DjangoJSONEncoder
+import uuid
+from django.views.decorators.http import require_http_methods
 
 User = get_user_model()
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
+@login_required
 def course_list(request):
     """
     Displays a list of courses with enrollment and progress information.
@@ -47,49 +50,30 @@ def course_list(request):
             for enrollment in enrollments:
                 course = enrollment.course
                 course.user_enrollment = enrollment
-                course.user_enrollment.course_progress = CourseProgress.get_or_create_progress(enrollment)
                 courses.append(course)
         elif request.user.is_instructor:
             # Get courses where user is instructor
             taught_courses = Course.objects.filter(instructors=request.user)
             
-            # Get courses where instructor is enrolled
-            enrolled_courses = Course.objects.filter(
-                enrollment__student=request.user
-            ).select_related('enrollment', 'enrollment__course_progress')
+            # Get enrollments where instructor is enrolled as student
+            student_enrollments = Enrollment.objects.filter(
+                student=request.user
+            ).select_related('course', 'course_progress')
             
-            # Combine both querysets and remove duplicates
-            all_courses = taught_courses.union(enrolled_courses)
-            
-            # Attach enrollment info where it exists
-            for course in all_courses:
-                enrollment = Enrollment.objects.filter(
-                    student=request.user,
-                    course=course
-                ).first()
-                
-                if enrollment:
-                    course.user_enrollment = enrollment
-                    course.user_enrollment.course_progress = CourseProgress.get_or_create_progress(enrollment)
-                
+            # Add taught courses
+            for course in taught_courses:
                 courses.append(course)
-
-    # Get LTI context data if available
-    lti_data = {}
-    if hasattr(request.user, 'lti_data') and request.user.lti_data:
-        lti_data = {
-            'name': request.user.lti_data.get('name'),
-            'email': request.user.lti_data.get('email'),
-            'roles': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/roles', []),
-            'context': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/context', {}),
-            'platform': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/tool_platform', {}),
-            'resource_link': request.user.lti_data.get('https://purl.imsglobal.org/spec/lti/claim/resource_link', {}),
-            'picture': request.user.lti_data.get('picture'),
-        }
+            
+            # Add enrolled courses
+            for enrollment in student_enrollments:
+                course = enrollment.course
+                course.user_enrollment = enrollment
+                if course not in courses:  # Avoid duplicates
+                    courses.append(course)
     
     return render(request, 'courses/course_list.html', {
         'courses': courses,
-        'lti_data': lti_data
+        'lti_data': getattr(request.user, 'lti_data', {})
     })
 
 @login_required
@@ -103,8 +87,7 @@ def course_detail(request, course_id):
     # Get course progress through enrollment if it exists
     course_progress = None
     if enrolled:
-        enrollment = Enrollment.objects.get(student=request.user, course=course)
-        course_progress = CourseProgress.get_or_create_progress(enrollment)
+        course_progress, created = CourseProgress.get_or_create_progress(request.user, course)
     
     units = course.units.prefetch_related('modules')
 
@@ -152,74 +135,49 @@ def module_detail(request, course_id, unit_id, module_id):
         messages.error(request, 'You must be enrolled in the course to access modules.')
         return redirect('courses:course_detail', course_id=course_id)
 
-    # Redirect to module render view if it's an external iframe
-    if module.module_type == 'external_iframe':
-        return redirect('courses:module_render', module_id=module.id)
-
     module_progress = ModuleProgress.objects.filter(
         enrollment__student=request.user,
         enrollment__course__id=course_id,
         module=module
     ).first()
     
-    # Print the raw state data from the database
-    print("Raw module_progress:", module_progress)
-    print("Raw state_data:", module_progress.state_data if module_progress else None)
-    
     # Properly serialize the state data
     state_data = json.dumps(module_progress.state_data if module_progress else None, cls=DjangoJSONEncoder)
-    print("Serialized state_data:", state_data)
     
-    return render(request, 'courses/external_iframe.html', {
+    return render(request, 'courses/module_page.html', {
         'module': module,
         'module_progress': module_progress,
-        'state_data': state_data
+        'state_data': state_data,
+        'is_instructor': is_instructor
     })
 
 @login_required
 def module_render(request, module_id):
-    """
-    Renders the smart content for a specific module.
-    """
     module = get_object_or_404(Module, id=module_id)
     course = module.unit.course
-
-    # Check if the user is enrolled or is an instructor
-    enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
-    is_instructor = request.user.is_instructor and course.instructors.filter(id=request.user.id).exists()
-
-    if not enrolled and not is_instructor:
-        messages.error(request, 'You must be enrolled in the course to access this module.')
-        return redirect('courses:course_detail', course_id=course.id)
-
-    # Get module progress and state data
-    module_progress = ModuleProgress.objects.filter(
-        enrollment__student=request.user,
-        enrollment__course=course,
-        module=module
-    ).first()
     
-    # Print the raw state data from the database
-    print("Raw module_progress:", module_progress)
-    print("Raw state_data:", module_progress.state_data if module_progress else None)
+    # Check if user has access to this module
+    is_instructor = course.instructors.filter(id=request.user.id).exists()
+    is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
     
-    # The state_data is already a Python dict (from JSONField)
+    if not (is_instructor or is_enrolled):
+        return HttpResponseForbidden("You don't have access to this module")
+    
+    # Get or create progress using the updated method
+    module_progress, created = ModuleProgress.get_or_create_progress(request.user, module)
+    
+    # Get state data for the module
     state_data = module_progress.state_data if module_progress else None
     
-    if module.module_type == 'external_iframe':
-        template_name = 'courses/external_iframe.html'
-        context = {
-            'module': module,
-            'module_progress': module_progress,
-            'state_data': state_data,  # Pass the raw dict
-            'lti_launch_url': request.build_absolute_uri(reverse('lti:launch')),
-            'year': datetime.now().year
-        }
-    else:
-        # Existing logic for other module types
-        template_name = 'courses/module_render.html'
-        context = {'module': module}
-
+    context = {
+        'module': module,
+        'state_data': state_data,
+        'is_instructor': is_instructor,  # Pass this to template
+        'module_progress': module_progress
+    }
+    
+    # Choose template based on module type
+    template_name = f'courses/{module.module_type}.html'
     return render(request, template_name, context)
 
 @login_required
@@ -267,75 +225,60 @@ def create_course(request):
 @login_required
 def launch_iframe_module(request, module_id):
     module = get_object_or_404(Module, id=module_id)
+    course = module.unit.course
     
-    # Ensure the module is of type 'external_iframe'
-    if module.module_type != 'external_iframe':
-        return HttpResponse('Invalid module type for LTI launch.', status=400)
-
-    # Use the LTI_CONSUMER_CONFIG for launching the tool
-    lti_consumer_config = settings.LTI_CONSUMER_CONFIG
-
-    # Generate LTI launch parameters
-    lti_params = {
-        "iss": request.build_absolute_uri('/'),  # Your platform's URL
-        "aud": lti_consumer_config['client_id'],
-        "sub": request.user.username,
-        "iat": int(time.time()),
-        "exp": int(time.time()) + 3600,
-        "nonce": "unique-nonce-value",
-        "state": "unique-state-value",
-        "https://purl.imsglobal.org/spec/lti/claim/message_type": "LtiResourceLinkRequest",
-        "https://purl.imsglobal.org/spec/lti/claim/version": "1.3.0",
-        "https://purl.imsglobal.org/spec/lti/claim/resource_link": {
-            "id": str(module.id)
-        },
-        # Add other necessary claims
-    }
-
-    # Sign the JWT
-    try:
-        # Use an absolute path
-        private_key_path = os.path.join(settings.BASE_DIR, 'modulearn', 'private.key')
-
-        # Open the private key file
-        with open(private_key_path, 'rb') as key_file:
-            private_key = key_file.read()
-        lti_jwt = jwt.encode(lti_params, private_key, algorithm='RS256')
-    except Exception as e:
-        logger.error(f"Error signing JWT: {e}")
-        return HttpResponse('Error generating LTI launch token.', status=500)
-
-    # Parse the existing iframe_url to preserve its query parameters
+    # Check if user has access to this module
+    is_instructor = course.instructors.filter(id=request.user.id).exists()
+    is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
+    
+    if not (is_instructor or is_enrolled):
+        return HttpResponseForbidden("You don't have access to this module")
+    
+    # Get or create progress using the updated method
+    module_progress, created = ModuleProgress.get_or_create_progress(request.user, module)
+    
+    # Get state data for the module
+    state_data = module_progress.state_data if module_progress else None
+    
+    # Parse the original URL and add LTI parameters
     parsed_url = urlparse(module.iframe_url)
     query_params = parse_qs(parsed_url.query)
-
-    # Add LTI parameters to the existing query parameters
-    query_params['id_token'] = lti_jwt
-    query_params['state'] = 'unique-state-value'
-
-    # Reconstruct the URL with all parameters
+    
+    # Add your existing LTI parameters here...
+    
+    # Reconstruct the URL
     new_query_string = urlencode(query_params, doseq=True)
     new_url = urlunparse(parsed_url._replace(query=new_query_string))
-
-    return redirect(new_url)
+    
+    context = {
+        'module': module,
+        'iframe_url': new_url,
+        'state_data': json.dumps(state_data) if state_data else None,
+        'is_instructor': is_instructor
+    }
+    
+    return render(request, 'courses/module_frame.html', context)
 
 @csrf_exempt
 def log_lti_response(request):
     """
     Logs the response received from the LTI tool iframe.
+    Handles both LTI 1.1 and 1.3 responses.
     """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             logger.info("LTI Response Data: %s", data)
-
-            # Optional: Save data to the database
-            # Example:
-            # LTIResult.objects.create(
-            #     user=request.user,
-            #     module_id=module_id,
-            #     result=data['result']
-            # )
+            
+            # Determine LTI version from response data
+            if 'id_token' in data:
+                # Handle LTI 1.3 specific response data
+                logger.info("Processing LTI 1.3 response")
+                # Add any LTI 1.3 specific processing here
+            else:
+                # Handle LTI 1.1 specific response data
+                logger.info("Processing LTI 1.1 response")
+                # Add any LTI 1.1 specific processing here
 
             return JsonResponse({'success': True, 'message': 'LTI response logged successfully'})
         except Exception as e:
@@ -346,41 +289,33 @@ def log_lti_response(request):
 @method_decorator(csrf_exempt, name='dispatch')
 class LTIOutcomesView(View):
     def post(self, request, *args, **kwargs):
+        """
+        Handles LTI outcomes for both 1.1 and 1.3 versions
+        """
         try:
-            # Parse XML payload
-            tree = ET.ElementTree(ET.fromstring(request.body))
-            root = tree.getroot()
+            # Check for LTI 1.3 AGS (Assignment and Grade Services)
+            if 'application/vnd.ims.lis.v2.lineitem+json' in request.headers.get('Accept', ''):
+                # Handle LTI 1.3 AGS request
+                score_data = json.loads(request.body)
+                StudentScore.objects.create(
+                    user=request.user,
+                    score=score_data.get('scoreGiven'),
+                    result_id=score_data.get('id')
+                )
+            else:
+                # Handle LTI 1.1 outcomes
+                tree = ET.ElementTree(ET.fromstring(request.body))
+                root = tree.getroot()
+                lis_result_sourcedid = root.find('.//lis_result_sourcedid').text
+                score = float(root.find('.//score').text)
+                
+                StudentScore.objects.create(
+                    user=request.user,
+                    lis_result_sourcedid=lis_result_sourcedid,
+                    score=score
+                )
 
-            # Extract necessary data
-            lis_result_sourcedid = root.find('.//lis_result_sourcedid').text
-            score = float(root.find('.//score').text)
-
-            # Log or save the score
-            StudentScore.objects.create(
-                user=request.user,
-                lis_result_sourcedid=lis_result_sourcedid,
-                score=score
-            )
-
-            # Return success response
-            response_xml = """<?xml version="1.0" encoding="UTF-8"?>
-            <imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
-                <imsx_POXHeader>
-                    <imsx_POXResponseHeaderInfo>
-                        <imsx_version>V1.0</imsx_version>
-                        <imsx_messageIdentifier>123456789</imsx_messageIdentifier>
-                        <imsx_statusInfo>
-                            <imsx_codeMajor>success</imsx_codeMajor>
-                            <imsx_severity>status</imsx_severity>
-                            <imsx_description>Score processed successfully</imsx_description>
-                        </imsx_statusInfo>
-                    </imsx_POXResponseHeaderInfo>
-                </imsx_POXHeader>
-                <imsx_POXBody>
-                    <replaceResultResponse/>
-                </imsx_POXBody>
-            </imsx_POXEnvelopeResponse>"""
-            return HttpResponse(response_xml, content_type='application/xml')
+            return HttpResponse(status=200)
         except Exception as e:
             logger.error(f"Error processing LTI Outcomes: {e}")
             return HttpResponse('Error processing LTI Outcomes', status=500)
@@ -408,24 +343,85 @@ class CaliperAnalyticsView(View):
             logger.error(f"Error processing Caliper Analytics: {e}")
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+@require_http_methods(["GET", "POST"])
 def enroll_with_code(request):
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        code = request.POST.get('code')
-        enrollment_code = EnrollmentCode.objects.filter(code=code, email=email).first()
-
-        if enrollment_code:
-            user, created = User.objects.get_or_create(email=email, defaults={'username': email, 'password': enrollment_code.code})
-            if created:
-                user.set_password(enrollment_code.code)
-                user.save()
-            login(request, user)
+    if request.method == "POST":
+        try:
+            email = request.POST.get('email')
+            code = request.POST.get('code')
+            
+            if not email or not code:
+                messages.error(request, 'Both email and code are required.')
+                return redirect('courses:enroll_with_code')
+            
+            # Find the enrollment code
+            try:
+                enrollment_code = EnrollmentCode.objects.get(email=email, code=code)
+            except EnrollmentCode.DoesNotExist:
+                messages.error(request, 'Invalid enrollment code or email.')
+                return redirect('courses:enroll_with_code')
+            
             course = enrollment_code.course
-            Enrollment.objects.get_or_create(student=user, course=course)
-            messages.success(request, f'You have been enrolled in {course.title}.')
+            
+            # Get or create user
+            user = User.objects.filter(email=email).first()
+            if not user:
+                # Create new user with email as username
+                username = email.split('@')[0]
+                base_username = username
+                counter = 1
+                # Ensure unique username
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+                
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=code  # Using enrollment code as initial password
+                )
+                user.is_student = True
+                user.save()
+            
+            # Check if already enrolled
+            if Enrollment.objects.filter(student=user, course=course).exists():
+                messages.warning(request, 'You are already enrolled in this course.')
+            else:
+                # Create enrollment and associated records
+                enrollment = Enrollment.objects.create(student=user, course=course)
+                
+                # Create CourseProgress
+                total_modules = Module.objects.filter(unit__course=course).count()
+                CourseProgress.objects.create(
+                    enrollment=enrollment,
+                    total_modules=total_modules
+                )
+                
+                # Create ModuleProgress records for each module
+                module_progress_list = []
+                for module in Module.objects.filter(unit__course=course):
+                    module_progress_list.append(
+                        ModuleProgress(
+                            user=user,
+                            module=module,
+                            enrollment=enrollment
+                        )
+                    )
+                ModuleProgress.objects.bulk_create(module_progress_list)
+                
+                messages.success(request, 'Successfully enrolled in the course!')
+            
+            # Log the user in
+            if not request.user.is_authenticated:
+                login(request, user)
+            
             return redirect('courses:course_detail', course_id=course.id)
-        else:
-            messages.error(request, 'Invalid enrollment code or email.')
+            
+        except Exception as e:
+            logger.error(f"Error in enrollment process: {str(e)}")
+            messages.error(request, 'An error occurred during enrollment. Please try again.')
+            return redirect('courses:enroll_with_code')
+    
     return render(request, 'courses/enroll_with_code.html')
 
 @require_POST
@@ -448,71 +444,97 @@ def create_enrollment_code(request, course_id):
             return JsonResponse({'success': False, 'error': 'All fields are required.'})
 
         course = get_object_or_404(Course, id=course_id)
-        EnrollmentCode.objects.create(code=code, email=email, course=course)
+        
+        # Check if user already exists
+        existing_user = User.objects.filter(email=email).first()
+        
+        # Check if user is already enrolled
+        if existing_user:
+            existing_enrollment = Enrollment.objects.filter(student=existing_user, course=course).exists()
+            if existing_enrollment:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'User is already enrolled in this course.',
+                    'status': 'already_enrolled'
+                })
 
-        user, created = User.objects.get_or_create(email=email, defaults={'username': email, 'password': code})
-        if created:
-            user.set_password(code)
+        # Create or get enrollment code
+        enrollment_code, created = EnrollmentCode.objects.get_or_create(
+            email=email,
+            course=course,
+            defaults={'code': code}
+        )
+
+        if not created:
+            return JsonResponse({
+                'success': False,
+                'error': 'An enrollment code already exists for this email.',
+                'status': 'code_exists',
+                'existing_code': enrollment_code.code
+            })
+
+        # Create or update user
+        if existing_user:
+            user = existing_user
+            status = 'existing_user'
+        else:
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=code
+            )
+            user.first_name = name.split()[0] if ' ' in name else name
+            user.last_name = name.split()[-1] if ' ' in name else ''
+            user.is_student = True
             user.save()
+            status = 'new_user'
 
-        # Create an enrollment for the user in the course
-        Enrollment.objects.get_or_create(student=user, course=course)
+        # Create enrollment
+        enrollment, created = Enrollment.objects.get_or_create(student=user, course=course)
 
-        logger.info("Enrollment code created successfully for email: %s", email)
-        return JsonResponse({'success': True})
+        return JsonResponse({
+            'success': True,
+            'status': status,
+            'message': 'Enrollment code created successfully.'
+        })
+
     except Exception as e:
         logger.error("Error creating enrollment code: %s", str(e))
         return JsonResponse({'success': False, 'error': str(e)})
 
 @csrf_exempt
-def update_module_progress(request):
+def update_module_progress(request, module_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    module = get_object_or_404(Module, id=module_id)
+    print(module)
+    print(module.unit)
+    print(module.unit.course)
+    course = module.unit.course
+    
+    # Don't update progress for instructors of this course
+    if course.instructors.filter(id=request.user.id).exists():
+        return JsonResponse({
+            'success': True,
+            'message': 'Progress not tracked for instructors'
+        })
+    
     try:
         data = json.loads(request.body)
-        logger.info("Received progress update data: %s", json.dumps(data, indent=2))
+        module_progress, created = ModuleProgress.get_or_create_progress(request.user, module)
+        module_progress.update_from_activity_attempt(data)
         
-        activity_data = data.get('data', [{}])[0]
-        activity_id = activity_data.get('activityId')
-        
-        logger.info("Processing activity %s", activity_id)
-        module = get_object_or_404(Module, id=activity_id)
-        
-        enrollment = get_object_or_404(Enrollment, 
-            student=request.user, 
-            course=module.unit.course
-        )
-        
-        module_progress, created = ModuleProgress.objects.get_or_create(
-            enrollment=enrollment,
-            module=module
-        )
-        
-        # Log the previous state if updating
-        if not created:
-            logger.info("Previous progress state: progress=%s, score=%s, complete=%s",
-                       module_progress.progress,
-                       module_progress.score,
-                       module_progress.is_complete)
-        
-        module_progress.update_from_activity_attempt(activity_data)
-        logger.info("Updated module progress: progress=%s, score=%s, complete=%s",
-                   module_progress.progress,
-                   module_progress.score,
-                   module_progress.is_complete)
-        
-        course_progress = CourseProgress.get_or_create_progress(enrollment)
+        # Get updated course progress
+        course_progress = CourseProgress.objects.get(enrollment__student=request.user, enrollment__course=course)
         course_progress.update_progress()
-        logger.info("Updated course progress: overall_progress=%s, overall_score=%s, completed=%s/%s",
-                   course_progress.overall_progress,
-                   course_progress.overall_score,
-                   course_progress.modules_completed,
-                   course_progress.total_modules)
         
         return JsonResponse({
             'success': True,
             'module_progress': {
                 'progress': module_progress.progress,
-                'score': module_progress.score,
-                'is_complete': module_progress.is_complete
+                'is_complete': module_progress.is_complete,
+                'score': module_progress.score
             },
             'course_progress': {
                 'overall_progress': course_progress.overall_progress,
@@ -520,8 +542,7 @@ def update_module_progress(request):
                 'modules_completed': course_progress.modules_completed
             }
         })
-        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        logger.error(f"Error updating progress: {str(e)}")
-        logger.error(traceback.format_exc())
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)

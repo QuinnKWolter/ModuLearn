@@ -14,9 +14,18 @@ from pylti1p3.contrib.django import (
 )
 from pylti1p3.tool_config import ToolConfDict
 import json
+from courses.models import Course, Module
+import logging
+from modulearn.settings import get_primary_domain
 
-def lti_jwks(request):
-    # Obtain the first available public key file from the LTI configuration
+logger = logging.getLogger(__name__)
+
+# ----------------------
+# LTI 1.3 Views
+# ----------------------
+
+def lti13_jwks(request):
+    """JWKS endpoint for LTI 1.3"""
     platform_config = settings.LTI_CONFIG['https://saltire.lti.app/platform']
     with open(platform_config['public_key_file'], 'rb') as f:
         public_key_pem = f.read()
@@ -26,141 +35,253 @@ def lti_jwks(request):
     return JsonResponse({'keys': [public_key_dict]})
 
 @csrf_exempt
-def lti_launch(request):
-    print("Received POST data at lti_launch:", request.POST)
-    tool_conf = ToolConfDict(settings.LTI_CONFIG)
+def lti13_login(request):
+    """OIDC login endpoint for LTI 1.3"""
+    logger.info("LTI 1.3 login request received")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"GET parameters: {request.GET}")
+    logger.info(f"POST parameters: {request.POST}")
 
-    # Initialize storage instance
+    # Add state parameter validation and storage
+    state = request.GET.get('state')
+    nonce = request.GET.get('nonce')
+
+    if not state:
+        return HttpResponse("Missing 'state' parameter in OIDC login request.", status=400)
+    
+    # Store state and nonce in session
+    request.session['oidc_state'] = state
+    request.session['oidc_nonce'] = nonce
+    request.session.save()
+
+    tool_conf = ToolConfDict(settings.LTI_CONFIG)
     launch_data_storage = DjangoCacheDataStorage()
 
-    # Pass storage instance to Message Launch
+    oidc_login = DjangoOIDCLogin(
+        request,
+        tool_conf,
+        launch_data_storage=launch_data_storage
+    )
+    
+    launch_url = request.build_absolute_uri(reverse('lti:launch')).replace("http://", "https://")
+    logger.info(f"Login Redirect URI: {launch_url}")
+
+    response = oidc_login.redirect(launch_url)
+    return response
+
+def handle_lti13_launch(request):
+    """Handle LTI 1.3 launch requests"""
+    logger.info("Processing LTI 1.3 launch")
+    
+    # Validate state parameter
+    state = request.POST.get('state')
+    if not state:
+        return HttpResponse("Missing 'state' parameter in LTI launch request.", status=400)
+
+    stored_state = request.session.get('oidc_state')
+    if state != stored_state:
+        return HttpResponse("Invalid 'state' parameter.", status=400)
+
+    tool_conf = ToolConfDict(settings.LTI_CONFIG)
+    launch_data_storage = DjangoCacheDataStorage()
+
     message_launch = DjangoMessageLaunch(
         request,
         tool_conf,
         launch_data_storage=launch_data_storage
     )
 
-    test_session_value = request.session.get('test_session_key')
-    print("Test session key on launch:", test_session_value)
-
-    # Log the session key
-    print("Session ID on launch:", request.session.session_key)
-
-    # Decode the id_token to extract the nonce
-    id_token = request.POST.get('id_token')
-    if id_token:
-        decoded_id_token = jwt.decode(id_token, options={"verify_signature": False})
-        nonce = decoded_id_token.get('nonce')
-        print("Nonce from id_token:", nonce)
-    else:
-        nonce = None
-        print("No id_token found in POST data.")
-
-    # Check if the nonce exists in the cache (Django cache)
-    if nonce:
-        cache_key = f'lti1p3-nonce-{nonce}'
-        from django.core.cache import cache
-        cache_nonce_value = cache.get(cache_key)
-        print(f"Cache nonce value for {cache_key}:", cache_nonce_value)
-    else:
-        print("Nonce is None.")
-
     try:
         message_launch = message_launch.validate()
     except Exception as e:
-        print(f"Nonce validation error: {e}")
-        return HttpResponse(f"Nonce validation error: {e}", status=400)
+        logger.error(f"LTI 1.3 validation error: {e}")
+        return HttpResponse(f"Launch validation error: {e}", status=400)
 
-    # Get launch data
     launch_data = message_launch.get_launch_data()
-    print("Launch Data:", launch_data)
-    
-    # Authenticate the user
-    sub = launch_data.get('sub')
-    if not sub:
-        return HttpResponse('Missing "sub" in launch data.', status=400)
+    return process_launch_data(request, launch_data)
 
-    # Get or create user with basic info
-    user, created = User.objects.get_or_create(username=sub)
-    
-    # Update user profile information if available
-    if launch_data.get('email'):
-        user.email = launch_data['email']
-    if launch_data.get('given_name'):
-        user.first_name = launch_data['given_name']
-    if launch_data.get('family_name'):
-        user.last_name = launch_data['family_name']
-    
-    # Set user role based on LTI roles
-    roles = launch_data.get('https://purl.imsglobal.org/spec/lti/claim/roles', [])
-    user.is_instructor = any('Instructor' in role for role in roles)
-    user.is_student = any('Learner' in role for role in roles) or not user.is_instructor
-    
-    # Store LTI data with the user
-    user.lti_data = launch_data
-    user.save()
-    
-    login(request, user)
+# ----------------------
+# LTI 1.1 Views
+# ----------------------
 
-    # Redirect to the desired page
-    return redirect('courses:course_list')
+def handle_lti11_launch(request):
+    """Handle LTI 1.1 launch requests"""
+    logger.info("Processing LTI 1.1 launch")
+    
+    # Extract launch parameters
+    launch_data = {
+        'user_id': request.POST.get('user_id'),
+        'roles': request.POST.get('roles', '').split(','),
+        'context_id': request.POST.get('context_id'),
+        'context_title': request.POST.get('context_title', 'Untitled Course'),
+        'resource_link_id': request.POST.get('resource_link_id'),
+        'resource_link_title': request.POST.get('resource_link_title'),
+        'lis_person_contact_email_primary': request.POST.get('lis_person_contact_email_primary'),
+        'lis_person_name_given': request.POST.get('lis_person_name_given'),
+        'lis_person_name_family': request.POST.get('lis_person_name_family'),
+    }
+    
+    return process_launch_data(request, launch_data)
 
-@csrf_exempt
-def lti_login(request):
-    print("Received data at lti_login:")
-    print("Request method at lti_login:", request.method)
-    print("GET parameters:", request.GET)
-    print("POST parameters:", request.POST)
-    tool_conf = ToolConfDict(settings.LTI_CONFIG)
+# ----------------------
+# Shared Launch Processing
+# ----------------------
 
-    # Initialize storage instance
-    launch_data_storage = DjangoCacheDataStorage()
-
-    # Pass storage instance to OIDC login
-    oidc_login = DjangoOIDCLogin(
-        request,
-        tool_conf,
-        launch_data_storage=launch_data_storage
+def process_launch_data(request, launch_data):
+    """Process launch data common to both LTI 1.1 and 1.3"""
+    # Extract user identifiers with fallbacks
+    user_id = (
+        launch_data.get('sub') or  # LTI 1.3 user ID
+        launch_data.get('user_id') or  # LTI 1.1 user ID
+        launch_data.get('custom_canvas_user_id')  # Canvas-specific user ID
     )
-    launch_url = request.build_absolute_uri(reverse('lti:launch')).replace("http://", "https://")
-    print("Login Redirect URI (launch_url):", launch_url)
+    
+    email = (
+        launch_data.get('email') or  # LTI 1.3 email
+        launch_data.get('lis_person_contact_email_primary') or  # LTI 1.1 email
+        f"{user_id}@canvas.instructure.com"  # Fallback email
+    )
 
-    # Set a test session variable
-    request.session['test_session_key'] = 'session_active'
-    request.session.save()  # Save the session explicitly
+    if not user_id:
+        logger.error("No user identifier found in launch data")
+        return HttpResponse('Missing user identifier in launch data.', status=400)
 
-    print("Session ID on login:", request.session.session_key)
+    # Get or create user with email as username for better identification
+    user, created = User.objects.get_or_create(
+        username=email,  # Use email as username for better identification
+        defaults={
+            'email': email,
+            'first_name': launch_data.get('given_name') or launch_data.get('lis_person_name_given', ''),
+            'last_name': launch_data.get('family_name') or launch_data.get('lis_person_name_family', ''),
+            'canvas_user_id': user_id  # Store original Canvas user ID
+        }
+    )
 
-    response = oidc_login.redirect(launch_url)
+    # Update user information if it has changed
+    update_fields = []
+    if user.email != email:
+        user.email = email
+        update_fields.append('email')
+    if launch_data.get('given_name') and user.first_name != launch_data['given_name']:
+        user.first_name = launch_data['given_name']
+        update_fields.append('first_name')
+    if launch_data.get('family_name') and user.last_name != launch_data['family_name']:
+        user.last_name = launch_data['family_name']
+        update_fields.append('last_name')
 
+    # Set user roles
+    roles = launch_data.get('roles', [])
+    if isinstance(roles, str):
+        roles = roles.split(',')
+    
+    user.is_instructor = any(role for role in roles if 'Instructor' in role or 'TeachingAssistant' in role)
+    user.is_student = any(role for role in roles if 'Learner' in role or 'Student' in role) or not user.is_instructor
+    update_fields.extend(['is_instructor', 'is_student'])
+
+    if update_fields:
+        user.save(update_fields=update_fields)
+
+    # Store LTI session data
+    request.session['lti_launch_data'] = launch_data
+    request.session['canvas_user_id'] = user_id
+    request.session['is_lti_launch'] = True
+    
+    # Log the user in
+    login(request, user)
+    logger.info(f"Successfully logged in user: {user.email} (Canvas ID: {user_id})")
+
+    # Handle course and module creation/routing
+    context_id = (launch_data.get('context', {}) or {}).get('id') or launch_data.get('context_id')
+    context_title = (launch_data.get('context', {}) or {}).get('title') or launch_data.get('context_title', 'Untitled Course')
+    
+    course, created = Course.objects.get_or_create(
+        id=context_id,
+        defaults={
+            'title': context_title,
+            'description': (launch_data.get('context', {}) or {}).get('label', '')
+        }
+    )
+
+    # Handle resource link if present
+    resource_link = (
+        launch_data.get('https://purl.imsglobal.org/spec/lti/claim/resource_link', {}) or 
+        {'id': launch_data.get('resource_link_id')}
+    )
+    
+    if resource_link and resource_link.get('id'):
+        try:
+            # Try to find module by resource_link_id first
+            module = Module.objects.filter(resource_link_id=resource_link['id']).first()
+            
+            if module:
+                target_url = reverse('courses:module_render', kwargs={'module_id': module.id})
+            else:
+                # If no module found, redirect to course view
+                logger.warning(f"No module found for resource_link_id: {resource_link['id']}")
+                target_url = reverse('courses:course_detail', kwargs={'course_id': course.id})
+        except Exception as e:
+            logger.error(f"Error finding module: {str(e)}")
+            target_url = reverse('courses:course_detail', kwargs={'course_id': course.id})
+    else:
+        target_url = reverse('courses:course_detail', kwargs={'course_id': course.id})
+
+    request.session['lti_target_url'] = target_url
+    response = redirect(target_url)
+    
     return response
 
+# ----------------------
+# Main Launch Endpoint
+# ----------------------
+
+@csrf_exempt
+def lti_launch(request):
+    """Main LTI launch endpoint supporting both 1.1 and 1.3"""
+    logger.info("LTI launch request received")
+    logger.info(f"POST data: {request.POST}")
+
+    if 'id_token' in request.POST:
+        return handle_lti13_launch(request)
+    elif 'oauth_consumer_key' in request.POST:
+        return handle_lti11_launch(request)
+    else:
+        return HttpResponse("Invalid LTI launch request.", status=400)
+
+# ----------------------
+# Configuration Views
+# ----------------------
+
 def lti_config(request):
-    # Build the tool configuration
-    issuer = settings.LTI_CONFIG['issuer']
-    oidc_login_url = request.build_absolute_uri(reverse('lti:login'))
-    launch_url = request.build_absolute_uri(reverse('lti:launch'))
-    jwks_url = request.build_absolute_uri(reverse('lti:jwks'))
-
-    # Print each of the URLs for verification
-    print("OIDC Login URL:", oidc_login_url)
-    print("Launch URL:", launch_url)
-    print("JWKS URL:", jwks_url)
-
-    tool_config = {
-        "title": "ModuLearn",
-        "description": "An LTI 1.3 tool built with Django.",
-        "scopes": [
-            "https://purl.imsglobal.org/spec/lti-ags/scope/score",
-            "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
-            # Add other scopes as needed
-        ],
-        "extensions": [],
-        "public_jwk_url": jwks_url,
-        "custom_fields": {},
-        "target_link_uri": launch_url,
-        "oidc_initiation_url": oidc_login_url,
-        "custom_parameters": {},
-    }
-
-    return JsonResponse(tool_config)
+    """XML configuration endpoint"""
+    logger.info(f"LTI Config request received from: {request.META.get('HTTP_REFERER', 'Unknown')}")
+    
+    domain = get_primary_domain()
+    launch_url = f"{domain}/lti/launch/"
+    
+    xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <cartridge_basiclti_link 
+        xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0"
+        xmlns:blti="http://www.imsglobal.org/xsd/imsbasiclti_v1p0"
+        xmlns:lticm="http://www.imsglobal.org/xsd/imslticm_v1p0"
+        xmlns:lticp="http://www.imsglobal.org/xsd/imslticp_v1p0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.imsglobal.org/xsd/imslticc_v1p0 http://www.imsglobal.org/xsd/imslticc_v1p0.xsd">
+        <blti:title>{settings.LTI_TOOL_CONFIG['title']}</blti:title>
+        <blti:description>{settings.LTI_TOOL_CONFIG['description']}</blti:description>
+        <blti:launch_url>{launch_url}</blti:launch_url>
+        <blti:secure_launch_url>{launch_url}</blti:secure_launch_url>
+        <blti:icon>{domain}/static/img/logo_128.png</blti:icon>
+        <blti:custom>
+            <lticm:property name="canvas_course_id">$Canvas.course.id</lticm:property>
+            <lticm:property name="canvas_user_id">$Canvas.user.id</lticm:property>
+        </blti:custom>
+        <blti:extensions platform="canvas.instructure.com">
+            <lticm:property name="privacy_level">public</lticm:property>
+            <lticm:property name="selection_height">800</lticm:property>
+            <lticm:property name="selection_width">1200</lticm:property>
+        </blti:extensions>
+    </cartridge_basiclti_link>
+    """
+    
+    logger.info(f"Returning XML config: {xml_content}")
+    return HttpResponse(xml_content, content_type='application/xml')

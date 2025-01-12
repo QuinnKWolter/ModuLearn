@@ -173,19 +173,165 @@
     })
     .then(response => response.json())
     .then(data => {
-      if (data.success) {
-        alert('Enrollment code created successfully.');
-        // Optionally, close the modal
-        var modal = bootstrap.Modal.getInstance(document.getElementById('enrollmentModal'));
-        modal.hide();
-      } else {
-        alert('Error: ' + data.error);
-      }
+        if (data.success) {
+            let message;
+            switch (data.status) {
+                case 'new_user':
+                    message = 'New user created and enrolled successfully.';
+                    break;
+                case 'existing_user':
+                    message = 'Existing user enrolled successfully.';
+                    break;
+                default:
+                    message = 'Enrollment code created successfully.';
+            }
+            
+            // Add new row to enrollment table
+            const table = document.querySelector('#studentList table tbody');
+            const newRow = table.insertRow();
+            newRow.innerHTML = `
+                <td>${name}</td>
+                <td>${email}</td>
+                <td>0/{{ course.total_modules }}</td>
+                <td>0.00%</td>
+                <td>${code}</td>
+            `;
+            
+            // Clear form and show success message
+            event.target.reset();
+            alert(message);
+            
+            // Close modal if it exists
+            const modal = bootstrap.Modal.getInstance(document.getElementById('enrollmentModal'));
+            if (modal) modal.hide();
+            
+        } else {
+            switch (data.status) {
+                case 'already_enrolled':
+                    alert('This user is already enrolled in the course.');
+                    break;
+                case 'code_exists':
+                    alert(`An enrollment code already exists for this email. Existing code: ${data.existing_code}`);
+                    break;
+                default:
+                    alert('Error: ' + data.error);
+            }
+        }
     })
     .catch(error => {
-      console.error('Error:', error);
-      alert('An error occurred. Please try again.');
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
     });
   });
 </script>
+
+{% if is_instructor %}
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3>Instructor Controls</h3>
+    </div>
+    <div class="card-body">
+      <!-- Enrollment Management Button -->
+      <button class="btn btn-warning mb-3" data-bs-toggle="collapse" data-bs-target="#studentList" aria-expanded="false" aria-controls="studentList">
+        <i class="bi bi-people"></i> Manage Students
+      </button>
+
+      <!-- Student List Collapsible Section -->
+      <div class="collapse" id="studentList">
+        <table class="table table-hover mt-3">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Progress</th>
+              <th>Grade</th>
+              <th>Enrollment Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for enrollment in course.enrollment_set.all %}
+            <tr>
+              <td>{{ enrollment.student.username }}</td>
+              <td>{{ enrollment.student.email }}</td>
+              <td>{{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}</td>
+              <td>{{ enrollment.course_progress.overall_score|floatformat:2 }}%</td>
+              <td>{{ enrollment.enrollmentcode_set.first.code|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Add New Enrollment Form -->
+        <form id="addEnrollmentForm" class="mt-4">
+          <h4>Add New Student</h4>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="enrollmentName" class="form-label">Name</label>
+                <input type="text" class="form-control" id="enrollmentName" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="enrollmentEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="enrollmentEmail" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="enrollmentCode" class="form-label">Code</label>
+                <input type="text" class="form-control" id="enrollmentCode" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Add Student</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('addEnrollmentForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('enrollmentName').value.trim();
+      const email = document.getElementById('enrollmentEmail').value.trim();
+      const code = document.getElementById('enrollmentCode').value.trim();
+
+      fetch('{% url "courses:create_enrollment_code" course.id %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ name, email, code })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Add new row to table
+          const table = document.querySelector('#studentList table tbody');
+          const newRow = table.insertRow();
+          newRow.innerHTML = `
+            <td>${name}</td>
+            <td>${email}</td>
+            <td>0/{{ course.total_modules }}</td>
+            <td>0.00%</td>
+            <td>${code}</td>
+          `;
+          
+          // Clear form
+          event.target.reset();
+          alert('Student added successfully!');
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+      });
+    });
+  </script>
+{% endif %}
 {% endblock %}

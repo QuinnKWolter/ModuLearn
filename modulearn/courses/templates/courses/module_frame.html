@@ -1,27 +1,17 @@
-{% extends 'base.html' %}
-
-{% block title %}{{ module.title }} - ModuLearn{% endblock %}
+{% extends 'content_base.html' %}
 
 {% block content %}
-<div class="module-content">
-  <h1>{{ module.title }}</h1>
-  <p>{{ module.description }}</p>
-
-  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-dark text-light mb-3">Return to Course</a>
-
+<div id="module-frame-container">
   {{ state_data|json_script:"state-data" }}
   
-  <iframe id="module-iframe" 
-          src="{% url 'courses:launch_iframe_module' module.id %}" 
+  <iframe id="content-iframe" 
+          src="{{ iframe_url }}" 
           width="100%" 
           height="800px" 
           frameborder="0" 
-          allowfullscreen 
-          style="background-color: white; border: 2px solid #ccc;">
+          allowfullscreen>
     Your browser doesn't support iframes.
   </iframe>
-
-  <a href="{% url 'courses:course_detail' module.unit.course.id %}" class="btn btn-dark mt-3">Return to Course</a>
 </div>
 
 <script>
@@ -44,19 +34,31 @@
     if (event.data.subject === 'SPLICE.getState') {
       // Get the stored state from the script tag
       const stateScript = document.getElementById('state-data');
-      const storedState = stateScript ? JSON.parse(stateScript.textContent) : null;
+      let storedState = stateScript ? JSON.parse(stateScript.textContent) : null;
       
       console.log("Retrieved stored state:", storedState);
       
       if (storedState) {
+        // Parse the string into an object if it's still a string
+        if (typeof storedState === 'string') {
+          storedState = JSON.parse(storedState);
+        }
+        
+        // Create the properly structured state object
         const stateMessage = {
           subject: 'SPLICE.getState.response',
           message_id: event.data.message_id,
-          state: storedState  // Already parsed, no need for JSON.parse
+          state: {
+            studentWork: Object.entries(storedState.work).map(([filename, content]) => ({
+              filename,
+              content: content[0]  // Since content is an array with one string
+            })),
+            scoreText: storedState.scoreText
+          }
         };
         
         console.log("Sending stored state:", stateMessage);
-        document.getElementById('module-iframe').contentWindow.postMessage(stateMessage, event.origin);
+        document.getElementById('content-iframe').contentWindow.postMessage(stateMessage, event.origin);
       } else {
         console.log("No stored state found");
       }
@@ -93,10 +95,7 @@
           score: event.data.score * 100, // Convert 0-1 to percentage
           success: event.data.score >= 0.7,
           progress: progress,
-          response: JSON.stringify({
-            work: event.data.state.work,
-            scoreText: event.data.state.scoreText
-          })
+          response: event.data.state  // Changed: Don't stringify the state again
         }]
       };
 
@@ -110,7 +109,7 @@
       console.log('CSRF Token:', '{{ csrf_token }}');
       console.groupEnd();
 
-      fetch('{% url "courses:update_module_progress" %}', {
+      fetch('{% url "courses:update_module_progress" module.id %}', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,4 +149,5 @@
   });
 </script>
 
+{% csrf_token %}
 {% endblock %}

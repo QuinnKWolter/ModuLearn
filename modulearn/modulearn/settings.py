@@ -17,15 +17,26 @@ SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Helper function to handle ngrok URLs in development
+def get_ngrok_urls():
+    if DEBUG:  # Only allow ngrok in development
+        from urllib.request import urlopen
+        try:
+            # Get ngrok tunnels info
+            ngrok_tunnels = urlopen('http://127.0.0.1:4040/api/tunnels').read()
+            import json
+            tunnels = json.loads(ngrok_tunnels)['tunnels']
+            return [tunnel['public_url'].replace('https://', '').replace('http://', '') 
+                   for tunnel in tunnels]
+        except:
+            return []
+    return []
+
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '34eb-173-75-1-223.ngrok-free.app',
-    'dd84-173-75-130-111.ngrok-free.app',
-    '880c-173-75-130-111.ngrok-free.app',
-    '1d4b-72-77-2-33.ngrok-free.app',
-    'dc20-173-75-130-111.ngrok-free.app',
-    'saltire.lti.app'
+    'saltire.lti.app',
+    *get_ngrok_urls()  # Dynamically add ngrok URLs
 ]
 
 # Application definition
@@ -59,7 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'lti_tool.middleware.LtiLaunchMiddleware'
+    'lti.middleware.LTIAuthMiddleware',
 ]
 
 ROOT_URLCONF = 'modulearn.urls'
@@ -158,8 +169,9 @@ OAUTH2_PROVIDER = {
 
 # CORS Headers Configuration
 CORS_ALLOWED_ORIGINS = [
-    'https://your-canvas-domain.com',  # Add Canvas domain for LTI integration
-    'https://saltire.lti.app'
+    'https://canvas.instructure.com',
+    'https://saltire.lti.app',
+    *[f'https://{host}' for host in get_ngrok_urls()]  # Add ngrok URLs with https://
 ]
 
 # Security Settings
@@ -197,6 +209,11 @@ LOGGING = {
         #     'level': 'DEBUG',
         #     'propagate': True,
         # },
+        'lti': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        }
     },
 }
 
@@ -235,8 +252,10 @@ CACHES = {
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # Allow session cookies to be sent in cross-site requests
-SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_SECURE = True  # Since you're using HTTPS via NGROK
+SESSION_COOKIE_SAMESITE = 'None'  # Required for iframe embedding
+SESSION_COOKIE_SECURE = True      # Required when SameSite is None
+CSRF_COOKIE_SAMESITE = 'None'    # Required for iframe embedding
+CSRF_COOKIE_SECURE = True        # Required when SameSite is None
 
 # Allow CSRF cookies in cross-site requests (if needed)
 CSRF_COOKIE_SAMESITE = None
@@ -253,3 +272,43 @@ LTI_CONSUMER_CONFIG = {
     'private_key_file': './modulearn/private.key',
     # Add any other necessary configuration specific to the external tool
 }
+
+def get_primary_domain():
+    """Returns the primary domain to use for the application"""
+    if DEBUG:
+        # Try to get ngrok URL first
+        ngrok_urls = get_ngrok_urls()
+        if ngrok_urls:
+            domain = f"https://{ngrok_urls[0]}"
+            print(f"Using ngrok domain: {domain}")  # Debug print
+            return domain
+        print("No ngrok URLs found, using localhost")  # Debug print
+        return "http://localhost:8000"  # Fallback to localhost
+    return "https://modulearn.com"  # Production domain PLACEHOLDER TODO
+
+LTI_TOOL_CONFIG = {
+    'title': 'ModuLearn',
+    'description': 'A multi-protocol eLearning module bundling and delivery platform',
+    'launch_url': f'{get_primary_domain()}/lti/launch/',
+    'custom_fields': {
+        'canvas_course_id': '$Canvas.course.id',
+        'canvas_user_id': '$Canvas.user.id'
+    },
+    'extensions': [
+        {
+            'platform': 'canvas.instructure.com',
+            'settings': {
+                'text': 'ModuLearn',
+                'icon_url': f'{get_primary_domain()}/static/img/logo_128.png',
+                'selection_height': 800,
+                'selection_width': 1200,
+                'privacy_level': 'public'
+            }
+        }
+    ]
+}
+
+# Add CSRF trusted origins for your ngrok domain
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app',
+]
