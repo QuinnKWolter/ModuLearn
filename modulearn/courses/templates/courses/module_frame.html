@@ -48,13 +48,7 @@
         const stateMessage = {
           subject: 'SPLICE.getState.response',
           message_id: event.data.message_id,
-          state: {
-            studentWork: Object.entries(storedState.work).map(([filename, content]) => ({
-              filename,
-              content: content[0]  // Since content is an array with one string
-            })),
-            scoreText: storedState.scoreText
-          }
+          state: storedState  // Just pass through the original structure
         };
         
         console.log("Sending stored state:", stateMessage);
