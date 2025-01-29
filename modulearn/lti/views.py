@@ -153,33 +153,18 @@ def process_launch_data(request, launch_data):
             'email': email,
             'first_name': launch_data.get('given_name') or launch_data.get('lis_person_name_given', ''),
             'last_name': launch_data.get('family_name') or launch_data.get('lis_person_name_family', ''),
-            'canvas_user_id': user_id  # Store original Canvas user ID
+            'canvas_user_id': user_id
         }
     )
 
-    # Update user information if it has changed
-    update_fields = []
-    if user.email != email:
-        user.email = email
-        update_fields.append('email')
-    if launch_data.get('given_name') and user.first_name != launch_data['given_name']:
-        user.first_name = launch_data['given_name']
-        update_fields.append('first_name')
-    if launch_data.get('family_name') and user.last_name != launch_data['family_name']:
-        user.last_name = launch_data['family_name']
-        update_fields.append('last_name')
-
-    # Set user roles
+    # Update user roles
     roles = launch_data.get('roles', [])
     if isinstance(roles, str):
         roles = roles.split(',')
     
     user.is_instructor = any(role for role in roles if 'Instructor' in role or 'TeachingAssistant' in role)
     user.is_student = any(role for role in roles if 'Learner' in role or 'Student' in role) or not user.is_instructor
-    update_fields.extend(['is_instructor', 'is_student'])
-
-    if update_fields:
-        user.save(update_fields=update_fields)
+    user.save(update_fields=['is_instructor', 'is_student'])
 
     # Store LTI session data
     request.session['lti_launch_data'] = launch_data
@@ -190,45 +175,8 @@ def process_launch_data(request, launch_data):
     login(request, user)
     logger.info(f"Successfully logged in user: {user.email} (Canvas ID: {user_id})")
 
-    # Handle course and module creation/routing
-    context_id = (launch_data.get('context', {}) or {}).get('id') or launch_data.get('context_id')
-    context_title = (launch_data.get('context', {}) or {}).get('title') or launch_data.get('context_title', 'Untitled Course')
-    
-    course, created = Course.objects.get_or_create(
-        id=context_id,
-        defaults={
-            'title': context_title,
-            'description': (launch_data.get('context', {}) or {}).get('label', '')
-        }
-    )
-
-    # Handle resource link if present
-    resource_link = (
-        launch_data.get('https://purl.imsglobal.org/spec/lti/claim/resource_link', {}) or 
-        {'id': launch_data.get('resource_link_id')}
-    )
-    
-    if resource_link and resource_link.get('id'):
-        try:
-            # Try to find module by resource_link_id first
-            module = Module.objects.filter(resource_link_id=resource_link['id']).first()
-            
-            if module:
-                target_url = reverse('courses:module_render', kwargs={'module_id': module.id})
-            else:
-                # If no module found, redirect to course view
-                logger.warning(f"No module found for resource_link_id: {resource_link['id']}")
-                target_url = reverse('courses:course_detail', kwargs={'course_id': course.id})
-        except Exception as e:
-            logger.error(f"Error finding module: {str(e)}")
-            target_url = reverse('courses:course_detail', kwargs={'course_id': course.id})
-    else:
-        target_url = reverse('courses:course_detail', kwargs={'course_id': course.id})
-
-    request.session['lti_target_url'] = target_url
-    response = redirect(target_url)
-    
-    return response
+    # Redirect to home page
+    return redirect('main:home')
 
 # ----------------------
 # Main Launch Endpoint

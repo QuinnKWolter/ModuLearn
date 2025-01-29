@@ -82,8 +82,7 @@ def create_course_from_json(course_data, current_user):
                     title=activity['name'],
                     defaults={
                         'description': f"Provider: {activity['provider_id']}, Author: {activity['author_id']}",
-                        'module_type': 'external_iframe',  # Assuming all are external iframes
-                        'iframe_url': activity['url']
+                        'content_url': activity['url']
                     }
                 )
                 logger.debug(f"Module {'created' if created else 'retrieved'}: {module}")

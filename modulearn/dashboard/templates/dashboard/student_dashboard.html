@@ -13,7 +13,10 @@
         <div class="col-md-6 mb-4">
           <div class="card h-100">
             <div class="card-body">
-              <h3 class="card-title">{{ enrollment.course.title }}</h3>
+              <h3 class="card-title">{{ enrollment.course_instance.course.title }}</h3>
+              {% if enrollment.course_instance.group_name %}
+                <h6 class="card-subtitle mb-2 text-muted">{{ enrollment.course_instance.group_name }}</h6>
+              {% endif %}
               
               <!-- Progress Bar -->
               <div class="progress mb-3" style="height: 20px;">
@@ -28,35 +31,18 @@
               </div>
               
               <!-- Course Stats -->
-              <div class="row text-center mb-3">
+              <div class="row mb-3">
                 <div class="col">
-                  <h5>Overall Score</h5>
-                  <span class="h4 {% if enrollment.course_progress.overall_score >= 0.7 %}text-success
-                                 {% elif enrollment.course_progress.overall_score >= 0.4 %}text-warning
-                                 {% else %}text-danger{% endif %}">
-                    {{ enrollment.course_progress.overall_score|floatformat:1 }}%
-                  </span>
+                  <small class="text-muted">Overall Score</small>
+                  <h4>{{ enrollment.course_progress.overall_score|floatformat:1 }}%</h4>
                 </div>
                 <div class="col">
-                  <h5>Modules Completed</h5>
-                  <span class="h4">{{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}</span>
+                  <small class="text-muted">Modules Completed</small>
+                  <h4>{{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}</h4>
                 </div>
               </div>
               
-              <!-- Actions -->
-              <div class="d-flex justify-content-between align-items-center">
-                <a href="{% url 'courses:course_detail' enrollment.course.id %}" class="btn btn-primary">
-                  {% if enrollment.course_progress.overall_progress > 0 %}
-                    Continue Course
-                  {% else %}
-                    Begin Course
-                  {% endif %}
-                </a>
-                <form method="post" action="{% url 'courses:unenroll' enrollment.course.id %}" class="d-inline">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-danger">Unenroll</button>
-                </form>
-              </div>
+              <a href="{% url 'courses:course_detail' enrollment.course_instance.id %}" class="btn btn-primary">Go to Course</a>
             </div>
           </div>
         </div>

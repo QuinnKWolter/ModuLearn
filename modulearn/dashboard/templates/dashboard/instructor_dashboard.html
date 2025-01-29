@@ -13,32 +13,71 @@
   </button>
 </div>
 
+<!-- Courses Section -->
 <h2 class="h4 mb-3">Your Courses</h2>
 {% if courses %}
-  <div class="accordion" id="courseAccordion">
+  <div class="row mt-3">
     {% for course in courses %}
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">{{ course.title }}</h5>
+            <p class="card-text">{{ course.description|truncatewords:30 }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <button class="btn btn-success new-session-btn" data-course-id="{{ course.id }}">
+                <i class="bi bi-plus-circle"></i> New Session
+              </button>
+              <button class="btn btn-danger delete-course-btn" data-course-id="{{ course.id }}">
+                <i class="bi bi-trash"></i> Delete Course
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>You haven't created any courses yet.</p>
+{% endif %}
+
+<!-- Course Instances Section -->
+<h2 class="h4 mt-5 mb-3">Active Course Sessions</h2>
+{% if course_instances %}
+  <div class="accordion" id="courseAccordion">
+    {% for course_instance in course_instances %}
       <div class="accordion-item mb-3">
-        <h2 class="accordion-header" id="heading{{ course.id }}">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ course.id }}" aria-expanded="false" aria-controls="collapse{{ course.id }}">
-            {{ course.title }}
+        <h2 class="accordion-header" id="heading{{ course_instance.id }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                  data-bs-target="#collapse{{ course_instance.id }}" aria-expanded="false" 
+                  aria-controls="collapse{{ course_instance.id }}">
+            {{ course_instance.course.title }} - {{ course_instance.group_name }}
           </button>
         </h2>
-        <div id="collapse{{ course.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ course.id }}" data-bs-parent="#courseAccordion">
+        <div id="collapse{{ course_instance.id }}" class="accordion-collapse collapse" 
+             aria-labelledby="heading{{ course_instance.id }}" data-bs-parent="#courseAccordion">
           <div class="accordion-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-info">
-                <i class="bi bi-info-circle"></i> Course Details
-              </a>
-              <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#manageEnrollmentModal-{{ course.id }}">
+              <div>
+                <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-info me-2">
+                  <i class="bi bi-info-circle"></i> Course Details
+                </a>
+              </div>
+              <button class="btn btn-warning" 
+                      type="button"
+                      data-bs-toggle="modal" 
+                      data-bs-target="#manageEnrollmentModal"
+                      data-course-instance-id="{{ course_instance.id }}"
+                      data-course-title="{{ course_instance.course.title }}"
+                      data-group-name="{{ course_instance.group_name }}">
                 <i class="bi bi-people"></i> Manage Enrollment
               </button>
             </div>
             
             <!-- Collapsible Section for Students -->
-            <button class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#studentList-{{ course.id }}" aria-expanded="false" aria-controls="studentList-{{ course.id }}">
+            <button class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#studentList-{{ course_instance.id }}" aria-expanded="false" aria-controls="studentList-{{ course_instance.id }}">
               <i class="bi bi-chevron-down"></i> View Students
             </button>
-            <div class="collapse" id="studentList-{{ course.id }}">
+            <div class="collapse" id="studentList-{{ course_instance.id }}">
               <table class="table table-hover mt-3">
                 <thead>
                   <tr>
@@ -48,7 +87,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for enrollment in course.enrollment_set.all %}
+                  {% for enrollment in course_instance.enrollments.all %}
                   <tr>
                     <td>{{ enrollment.student.username }}</td>
                     <td>{{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}</td>
@@ -58,16 +97,16 @@
                 </tbody>
               </table>
             </div>
-            <!-- End of Collapsible Section -->
           </div>
         </div>
       </div>
     {% endfor %}
   </div>
 {% else %}
-  <p class="text-muted">You have not created any courses yet.</p>
+  <p>You don't have any active course sessions.</p>
 {% endif %}
 
+<!-- ALL MODALS FIRST -->
 <!-- Create Course Modal -->
 <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -87,139 +126,584 @@
             <label for="rawJson" class="form-label">Raw JSON</label>
             <textarea class="form-control" id="rawJson" rows="5"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary">Submit</button>
+          <button type="submit" class="btn btn-primary">Create Course</button>
         </form>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-document.getElementById('createCourseForm').addEventListener('submit', function(event) {
-  event.preventDefault();
-  const courseId = document.getElementById('newCourseId').value.trim();
-  const rawJson = document.getElementById('rawJson').value.trim();
-  
-  let payload = {};
-  if (rawJson) {
-    try {
-      payload = { course_data: JSON.parse(rawJson) };
-    } catch (e) {
-      alert('Invalid JSON format. Please correct it and try again.');
-      return;
-    }
-  } else if (courseId) {
-    payload = { course_id: courseId };
-  } else {
-    alert('Please provide either a Course ID or Raw JSON.');
-    return;
-  }
-  
-  fetch("{% url 'courses:create_course' %}", {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: JSON.stringify(payload)
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert('Course created successfully!');
-      location.reload(); // Reload the page to show the new course
-    } else {
-      console.error('Failed to create course:', data.error); // Log error to console
-      alert('Failed to create course: ' + data.error);
-    }
-  })
-  .catch(error => {
-    console.error('Error creating course:', error); // Log error to console
-    alert('An error occurred while creating the course.');
-  });
-});
-</script>
-
-<!-- Manage Enrollment Modal -->
-<div class="modal fade" id="manageEnrollmentModal-{{ course.id }}" tabindex="-1" aria-labelledby="manageEnrollmentModalLabel-{{ course.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+<!-- New Session Modal -->
+<div class="modal fade" id="newSessionModal" tabindex="-1" aria-labelledby="newSessionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="manageEnrollmentModalLabel-{{ course.id }}">Manage Enrollment for {{ course.title }}</h5>
+        <h5 class="modal-title" id="newSessionModalLabel">Create New Course Session</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Enrollment Code</th>
-            </tr>
-          </thead>
-          <tbody id="enrollmentTable-{{ course.id }}">
-            {% for enrollment in course.enrollment_set.all %}
-            <tr>
-              <td>{{ enrollment.student.username }}</td>
-              <td>{{ enrollment.student.email }}</td>
-              <td>{{ enrollment.enrollmentcode_set.first.code }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <form id="addEnrollmentForm-{{ course.id }}">
+        <form id="newSessionForm">
+          <input type="hidden" id="courseId">
           <div class="mb-3">
-            <label for="enrollmentName-{{ course.id }}" class="form-label">Name</label>
-            <input type="text" class="form-control" id="enrollmentName-{{ course.id }}" required>
+            <label for="groupName" class="form-label required">Group Name</label>
+            <input type="text" class="form-control" id="groupName" required>
+            <div id="groupNameFeedback"></div>
+            <small class="form-text text-muted">A unique identifier for this course session (e.g., "Fall 2024", "Section A")</small>
           </div>
-          <div class="mb-3">
-            <label for="enrollmentEmail-{{ course.id }}" class="form-label">Email</label>
-            <input type="email" class="form-control" id="enrollmentEmail-{{ course.id }}" required>
-          </div>
-          <div class="mb-3">
-            <label for="enrollmentCode-{{ course.id }}" class="form-label">Code</label>
-            <input type="text" class="form-control" id="enrollmentCode-{{ course.id }}" required>
-          </div>
-          <button type="submit" class="btn btn-primary">Add Enrollment</button>
+          <button type="submit" class="btn btn-primary">Create Session</button>
         </form>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-document.querySelectorAll('[id^="addEnrollmentForm-"]').forEach(form => {
-  form.addEventListener('submit', function(event) {
-    event.preventDefault();
-    const courseId = this.id.split('-')[1];
-    const name = document.getElementById(`enrollmentName-${courseId}`).value.trim();
-    const email = document.getElementById(`enrollmentEmail-${courseId}`).value.trim();
-    const code = document.getElementById(`enrollmentCode-${courseId}`).value.trim();
+<!-- Delete Course Modal -->
+<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-labelledby="deleteCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteCourseModalLabel">Confirm Course Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">
+          <h6 class="alert-heading">Warning: This action cannot be undone!</h6>
+          <p>You are about to delete the following course:</p>
+          <p class="fw-bold" id="courseToDelete"></p>
+        </div>
+        <div id="courseInstancesList">
+          <p>This will also delete the following course sessions:</p>
+          <ul class="list-group mb-3" id="instancesListGroup">
+          </ul>
+        </div>
+        <div id="noInstancesMessage" style="display: none;">
+          <p>This course has no active sessions.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteButton">
+          Delete Course
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    fetch(`/courses/${courseId}/create_enrollment_code/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
-      body: JSON.stringify({ name, email, code })
-    })
-    .then(response => response.json())
-    .then(data => {
+<!-- THEN ALL SCRIPTS -->
+<script>
+// Function definitions first (outside DOMContentLoaded)
+function createNewSession(courseId) {
+  document.getElementById('courseId').value = courseId;
+  document.getElementById('groupName').value = '';
+  document.getElementById('groupName').classList.remove('is-valid', 'is-invalid');
+  document.getElementById('groupNameFeedback').textContent = '';
+  
+  // Store the courseId in a data attribute for the validation
+  document.getElementById('newSessionForm').dataset.courseId = courseId;
+  
+  new bootstrap.Modal(document.getElementById('newSessionModal')).show();
+}
+
+async function showDeleteCourseConfirmation(courseId) {
+  try {
+    // Show loading state
+    const modal = new bootstrap.Modal(document.getElementById('deleteCourseModal'));
+    modal.show();
+    
+    document.getElementById('courseToDelete').textContent = 'Loading...';
+    document.getElementById('confirmDeleteButton').disabled = true;
+    
+    // Fetch course details
+    const response = await fetch(`/courses/${courseId}/details/`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    // Update modal content
+    document.getElementById('courseToDelete').textContent = data.course.title;
+    
+    const instancesList = document.getElementById('instancesListGroup');
+    const noInstancesMessage = document.getElementById('noInstancesMessage');
+    const courseInstancesList = document.getElementById('courseInstancesList');
+    
+    instancesList.innerHTML = '';
+    
+    if (data.instances && data.instances.length > 0) {
+      courseInstancesList.style.display = 'block';
+      noInstancesMessage.style.display = 'none';
+      
+      data.instances.forEach(instance => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = `${instance.group_name} (${instance.enrollment_count} students enrolled)`;
+        instancesList.appendChild(li);
+      });
+    } else {
+      courseInstancesList.style.display = 'none';
+      noInstancesMessage.style.display = 'block';
+    }
+    
+    // Enable delete button
+    const confirmButton = document.getElementById('confirmDeleteButton');
+    confirmButton.disabled = false;
+    confirmButton.onclick = () => deleteCourse(courseId);
+    
+  } catch (error) {
+    console.error('Error fetching course details:', error);
+    // Show error in modal
+    document.getElementById('courseToDelete').textContent = 'Error loading course details';
+    document.getElementById('courseInstancesList').style.display = 'none';
+    document.getElementById('noInstancesMessage').style.display = 'block';
+    document.getElementById('noInstancesMessage').innerHTML = `
+      <div class="alert alert-danger">
+        Error: ${error.message || 'Failed to load course details'}
+      </div>
+    `;
+    document.getElementById('confirmDeleteButton').disabled = true;
+  }
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Add event listeners for all "New Session" buttons
+  document.querySelectorAll('.new-session-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const courseId = this.dataset.courseId;
+      createNewSession(courseId);
+    });
+  });
+
+  // Add event listeners for all "Delete Course" buttons
+  document.querySelectorAll('.delete-course-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const courseId = this.dataset.courseId;
+      showDeleteCourseConfirmation(courseId);
+    });
+  });
+
+  // Group name validation
+  const checkGroupName = debounce(async function(groupName) {
+    const groupNameInput = document.getElementById('groupName');
+    const groupNameFeedback = document.getElementById('groupNameFeedback');
+    const submitButton = document.querySelector('#newSessionForm button[type="submit"]');
+    const courseId = document.getElementById('newSessionForm').dataset.courseId;
+    
+    if (!groupName.trim()) {
+      groupNameInput.classList.remove('is-valid', 'is-invalid');
+      groupNameFeedback.textContent = '';
+      submitButton.disabled = true;
+      return;
+    }
+    
+    try {
+      const response = await fetch(
+        "{% url 'courses:check_group_name' %}" + 
+        `?group_name=${encodeURIComponent(groupName)}` +
+        `&course_id=${encodeURIComponent(courseId)}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.available) {
+        groupNameInput.classList.remove('is-invalid');
+        groupNameInput.classList.add('is-valid');
+        groupNameFeedback.textContent = 'Session name is available for this course';
+        groupNameFeedback.className = 'valid-feedback';
+        submitButton.disabled = false;
+      } else {
+        groupNameInput.classList.remove('is-valid');
+        groupNameInput.classList.add('is-invalid');
+        groupNameFeedback.textContent = data.error || 'This session name already exists for this course';
+        groupNameFeedback.className = 'invalid-feedback';
+        submitButton.disabled = true;
+      }
+    } catch (error) {
+      console.error('Error checking session name:', error);
+      groupNameInput.classList.remove('is-valid', 'is-invalid');
+      submitButton.disabled = false;  // Allow submission if check fails
+    }
+  }, 300);
+
+  // New session form handler
+  const newSessionForm = document.getElementById('newSessionForm');
+  if (newSessionForm) {
+    newSessionForm.addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      const courseId = document.getElementById('courseId').value;
+      const groupName = document.getElementById('groupName').value.trim();
+      const submitButton = this.querySelector('button[type="submit"]');
+      
+      console.log('Submitting new session:', { courseId, groupName }); // Debug log
+      
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+      
+      const url = "{% url 'courses:create_course_instance' 'COURSE_ID' %}".replace('COURSE_ID', courseId);
+      console.log('Submitting to URL:', url); // Debug log
+      
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ group_name: groupName })
+      })
+      .then(async response => {
+        const data = await response.json();
+        console.log('Response:', data); // Debug log
+        if (data.success) {
+          alert('Course session created successfully!');
+          window.location.reload();
+        } else {
+          alert('Failed to create course session: ' + data.error);
+        }
+        return data;
+      })
+      .catch(error => {
+        console.error('Error creating course session:', error);
+        alert('An error occurred while creating the course session.');
+      })
+      .finally(() => {
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Create Session';
+      });
+    });
+  }
+
+  // Add input event listener for group name validation
+  const groupNameInput = document.getElementById('groupName');
+  if (groupNameInput) {
+    groupNameInput.addEventListener('input', (e) => checkGroupName(e.target.value.trim()));
+  }
+
+  // Add these functions to your existing script section
+  async function deleteCourse(courseId) {
+    const confirmButton = document.getElementById('confirmDeleteButton');
+    try {
+      confirmButton.disabled = true;
+      confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+      
+      const response = await fetch(`/courses/${courseId}/delete/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete course');
+      }
+      
       if (data.success) {
-        const table = document.getElementById(`enrollmentTable-${courseId}`);
-        const newRow = table.insertRow();
-        newRow.innerHTML = `<td>${name}</td><td>${email}</td><td>${code}</td>`;
-        alert('Enrollment added successfully.');
+        window.location.reload();
+      } else {
+        throw new Error(data.error || 'Failed to delete course');
+      }
+      
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      alert('Error: ' + (error.message || 'Failed to delete course'));
+      confirmButton.disabled = false;
+      confirmButton.innerHTML = 'Delete Course';
+    }
+  }
+
+  document.querySelectorAll('[id^="addEnrollmentForm-"]').forEach(form => {
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+      const courseId = this.id.split('-')[1];
+      const name = document.getElementById(`enrollmentName-${courseId}`).value.trim();
+      const email = document.getElementById(`enrollmentEmail-${courseId}`).value.trim();
+      const code = document.getElementById(`enrollmentCode-${courseId}`).value.trim();
+
+      fetch(`/courses/${courseId}/create_enrollment_code/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ name, email, code })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const table = document.getElementById(`enrollmentTable-${courseId}`);
+          const newRow = table.insertRow();
+          newRow.innerHTML = `<td>${name}</td><td>${email}</td><td>${code}</td>`;
+          alert('Enrollment added successfully.');
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error adding enrollment:', error);
+        alert('An error occurred while adding the enrollment.');
+      });
+    });
+  });
+
+  // Handle bulk enrollment forms
+  document.getElementById('bulkEnrollmentForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    
+    const courseInstanceId = document.getElementById('currentCourseInstanceId').value;
+    const emailList = document.getElementById('emailList');
+    const emails = emailList.value.split(',').map(email => email.trim()).filter(email => email);
+    
+    if (emails.length === 0) {
+      alert('Please enter at least one email address');
+      return;
+    }
+
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+
+    try {
+      const response = await fetch(`/courses/${courseInstanceId}/bulk-enroll/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ emails })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        emailList.value = '';
+        await loadEnrollments(courseInstanceId);
+        
+        let message = `Successfully enrolled ${data.success_count} students.`;
+        if (data.error_count > 0) {
+          message += '\n\nErrors:\n' + data.error_details.join('\n');
+        }
+        alert(message);
       } else {
         alert('Error: ' + data.error);
       }
-    })
-    .catch(error => {
-      console.error('Error adding enrollment:', error);
-      alert('An error occurred while adding the enrollment.');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred while enrolling students.');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = '<i class="bi bi-person-plus"></i> Add Students';
+    }
+  });
+
+  // Handle remove enrollment buttons
+  document.querySelectorAll('.remove-enrollment').forEach(button => {
+    button.addEventListener('click', async function() {
+      if (!confirm('Are you sure you want to remove this student?')) {
+        return;
+      }
+
+      const enrollmentId = this.dataset.enrollmentId;
+      try {
+        const response = await fetch(`/courses/enrollment/${enrollmentId}/remove/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          this.closest('tr').remove();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while removing the student.');
+      }
     });
+  });
+
+  // Update modal content when it's about to be shown
+  const manageEnrollmentModal = document.getElementById('manageEnrollmentModal');
+  manageEnrollmentModal.addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const courseInstanceId = button.getAttribute('data-course-instance-id');
+    const courseTitle = button.getAttribute('data-course-title');
+    const groupName = button.getAttribute('data-group-name');
+    
+    // Update modal title with course title and group name
+    document.getElementById('manageEnrollmentModalLabel').textContent = 
+      `${courseTitle} - ${groupName}`;
+    document.getElementById('currentCourseInstanceId').value = courseInstanceId;
+    
+    // Load enrollments
+    loadEnrollments(courseInstanceId);
+  });
+
+  // Function to load enrollments
+  async function loadEnrollments(courseInstanceId) {
+    try {
+      const response = await fetch(`/courses/${courseInstanceId}/enrollments/`);
+      const data = await response.json();
+      
+      const tableBody = document.getElementById('enrollmentTableBody');
+      tableBody.innerHTML = '';
+      
+      if (data.enrollments && data.enrollments.length > 0) {
+        data.enrollments.forEach(enrollment => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${enrollment.student.email}</td>
+            <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules}</td>
+            <td>${enrollment.progress.overall_score.toFixed(2)}%</td>
+            <td>
+              <button class="btn btn-sm btn-danger remove-enrollment" 
+                      data-enrollment-id="${enrollment.id}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+        
+        // Reattach event listeners for remove buttons
+        attachRemoveListeners();
+      } else {
+        // Add a single row with "no students" message
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td colspan="4" class="text-center text-muted">
+            <em>No students are currently enrolled in this course session</em>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      }
+    } catch (error) {
+      console.error('Error loading enrollments:', error);
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td colspan="4" class="text-center text-danger">
+          <em>Error loading enrollments. Please try again.</em>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    }
+  }
+
+  function attachRemoveListeners() {
+    document.querySelectorAll('.remove-enrollment').forEach(button => {
+      button.addEventListener('click', async function() {
+        if (!confirm('Are you sure you want to remove this student?')) {
+          return;
+        }
+
+        const enrollmentId = this.dataset.enrollmentId;
+        try {
+          const response = await fetch(`/courses/enrollment/${enrollmentId}/remove/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            }
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            this.closest('tr').remove();
+          } else {
+            alert('Error: ' + data.error);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('An error occurred while removing the student.');
+        }
+      });
+    });
+  }
+  
+  // Add event listener for when the modal is hidden
+  manageEnrollmentModal.addEventListener('hidden.bs.modal', function () {
+    // Refresh the page
+    window.location.reload();
   });
 });
 </script>
+
+<!-- Single modal outside of any loops -->
+<div class="modal fade" id="manageEnrollmentModal" tabindex="-1" 
+     aria-labelledby="manageEnrollmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="manageEnrollmentModalLabel">
+          Manage Course Enrollment
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Bulk Add Students Section -->
+        <div class="mb-4">
+          <h6>Add Students (comma-separated emails)</h6>
+          <form id="bulkEnrollmentForm" class="mb-3">
+            <input type="hidden" id="currentCourseInstanceId">
+            <div class="form-group">
+              <textarea class="form-control" id="emailList" 
+                        rows="3" placeholder="email1@example.com, email2@example.com"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">
+              <i class="bi bi-person-plus"></i> Add Students
+            </button>
+          </form>
+        </div>
+
+        <!-- Current Enrollments Section -->
+        <div>
+          <h6>Current Students</h6>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Progress</th>
+                  <th>Grade</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="enrollmentTableBody">
+                <!-- Will be populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

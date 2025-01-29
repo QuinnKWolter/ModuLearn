@@ -22,6 +22,35 @@ class Course(models.Model):
         """Return the total number of modules in the course."""
         return Module.objects.filter(unit__course=self).count()
 
+class CourseInstance(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='instances', null=True, blank=True)
+    group_name = models.CharField(max_length=255, blank=True, help_text="Custom identifier for the student group")
+    instructors = models.ManyToManyField(User, related_name='course_instances_taught', limit_choices_to={'is_instructor': True}, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('course', 'group_name')
+
+    def __str__(self):
+        return f"{self.course.title} - {self.group_name}"
+
+    def duplicate(self, new_group_name):
+        """Create a new instance of this course with a different group name"""
+        if CourseInstance.objects.filter(course=self.course, group_name=new_group_name).exists():
+            raise ValueError("A course instance with this group name already exists")
+        
+        new_instance = CourseInstance.objects.create(
+            course=self.course,
+            group_name=new_group_name
+        )
+        
+        # Copy instructors
+        for instructor in self.instructors.all():
+            new_instance.instructors.add(instructor)
+        
+        return new_instance
+
 class Unit(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='units')
     title = models.CharField(max_length=255)
@@ -31,19 +60,11 @@ class Unit(models.Model):
         return f"{self.course.title} - {self.title}"
 
 class Module(models.Model):
-    MODULE_TYPES = [
-        ('quiz', 'Quiz'),
-        ('coding', 'Coding Challenge'),
-        ('simulation', 'Simulation'),
-        ('external_iframe', 'External IFrame'),
-    ]
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='modules', null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    module_type = models.CharField(max_length=50, choices=MODULE_TYPES)
     content_data = models.JSONField(blank=True, null=True)
     content_url = models.URLField(blank=True, null=True)
-    iframe_url = models.URLField(blank=True, null=True)
     keywords = models.CharField(max_length=500, blank=True)
     platform_name = models.CharField(max_length=255, blank=True)
     author = models.CharField(max_length=255, blank=True)
@@ -79,15 +100,16 @@ class Module(models.Model):
         ]
 
 class Enrollment(models.Model):
-    student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'is_student': True})
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    date_enrolled = models.DateTimeField(auto_now_add=True)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')
+    course_instance = models.ForeignKey(CourseInstance, on_delete=models.CASCADE, related_name='enrollments')
+    created_at = models.DateTimeField(auto_now_add=True)
+    active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ('student', 'course')
+        unique_together = ('student', 'course_instance')
 
     def __str__(self):
-        return f"{self.student.username} enrolled in {self.course.title}"
+        return f"{self.student.username} - {self.course_instance}"
 
 class ModuleProgress(models.Model):
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='module_progress', null=True, blank=True)
@@ -119,21 +141,18 @@ class ModuleProgress(models.Model):
     lis_outcome_service_url = models.URLField(null=True, blank=True)
     
     class Meta:
-        unique_together = [('user', 'module')]
+        unique_together = [('user', 'module', 'enrollment')]
 
     def __str__(self):
         return f"{self.user.username}'s progress in {self.module.title}"
 
     @classmethod
-    def get_or_create_progress(cls, user, module):
-        """Get or create progress record based on user role in this specific course"""
-        course = module.unit.course
+    def get_or_create_progress(cls, user, module, course_instance):
+        """Get or create progress record based on user role in this specific course instance"""
+        # First, check if user is instructor for this course instance
+        is_instructor = course_instance.instructors.filter(id=user.id).exists()
         
-        # First, check the user's role in THIS specific course
-        is_instructor_for_this_course = course.instructors.filter(id=user.id).exists()
-        
-        if is_instructor_for_this_course:
-            # Handle as instructor for this course
+        if is_instructor:
             return cls.objects.get_or_create(
                 user=user,
                 module=module,
@@ -144,18 +163,15 @@ class ModuleProgress(models.Model):
                 }
             )
         else:
-            # Handle as student (even if they're an instructor for other courses)
             try:
-                enrollment = Enrollment.objects.get(student=user, course=course)
+                enrollment = Enrollment.objects.get(student=user, course_instance=course_instance)
             except Enrollment.DoesNotExist:
-                enrollment = Enrollment.objects.create(student=user, course=course)
+                enrollment = Enrollment.objects.create(student=user, course_instance=course_instance)
             
             return cls.objects.get_or_create(
                 user=user,
                 module=module,
-                defaults={
-                    'enrollment': enrollment
-                }
+                enrollment=enrollment
             )
 
     def update_from_activity_attempt(self, data):
@@ -218,78 +234,63 @@ class CaliperEvent(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
 class EnrollmentCode(models.Model):
-    code = models.CharField(max_length=255, unique=True)
+    code = models.CharField(max_length=20, unique=True)
     email = models.EmailField()
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    course_instance = models.ForeignKey(CourseInstance, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('email', 'course_instance')
 
     def __str__(self):
-        return f"{self.code} for {self.email} in {self.course.title}"
+        return f"Code for {self.email} - {self.course_instance}"
 
 class CourseProgress(models.Model):
     enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='course_progress')
-    
     overall_progress = models.FloatField(default=0.0)
     overall_score = models.FloatField(default=0.0)
     modules_completed = models.IntegerField(default=0)
     total_modules = models.IntegerField(default=0)
-    
     last_accessed = models.DateTimeField(auto_now=True)
-    
-    @classmethod
-    def get_or_create_progress(cls, user, course):
-        """Get or create progress record based on user role in this specific course"""
-        # First, check the user's role in THIS specific course
-        is_instructor_for_this_course = course.instructors.filter(id=user.id).exists()
-        
-        if is_instructor_for_this_course:
-            # Instructors don't need course progress tracking
-            return None, False
-        else:
-            # Handle as student (even if they're an instructor for other courses)
-            try:
-                enrollment = Enrollment.objects.get(student=user, course=course)
-            except Enrollment.DoesNotExist:
-                enrollment = Enrollment.objects.create(student=user, course=course)
-            
-            return cls.objects.get_or_create(
-                enrollment=enrollment,
-                defaults={
-                    'total_modules': Module.objects.filter(unit__course=course).count()
-                }
-            )
 
     def update_progress(self):
         """Calculate overall course progress based on module progress"""
         module_progress = ModuleProgress.objects.filter(enrollment=self.enrollment)
         total_modules = Module.objects.filter(
-            unit__course=self.enrollment.course
+            unit__course=self.enrollment.course_instance.course
         ).count()
         
         if total_modules > 0:
             completed = module_progress.filter(is_complete=True).count()
             total_progress = sum(mp.progress or 0 for mp in module_progress)
             total_score = sum(mp.score or 0 for mp in module_progress if mp.score is not None)
-            print("total_progress", total_progress)
-            print("total_score", total_score)
             
             self.modules_completed = completed
             self.total_modules = total_modules
-            self.overall_progress = (total_progress / total_modules)*100 if total_modules > 0 else 0
+            self.overall_progress = (total_progress / total_modules) * 100 if total_modules > 0 else 0
             self.overall_score = (total_score / total_modules) if total_modules > 0 else 0
-            print("self.overall_progress", self.overall_progress)
-            print("self.overall_score", self.overall_score)
             self.save()
 
 @receiver(post_save, sender=Enrollment)
 def create_module_progress_records(sender, instance, created, **kwargs):
+    """
+    Create ModuleProgress records for each module in the course when a new enrollment is created
+    """
     if created:
-        # Create ModuleProgress for each module in the course
-        modules = Module.objects.filter(unit__course=instance.course)
-        ModuleProgress.objects.bulk_create([
-            ModuleProgress(enrollment=instance, module=module)
-            for module in modules
-        ])
+        # Fix: Access course through course_instance
+        modules = Module.objects.filter(unit__course=instance.course_instance.course)
+        
+        module_progress_list = []
+        for module in modules:
+            module_progress_list.append(
+                ModuleProgress(
+                    user=instance.student,
+                    module=module,
+                    enrollment=instance
+                )
+            )
+        ModuleProgress.objects.bulk_create(module_progress_list)
         
         # Create CourseProgress
         CourseProgress.objects.create(enrollment=instance)

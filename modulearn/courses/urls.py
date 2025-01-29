@@ -5,6 +5,7 @@ from .views import LTIOutcomesView, CaliperAnalyticsView
 app_name = 'courses'
 
 urlpatterns = [
+    path('check-group-name/', views.check_group_name, name='check_group_name'),
     path('', views.course_list, name='course_list'),
     path('create/', views.create_course, name='create_course'),
     path('update-module-progress/<int:module_id>/', views.update_module_progress, name='update_module_progress'),
@@ -14,8 +15,15 @@ urlpatterns = [
     path('lti/outcomes/', LTIOutcomesView.as_view(), name='lti_outcomes'),
     path('caliper/analytics/', CaliperAnalyticsView.as_view(), name='caliper_analytics'),
     path('enroll/', views.enroll_with_code, name='enroll_with_code'),
+    path('<str:course_instance_id>/enrollments/', views.get_course_enrollments, name='get_course_enrollments'),
     path('<str:course_id>/create_enrollment_code/', views.create_enrollment_code, name='create_enrollment_code'),
+    path('<int:course_instance_id>/bulk-enroll/', views.bulk_enroll_students, name='bulk_enroll_students'),
     path('<str:course_id>/unenroll/', views.unenroll, name='unenroll'),
     path('<str:course_id>/units/<int:unit_id>/modules/<int:module_id>/', views.module_detail, name='module_detail'),
     path('<str:course_id>/', views.course_detail, name='course_detail'),
+    path('<str:course_id>/create-instance/', views.create_course_instance, name='create_course_instance'),
+    path('<str:course_instance_id>/duplicate/', views.duplicate_course_instance, name='duplicate_course_instance'),
+    path('<str:course_id>/details/', views.course_details, name='course_details'),
+    path('<str:course_id>/delete/', views.delete_course, name='delete_course'),
+    
 ]

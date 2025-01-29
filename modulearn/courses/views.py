@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Course, Module, Enrollment, Unit, StudentScore, CaliperEvent, EnrollmentCode, CourseProgress, ModuleProgress
+from .models import Course, Module, Enrollment, Unit, StudentScore, CaliperEvent, EnrollmentCode, CourseProgress, ModuleProgress, CourseInstance
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import json
@@ -19,11 +19,16 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import xml.etree.ElementTree as ET
 from django.contrib.auth import login
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 import os
 from django.core.serializers.json import DjangoJSONEncoder
 import uuid
 from django.views.decorators.http import require_http_methods
+from django.db.utils import IntegrityError
+from django.db.models import Count
+from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 
 User = get_user_model()
 
@@ -37,72 +42,79 @@ def course_list(request):
     Instructors see courses they teach or are enrolled in.
     Students see only courses they are enrolled in.
     """
-    courses = []
+    course_instances = []
     
     if request.user.is_authenticated:
         if request.user.is_student:
-            # Get only enrolled courses for students
+            # Get only enrolled course instances for students
             enrollments = Enrollment.objects.filter(
                 student=request.user
-            ).select_related('course', 'course_progress')
+            ).select_related('course_instance', 'course_instance__course', 'course_progress')
             
-            # Convert to list of courses with attached enrollment info
+            # Convert to list of course instances with attached enrollment info
             for enrollment in enrollments:
-                course = enrollment.course
-                course.user_enrollment = enrollment
-                courses.append(course)
+                course_instance = enrollment.course_instance
+                course_instance.user_enrollment = enrollment
+                course_instances.append(course_instance)
         elif request.user.is_instructor:
-            # Get courses where user is instructor
-            taught_courses = Course.objects.filter(instructors=request.user)
+            # Get course instances where user is instructor
+            taught_instances = CourseInstance.objects.filter(instructors=request.user)
             
             # Get enrollments where instructor is enrolled as student
             student_enrollments = Enrollment.objects.filter(
                 student=request.user
-            ).select_related('course', 'course_progress')
+            ).select_related('course_instance', 'course_instance__course', 'course_progress')
             
-            # Add taught courses
-            for course in taught_courses:
-                courses.append(course)
+            # Add taught course instances
+            for instance in taught_instances:
+                course_instances.append(instance)
             
-            # Add enrolled courses
+            # Add enrolled course instances
             for enrollment in student_enrollments:
-                course = enrollment.course
-                course.user_enrollment = enrollment
-                if course not in courses:  # Avoid duplicates
-                    courses.append(course)
+                instance = enrollment.course_instance
+                instance.user_enrollment = enrollment
+                if instance not in course_instances:  # Avoid duplicates
+                    course_instances.append(instance)
     
     return render(request, 'courses/course_list.html', {
-        'courses': courses,
+        'course_instances': course_instances,
         'lti_data': getattr(request.user, 'lti_data', {})
     })
 
 @login_required
 def course_detail(request, course_id):
     """
-    Displays details of a specific course and handles enrollment.
+    Displays details of a specific course instance and handles enrollment.
     """
-    course = get_object_or_404(Course, id=course_id)
-    enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
+    course_instance = get_object_or_404(CourseInstance, id=course_id)
+    enrolled = Enrollment.objects.filter(student=request.user, course_instance=course_instance).exists()
     
     # Get course progress through enrollment if it exists
     course_progress = None
     if enrolled:
-        course_progress, created = CourseProgress.get_or_create_progress(request.user, course)
+        enrollment = Enrollment.objects.get(student=request.user, course_instance=course_instance)
+        course_progress = enrollment.course_progress
     
-    units = course.units.prefetch_related('modules')
+    units = course_instance.course.units.prefetch_related('modules')
 
     # Pre-compute module progress
     module_progress_data = {}
     if enrolled:
         for unit in units:
             for module in unit.modules.all():
-                module_progress_data[module.id] = module.get_student_progress(request.user)
+                module_progress = ModuleProgress.objects.filter(
+                    enrollment__student=request.user,
+                    enrollment__course_instance=course_instance,
+                    module=module
+                ).first()
+                module_progress_data[module.id] = module_progress
     
-    # Check if user is instructor for this course
-    is_instructor = request.user.is_instructor and course.instructors.filter(id=request.user.id).exists()
+    # Check if user is instructor for this course instance
+    is_instructor = request.user.is_instructor and course_instance.instructors.filter(id=request.user.id).exists()
     
     context = {
-        'course': course,
+        'course_instance': course_instance,
+        'course': course_instance.course,
         'enrolled': enrolled,
         'course_progress': course_progress,
         'units': units,
@@ -112,8 +124,8 @@ def course_detail(request, course_id):
 
     # Handle enrollment POST request
     if request.method == 'POST' and not enrolled and request.user.is_student:
-        enrollment = Enrollment.objects.create(student=request.user, course=course)
-        messages.success(request, f'You have been enrolled in {course.title}')
+        enrollment = Enrollment.objects.create(student=request.user, course_instance=course_instance)
+        messages.success(request, f'You have been enrolled in {course_instance}')
         return redirect('courses:course_detail', course_id=course_id)
 
     return render(request, 'courses/course_detail.html', context)
@@ -121,15 +133,15 @@ def course_detail(request, course_id):
 @login_required
 def module_detail(request, course_id, unit_id, module_id):
     """
-    Displays details of a specific module within a course.
+    Displays details of a specific module within a course instance.
     """
-    course = get_object_or_404(Course, id=course_id)
-    unit = get_object_or_404(Unit, id=unit_id, course=course)
+    course_instance = get_object_or_404(CourseInstance, id=course_id)
+    unit = get_object_or_404(Unit, id=unit_id, course=course_instance.course)
     module = get_object_or_404(Module, id=module_id, unit=unit)
-    enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
+    enrolled = Enrollment.objects.filter(student=request.user, course_instance=course_instance).exists()
 
-    # Determine if the user is an instructor for this course
-    is_instructor = request.user.is_instructor and course.instructors.filter(id=request.user.id).exists()
+    # Determine if the user is an instructor for this course instance
+    is_instructor = request.user.is_instructor and course_instance.instructors.filter(id=request.user.id).exists()
 
     if not enrolled and not is_instructor:
         messages.error(request, 'You must be enrolled in the course to access modules.')
@@ -137,90 +149,111 @@ def module_detail(request, course_id, unit_id, module_id):
 
     module_progress = ModuleProgress.objects.filter(
         enrollment__student=request.user,
-        enrollment__course__id=course_id,
+        enrollment__course_instance=course_instance,
         module=module
     ).first()
     
-    # Properly serialize the state data
     state_data = json.dumps(module_progress.state_data if module_progress else None, cls=DjangoJSONEncoder)
     
     return render(request, 'courses/module_page.html', {
         'module': module,
         'module_progress': module_progress,
         'state_data': state_data,
-        'is_instructor': is_instructor
+        'is_instructor': is_instructor,
+        'course_instance': course_instance
     })
 
 @login_required
 def module_render(request, module_id):
     module = get_object_or_404(Module, id=module_id)
     course = module.unit.course
+    course_instance = CourseInstance.objects.filter(
+        course=course,
+        enrollments__student=request.user
+    ).first()
+    
+    if not course_instance:
+        course_instance = CourseInstance.objects.filter(
+            course=course,
+            instructors=request.user
+        ).first()
+    
+    if not course_instance:
+        return HttpResponseForbidden("You don't have access to this module")
     
     # Check if user has access to this module
-    is_instructor = course.instructors.filter(id=request.user.id).exists()
-    is_enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
+    is_instructor = course_instance.instructors.filter(id=request.user.id).exists()
+    is_enrolled = Enrollment.objects.filter(student=request.user, course_instance=course_instance).exists()
     
     if not (is_instructor or is_enrolled):
         return HttpResponseForbidden("You don't have access to this module")
     
     # Get or create progress using the updated method
-    module_progress, created = ModuleProgress.get_or_create_progress(request.user, module)
-    
-    # Get state data for the module
-    state_data = module_progress.state_data if module_progress else None
+    module_progress, created = ModuleProgress.get_or_create_progress(request.user, module, course_instance)
     
     context = {
         'module': module,
-        'state_data': state_data,
-        'is_instructor': is_instructor,  # Pass this to template
-        'module_progress': module_progress
+        'state_data': module_progress.state_data if module_progress else None,
+        'is_instructor': is_instructor,
+        'module_progress': module_progress,
+        'course_instance': course_instance
     }
     
-    # Choose template based on module type
-    template_name = f'courses/{module.module_type}.html'
+    template_name = f'courses/external_iframe.html'
     return render(request, template_name, context)
 
 @login_required
 def unenroll(request, course_id):
     """
-    Allows a user to unenroll from a course.
+    Allows a user to unenroll from a course instance.
     """
-    course = get_object_or_404(Course, id=course_id)
-    enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
+    course_instance = get_object_or_404(CourseInstance, id=course_id)
+    enrollment = Enrollment.objects.filter(
+        student=request.user, 
+        course_instance=course_instance
+    ).first()
 
     if enrollment:
         enrollment.delete()
-        messages.success(request, f'You have unenrolled from {course.title}.')
+        messages.success(request, f'You have unenrolled from {course_instance}.')
     else:
         messages.error(request, 'You are not enrolled in this course.')
 
     return redirect('courses:course_detail', course_id=course_id)
 
 @login_required
+@require_POST
 def create_course(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
+    """
+    Creates a new course from either a course ID or JSON data.
+    """
+    if not request.user.is_instructor:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        data = json.loads(request.body)
+        course_id = data.get('course_id')
+        course_data = data.get('course_data')
+        
+        if course_data:
+            course = create_course_from_json(course_data, request.user)
+        elif course_id:
+            # Create basic course from ID
+            course = Course.objects.create(
+                id=course_id,
+                title=f"Course {course_id}",  # Temporary title
+                description="Course description pending"
+            )
+            # Add the current user as an instructor
+            course.instructors.add(request.user)
+        else:
+            return JsonResponse({'success': False, 'error': 'Either course_id or course_data is required'})
             
-            if 'course_id' in data:
-                # Fetch JSON from external API
-                course_data = fetch_course_details(data['course_id'])
-            elif 'course_data' in data:
-                # Use provided JSON directly
-                course_data = data['course_data']
-            else:
-                return JsonResponse({'success': False, 'error': 'Invalid input'})
-            
-            # Create course from the JSON data
-            create_course_from_json(course_data, request.user)
-            return JsonResponse({'success': True})
-            
-        except Exception as e:
-            logger.error("Error creating course: %s", str(e))
-            logger.error(traceback.format_exc())
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+        return JsonResponse({'success': True, 'course_id': course.id})
+        
+    except Exception as e:
+        logger.error(f"Error creating course: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
 def launch_iframe_module(request, module_id):
@@ -241,7 +274,7 @@ def launch_iframe_module(request, module_id):
     state_data = module_progress.state_data if module_progress else None
     
     # Parse the original URL and add LTI parameters
-    parsed_url = urlparse(module.iframe_url)
+    parsed_url = urlparse(module.content_url)
     query_params = parse_qs(parsed_url.query)
     
     # Add your existing LTI parameters here...
@@ -252,7 +285,7 @@ def launch_iframe_module(request, module_id):
     
     context = {
         'module': module,
-        'iframe_url': new_url,
+        'content_url': new_url,
         'state_data': json.dumps(state_data) if state_data else None,
         'is_instructor': is_instructor
     }
@@ -384,14 +417,22 @@ def enroll_with_code(request):
                 user.save()
             
             # Check if already enrolled
-            if Enrollment.objects.filter(student=user, course=course).exists():
+            if Enrollment.objects.filter(
+                student=user, 
+                course_instance__course=enrollment_code.course_instance.course
+            ).exists():
                 messages.warning(request, 'You are already enrolled in this course.')
             else:
                 # Create enrollment and associated records
-                enrollment = Enrollment.objects.create(student=user, course=course)
+                enrollment = Enrollment.objects.create(
+                    student=user, 
+                    course_instance=enrollment_code.course_instance
+                )
                 
                 # Create CourseProgress
-                total_modules = Module.objects.filter(unit__course=course).count()
+                total_modules = Module.objects.filter(
+                    unit__course=enrollment_code.course_instance.course
+                ).count()
                 CourseProgress.objects.create(
                     enrollment=enrollment,
                     total_modules=total_modules
@@ -399,7 +440,7 @@ def enroll_with_code(request):
                 
                 # Create ModuleProgress records for each module
                 module_progress_list = []
-                for module in Module.objects.filter(unit__course=course):
+                for module in Module.objects.filter(unit__course=enrollment_code.course_instance.course):
                     module_progress_list.append(
                         ModuleProgress(
                             user=user,
@@ -426,31 +467,30 @@ def enroll_with_code(request):
 
 @require_POST
 @login_required
-def create_enrollment_code(request, course_id):
-    logger.info("Received request to create enrollment code")
+def create_enrollment_code(request, course_instance_id):
     if not request.user.is_instructor:
-        logger.warning("Permission denied for user: %s", request.user)
         return JsonResponse({'success': False, 'error': 'Permission denied.'})
 
     try:
         data = json.loads(request.body)
-        logger.debug("Request data: %s", data)
         name = data.get('name')
         email = data.get('email')
         code = data.get('code')
 
         if not (name and email and code):
-            logger.error("Missing fields in request data")
             return JsonResponse({'success': False, 'error': 'All fields are required.'})
 
-        course = get_object_or_404(Course, id=course_id)
+        course_instance = get_object_or_404(CourseInstance, id=course_instance_id)
         
         # Check if user already exists
         existing_user = User.objects.filter(email=email).first()
         
         # Check if user is already enrolled
         if existing_user:
-            existing_enrollment = Enrollment.objects.filter(student=existing_user, course=course).exists()
+            existing_enrollment = Enrollment.objects.filter(
+                student=existing_user, 
+                course_instance=course_instance
+            ).exists()
             if existing_enrollment:
                 return JsonResponse({
                     'success': False, 
@@ -461,7 +501,7 @@ def create_enrollment_code(request, course_id):
         # Create or get enrollment code
         enrollment_code, created = EnrollmentCode.objects.get_or_create(
             email=email,
-            course=course,
+            course_instance=course_instance,
             defaults={'code': code}
         )
 
@@ -490,7 +530,7 @@ def create_enrollment_code(request, course_id):
             status = 'new_user'
 
         # Create enrollment
-        enrollment, created = Enrollment.objects.get_or_create(student=user, course=course)
+        enrollment, created = Enrollment.objects.get_or_create(student=user, course_instance=course_instance)
 
         return JsonResponse({
             'success': True,
@@ -545,4 +585,370 @@ def update_module_progress(request, module_id):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def duplicate_course_instance(request, course_instance_id):
+    """
+    Duplicates a course instance with a new group name.
+    """
+    if not request.user.is_instructor:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        data = json.loads(request.body)
+        new_group_name = data.get('group_name')
+        
+        if not new_group_name:
+            return JsonResponse({'success': False, 'error': 'Group name is required'})
+            
+        course_instance = get_object_or_404(CourseInstance, id=course_instance_id)
+        
+        # Check if user is instructor for this course
+        if not course_instance.instructors.filter(id=request.user.id).exists():
+            return JsonResponse({'success': False, 'error': 'Permission denied'})
+            
+        # Duplicate the course instance
+        new_instance = course_instance.duplicate(new_group_name)
+        
+        return JsonResponse({'success': True, 'new_instance_id': new_instance.id})
+        
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        logger.error(f"Error duplicating course instance: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'An error occurred while duplicating the course'})
+
+@require_GET
+def check_group_name(request):
+    """
+    Check if a group name is available for a specific course.
+    """
+    try:
+        group_name = request.GET.get('group_name', '').strip()
+        course_id = request.GET.get('course_id')
+        
+        if not group_name:
+            return JsonResponse({'available': False, 'error': 'Group name is required'})
+            
+        if not course_id:
+            return JsonResponse({'available': False, 'error': 'Course ID is required'})
+            
+        # Check if the group name exists for this specific course
+        exists = CourseInstance.objects.filter(
+            course_id=course_id,
+            group_name=group_name
+        ).exists()
+        
+        return JsonResponse({'available': not exists})
+        
+    except Exception as e:
+        logger.error(f"Error checking group name: {str(e)}", exc_info=True)
+        return JsonResponse(
+            {'available': False, 'error': str(e)}, 
+            status=400
+        )
+
+@login_required
+@require_POST
+def create_course_instance(request, course_id):
+    """
+    Creates a new instance of an existing course.
+    """
+    logger.info(f"Attempting to create course instance for course_id: {course_id}, user: {request.user}")
+    
+    if not request.user.is_instructor:
+        logger.warning(f"Permission denied: User {request.user} is not an instructor")
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        # Log request body
+        logger.debug(f"Request body: {request.body}")
+        data = json.loads(request.body)
+        group_name = data.get('group_name', '').strip()
+        
+        logger.info(f"Parsed group_name: {group_name}")
+        
+        if not group_name:
+            logger.warning("Group name is required but was empty")
+            return JsonResponse({'success': False, 'error': 'Group name is required'})
+        
+        # Log course lookup attempt
+        logger.info(f"Looking up course with id: {course_id}")
+        course = get_object_or_404(Course, id=course_id)
+        logger.info(f"Found course: {course.title}")
+        
+        # Check instructor permission
+        if not course.instructors.filter(id=request.user.id).exists():
+            logger.warning(f"Permission denied: User {request.user} is not an instructor for course {course_id}")
+            return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+        # Check if instance with this group name already exists
+        if CourseInstance.objects.filter(course=course, group_name=group_name).exists():
+            logger.warning(f"Group name '{group_name}' already exists for course {course_id}")
+            return JsonResponse({'success': False, 'error': 'A session with this group name already exists'})
+        
+        # Create new course instance
+        logger.info(f"Creating new course instance with group_name: {group_name}")
+        instance = CourseInstance.objects.create(
+            course=course,
+            group_name=group_name
+        )
+        instance.instructors.add(request.user)
+        logger.info(f"Successfully created course instance id: {instance.id}")
+        
+        return JsonResponse({'success': True, 'instance_id': instance.id})
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Invalid JSON in request'})
+    except Course.DoesNotExist:
+        logger.error(f"Course not found: {course_id}")
+        return JsonResponse({'success': False, 'error': 'Course not found'})
+    except Exception as e:
+        logger.error(f"Unexpected error creating course instance: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'An unexpected error occurred'})
+
+@login_required
+def course_details(request, course_id):
+    """
+    Returns JSON details about a course and its instances for deletion confirmation
+    """
+    try:
+        course = Course.objects.get(id=course_id)
+        
+        # Check if user is authorized to delete this course
+        if request.user not in course.instructors.all():
+            return JsonResponse({
+                'error': 'Not authorized to delete this course'
+            }, status=403)
+        
+        # Get all instances of this course
+        instances = CourseInstance.objects.filter(course=course).annotate(
+            enrollment_count=Count('enrollments')
+        )
+        
+        # Prepare the response data
+        data = {
+            'course': {
+                'id': course.id,
+                'title': course.title,
+                'description': course.description
+            },
+            'instances': [{
+                'id': instance.id,
+                'group_name': instance.group_name,
+                'enrollment_count': instance.enrollment_count
+            } for instance in instances]
+        }
+        
+        return JsonResponse(data)
+        
+    except Course.DoesNotExist:
+        return JsonResponse({
+            'error': 'Course not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching course details: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)
+
+@login_required
+@require_POST
+def delete_course(request, course_id):
+    """
+    Deletes a course and all its instances.
+    """
+    if not request.user.is_instructor:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+    try:
+        course = Course.objects.get(id=course_id, instructors=request.user)
+        
+        # Get the count of instances and enrollments for logging
+        instances = CourseInstance.objects.filter(course=course)
+        instance_count = instances.count()
+        enrollment_count = Enrollment.objects.filter(course_instance__in=instances).count()
+        
+        # Delete the course (this will cascade delete instances and enrollments)
+        course.delete()
+        
+        logger.info(f"Deleted course {course_id} with {instance_count} instances and {enrollment_count} enrollments")
+        return JsonResponse({'success': True})
+        
+    except Course.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Course not found'})
+    except Exception as e:
+        logger.error(f"Error deleting course: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'An error occurred while deleting the course'})
+
+@login_required
+def get_course_enrollments(request, course_instance_id):
+    try:
+        course_instance = CourseInstance.objects.get(id=course_instance_id)
+        
+        # Check if user is authorized
+        if request.user not in course_instance.instructors.all():
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+        
+        # Get total modules count for the course
+        total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+        
+        enrollments_data = []
+        for enrollment in course_instance.enrollments.select_related('student', 'course_progress').all():
+            enrollments_data.append({
+                'id': enrollment.id,
+                'student': {
+                    'email': enrollment.student.email,
+                    'username': enrollment.student.username
+                },
+                'progress': {
+                    'modules_completed': enrollment.course_progress.modules_completed if hasattr(enrollment, 'course_progress') else 0,
+                    'total_modules': total_modules,  # Use the calculated total
+                    'overall_score': enrollment.course_progress.overall_score if hasattr(enrollment, 'course_progress') else 0.0
+                }
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'enrollments': enrollments_data
+        })
+        
+    except CourseInstance.DoesNotExist:
+        return JsonResponse({'error': 'Course instance not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching enrollments: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def bulk_enroll_students(request, course_instance_id):
+    print("\n=== Starting bulk enrollment process ===")
+    try:
+        course_instance = CourseInstance.objects.get(id=course_instance_id)
+        print(f"Found course instance: {course_instance.id} - {course_instance.course.title}")
+        
+        if request.user not in course_instance.instructors.all():
+            print(f"User {request.user.username} not authorized")
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+        
+        data = json.loads(request.body)
+        emails = data.get('emails', [])
+        print(f"Processing emails: {emails}")
+        
+        success_count = 0
+        error_count = 0
+        new_enrollments = []
+        error_details = []
+        
+        for email in emails:
+            print(f"\nProcessing email: {email}")
+            try:
+                validate_email(email)
+                print("Email validation passed")
+                
+                # Get or create user with email as username
+                user, user_created = User.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        'username': email,  # Use full email as username
+                        'is_student': True
+                    }
+                )
+                print(f"User {'created' if user_created else 'found'}: {user.username}")
+                
+                # Check enrollment
+                print(f"Checking enrollment for user {user.username} in course instance {course_instance.id}")
+                enrollment, enrollment_created = Enrollment.objects.get_or_create(
+                    student=user,
+                    course_instance=course_instance,
+                    defaults={'active': True}
+                )
+                print(f"Enrollment {'created' if enrollment_created else 'already exists'}")
+                
+                if enrollment_created:
+                    new_enrollments.append({
+                        'id': enrollment.id,
+                        'student': {
+                            'email': user.email
+                        },
+                        'progress': {
+                            'modules_completed': 0,
+                            'total_modules': Module.objects.filter(unit__course=course_instance.course).count(),
+                            'overall_score': 0.0
+                        }
+                    })
+                    success_count += 1
+                    print("Enrollment process completed successfully")
+                else:
+                    error_count += 1
+                    error_details.append(f"{email}: Already enrolled in this course session")
+                    print("Skipped - already enrolled")
+                    
+            except ValidationError as ve:
+                print(f"Validation error for {email}: {str(ve)}")
+                error_count += 1
+                error_details.append(f"{email}: Invalid email format")
+                continue
+            except Exception as e:
+                print(f"Unexpected error for {email}: {str(e)}")
+                error_count += 1
+                error_details.append(f"{email}: {str(e)}")
+                logger.error(f"Error enrolling {email}: {str(e)}", exc_info=True)
+                continue
+        
+        print("\n=== Bulk enrollment process completed ===")
+        print(f"Successes: {success_count}, Errors: {error_count}")
+        print(f"Error details: {error_details}")
+        
+        return JsonResponse({
+            'success': True,
+            'success_count': success_count,
+            'error_count': error_count,
+            'error_details': error_details,
+            'enrollments': new_enrollments
+        })
+        
+    except CourseInstance.DoesNotExist:
+        print(f"Course instance {course_instance_id} not found")
+        return JsonResponse({'error': 'Course instance not found'}, status=404)
+    except Exception as e:
+        print(f"Critical error in bulk enrollment: {str(e)}")
+        logger.error(f"Error in bulk enrollment: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def remove_enrollment(request, enrollment_id):
+    """
+    Remove a student's enrollment from a course instance
+    """
+    try:
+        enrollment = Enrollment.objects.select_related('course_instance').get(id=enrollment_id)
+        
+        # Check if user is authorized (must be an instructor of the course)
+        if request.user not in enrollment.course_instance.instructors.all():
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+        
+        # Store info for logging
+        student_email = enrollment.student.email
+        course_name = enrollment.course_instance.course.title
+        
+        # Delete the enrollment (this will cascade to related records)
+        enrollment.delete()
+        
+        # Log the action
+        logger.info(f"Removed enrollment of {student_email} from {course_name} by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully removed {student_email} from the course'
+        })
+        
+    except Enrollment.DoesNotExist:
+        return JsonResponse({'error': 'Enrollment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error removing enrollment: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)

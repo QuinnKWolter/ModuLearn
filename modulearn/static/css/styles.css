@@ -160,3 +160,7 @@ footer {
 .dark-mode .table-hover tbody tr:hover {
   background-color: #555;
 }
+
+.dark-mode .text-muted {
+  color: #bbb !important;
+}
