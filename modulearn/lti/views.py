@@ -14,7 +14,7 @@ from pylti1p3.contrib.django import (
 )
 from pylti1p3.tool_config import ToolConfDict
 import json
-from courses.models import Course, Module
+from courses.models import Course, Module, CourseInstance, Enrollment, CourseProgress
 import logging
 from modulearn.settings import get_primary_domain
 
@@ -119,6 +119,11 @@ def handle_lti11_launch(request):
         'lis_person_contact_email_primary': request.POST.get('lis_person_contact_email_primary'),
         'lis_person_name_given': request.POST.get('lis_person_name_given'),
         'lis_person_name_family': request.POST.get('lis_person_name_family'),
+        # Add Canvas-specific fields
+        'custom_canvas_course_id': request.POST.get('custom_canvas_course_id'),
+        'custom_canvas_assignment_id': request.POST.get('custom_canvas_assignment_id'),
+        'lis_outcome_service_url': request.POST.get('lis_outcome_service_url'),
+        'lis_result_sourcedid': request.POST.get('lis_result_sourcedid'),
     }
     
     return process_launch_data(request, launch_data)
@@ -135,16 +140,16 @@ def process_launch_data(request, launch_data):
         launch_data.get('user_id') or  # LTI 1.1 user ID
         launch_data.get('custom_canvas_user_id')  # Canvas-specific user ID
     )
-    
+
+    if not user_id:
+        logger.error("No user identifier found in launch data")
+        return HttpResponse('Missing user identifier in launch data.', status=400)
+
     email = (
         launch_data.get('email') or  # LTI 1.3 email
         launch_data.get('lis_person_contact_email_primary') or  # LTI 1.1 email
         f"{user_id}@canvas.instructure.com"  # Fallback email
     )
-
-    if not user_id:
-        logger.error("No user identifier found in launch data")
-        return HttpResponse('Missing user identifier in launch data.', status=400)
 
     # Get or create user with email as username for better identification
     user, created = User.objects.get_or_create(
@@ -161,7 +166,7 @@ def process_launch_data(request, launch_data):
     roles = launch_data.get('roles', [])
     if isinstance(roles, str):
         roles = roles.split(',')
-    
+
     user.is_instructor = any(role for role in roles if 'Instructor' in role or 'TeachingAssistant' in role)
     user.is_student = any(role for role in roles if 'Learner' in role or 'Student' in role) or not user.is_instructor
     user.save(update_fields=['is_instructor', 'is_student'])
@@ -171,6 +176,54 @@ def process_launch_data(request, launch_data):
     request.session['canvas_user_id'] = user_id
     request.session['is_lti_launch'] = True
     
+    # Get the course instance ID from custom parameters or query string
+    instance_id = (
+        launch_data.get('custom_course_id') or  # Custom parameter
+        request.GET.get('course_id')  # Query parameter from our LTI URL
+    )
+    
+    # Get Canvas context info
+    canvas_course_id = launch_data.get('custom_canvas_course_id')
+    canvas_assignment_id = launch_data.get('custom_canvas_assignment_id')
+    
+    print(f"Instance ID: {instance_id}")
+    print(f"Canvas Course ID: {canvas_course_id}")
+    print(f"Canvas Assignment ID: {canvas_assignment_id}")
+    
+    if instance_id:
+        try:
+            course_instance = CourseInstance.objects.get(
+                id=instance_id,  # Looking for the instance by its ID
+                active=True
+            )
+            # Store Canvas context info with the course instance
+            if canvas_course_id and canvas_assignment_id:
+                course_instance.canvas_course_id = canvas_course_id
+                course_instance.canvas_assignment_id = canvas_assignment_id
+                course_instance.lis_outcome_service_url = launch_data.get('lis_outcome_service_url')
+                course_instance.save()
+                
+                # Get or create the student's course progress
+                enrollment = Enrollment.objects.get(
+                    student=request.user,
+                    course_instance=course_instance
+                )
+                course_progress = CourseProgress.objects.get(enrollment=enrollment)
+                
+                print("LTI Launch - Storing credentials:")
+                print(f"sourcedid: {launch_data.get('lis_result_sourcedid')}")
+                print(f"service_url: {launch_data.get('lis_outcome_service_url')}")
+                
+                # Store the student-specific sourcedid
+                course_progress.lis_result_sourcedid = launch_data.get('lis_result_sourcedid')
+                course_progress.save()
+                
+            # Redirect to the specific course
+            return redirect('courses:course_detail', instance_id=course_instance.id)
+        except CourseInstance.DoesNotExist:
+            logger.error(f"Course instance {instance_id} not found")
+    
+    # If no instance_id or course not found, continue with normal launch flow
     # Log the user in
     login(request, user)
     logger.info(f"Successfully logged in user: {user.email} (Canvas ID: {user_id})")

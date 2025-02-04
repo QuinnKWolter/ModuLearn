@@ -19,7 +19,7 @@
   
   window.addEventListener('message', function(event) {
     // Validate the origin for security
-    const expectedOrigins = ['http://pawscomp2.sis.pitt.edu', 'http://127.0.0.1:8000', 'https://codecheck.io'];
+    const expectedOrigins = ['http://pawscomp2.sis.pitt.edu', 'http://127.0.0.1:8000', 'https://codecheck.io', 'https://codecheck.me'];
     if (!expectedOrigins.includes(event.origin)) {
       console.warn('Unexpected message origin:', event.origin);
       return;

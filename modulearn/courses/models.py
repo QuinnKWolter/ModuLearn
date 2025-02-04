@@ -6,8 +6,21 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 import json
 import requests
+from oauthlib.oauth1 import Client
+from oauthlib.oauth1.rfc5849 import signature, parameters
+import uuid
+from django.conf import settings
+import logging
+import jwt
+import time
+import hashlib
+import base64
+import hmac
+from urllib.parse import quote, urlencode
+
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 class Course(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
@@ -28,6 +41,9 @@ class CourseInstance(models.Model):
     instructors = models.ManyToManyField(User, related_name='course_instances_taught', limit_choices_to={'is_instructor': True}, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     active = models.BooleanField(default=True)
+    canvas_course_id = models.CharField(max_length=255, null=True, blank=True)
+    canvas_assignment_id = models.CharField(max_length=255, null=True, blank=True)
+    lis_outcome_service_url = models.URLField(null=True, blank=True)
 
     class Meta:
         unique_together = ('course', 'group_name')
@@ -174,52 +190,152 @@ class ModuleProgress(models.Model):
                 enrollment=enrollment
             )
 
+    def update_progress(self, new_progress):
+        """Update module progress and potentially submit course grade"""
+        self.progress = new_progress
+        self.save()
+
+        print("Updating progress:", self.progress)
+        
+        # If module is completed, update course progress
+        if self.progress >= 1.0:
+            print("Module is completed, updating course progress")
+            course_progress = self.enrollment.course_progress
+            course_progress.recalculate_progress()
+            # Submit updated grade to Canvas
+            course_progress.submit_grade_to_canvas()
+
     def update_from_activity_attempt(self, data):
         """Update progress based on activity attempt data"""
+        print("Updating from activity attempt:", data)
         if not isinstance(data, dict) or 'data' not in data or not data['data']:
+            print("Invalid data format")
             return
         
         activity_data = data['data'][0]  # Get the first activity
+        print(f"Processing activity data: {activity_data}")
+        
         self.attempts += 1
         self.last_response = json.dumps(activity_data)
         
-        # Update fields from the activity data with proper type conversion
-        if 'score' in activity_data:
-            self.score = float(activity_data['score'])
-        if 'progress' in activity_data:
-            self.progress = float(activity_data['progress']) / 100.0  # Convert percentage to decimal
-        if 'success' in activity_data:
-            self.success = bool(activity_data['success'])
-        if 'completion' in activity_data:
-            self.is_complete = bool(activity_data['completion'])
-        if 'response' in activity_data:
-            self.state_data = activity_data['response']
-        
-        self.save()
-        
-        # If LTI grade passback is configured, submit the grade
-        if self.lis_result_sourcedid and self.lis_outcome_service_url:
-            self.submit_grade_to_canvas()
+        # Update fields from the activity data
+        try:
+            if 'score' in activity_data:
+                self.score = float(activity_data['score'])
+                print(f"Updated score: {self.score}")
+            if 'progress' in activity_data:
+                self.progress = float(activity_data['progress']) / 100.0
+                print(f"Updated progress: {self.progress}")
+            if 'success' in activity_data:
+                self.success = bool(activity_data['success'])
+                print(f"Updated success: {self.success}")
+            if 'completion' in activity_data:
+                self.is_complete = bool(activity_data['completion'])
+                print(f"Updated completion: {self.is_complete}")
+            if 'response' in activity_data:
+                self.state_data = activity_data['response']
+            
+            self.save()
+            print("Saved ModuleProgress updates")
+            
+            # Update course progress if there's an enrollment
+            if self.enrollment and hasattr(self.enrollment, 'course_progress'):
+                print("Updating course progress")
+                self.enrollment.course_progress.update_progress()
+                print("Course progress updated")
+            
+        except Exception as e:
+            logger.error(f"Error updating module progress: {str(e)}")
+            raise
 
     def submit_grade_to_canvas(self):
-        """Submit grade to Canvas via LTI"""
+        """Submit grade to Canvas via LTI 1.1 or 1.3"""
+        print("Submitting grade to Canvas MODULE PROGRESS!")
         if not (self.lis_result_sourcedid and self.lis_outcome_service_url):
+            logger.warning("Missing LTI grade passback credentials")
             return False
+        
+        try:
+            # Get LTI 1.1 credentials
+            consumer_key = settings.LTI_11_CONSUMER_KEY
+            consumer_secret = settings.LTI_11_CONSUMER_SECRET
+            print(f"Using consumer key: {consumer_key}")
             
-        score = self.score if self.score is not None else 0.0
-        
-        # Submit grade using LTI outcomes service
-        payload = {
-            'lis_result_sourcedid': self.lis_result_sourcedid,
-            'score': score / 100.0  # Convert percentage to decimal
-        }
-        
-        response = requests.post(
-            self.lis_outcome_service_url,
-            json=payload,
-            headers={'Content-Type': 'application/json'}
-        )
-        return response.ok
+            # Convert score to 0-1 range for Canvas
+            score = self.score if self.score is not None else 0.0
+            score = score / 100.0  # Convert percentage to decimal
+            print(f"Submitting score: {score}")
+            
+            # Create OAuth1 client and submit grade
+            client = Client(
+                client_key=consumer_key,
+                client_secret=consumer_secret,
+            )
+            
+            # Prepare the XML payload
+            xml_template = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
+                <imsx_POXHeader>
+                    <imsx_POXRequestHeaderInfo>
+                        <imsx_version>V1.0</imsx_version>
+                        <imsx_messageIdentifier>{message_id}</imsx_messageIdentifier>
+                    </imsx_POXRequestHeaderInfo>
+                </imsx_POXHeader>
+                <imsx_POXBody>
+                    <replaceResultRequest>
+                        <resultRecord>
+                            <sourcedGUID>
+                                <sourcedId>{sourcedid}</sourcedId>
+                            </sourcedGUID>
+                            <result>
+                                <resultScore>
+                                    <language>en</language>
+                                    <textString>{score}</textString>
+                                </resultScore>
+                            </result>
+                        </resultRecord>
+                    </replaceResultRequest>
+                </imsx_POXBody>
+            </imsx_POXEnvelopeRequest>
+            """.format(
+                message_id=str(uuid.uuid4()),
+                sourcedid=self.lis_result_sourcedid,
+                score=str(score)
+            )
+            
+            # Generate OAuth1 signature
+            oauth_params = client.get_oauth_params()
+            oauth_params.append(('oauth_body_hash', signature.sign_plaintext(xml_template, consumer_secret)))
+            
+            # Get authorization header
+            auth_header = client.get_oauth_signature(
+                self.lis_outcome_service_url,
+                http_method='POST',
+                oauth_params=oauth_params
+            )
+            
+            headers = {
+                'Content-Type': 'application/xml',
+                'Authorization': auth_header,
+            }
+            
+            # Send the request
+            response = requests.post(
+                self.lis_outcome_service_url,
+                data=xml_template,
+                headers=headers,
+                verify=True
+            )
+            
+            success = 200 <= response.status_code < 300
+            if not success:
+                logger.error(f"Failed to submit grade. Status: {response.status_code}, Response: {response.text}")
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error submitting grade to Canvas: {str(e)}")
+            return False
 
 class StudentScore(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -253,9 +369,11 @@ class CourseProgress(models.Model):
     modules_completed = models.IntegerField(default=0)
     total_modules = models.IntegerField(default=0)
     last_accessed = models.DateTimeField(auto_now=True)
+    lis_result_sourcedid = models.CharField(max_length=255, null=True, blank=True)
 
     def update_progress(self):
         """Calculate overall course progress based on module progress"""
+        print("\nUpdating CourseProgress...")
         module_progress = ModuleProgress.objects.filter(enrollment=self.enrollment)
         total_modules = Module.objects.filter(
             unit__course=self.enrollment.course_instance.course
@@ -263,14 +381,147 @@ class CourseProgress(models.Model):
         
         if total_modules > 0:
             completed = module_progress.filter(is_complete=True).count()
-            total_progress = sum(mp.progress or 0 for mp in module_progress)
-            total_score = sum(mp.score or 0 for mp in module_progress if mp.score is not None)
+            print(f"Completed modules: {completed}")
+            total_progress = sum(getattr(mp, 'progress', 0) or 0 for mp in module_progress)
+            print(f"Total progress: {total_progress}")
+            total_score = sum(getattr(mp, 'score', 0) or 0 for mp in module_progress)
+            print(f"Total score: {total_score}")
             
             self.modules_completed = completed
             self.total_modules = total_modules
             self.overall_progress = (total_progress / total_modules) * 100 if total_modules > 0 else 0
             self.overall_score = (total_score / total_modules) if total_modules > 0 else 0
             self.save()
+            
+            # Submit grade to Canvas
+            print("Checking LTI credentials for grade submission...")
+            print(f"lis_result_sourcedid: {self.lis_result_sourcedid}")
+            print(f"lis_outcome_service_url: {self.enrollment.course_instance.lis_outcome_service_url}")
+            
+            if self.lis_result_sourcedid and self.enrollment.course_instance.lis_outcome_service_url:
+                print(f"Attempting to submit overall score: {self.overall_score}")
+                self.submit_grade_to_canvas()
+            else:
+                print("Missing LTI credentials for grade submission")
+
+    def submit_grade_to_canvas(self):
+        """Submit the overall course grade back to Canvas"""
+        print("Submitting grade to Canvas COURSE PROGRESS!")
+        if not (self.lis_result_sourcedid and self.enrollment.course_instance.lis_outcome_service_url):
+            logger.warning("Missing LTI grade passback credentials")
+            return False
+        
+        try:
+            # Get LTI 1.1 credentials
+            consumer_key = settings.LTI_11_CONSUMER_KEY
+            consumer_secret = settings.LTI_11_CONSUMER_SECRET
+            print(f"Using consumer key: {consumer_key}")
+            
+            # Convert score to 0-1 range for Canvas
+            score = self.overall_score / 100.0
+            print(f"Submitting score: {score}")
+            
+            # Create the XML payload
+            xml_template = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
+                <imsx_POXHeader>
+                    <imsx_POXRequestHeaderInfo>
+                        <imsx_version>V1.0</imsx_version>
+                        <imsx_messageIdentifier>{message_id}</imsx_messageIdentifier>
+                    </imsx_POXRequestHeaderInfo>
+                </imsx_POXHeader>
+                <imsx_POXBody>
+                    <replaceResultRequest>
+                        <resultRecord>
+                            <sourcedGUID>
+                                <sourcedId>{sourcedid}</sourcedId>
+                            </sourcedGUID>
+                            <result>
+                                <resultScore>
+                                    <language>en</language>
+                                    <textString>{score}</textString>
+                                </resultScore>
+                            </result>
+                        </resultRecord>
+                    </replaceResultRequest>
+                </imsx_POXBody>
+            </imsx_POXEnvelopeRequest>
+            """.format(
+                message_id=str(uuid.uuid4()),
+                sourcedid=self.lis_result_sourcedid,
+                score=str(score)
+            )
+
+            # Calculate body hash
+            body_hash = base64.b64encode(hashlib.sha1(xml_template.encode('utf-8')).digest()).decode('utf-8')
+            
+            # Prepare OAuth parameters
+            oauth_timestamp = str(int(time.time()))
+            oauth_nonce = str(uuid.uuid4())
+            
+            params = {
+                'oauth_consumer_key': consumer_key,
+                'oauth_signature_method': 'HMAC-SHA1',
+                'oauth_timestamp': oauth_timestamp,
+                'oauth_nonce': oauth_nonce,
+                'oauth_version': '1.0',
+                'oauth_body_hash': body_hash
+            }
+
+            # Generate base string
+            base_string_parts = [
+                'POST',
+                quote(self.enrollment.course_instance.lis_outcome_service_url, safe=''),
+                quote(urlencode(sorted(params.items())), safe='')
+            ]
+            base_string = '&'.join(base_string_parts)
+            
+            # Generate signature
+            key = f"{quote(consumer_secret, safe='')}&"
+            signature = base64.b64encode(
+                hmac.new(
+                    key.encode('utf-8'),
+                    base_string.encode('utf-8'),
+                    hashlib.sha1
+                ).digest()
+            ).decode('utf-8')
+            
+            # Add signature to params
+            params['oauth_signature'] = signature
+            
+            # Create Authorization header
+            auth_header = 'OAuth ' + ','.join(
+                f'{quote(k, safe="~")}="{quote(v, safe="~")}"'
+                for k, v in sorted(params.items())
+            )
+            
+            headers = {
+                'Content-Type': 'application/xml',
+                'Authorization': auth_header,
+            }
+            
+            print(f"Sending grade to: {self.enrollment.course_instance.lis_outcome_service_url}")
+            print(f"Authorization header: {auth_header}")
+            
+            response = requests.post(
+                self.enrollment.course_instance.lis_outcome_service_url,
+                data=xml_template,
+                headers=headers,
+                verify=True
+            )
+            
+            success = 200 <= response.status_code < 300
+            print(f"Grade submission response: {response.status_code}")
+            print(f"Response content: {response.text}")
+            
+            if not success:
+                logger.error(f"Failed to submit grade. Status: {response.status_code}, Response: {response.text}")
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error submitting grade to Canvas: {str(e)}")
+            return False
 
 @receiver(post_save, sender=Enrollment)
 def create_module_progress_records(sender, instance, created, **kwargs):
@@ -278,10 +529,22 @@ def create_module_progress_records(sender, instance, created, **kwargs):
     Create ModuleProgress records for each module in the course when a new enrollment is created
     """
     if created:
-        # Fix: Access course through course_instance
+        # Get total modules for the course
+        total_modules = Module.objects.filter(unit__course=instance.course_instance.course).count()
+        
+        # Create or update CourseProgress with correct total_modules
+        CourseProgress.objects.get_or_create(
+            enrollment=instance,
+            defaults={
+                'total_modules': total_modules,
+                'modules_completed': 0
+            }
+        )
+        
+        # Create ModuleProgress records
+        module_progress_list = []
         modules = Module.objects.filter(unit__course=instance.course_instance.course)
         
-        module_progress_list = []
         for module in modules:
             module_progress_list.append(
                 ModuleProgress(
@@ -291,6 +554,3 @@ def create_module_progress_records(sender, instance, created, **kwargs):
                 )
             )
         ModuleProgress.objects.bulk_create(module_progress_list)
-        
-        # Create CourseProgress
-        CourseProgress.objects.create(enrollment=instance)

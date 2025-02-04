@@ -61,6 +61,12 @@
                 <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-info me-2">
                   <i class="bi bi-info-circle"></i> Course Details
                 </a>
+                <button class="btn btn-secondary copy-lti-url" 
+                        data-course-instance-id="{{ course_instance.id }}"
+                        data-bs-toggle="tooltip" 
+                        title="Copy LTI Launch URL">
+                  <i class="bi bi-link-45deg"></i> Copy LTI URL
+                </button>
               </div>
               <button class="btn btn-warning" 
                       type="button"
@@ -116,17 +122,22 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div id="courseImportError" class="alert alert-danger" style="display: none;"></div>
         <form id="createCourseForm">
           <div class="mb-3">
             <label for="newCourseId" class="form-label">Course ID</label>
             <input type="text" class="form-control" id="newCourseId">
+            <small class="form-text text-muted">Enter the ID of an existing course to import</small>
           </div>
           <div class="text-center mb-3">or</div>
           <div class="mb-3">
             <label for="rawJson" class="form-label">Raw JSON</label>
             <textarea class="form-control" id="rawJson" rows="5"></textarea>
+            <small class="form-text text-muted">Paste the complete course JSON structure</small>
           </div>
-          <button type="submit" class="btn btn-primary">Create Course</button>
+          <button type="submit" class="btn btn-primary" id="createCourseSubmit">
+            Create Course
+          </button>
         </form>
       </div>
     </div>
@@ -145,7 +156,7 @@
         <form id="newSessionForm">
           <input type="hidden" id="courseId">
           <div class="mb-3">
-            <label for="groupName" class="form-label required">Group Name</label>
+            <label for="groupName" class="form-label required">Session Name</label>
             <input type="text" class="form-control" id="groupName" required>
             <div id="groupNameFeedback"></div>
             <small class="form-text text-muted">A unique identifier for this course session (e.g., "Fall 2024", "Section A")</small>
@@ -282,6 +293,41 @@ function debounce(func, wait) {
   };
 }
 
+// Add this before the DOMContentLoaded event listener
+async function deleteCourse(courseId) {
+  const confirmButton = document.getElementById('confirmDeleteButton');
+  try {
+    confirmButton.disabled = true;
+    confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+    
+    const response = await fetch(`/courses/${courseId}/delete/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete course');
+    }
+    
+    if (data.success) {
+      window.location.reload();
+    } else {
+      throw new Error(data.error || 'Failed to delete course');
+    }
+    
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    alert('Error: ' + (error.message || 'Failed to delete course'));
+    confirmButton.disabled = false;
+    confirmButton.innerHTML = 'Delete Course';
+  }
+}
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Add event listeners for all "New Session" buttons
@@ -377,7 +423,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await response.json();
         console.log('Response:', data); // Debug log
         if (data.success) {
-          alert('Course session created successfully!');
           window.location.reload();
         } else {
           alert('Failed to create course session: ' + data.error);
@@ -399,41 +444,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const groupNameInput = document.getElementById('groupName');
   if (groupNameInput) {
     groupNameInput.addEventListener('input', (e) => checkGroupName(e.target.value.trim()));
-  }
-
-  // Add these functions to your existing script section
-  async function deleteCourse(courseId) {
-    const confirmButton = document.getElementById('confirmDeleteButton');
-    try {
-      confirmButton.disabled = true;
-      confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
-      
-      const response = await fetch(`/courses/${courseId}/delete/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}'
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete course');
-      }
-      
-      if (data.success) {
-        window.location.reload();
-      } else {
-        throw new Error(data.error || 'Failed to delete course');
-      }
-      
-    } catch (error) {
-      console.error('Error deleting course:', error);
-      alert('Error: ' + (error.message || 'Failed to delete course'));
-      confirmButton.disabled = false;
-      confirmButton.innerHTML = 'Delete Course';
-    }
   }
 
   document.querySelectorAll('[id^="addEnrollmentForm-"]').forEach(form => {
@@ -458,7 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
           const table = document.getElementById(`enrollmentTable-${courseId}`);
           const newRow = table.insertRow();
           newRow.innerHTML = `<td>${name}</td><td>${email}</td><td>${code}</td>`;
-          alert('Enrollment added successfully.');
         } else {
           alert('Error: ' + data.error);
         }
@@ -652,6 +661,91 @@ document.addEventListener('DOMContentLoaded', function() {
   manageEnrollmentModal.addEventListener('hidden.bs.modal', function () {
     // Refresh the page
     window.location.reload();
+  });
+
+  // Add this new event listener for the create course form
+  const createCourseForm = document.getElementById('createCourseForm');
+  if (createCourseForm) {
+    createCourseForm.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      
+      const courseId = document.getElementById('newCourseId').value.trim();
+      const rawJson = document.getElementById('rawJson').value.trim();
+      const errorDiv = document.getElementById('courseImportError');
+      const submitButton = document.getElementById('createCourseSubmit');
+      
+      errorDiv.style.display = 'none';
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
+      
+      if (!courseId && !rawJson) {
+        errorDiv.textContent = 'Please provide either a Course ID or Raw JSON';
+        errorDiv.style.display = 'block';
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Create Course';
+        return;
+      }
+      
+      try {
+        let courseData = null;
+        if (rawJson) {
+          try {
+            courseData = JSON.parse(rawJson);
+          } catch (e) {
+            throw new Error('Invalid JSON format: ' + e.message);
+          }
+        }
+        
+        const response = await fetch("{% url 'courses:create_course' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({
+            course_id: courseId || null,
+            course_data: courseData
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          window.location.reload();
+        } else {
+          throw new Error(data.error || 'Failed to create course');
+        }
+      } catch (error) {
+        console.error('Error creating course:', error);
+        errorDiv.textContent = 'Error: ' + error.message;
+        errorDiv.style.display = 'block';
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Create Course';
+      }
+    });
+  }
+
+  // Handle LTI URL copy buttons
+  document.querySelectorAll('.copy-lti-url').forEach(button => {
+    button.addEventListener('click', function() {
+      const courseInstanceId = this.dataset.courseInstanceId;
+      const baseUrl = window.location.origin + '/lti/launch/';
+      const ltiUrl = `${baseUrl}?course_id=${courseInstanceId}`;
+      
+      navigator.clipboard.writeText(ltiUrl).then(() => {
+        // Show tooltip feedback
+        const tooltip = new bootstrap.Tooltip(button, {
+          title: 'URL Copied!',
+          trigger: 'manual'
+        });
+        tooltip.show();
+        setTimeout(() => tooltip.dispose(), 1500);
+      }).catch(err => {
+        console.error('Failed to copy URL:', err);
+        alert('Failed to copy URL to clipboard');
+      });
+    });
   });
 });
 </script>

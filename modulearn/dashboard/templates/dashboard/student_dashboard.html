@@ -42,7 +42,7 @@
                 </div>
               </div>
               
-              <a href="{% url 'courses:course_detail' enrollment.course_instance.id %}" class="btn btn-primary">Go to Course</a>
+              <a href="{% url 'courses:course_detail' instance_id=enrollment.course_instance.id %}" class="btn btn-primary">Go to Course</a>
             </div>
           </div>
         </div>

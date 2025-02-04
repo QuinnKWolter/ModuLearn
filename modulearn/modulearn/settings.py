@@ -313,3 +313,7 @@ LTI_TOOL_CONFIG = {
 CSRF_TRUSTED_ORIGINS = [
     'https://*.ngrok-free.app',
 ]
+
+# LTI 1.1 Configuration
+LTI_11_CONSUMER_KEY = 'modulearn_key'
+LTI_11_CONSUMER_SECRET = 'modulearn_secret'

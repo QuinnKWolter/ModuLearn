@@ -162,5 +162,13 @@ footer {
 }
 
 .dark-mode .text-muted {
+  color: #bbb;
+}
+
+.btn-link {
+  color: #555 !important;
+}
+
+.dark-mode .btn-link {
   color: #bbb !important;
 }

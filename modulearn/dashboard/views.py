@@ -13,8 +13,11 @@ def student_dashboard(request):
         'course_instance',
         'course_instance__course',
         'course_progress'
-    )
-    return render(request, 'dashboard/student_dashboard.html', {'enrollments': enrollments})
+    ).order_by('-course_instance__created_at')
+    
+    return render(request, 'dashboard/student_dashboard.html', {
+        'enrollments': enrollments
+    })
 
 @login_required
 def instructor_dashboard(request):
