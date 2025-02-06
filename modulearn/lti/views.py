@@ -171,54 +171,55 @@ def process_launch_data(request, launch_data):
     user.is_student = any(role for role in roles if 'Learner' in role or 'Student' in role) or not user.is_instructor
     user.save(update_fields=['is_instructor', 'is_student'])
 
+    # Log the user in before trying to access enrollments
+    login(request, user)
+
     # Store LTI session data
     request.session['lti_launch_data'] = launch_data
     request.session['canvas_user_id'] = user_id
     request.session['is_lti_launch'] = True
     
-    # Get the course instance ID from custom parameters or query string
+    # Get the course instance ID
     instance_id = (
-        launch_data.get('custom_course_id') or  # Custom parameter
-        request.GET.get('course_id')  # Query parameter from our LTI URL
+        launch_data.get('custom_course_id') or
+        request.GET.get('course_id')
     )
-    
-    # Get Canvas context info
-    canvas_course_id = launch_data.get('custom_canvas_course_id')
-    canvas_assignment_id = launch_data.get('custom_canvas_assignment_id')
-    
-    print(f"Instance ID: {instance_id}")
-    print(f"Canvas Course ID: {canvas_course_id}")
-    print(f"Canvas Assignment ID: {canvas_assignment_id}")
     
     if instance_id:
         try:
             course_instance = CourseInstance.objects.get(
-                id=instance_id,  # Looking for the instance by its ID
+                id=instance_id,
                 active=True
             )
-            # Store Canvas context info with the course instance
+            
+            # Update Canvas context info FIRST
+            canvas_course_id = launch_data.get('custom_canvas_course_id')
+            canvas_assignment_id = launch_data.get('custom_canvas_assignment_id')
+            print(f"Canvas Course ID: {canvas_course_id}")
+            print(f"Canvas Assignment ID: {canvas_assignment_id}")
+            
             if canvas_course_id and canvas_assignment_id:
                 course_instance.canvas_course_id = canvas_course_id
                 course_instance.canvas_assignment_id = canvas_assignment_id
                 course_instance.lis_outcome_service_url = launch_data.get('lis_outcome_service_url')
+                print(f"lis_outcome_service_url: {course_instance.lis_outcome_service_url}")
                 course_instance.save()
-                
-                # Get or create the student's course progress
-                enrollment = Enrollment.objects.get(
-                    student=request.user,
-                    course_instance=course_instance
+            
+            # Then handle instructor/student specific logic
+            if user.is_instructor:
+                course_instance.instructors.add(user)
+            elif user.is_student:
+                enrollment, created = Enrollment.objects.get_or_create(
+                    student=user,
+                    course_instance=course_instance,
+                    defaults={'active': True}
                 )
-                course_progress = CourseProgress.objects.get(enrollment=enrollment)
                 
-                print("LTI Launch - Storing credentials:")
-                print(f"sourcedid: {launch_data.get('lis_result_sourcedid')}")
-                print(f"service_url: {launch_data.get('lis_outcome_service_url')}")
-                
-                # Store the student-specific sourcedid
-                course_progress.lis_result_sourcedid = launch_data.get('lis_result_sourcedid')
-                course_progress.save()
-                
-            # Redirect to the specific course
+                if created or enrollment:
+                    course_progress = CourseProgress.objects.get(enrollment=enrollment)
+                    course_progress.lis_result_sourcedid = launch_data.get('lis_result_sourcedid')
+                    course_progress.save()
+            
             return redirect('courses:course_detail', instance_id=course_instance.id)
         except CourseInstance.DoesNotExist:
             logger.error(f"Course instance {instance_id} not found")

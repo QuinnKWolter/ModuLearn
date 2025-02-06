@@ -161,8 +161,14 @@ footer {
   background-color: #555;
 }
 
+/* Light mode text-muted */
+.text-muted {
+    color: #6c757d !important;  /* Bootstrap's default text-muted color */
+}
+
+/* Dark mode text-muted */
 .dark-mode .text-muted {
-  color: #bbb;
+    color: #9ca3af !important;  /* Lighter gray for better visibility in dark mode */
 }
 
 .btn-link {

@@ -999,3 +999,20 @@ def remove_enrollment(request, enrollment_id):
     except Exception as e:
         logger.error(f"Error removing enrollment: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_POST
+def delete_course_instance(request, instance_id):
+    try:
+        instance = CourseInstance.objects.get(id=instance_id)
+        
+        # Check if user is an instructor for this course instance
+        if request.user not in instance.instructors.all():
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+            
+        instance.delete()
+        return JsonResponse({'success': True})
+    except CourseInstance.DoesNotExist:
+        return JsonResponse({'error': 'Course instance not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
