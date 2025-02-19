@@ -1,0 +1,17 @@
+# run: docker-compose up
+version: "3"
+services:
+  webapp:
+    container_name: modulearn__webapp
+    build:
+      context: ./modulearn/
+      dockerfile: ./Dockerfile
+    ports:
+      - "8000:8000"
+    restart: always
+    command: >
+      sh -c "python manage.py makemigrations admin accounts courses &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./modulearn-storage/db:/modulearn-storage/db
