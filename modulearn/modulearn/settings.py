@@ -17,6 +17,8 @@ SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+FORCE_SCRIPT_NAME = '/modulearn'
+
 # Helper function to handle ngrok URLs in development
 def get_ngrok_urls():
     if DEBUG:  # Only allow ngrok in development
@@ -129,11 +131,11 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
+STATIC_URL = '/modulearn/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = '/media/'
+MEDIA_URL = '/modulearn/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
@@ -141,7 +143,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
-LOGIN_URL = 'accounts:login'
+LOGIN_URL = '/modulearn/accounts/login/'
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
@@ -284,12 +286,12 @@ def get_primary_domain():
         # Try to get ngrok URL first
         ngrok_urls = get_ngrok_urls()
         if ngrok_urls:
-            domain = f"https://{ngrok_urls[0]}"
-            print(f"Using ngrok domain: {domain}")  # Debug print
+            domain = f"https://{ngrok_urls[0]}/modulearn"
+            print(f"Using ngrok domain: {domain}")
             return domain
-        print("No ngrok URLs found, using localhost")  # Debug print
-        return "http://localhost:8000"  # Fallback to localhost
-    return "https://modulearn.com"  # Production domain PLACEHOLDER TODO
+        print("No ngrok URLs found, using localhost")
+        return "http://localhost:8000/modulearn"
+    return "https://modulearn.com/modulearn"
 
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
