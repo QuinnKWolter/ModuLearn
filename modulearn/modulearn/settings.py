@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party apps
-    'lti_tool',
+    # 'lti_tool',
     'crispy_forms',
     'crispy_bootstrap5',
     # Your apps
@@ -93,11 +93,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'modulearn.wsgi.application'
 
+# store db outside of the project
+os.makedirs(BASE_DIR / '../modulearn-storage/db', exist_ok=True)
+
 # Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / '../modulearn-storage/db/db.sqlite3',
     }
 }
 
