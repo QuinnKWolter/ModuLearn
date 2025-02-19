@@ -4,7 +4,7 @@ services:
   webapp:
     container_name: modulearn__webapp
     build:
-      context: ./modulearn/
+      context: ./ModuLearn/modulearn/
       dockerfile: ./Dockerfile
     ports:
       - "8000:8000"
