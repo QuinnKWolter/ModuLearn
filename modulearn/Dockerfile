@@ -25,7 +25,7 @@ ENV DJANGO_SETTINGS_MODULE=modulearn.settings
 # Expose the port that Django runs on
 EXPOSE 8000
 
-ENTRYPOINT ["python3"] 
+COPY docker-entrypoint.sh .
+RUN chmod +x docker-entrypoint.sh
 
-# Command to run the Django development server
-CMD ["manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["./docker-entrypoint.sh"]
