@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'saltire.lti.app',
+    'c3a6-72-77-2-33.ngrok-free.app',
     *get_ngrok_urls()  # Dynamically add ngrok URLs
 ]
 
@@ -49,7 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party apps
-    'lti_tool',
+    # 'lti_tool',
     'crispy_forms',
     'crispy_bootstrap5',
     # Your apps
