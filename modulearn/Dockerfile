@@ -25,7 +25,7 @@ ENV DJANGO_SETTINGS_MODULE=modulearn.settings
 # Expose the port that Django runs on
 EXPOSE 8000
 
-RUN chmod +x /usr/local/bin/python
+ENTRYPOINT ["python3"] 
 
 # Command to run the Django development server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["manage.py", "runserver", "0.0.0.0:8000"]
