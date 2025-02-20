@@ -35,9 +35,8 @@ def get_ngrok_urls():
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'saltire.lti.app',
-    'c3a6-72-77-2-33.ngrok-free.app',
-    *get_ngrok_urls()  # Dynamically add ngrok URLs
+    'proxy.personalized-learning.org',
+    # *get_ngrok_urls()  # Dynamically add ngrok URLs
 ]
 
 # Application definition
