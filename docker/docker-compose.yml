@@ -11,4 +11,3 @@ services:
     restart: always
     volumes:
       - ./modulearn-storage/db:/modulearn-storage/db
-      - ./modulearn-static:/modulearn/staticfiles
