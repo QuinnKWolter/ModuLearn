@@ -313,6 +313,7 @@ LTI_TOOL_CONFIG = {
 
 # Add CSRF trusted origins for your ngrok domain
 CSRF_TRUSTED_ORIGINS = [
+    'https://proxy.personalized-learning.org',
     'https://*.ngrok-free.app',
 ]
 
