@@ -32,3 +32,6 @@ venv.bak/
 .DS_Store
 
 modulearn-storage/
+modulearn-static/
+
+staticfiles/
