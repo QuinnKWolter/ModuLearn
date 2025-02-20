@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third-party apps
-    # 'lti_tool',
     'crispy_forms',
     'crispy_bootstrap5',
     # Your apps
@@ -321,3 +320,6 @@ CSRF_TRUSTED_ORIGINS = [
 # LTI 1.1 Configuration
 LTI_11_CONSUMER_KEY = 'modulearn_key'
 LTI_11_CONSUMER_SECRET = 'modulearn_secret'
+
+FORCE_SCRIPT_NAME = '/modulearn'
+USE_X_FORWARDED_HOST = True
