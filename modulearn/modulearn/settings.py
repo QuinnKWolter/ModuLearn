@@ -177,7 +177,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # Security Settings
-SECURE_SSL_REDIRECT = not DEBUG          # Redirect HTTP to HTTPS in production
+# SECURE_SSL_REDIRECT = not DEBUG          # Redirect HTTP to HTTPS in production
 SESSION_COOKIE_SECURE = not DEBUG        # Secure cookies in production
 CSRF_COOKIE_SECURE = not DEBUG           # Secure CSRF cookies in production
 X_FRAME_OPTIONS = ''
