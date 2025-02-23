@@ -9,7 +9,6 @@
   <h1 class="mt-4">Create an Account</h1>
   <form method="post" novalidate>
     {% csrf_token %}
-    {{ form.full_name|as_crispy_field }}
     {{ form|crispy }}
     <button type="submit" class="btn btn-primary">Sign Up</button>
   </form>
