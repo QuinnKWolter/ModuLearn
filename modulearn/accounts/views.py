@@ -12,6 +12,7 @@ def signup(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
+            user.full_name = form.cleaned_data.get('full_name', '')
             user.is_instructor = form.cleaned_data.get('is_instructor', False)
             user.is_student = form.cleaned_data.get('is_student', True)
             user.save()

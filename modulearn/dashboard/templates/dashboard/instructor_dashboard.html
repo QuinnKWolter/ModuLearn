@@ -5,11 +5,8 @@
 {% block content %}
 <h1 class="display-4 mb-4">Instructor Dashboard</h1>
 <div class="d-flex justify-content-between mb-4">
-  <button class="btn btn-primary" onclick="window.open('http://adapt2.sis.pitt.edu/next.course-authoring/#/login', '_blank')">
-    <i class="bi bi-pencil-square"></i> Course Authoring Tool
-  </button>
-  <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#createCourseModal">
-    <i class="bi bi-upload"></i> Import Course
+  <button class="btn btn-secondary" id="importCourseButton">
+    <i class="bi bi-upload"></i> Import From Course Authoring Tool
   </button>
 </div>
 
@@ -746,6 +743,56 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Failed to copy URL to clipboard');
       });
     });
+  });
+
+  document.getElementById('importCourseButton').addEventListener('click', async function() {
+    try {
+        const response = await fetch("{% url 'dashboard:generate_course_auth_url' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch token');
+        }
+
+        const data = await response.json();
+        if (data.error) {
+            console.error('Error:', data.error);
+            alert('Error: ' + data.error);
+        } else {
+            console.log('Token:', data.token);
+
+            // Post to x-login with the token
+            const loginResponse = await fetch("http://adapt2.sis.pitt.edu/next.course-authoring/api/auth/x-login", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: data.token })
+            });
+
+            if (!loginResponse.ok) {
+                throw new Error('Failed to log in with token');
+            }
+
+            const loginData = await loginResponse.json();
+            if (loginData.error) {
+                console.error('Login Error:', loginData.error);
+                alert('Login Error: ' + loginData.error);
+            } else {
+                alert('Successfully logged in to the course authoring tool.');
+                // Redirect the user to the course authoring tool
+                window.location.href = "http://adapt2.sis.pitt.edu/next.course-authoring/#/modulearn";
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while fetching the token or logging in.');
+    }
   });
 });
 </script>
