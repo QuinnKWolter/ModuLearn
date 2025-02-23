@@ -16,7 +16,7 @@ User = get_user_model()
 def fetch_course_details(course_id):
     logger.info(f"Starting fetch_course_details for course_id: {course_id}")
     
-    url = f"http://adapt2.sis.pitt.edu/next.course-authoring/api/courses/{course_id}/export"
+    url = f"https://proxy.personalized-learning.org/next.course-authoring/api/courses/{course_id}/export"
     logger.info(f"Fetching course data from URL: {url}")
     
     try:

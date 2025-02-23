@@ -1016,3 +1016,27 @@ def delete_course_instance(request, instance_id):
         return JsonResponse({'error': 'Course instance not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def create_semester_course(request):
+    if not request.user.is_instructor:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        course_id = request.GET.get('course_id')
+
+        if not course_id or not data:
+            return JsonResponse({'error': 'Course ID and data are required'}, status=400)
+
+        # Assuming create_course_from_json is a function that handles the course creation logic
+        course = create_course_from_json(data, request.user)
+
+        return JsonResponse({'success': True, 'course_id': course.id})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creating course: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)

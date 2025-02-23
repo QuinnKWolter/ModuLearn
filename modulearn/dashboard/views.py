@@ -77,7 +77,7 @@ def generate_course_auth_url(request):
     # Make POST request to obtain the encrypted token
     try:
         response = requests.post(
-            "http://adapt2.sis.pitt.edu/next.course-authoring/api/auth/x-login-token",
+            "https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login-token",
             json=payload
         )
         response.raise_for_status()

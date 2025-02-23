@@ -766,8 +766,11 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             console.log('Token:', data.token);
 
+            // Debug log before POST request
+            console.log('Attempting to POST to x-login with token:', data.token);
+
             // Post to x-login with the token
-            const loginResponse = await fetch("http://adapt2.sis.pitt.edu/next.course-authoring/api/auth/x-login", {
+            const loginResponse = await fetch("https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -775,18 +778,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ token: data.token })
             });
 
+            // Debug log for response
+            console.log('Login response status:', loginResponse.status);
+            console.log('Login response headers:', loginResponse.headers);
+
             if (!loginResponse.ok) {
                 throw new Error('Failed to log in with token');
             }
 
             const loginData = await loginResponse.json();
+            console.log('Login response data:', loginData);
+
             if (loginData.error) {
                 console.error('Login Error:', loginData.error);
                 alert('Login Error: ' + loginData.error);
             } else {
                 alert('Successfully logged in to the course authoring tool.');
+                // Debug log before navigation
+                console.log('Navigating to course authoring tool');
                 // Redirect the user to the course authoring tool
-                window.location.href = "http://adapt2.sis.pitt.edu/next.course-authoring/#/modulearn";
+                window.location.href = "https://proxy.personalized-learning.org/next.course-authoring/#/modulearn";
             }
         }
     } catch (error) {
