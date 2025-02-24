@@ -979,7 +979,7 @@ def create_semester_course(request):
 
     # Render the template that handles the course creation process
     try:
-        response = render(request, 'courses/create_semester_course.html', {
+        response = render(request, 'modulearn/courses/create_semester_course.html', {
             'course_id': course_id
         })
         logger.debug("Successfully rendered create_semester_course.html")
