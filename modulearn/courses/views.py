@@ -1018,7 +1018,6 @@ def delete_course_instance(request, instance_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
-@require_POST
 def create_semester_course(request):
     if not request.user.is_instructor:
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
