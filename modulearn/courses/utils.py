@@ -23,7 +23,7 @@ def fetch_course_details(course_id, user):
     logger.info(f"Fetching course data from URL: {url}")
     
     headers = {
-        'token': token
+        'Authorization': f'Bearer {token}'
     }
     
     try:
