@@ -26,9 +26,9 @@
                 const courseData = await response.json();
                 console.log('Course Data:', courseData);
 
-                // Send the course data to the create_course endpoint
+                // Send the course data to the course creation endpoint
                 console.log("Sending course data to backend /courses/create/");
-                const backendResponse = await fetch('/courses/create/', {
+                const backendResponse = await fetch('/modulearn/courses/create/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
