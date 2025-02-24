@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creating Course</title>
+</head>
+<body>
+    <h1>Please wait while we create your course...</h1>
+    <script>
+        async function createCourse(courseId) {
+            try {
+                // Fetch course details from the external API
+                const response = await fetch(`https://proxy.personalized-learning.org/next.course-authoring/api/courses/${courseId}/export`, {
+                    method: 'GET',
+                    credentials: 'include' // Include cookies and other credentials
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch course details: ${response.statusText}`);
+                }
+
+                const courseData = await response.json();
+                console.log('Course Data:', courseData);
+
+                // Send the course data to the create_course endpoint
+                const backendResponse = await fetch('/courses/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ course_data: courseData })
+                });
+
+                if (!backendResponse.ok) {
+                    throw new Error(`Failed to send course data to backend: ${backendResponse.statusText}`);
+                }
+
+                const result = await backendResponse.json();
+                console.log('Backend Response:', result);
+
+                if (result.success) {
+                    alert('Course created successfully!');
+                    window.location.href = '/dashboard/instructor/';
+                } else {
+                    alert('Error creating course: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing the course.');
+            }
+        }
+
+        // Call the function with the course ID
+        createCourse('67bb722453e99c2f13cd38a2');
+    </script>
+</body>
+</html>

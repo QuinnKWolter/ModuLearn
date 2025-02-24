@@ -206,79 +206,28 @@ def unenroll(request, course_id):
 
     return redirect('courses:course_detail', course_id=course_id)
 
-@login_required
-@require_POST
+@csrf_exempt
 def create_course(request):
-    """
-    Creates a new course from either a course ID or JSON data.
-    """
     if not request.user.is_instructor:
-        return JsonResponse({'success': False, 'error': 'Permission denied'})
-        
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
     try:
         data = json.loads(request.body)
-        course = None
-        
-        logger.info(f"Received course creation request with data: {data}")
-        
-        if 'course_data' in data and data['course_data']:
-            # Direct JSON input
-            logger.info("Processing direct JSON input")
-            course_data = data['course_data']
-            if not course_data.get('id'):
-                return JsonResponse({'success': False, 'error': 'Course data must include an ID'})
-            try:
-                course = create_course_from_json(course_data, request.user)
-            except Exception as e:
-                logger.error(f"Error creating course from JSON: {str(e)}")
-                logger.error(traceback.format_exc())
-                return JsonResponse({'success': False, 'error': f'Error creating course: {str(e)}'})
-            
-        elif 'course_id' in data and data['course_id']:
-            # Fetch from API
-            course_id = data['course_id']
-            logger.info(f"Fetching course data for ID: {course_id}")
-            try:
-                course_data = fetch_course_details(course_id)
-                if not course_data:
-                    logger.error("No course data returned from API")
-                    return JsonResponse({'success': False, 'error': 'No course data returned from API'})
-                
-                # Ensure the course ID is set
-                if 'id' not in course_data:
-                    course_data['id'] = course_id
-                    
-                print(course_data)
-                print(request.user)
-                course = create_course_from_json(course_data, request.user)
-                print(course)
-            except Exception as e:
-                logger.error(f"Error fetching/creating course: {str(e)}")
-                logger.error(traceback.format_exc())
-                return JsonResponse({'success': False, 'error': f'Error fetching/creating course: {str(e)}'})
-        else:
-            return JsonResponse({'success': False, 'error': 'Either course_id or course_data is required'})
-        
-        # Process successful course creation
-        if course:           
-            logger.info(f"Successfully created/updated course with ID: {course.id}")
-            return JsonResponse({
-                'success': True, 
-                'course_id': course.id,
-                'message': 'Course successfully created/updated'
-            })
-        else:
-            logger.error("Course creation failed: course object is None")
-            return JsonResponse({'success': False, 'error': 'Failed to create course'})
-            
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {str(e)}")
-        logger.error(traceback.format_exc())
-        return JsonResponse({'success': False, 'error': f'Invalid JSON format: {str(e)}'})
+        course_data = data.get('course_data')
+
+        if not course_data:
+            return JsonResponse({'error': 'Course data is required'}, status=400)
+
+        # Assuming create_course_from_json is a function that handles the course creation logic
+        course = create_course_from_json(course_data, request.user)
+
+        return JsonResponse({'success': True, 'course_id': course.id})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
     except Exception as e:
-        logger.error(f"Unexpected error creating course: {str(e)}")
-        logger.error(traceback.format_exc())
-        return JsonResponse({'success': False, 'error': str(e)})
+        logger.error(f"Error creating course: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def launch_iframe_module(request, instance_id, module_id):
@@ -1022,22 +971,7 @@ def create_semester_course(request):
     if not request.user.is_instructor:
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
 
-    try:
-        course_id = request.GET.get('course_id')
-
-        if not course_id:
-            return JsonResponse({'error': 'Course ID is required'}, status=400)
-
-        # Fetch course details with token
-        course_data = fetch_course_details(course_id, request.user)
-
-        # Assuming create_course_from_json is a function that handles the course creation logic
-        course = create_course_from_json(course_data, request.user)
-
-        return JsonResponse({'success': True, 'course_id': course.id})
-
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
-    except Exception as e:
-        logger.error(f"Error creating course: {str(e)}", exc_info=True)
-        return JsonResponse({'error': str(e)}, status=500)
+    # Render the template that handles the course creation process
+    return render(request, 'create_semester_course.html', {
+        'course_id': request.GET.get('course_id')
+    })
