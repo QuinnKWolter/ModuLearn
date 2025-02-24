@@ -342,7 +342,7 @@
           submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
 
           try {
-            const response = await fetch(`/courses/{{ current_instance.id }}/bulk-enroll/`, {
+            const response = await fetch(`/modulearn/courses/{{ current_instance.id }}/bulk-enroll/`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -397,7 +397,7 @@
           
           document.getElementById('confirmDeleteButton').onclick = async function() {
             try {
-              const response = await fetch(`/courses/instance/{{ current_instance.id }}/delete/`, {
+              const response = await fetch(`/modulearn/courses/instance/{{ current_instance.id }}/delete/`, {
                 method: 'POST',
                 headers: {
                   'X-CSRFToken': '{{ csrf_token }}'

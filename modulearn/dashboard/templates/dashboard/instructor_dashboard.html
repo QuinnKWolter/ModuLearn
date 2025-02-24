@@ -223,7 +223,7 @@ async function showDeleteCourseConfirmation(courseId) {
     document.getElementById('confirmDeleteButton').disabled = true;
     
     // Fetch course details
-    const response = await fetch(`/courses/${courseId}/details/`);
+    const response = await fetch(`/modulearn/courses/${courseId}/details/`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -297,7 +297,7 @@ async function deleteCourse(courseId) {
     confirmButton.disabled = true;
     confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
     
-    const response = await fetch(`/courses/${courseId}/delete/`, {
+    const response = await fetch(`/modulearn/courses/${courseId}/delete/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const email = document.getElementById(`enrollmentEmail-${courseId}`).value.trim();
       const code = document.getElementById(`enrollmentCode-${courseId}`).value.trim();
 
-      fetch(`/courses/${courseId}/create_enrollment_code/`, {
+      fetch(`/modulearn/courses/${courseId}/create_enrollment_code/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
 
     try {
-      const response = await fetch(`/courses/${courseInstanceId}/bulk-enroll/`, {
+      const response = await fetch(`/modulearn/courses/${courseInstanceId}/bulk-enroll/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const enrollmentId = this.dataset.enrollmentId;
       try {
-        const response = await fetch(`/courses/enrollment/${enrollmentId}/remove/`, {
+        const response = await fetch(`/modulearn/courses/enrollment/${enrollmentId}/remove/`, {
           method: 'POST',
           headers: {
             'X-CSRFToken': '{{ csrf_token }}'
@@ -576,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Function to load enrollments
   async function loadEnrollments(courseInstanceId) {
     try {
-      const response = await fetch(`/courses/${courseInstanceId}/enrollments/`);
+      const response = await fetch(`/modulearn/courses/${courseInstanceId}/enrollments/`);
       const data = await response.json();
       
       const tableBody = document.getElementById('enrollmentTableBody');
@@ -632,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const enrollmentId = this.dataset.enrollmentId;
         try {
-          const response = await fetch(`/courses/enrollment/${enrollmentId}/remove/`, {
+          const response = await fetch(`/modulearn/courses/enrollment/${enrollmentId}/remove/`, {
             method: 'POST',
             headers: {
               'X-CSRFToken': '{{ csrf_token }}'
