@@ -13,14 +13,21 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-def fetch_course_details(course_id):
+def fetch_course_details(course_id, user):
     logger.info(f"Starting fetch_course_details for course_id: {course_id}")
+    
+    # Get the authentication token
+    token = get_course_auth_token(user)
     
     url = f"https://proxy.personalized-learning.org/next.course-authoring/api/courses/{course_id}/export"
     logger.info(f"Fetching course data from URL: {url}")
     
+    headers = {
+        'token': token
+    }
+    
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         logger.info(f"Received response with status code: {response.status_code}")
         logger.debug(f"Response content: {response.text[:500]}...")  # Log first 500 chars
         
@@ -136,3 +143,45 @@ def send_grade_to_canvas(xml_payload, outcome_service_url, consumer_key, consume
         headers=headers,
         verify=True
     )
+
+def get_course_auth_token(user):
+    """
+    Generates an encrypted token for course authoring login.
+    """
+    if not user.is_authenticated:
+        raise ValueError("User not authenticated")
+
+    # Fetch user details
+    user_email = user.email
+    user_fullname = f"{user.first_name} {user.last_name}"
+
+    # Generate or retrieve stored password
+    if not user.course_authoring_password:
+        user.course_authoring_password = str(uuid.uuid4())  # Generate a UUID password
+        user.save()
+
+    # Create payload
+    payload = {
+        "fullname": user_fullname,
+        "email": user_email,
+        "password": user.course_authoring_password,
+    }
+
+    print(f"Payload for token request: {payload}")
+
+    # Make POST request to obtain the encrypted token
+    try:
+        response = requests.post(
+            "https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login-token",
+            json=payload
+        )
+        response.raise_for_status()
+        print(f"Raw response content: {response.content}")
+
+        # Extract token
+        token = response.text.strip()
+        print(f"Token received: {token}")
+        return token
+    except requests.exceptions.RequestException as e:
+        print(f"Request exception occurred: {e}")
+        raise

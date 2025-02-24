@@ -1024,14 +1024,16 @@ def create_semester_course(request):
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
 
     try:
-        data = json.loads(request.body)
         course_id = request.GET.get('course_id')
 
-        if not course_id or not data:
-            return JsonResponse({'error': 'Course ID and data are required'}, status=400)
+        if not course_id:
+            return JsonResponse({'error': 'Course ID is required'}, status=400)
+
+        # Fetch course details with token
+        course_data = fetch_course_details(course_id, request.user)
 
         # Assuming create_course_from_json is a function that handles the course creation logic
-        course = create_course_from_json(data, request.user)
+        course = create_course_from_json(course_data, request.user)
 
         return JsonResponse({'success': True, 'course_id': course.id})
 

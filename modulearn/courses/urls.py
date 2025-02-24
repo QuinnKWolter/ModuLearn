@@ -5,8 +5,9 @@ from .views import LTIOutcomesView, CaliperAnalyticsView
 app_name = 'courses'
 
 urlpatterns = [
-    path('check-group-name/', views.check_group_name, name='check_group_name'),
     path('', views.course_list, name='course_list'),
+    path('check-group-name/', views.check_group_name, name='check_group_name'),
+    path('create-semester-course/', views.create_semester_course, name='create_semester_course'),
     path('create/', views.create_course, name='create_course'),
     path('update-module-progress/<int:module_id>/', views.update_module_progress, name='update_module_progress'),
     path('modules/<int:module_id>/launch/', views.launch_iframe_module, name='launch_iframe_module'),
