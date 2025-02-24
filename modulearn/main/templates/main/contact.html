@@ -3,6 +3,35 @@
 {% block title %}Contact Us - ModuLearn{% endblock %}
 
 {% block content %}
-<h1>Contact Us</h1>
-<p>If you have any questions or feedback, please reach out to the developer at <a href="mailto:QuinnKWolter@pitt.edu">QuinnKWolter@pitt.edu</a>.</p>
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-lg-12 text-center">
+            <h1 class="display-4 mb-4">About ModuLearn</h1>
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Prototype Status:</strong> This application is currently in prototype phase. Please report any bugs or provide feedback to 
+                <a href="mailto:QuinnKWolter@pitt.edu" class="alert-link">QuinnKWolter@pitt.edu</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Card -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center p-5">
+                    <i class="bi bi-envelope-paper text-primary display-1 mb-4"></i>
+                    <h2 class="h3 mb-4">Get In Touch</h2>
+                    <p class="lead mb-4">Have questions, feedback, or encountered a bug? We'd love to hear from you!</p>
+                    <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary btn-lg">
+                        <i class="bi bi-envelope me-2"></i>
+                        Contact the Developer
+                    </a>
+                    <p class="text-muted mt-4">Email: QuinnKWolter@pitt.edu</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

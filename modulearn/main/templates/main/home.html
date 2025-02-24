@@ -3,24 +3,65 @@
 {% block title %}Home - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="jumbotron text-center">
-  <h1 class="display-4">Welcome to ModuLearn</h1>
-  <p class="lead">A platform for secure, modular delivery of smart eLearning content.</p>
-  <hr class="my-4">
-  <p>Get started by exploring courses or logging in.</p>
-  
-  {% if user.is_authenticated %}
-    {% if user.is_student %}
-      <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}" role="button">Student Dashboard</a>
-    {% endif %}
-    {% if user.is_instructor %}
-      <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}" role="button">Instructor Dashboard</a>
-    {% endif %}
-  {% else %}
-    <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}" role="button">Sign In</a>
-    <a class="btn btn-secondary btn-lg" href="{% url 'accounts:signup' %}" role="button">Sign Up</a>
-  {% endif %}
-  
-  <a class="btn btn-success btn-lg" href="{% url 'courses:course_list' %}" role="button">Browse Courses</a>
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-10 text-center">
+            <h1 class="display-3 mb-4">Welcome to ModuLearn</h1>
+            <p class="lead mb-4">A platform for secure, modular delivery of smart eLearning content.</p>
+            <div class="d-flex justify-content-center gap-3 mb-5">
+                {% if user.is_authenticated %}
+                    {% if user.is_student %}
+                        <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}" role="button">
+                            <i class="bi bi-mortarboard me-2"></i>Student Dashboard
+                        </a>
+                    {% endif %}
+                    {% if user.is_instructor %}
+                        <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}" role="button">
+                            <i class="bi bi-easel me-2"></i>Instructor Dashboard
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}" role="button">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                    </a>
+                    <a class="btn btn-outline-primary btn-lg" href="{% url 'accounts:signup' %}" role="button">
+                        <i class="bi bi-person-plus me-2"></i>Sign Up
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="row justify-content-center g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <i class="bi bi-shield-lock text-primary display-4 mb-3"></i>
+                    <h3 class="h5">Secure Integration</h3>
+                    <p class="text-muted">Seamlessly connects with your Learning Management System through LTI protocols.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <i class="bi bi-grid-3x3-gap text-primary display-4 mb-3"></i>
+                    <h3 class="h5">Modular Content</h3>
+                    <p class="text-muted">Flexible delivery of interactive learning modules, quizzes, and coding challenges.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <i class="bi bi-graph-up-arrow text-primary display-4 mb-3"></i>
+                    <h3 class="h5">Progress Tracking</h3>
+                    <p class="text-muted">Track progress, resume work, and automatically sync grades with your LMS.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

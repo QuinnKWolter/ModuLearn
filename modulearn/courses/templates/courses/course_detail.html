@@ -371,7 +371,7 @@
       document.querySelectorAll('.copy-lti-url').forEach(button => {
         button.addEventListener('click', function() {
           const courseInstanceId = this.dataset.courseInstanceId;
-          const baseUrl = window.location.origin + '/lti/launch/';
+          const baseUrl = window.location.origin + '/modulearn/lti/launch/';
           const ltiUrl = `${baseUrl}?course_id=${courseInstanceId}`;
           
           navigator.clipboard.writeText(ltiUrl).then(() => {
