@@ -968,10 +968,22 @@ def delete_course_instance(request, instance_id):
 
 @csrf_exempt
 def create_semester_course(request):
+    logger.debug("Entered create_semester_course view")
+    
     if not request.user.is_instructor:
+        logger.warning(f"Permission denied for user: {request.user}")
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
 
+    course_id = request.GET.get('course_id')
+    logger.debug(f"Received course_id: {course_id}")
+
     # Render the template that handles the course creation process
-    return render(request, 'create_semester_course.html', {
-        'course_id': request.GET.get('course_id')
-    })
+    try:
+        response = render(request, 'courses/create_semester_course.html', {
+            'course_id': course_id
+        })
+        logger.debug("Successfully rendered create_semester_course.html")
+        return response
+    except Exception as e:
+        logger.error(f"Error rendering template: {str(e)}", exc_info=True)
+        return JsonResponse({'error': 'Internal server error'}, status=500)
