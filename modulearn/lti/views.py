@@ -258,7 +258,7 @@ def lti_config(request):
     logger.info(f"LTI Config request received from: {request.META.get('HTTP_REFERER', 'Unknown')}")
     
     domain = get_primary_domain()
-    launch_url = f"{domain}/lti/launch/"
+    launch_url = f"{domain}/modulearn/lti/launch/"
     
     xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
     <cartridge_basiclti_link 
