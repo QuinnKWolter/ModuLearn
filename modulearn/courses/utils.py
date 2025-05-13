@@ -184,4 +184,13 @@ def get_course_auth_token(user):
         return token
     except requests.exceptions.RequestException as e:
         print(f"Request exception occurred: {e}")
+        print(f"Request URL: https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login-token")
+        print(f"Request payload: {payload}")
+        print(f"Response status code: {getattr(e.response, 'status_code', 'N/A')}")
+        print(f"Response content: {getattr(e.response, 'content', 'N/A')}")
+        print(f"Response headers: {getattr(e.response, 'headers', 'N/A')}")
+        print(f"Exception type: {type(e).__name__}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error occurred: {e}")
         raise

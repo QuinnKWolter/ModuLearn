@@ -60,3 +60,5 @@ def generate_course_auth_url(request):
         return JsonResponse({"error": str(e)}, status=401)
     except requests.exceptions.RequestException as e:
         return JsonResponse({"error": f"Request error: {e}"}, status=500)
+    except Exception as e:
+        return JsonResponse({"error": f"An unexpected error occurred during token request: {e}"}, status=500)
