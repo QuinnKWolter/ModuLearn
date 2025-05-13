@@ -153,7 +153,7 @@ def get_course_auth_token(user):
 
     # Fetch user details
     user_email = user.email
-    user_fullname = f"{user.first_name} {user.last_name}"
+    user_fullname = f"{user.full_name}"
 
     # Generate or retrieve stored password
     if not user.course_authoring_password:
