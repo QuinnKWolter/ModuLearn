@@ -15,7 +15,9 @@
 </div>
 
 <script>
-  console.log("TEST");
+  const selectedProtocol = "{{ selected_protocol|default:'' }}";
+  console.log("Selected module protocol:", selectedProtocol || "(none)");
+  const isPreview = {{ preview_mode|yesno:"true,false" }};
   
   window.addEventListener('message', function(event) {
     // Validate the origin for security
@@ -68,6 +70,10 @@
 
     // Only send progress updates for relevant messages
     if (event.data.subject === 'SPLICE.reportScoreAndState') {
+      if (isPreview) {
+        console.log('Preview mode: progress updates are not tracked.');
+        return;
+      }
       // Parse the scoreText to determine completion
       let progress = 0;
       if (event.data.state && event.data.state.scoreText) {

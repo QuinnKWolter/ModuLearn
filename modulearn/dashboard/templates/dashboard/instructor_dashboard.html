@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const email = document.getElementById(`enrollmentEmail-${courseId}`).value.trim();
       const code = document.getElementById(`enrollmentCode-${courseId}`).value.trim();
 
-      fetch(`/modulearn/courses/${courseId}/create_enrollment_code/`, {
+      fetch(`/modulearn/courses/instance/${courseId}/create_enrollment_code/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

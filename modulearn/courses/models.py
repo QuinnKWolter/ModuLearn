@@ -84,6 +84,8 @@ class Module(models.Model):
     keywords = models.CharField(max_length=500, blank=True)
     platform_name = models.CharField(max_length=255, blank=True)
     author = models.CharField(max_length=255, blank=True)
+    provider_id = models.CharField(max_length=255, blank=True)
+    supported_protocols = models.JSONField(blank=True, null=True)
     resource_link_id = models.CharField(
         max_length=255,
         null=True,
@@ -114,6 +116,21 @@ class Module(models.Model):
         indexes = [
             models.Index(fields=['resource_link_id']),
         ]
+
+    def select_launch_protocol(self, preferred_order=None):
+        """Return the best-supported protocol for this module.
+
+        Priority default: ['splice', 'lti', 'pitt']
+        Returns the protocol string or None if none are available.
+        """
+        if preferred_order is None:
+            preferred_order = ['splice', 'lti', 'pitt']
+
+        available = self.supported_protocols or []
+        for protocol in preferred_order:
+            if protocol in available:
+                return protocol
+        return None
 
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')

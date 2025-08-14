@@ -158,7 +158,7 @@
     const email = document.getElementById('enrollmentEmail').value.trim();
     const code = document.getElementById('enrollmentCode').value.trim();
 
-    fetch('{% url "courses:create_enrollment_code" course.id %}', {
+    fetch('{% url "courses:create_enrollment_code" current_instance.id %}', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -229,7 +229,7 @@
     <div class="card-body">
       <div class="d-flex justify-content-between mb-4">
         <!-- LTI URL Copy Button -->
-        <button class="btn btn-secondary copy-lti-url" 
+               <button class="btn btn-secondary copy-lti-url" 
                 data-course-instance-id="{{ current_instance.id }}"
                 data-bs-toggle="tooltip" 
                 title="Copy LTI Launch URL">

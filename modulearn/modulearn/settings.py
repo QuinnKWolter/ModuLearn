@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True  # Set to True for local development, False for production
 
 # Helper function to handle ngrok URLs in development
 def get_ngrok_urls():
@@ -126,7 +126,14 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = '/modulearn-static/'
+# Handle static files differently for local development vs production
+if DEBUG:
+    # In development, serve static files without the /modulearn prefix
+    STATIC_URL = '/static/'
+else:
+    # In production, use the /modulearn-static/ prefix
+    STATIC_URL = '/modulearn-static/'
+
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
@@ -286,7 +293,7 @@ def get_primary_domain():
             return domain
         print("No ngrok URLs found, using localhost")  # Debug print
         return "http://localhost:8000"  # Fallback to localhost
-    return "https://modulearn.com"  # Production domain PLACEHOLDER TODO
+    return "https://proxy.personalized-learning.org"  # Production domain
 
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
@@ -301,7 +308,7 @@ LTI_TOOL_CONFIG = {
             'platform': 'canvas.instructure.com',
             'settings': {
                 'text': 'ModuLearn',
-                'icon_url': f'{get_primary_domain()}/static/img/logo_128.png',
+                'icon_url': f'{get_primary_domain()}{STATIC_URL}img/logo_128.png',
                 'selection_height': 800,
                 'selection_width': 1200,
                 'privacy_level': 'public'
@@ -320,5 +327,7 @@ CSRF_TRUSTED_ORIGINS = [
 LTI_11_CONSUMER_KEY = 'modulearn_key'
 LTI_11_CONSUMER_SECRET = 'modulearn_secret'
 
-FORCE_SCRIPT_NAME = '/modulearn'
+# Only force script name in production (not in development)
+if not DEBUG:
+    FORCE_SCRIPT_NAME = '/modulearn'
 USE_X_FORWARDED_HOST = True

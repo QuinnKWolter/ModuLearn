@@ -204,7 +204,7 @@ def unenroll(request, course_id):
     else:
         messages.error(request, 'You are not enrolled in this course.')
 
-    return redirect('courses:course_detail', course_id=course_id)
+    return redirect('courses:course_detail', instance_id=course_id)
 
 @csrf_exempt
 def create_course(request):
@@ -248,6 +248,10 @@ def launch_iframe_module(request, instance_id, module_id):
         course_instance=course_instance
     )
     
+    # Choose the best available protocol (splice > lti > pitt)
+    selected_protocol = module.select_launch_protocol()
+    logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
+
     # Parse the URL and check if it's a CodeCheck URL
     content_url = module.content_url
     parsed_url = urlparse(content_url)
@@ -262,9 +266,48 @@ def launch_iframe_module(request, instance_id, module_id):
         'is_instructor': is_instructor,
         'progress': module_progress,
         'content_url': content_url,
-        'state_data': module_progress.state_data if hasattr(module_progress, 'state_data') else None
+        'state_data': module_progress.state_data if hasattr(module_progress, 'state_data') else None,
+        'selected_protocol': selected_protocol,
     }
     
+    response = render(request, 'courses/module_frame.html', context)
+    response['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
+
+@login_required
+def preview_iframe_module(request, module_id):
+    """
+    Instructor preview of a module without tracking progress or requiring an instance.
+    Only accessible to instructors. Uses the module's raw content_url and never
+    creates/updates ModuleProgress or CourseProgress.
+    """
+    module = get_object_or_404(Module, id=module_id)
+
+    if not request.user.is_instructor:
+        return HttpResponseForbidden("Preview is limited to instructors")
+
+    # Choose the best available protocol (splice > lti > pitt)
+    selected_protocol = module.select_launch_protocol()
+    logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
+
+    # Resolve CodeCheck URL substitution same as tracked path
+    content_url = module.content_url
+    parsed_url = urlparse(content_url)
+    query_params = parse_qs(parsed_url.query)
+    if query_params.get('tool', [''])[0] == 'codecheck' and 'sub' in query_params:
+        sub_param = query_params['sub'][0]
+        content_url = f'https://codecheck.me/files/wiley/{sub_param}'
+
+    context = {
+        'module': module,
+        'is_instructor': True,
+        'progress': None,
+        'content_url': content_url,
+        'state_data': None,
+        'preview_mode': True,
+        'selected_protocol': selected_protocol,
+    }
+
     response = render(request, 'courses/module_frame.html', context)
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
@@ -371,7 +414,7 @@ def enroll_with_code(request):
                 messages.error(request, 'Invalid enrollment code or email.')
                 return redirect('courses:enroll_with_code')
             
-            course = enrollment_code.course
+            course_instance = enrollment_code.course_instance
             
             # Get or create user
             user = User.objects.filter(email=email).first()
@@ -394,22 +437,17 @@ def enroll_with_code(request):
                 user.save()
             
             # Check if already enrolled
-            if Enrollment.objects.filter(
-                student=user, 
-                course_instance__course=enrollment_code.course_instance.course
-            ).exists():
+            if Enrollment.objects.filter(student=user, course_instance=course_instance).exists():
                 messages.warning(request, 'You are already enrolled in this course.')
             else:
                 # Create enrollment and associated records
                 enrollment = Enrollment.objects.create(
-                    student=user, 
-                    course_instance=enrollment_code.course_instance
+                    student=user,
+                    course_instance=course_instance
                 )
                 
                 # Create CourseProgress
-                total_modules = Module.objects.filter(
-                    unit__course=enrollment_code.course_instance.course
-                ).count()
+                total_modules = Module.objects.filter(unit__course=course_instance.course).count()
                 CourseProgress.objects.create(
                     enrollment=enrollment,
                     total_modules=total_modules
@@ -417,7 +455,7 @@ def enroll_with_code(request):
                 
                 # Create ModuleProgress records for each module
                 module_progress_list = []
-                for module in Module.objects.filter(unit__course=enrollment_code.course_instance.course):
+                for module in Module.objects.filter(unit__course=course_instance.course):
                     module_progress_list.append(
                         ModuleProgress(
                             user=user,
@@ -433,7 +471,7 @@ def enroll_with_code(request):
             if not request.user.is_authenticated:
                 login(request, user)
             
-            return redirect('courses:course_detail', course_id=course.id)
+            return redirect('courses:course_detail', instance_id=course_instance.id)
             
         except Exception as e:
             logger.error(f"Error in enrollment process: {str(e)}")

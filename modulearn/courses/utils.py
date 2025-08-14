@@ -72,6 +72,20 @@ def create_course_from_json(course_data, current_user):
         }
     )
     logger.debug(f"Course {'created' if created else 'retrieved'}: {course}")
+
+    # If the course already existed, update mutable fields from JSON
+    if not created:
+        updated = False
+        title = course_data.get('name', '')
+        description = course_data.get('description', '')
+        if title and course.title != title:
+            course.title = title
+            updated = True
+        if description != course.description:
+            course.description = description
+            updated = True
+        if updated:
+            course.save()
     
     # Add the current user as an instructor
     if current_user.is_instructor:
@@ -89,6 +103,7 @@ def create_course_from_json(course_data, current_user):
             course.instructors.add(instructor_user)
     
     # Create Unit and Module objects
+    provider_protocols_map = course_data.get('provider_protocols', {}) or {}
     for unit_data in course_data.get('units', []):
         unit, created = Unit.objects.get_or_create(
             course=course,
@@ -99,14 +114,28 @@ def create_course_from_json(course_data, current_user):
         
         for resource_id, activities in unit_data.get('activities', {}).items():
             for activity in activities:
+                provider_id = activity.get('provider_id', '') or ''
+                supported_protocols = provider_protocols_map.get(provider_id, [])
                 module, created = Module.objects.get_or_create(
                     unit=unit,
                     title=activity['name'],
                     defaults={
-                        'description': f"Provider: {activity.get('provider_id', 'unknown')}, Author: {activity.get('author_id', 'unknown')}",
-                        'content_url': activity.get('url', '')
+                        'description': f"Provider: {provider_id or 'unknown'}, Author: {activity.get('author_id', 'unknown')}",
+                        'content_url': activity.get('url', ''),
+                        'provider_id': provider_id,
+                        'supported_protocols': supported_protocols,
                     }
                 )
+                # Update protocols/provider if module existed and differs
+                updated = False
+                if module.provider_id != provider_id:
+                    module.provider_id = provider_id
+                    updated = True
+                if module.supported_protocols != supported_protocols:
+                    module.supported_protocols = supported_protocols
+                    updated = True
+                if updated:
+                    module.save()
                 logger.debug(f"Module {'created' if created else 'retrieved'}: {module}")
     
     logger.info(f"Successfully created/updated course: {course}")
