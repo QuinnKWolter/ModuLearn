@@ -272,6 +272,10 @@ def launch_iframe_module(request, instance_id, module_id):
         sub_param = query_params['sub'][0]
         content_url = f'https://codecheck.me/files/wiley/{sub_param}'
     
+    # Determine if we need to proxy HTTP content
+    use_proxy = content_url and content_url.startswith('http://')
+    print(f"DEBUG: Use proxy for HTTP content: {use_proxy}")
+    
     context = {
         'module': module,
         'is_instructor': is_instructor,
@@ -281,6 +285,7 @@ def launch_iframe_module(request, instance_id, module_id):
         'selected_protocol': selected_protocol,
         'course_instance': course_instance,
         'lti_sub': lti_sub,
+        'use_proxy': use_proxy,
     }
     
     response = render(request, 'courses/module_frame.html', context)
@@ -321,6 +326,10 @@ def preview_iframe_module(request, module_id):
         sub_param = query_params['sub'][0]
         content_url = f'https://codecheck.me/files/wiley/{sub_param}'
 
+    # Determine if we need to proxy HTTP content
+    use_proxy = content_url and content_url.startswith('http://')
+    print(f"DEBUG: Preview use proxy for HTTP content: {use_proxy}")
+
     context = {
         'module': module,
         'is_instructor': True,
@@ -330,6 +339,7 @@ def preview_iframe_module(request, module_id):
         'preview_mode': True,
         'selected_protocol': selected_protocol,
         'lti_sub': lti_sub,
+        'use_proxy': use_proxy,
     }
 
     response = render(request, 'courses/module_frame.html', context)

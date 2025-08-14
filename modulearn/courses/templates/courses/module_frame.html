@@ -7,11 +7,10 @@
   <!-- Debug template variables -->
   <!-- selected_protocol: {{ selected_protocol }} -->
   <!-- content_url: {{ content_url }} -->
-  <!-- content_url|slice:':7': {{ content_url|slice:':7' }} -->
-  <!-- Is HTTP check: {{ content_url|slice:':7' == 'http://' }} -->
+  <!-- use_proxy: {{ use_proxy }} -->
   
   <iframe id="content-iframe" 
-          src="{% if selected_protocol == 'lti' %}{% url 'lti_launch' %}?tool={{ module.provider_id }}&sub={{ lti_sub|default:module.content_url|urlencode }}&usr={{ user.id }}&grp={% if course_instance %}{{ course_instance.id }}{% else %}default{% endif %}{% elif content_url|slice:':7' == 'http://' %}{% url 'http_get_proxy' %}?url={{ content_url|urlencode }}{% else %}{{ content_url }}{% endif %}" 
+          src="{% if selected_protocol == 'lti' %}{% url 'lti_launch' %}?tool={{ module.provider_id }}&sub={{ lti_sub|default:module.content_url|urlencode }}&usr={{ user.id }}&grp={% if course_instance %}{{ course_instance.id }}{% else %}default{% endif %}{% elif use_proxy %}{% url 'http_get_proxy' %}?url={{ content_url|urlencode }}{% else %}{{ content_url }}{% endif %}" 
           width="100%" 
           height="800px" 
           frameborder="0" 
@@ -24,11 +23,11 @@
 <script>
   const selectedProtocol = "{{ selected_protocol|default:'' }}";
   const contentUrl = "{{ content_url|escapejs }}";
-  const isHttpUrl = contentUrl.startsWith('http://');
+  const useProxy = {{ use_proxy|yesno:"true,false" }};
   
   console.log("Selected module protocol:", selectedProtocol || "(none)");
   console.log("Content URL:", contentUrl);
-  console.log("Is HTTP URL:", isHttpUrl);
+  console.log("Use proxy:", useProxy);
   console.log("Current iframe src:", document.getElementById('content-iframe').src);
   
   const isPreview = {{ preview_mode|yesno:"true,false" }};
