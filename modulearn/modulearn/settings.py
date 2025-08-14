@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True  # Set to True for local development, False for production
+DEBUG = False  # Set to True for local development, False for production
 
 # Helper function to handle ngrok URLs in development
 def get_ngrok_urls():
