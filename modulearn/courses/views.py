@@ -251,12 +251,23 @@ def launch_iframe_module(request, instance_id, module_id):
     # Choose the best available protocol (splice > lti > pitt)
     selected_protocol = module.select_launch_protocol()
     logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
+    print(f"DEBUG: Module {module.id} - Protocol: {selected_protocol}, Content URL: {module.content_url}")
+    print(f"DEBUG: URL starts with http://: {module.content_url.startswith('http://') if module.content_url else False}")
 
-    # Parse the URL and check if it's a CodeCheck URL
+    # Parse the URL for LTI parameters
     content_url = module.content_url
     parsed_url = urlparse(content_url)
     query_params = parse_qs(parsed_url.query)
     
+    # Extract LTI launch parameters
+    lti_sub = None
+    if query_params.get('tool') and query_params.get('sub'):
+        lti_sub = query_params['sub'][0]
+    elif module.provider_id and content_url:
+        # Use content_url or extract sub from it
+        lti_sub = query_params.get('sub', [content_url])[0]
+    
+    # Handle CodeCheck URL transformation for splice protocol
     if query_params.get('tool', [''])[0] == 'codecheck' and 'sub' in query_params:
         sub_param = query_params['sub'][0]
         content_url = f'https://codecheck.me/files/wiley/{sub_param}'
@@ -268,6 +279,8 @@ def launch_iframe_module(request, instance_id, module_id):
         'content_url': content_url,
         'state_data': module_progress.state_data if hasattr(module_progress, 'state_data') else None,
         'selected_protocol': selected_protocol,
+        'course_instance': course_instance,
+        'lti_sub': lti_sub,
     }
     
     response = render(request, 'courses/module_frame.html', context)
@@ -290,10 +303,20 @@ def preview_iframe_module(request, module_id):
     selected_protocol = module.select_launch_protocol()
     logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
 
-    # Resolve CodeCheck URL substitution same as tracked path
+    # Parse the URL for LTI parameters
     content_url = module.content_url
     parsed_url = urlparse(content_url)
     query_params = parse_qs(parsed_url.query)
+    
+    # Extract LTI launch parameters
+    lti_sub = None
+    if query_params.get('tool') and query_params.get('sub'):
+        lti_sub = query_params['sub'][0]
+    elif module.provider_id and content_url:
+        # Use content_url or extract sub from it
+        lti_sub = query_params.get('sub', [content_url])[0]
+    
+    # Handle CodeCheck URL transformation for splice protocol
     if query_params.get('tool', [''])[0] == 'codecheck' and 'sub' in query_params:
         sub_param = query_params['sub'][0]
         content_url = f'https://codecheck.me/files/wiley/{sub_param}'
@@ -306,6 +329,7 @@ def preview_iframe_module(request, module_id):
         'state_data': None,
         'preview_mode': True,
         'selected_protocol': selected_protocol,
+        'lti_sub': lti_sub,
     }
 
     response = render(request, 'courses/module_frame.html', context)

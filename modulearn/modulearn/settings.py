@@ -331,3 +331,34 @@ LTI_11_CONSUMER_SECRET = 'modulearn_secret'
 if not DEBUG:
     FORCE_SCRIPT_NAME = '/modulearn'
 USE_X_FORWARDED_HOST = True
+
+# LTI tools: env var names for key/secret/launch base
+LTI_TOOL_ENVS = {
+    "codecheck": ("CODECHECK_KEY", "CODECHECK_SECRET", "CODECHECK_LAUNCH"),
+    "codelab": ("CODELAB_KEY", "CODELAB_SECRET", "CODELAB_LAUNCH"),
+    "codeocean": ("CODEOCEAN_KEY", "CODEOCEAN_SECRET", "CODEOCEAN_LAUNCH"),
+    "codeworkout": ("CODEWORKOUT_KEY", "CODEWORKOUT_SECRET", "CODEWORKOUT_LAUNCH"),
+    "ctat": ("CTAT_KEY", "CTAT_SECRET", "CTAT_LAUNCH"),
+    "dbqa": ("DBQA_KEY", "DBQA_SECRET", "DBQA_LAUNCH"),
+    "opendsa_problems": ("OPENDSA_PROBLEMS_KEY", "OPENDSA_PROBLEMS_SECRET", "OPENDSA_PROBLEMS_LAUNCH"),
+    "opendsa_slideshows": ("OPENDSA_SLIDESHOWS_KEY", "OPENDSA_SLIDESHOWS_SECRET", "OPENDSA_SLIDESHOWS_LAUNCH"),
+    # add more as needed
+}
+
+# Tool-specific URL builders (only when base URL needs transformation)
+def LTI_URL_BUILDER(tool: str, base: str, sub: str) -> str:
+    if tool == "ctat":
+        return f"{base.rstrip('/')}/mg_{sub}"
+    if tool in ("opendsa_problems", "opendsa_slideshows"):
+        return f"{base}?custom_ex_settings=%7B%7D&custom_ex_short_name={sub}"
+    # default: use base as-is; Node code often passes all context via POST body anyway
+    return base
+
+# Optional: tight proxy allowlist (HTTP origins you're willing to fetch)
+PROXY_ALLOWED_HOSTS = {
+    "columbus.exp.sis.pitt.edu",
+    "pawscomp2.sis.pitt.edu",
+    "adapt2.sis.pitt.edu",
+}
+PROXY_MAX_BYTES = 5 * 1024 * 1024
+PROXY_CORS_ORIGIN = 'https://proxy.personalized-learning.org'

@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+  <body>
+    <form id="ltiLaunch" action="{{ action }}" method="post">
+      {% for k, v in params.items %}
+        <input type="hidden" name="{{ k|escape }}" value="{{ v|escape }}">
+      {% endfor %}
+      <noscript><button type="submit">Launch</button></noscript>
+    </form>
+    <script>document.getElementById('ltiLaunch').submit();</script>
+  </body>
+</html>
