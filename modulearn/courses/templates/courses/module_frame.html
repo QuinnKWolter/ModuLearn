@@ -10,7 +10,7 @@
   <!-- use_proxy: {{ use_proxy }} -->
   
   <iframe id="content-iframe" 
-          src="{% if selected_protocol == 'lti' %}{% url 'lti_launch' %}?tool={{ module.provider_id }}&sub={{ lti_sub|default:module.content_url|urlencode }}&usr={{ user.id }}&grp={% if course_instance %}{{ course_instance.id }}{% else %}default{% endif %}{% elif use_proxy %}{% url 'http_get_proxy' %}?url={{ content_url|urlencode }}{% else %}{{ content_url }}{% endif %}" 
+          src="{{ iframe_src }}" 
           width="100%" 
           height="800px" 
           frameborder="0" 
@@ -28,14 +28,61 @@
   console.log("Selected module protocol:", selectedProtocol || "(none)");
   console.log("Content URL:", contentUrl);
   console.log("Use proxy:", useProxy);
+  console.log("Iframe src:", "{{ iframe_src|escapejs }}");
   console.log("Current iframe src:", document.getElementById('content-iframe').src);
   
   const isPreview = {{ preview_mode|yesno:"true,false" }};
+
+  // Utility: simple UUID for message IDs
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  // Ping the child to see if it speaks SPLICE.
+  // Some tools only talk after the parent asks.
+  function probeSplice() {
+    const iframe = document.getElementById('content-iframe');
+    if (!iframe || !iframe.contentWindow) return;
+    const mid = uuid();
+
+    // Try a few common subjects
+    const probes = [
+      { subject: 'SPLICE.getState', message_id: mid },
+      { subject: 'SPLICE.ping',     message_id: uuid() },
+      { subject: 'SPLICE.hello',    message_id: uuid() },
+    ];
+
+    for (const msg of probes) {
+      // Target '*' so we don’t block on unknown child origin.
+      iframe.contentWindow.postMessage(msg, '*');
+      console.log('Sent SPLICE probe →', msg);
+    }
+  }
+
+  // Fire after iframe load (and again shortly after in case of late scripts)
+  const iframe = document.getElementById('content-iframe');
+  iframe.addEventListener('load', () => {
+    probeSplice();
+    setTimeout(probeSplice, 1000);
+    setTimeout(probeSplice, 3000);
+  });
   
   window.addEventListener('message', function(event) {
     // Validate the origin for security
-    const expectedOrigins = ['http://pawscomp2.sis.pitt.edu', 'http://127.0.0.1:8000', 'https://codecheck.io', 'https://codecheck.me'];
-    if (!expectedOrigins.includes(event.origin)) {
+    // Build a flexible allowlist; your origin is critical when proxying.
+    const expectedOrigins = new Set([
+      window.location.origin,           // e.g., http://127.0.0.1:8000
+      'http://pawscomp2.sis.pitt.edu',
+      'https://codecheck.me',
+      'https://codecheck.io',
+    ]);
+    // DEBUG: see literally everything first
+    console.log('[ALL postMessage]', event.origin, event.data);
+    if (!expectedOrigins.has(event.origin)) {
       console.warn('Unexpected message origin:', event.origin);
       return;
     }

@@ -37,6 +37,21 @@ User = get_user_model()
 # Configure logging
 logger = logging.getLogger(__name__)
 
+def to_path_style_proxy(url: str) -> str:
+    """Convert URL to path-style proxy format for iframe src."""
+    from urllib.parse import urlparse
+    u = urlparse(url)
+    # Only allow http here
+    if u.scheme != "http":
+        return url   # for https, keep direct
+    # guard host
+    if u.hostname not in getattr(settings, "PROXY_ALLOWED_HOSTS", set()):
+        return url
+    # Build /proxy/http/<host>/<path>?<query>
+    path = u.path.lstrip('/')
+    base = f"/proxy/http/{u.hostname}/{path}"
+    return f"{base}?{u.query}" if u.query else base
+
 @login_required
 def course_list(request):
     """
@@ -248,13 +263,7 @@ def launch_iframe_module(request, instance_id, module_id):
         course_instance=course_instance
     )
     
-    # Choose the best available protocol (splice > lti > pitt)
-    selected_protocol = module.select_launch_protocol()
-    logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
-    print(f"DEBUG: Module {module.id} - Protocol: {selected_protocol}, Content URL: {module.content_url}")
-    print(f"DEBUG: URL starts with http://: {module.content_url.startswith('http://') if module.content_url else False}")
-
-    # Parse the URL for LTI parameters
+    # Parse the URL for LTI parameters and handle transformations first
     content_url = module.content_url
     parsed_url = urlparse(content_url)
     query_params = parse_qs(parsed_url.query)
@@ -272,10 +281,29 @@ def launch_iframe_module(request, instance_id, module_id):
         sub_param = query_params['sub'][0]
         content_url = f'https://codecheck.me/files/wiley/{sub_param}'
     
-    # Determine if we need to proxy HTTP content
-    use_proxy = content_url and content_url.startswith('http://')
+    # Now resolve protocol and proxy settings using the final content_url
+    selected_protocol = module.select_launch_protocol()
+    
+    # Check if proxy is needed for http:// content from known hosts
+    use_proxy = False
+    if content_url:
+        parsed_final = urlparse(content_url)
+        scheme = parsed_final.scheme
+        hostname = parsed_final.hostname
+        use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
+    
+    logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
+    print(f"DEBUG: Module {module.id} - Protocol: {selected_protocol}, Content URL: {content_url}")
     print(f"DEBUG: Use proxy for HTTP content: {use_proxy}")
     
+    # Generate iframe src based on protocol and proxy needs
+    if selected_protocol == 'lti':
+        iframe_src = f"{reverse('lti_launch')}?tool={module.provider_id}&sub={lti_sub or content_url}&usr={request.user.id}&grp={course_instance.id if course_instance else 'default'}"
+    elif use_proxy:
+        iframe_src = to_path_style_proxy(content_url)
+    else:
+        iframe_src = content_url
+
     context = {
         'module': module,
         'is_instructor': is_instructor,
@@ -286,6 +314,7 @@ def launch_iframe_module(request, instance_id, module_id):
         'course_instance': course_instance,
         'lti_sub': lti_sub,
         'use_proxy': use_proxy,
+        'iframe_src': iframe_src,
     }
     
     response = render(request, 'courses/module_frame.html', context)
@@ -304,11 +333,7 @@ def preview_iframe_module(request, module_id):
     if not request.user.is_instructor:
         return HttpResponseForbidden("Preview is limited to instructors")
 
-    # Choose the best available protocol (splice > lti > pitt)
-    selected_protocol = module.select_launch_protocol()
-    logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
-
-    # Parse the URL for LTI parameters
+    # Parse the URL for LTI parameters and handle transformations first
     content_url = module.content_url
     parsed_url = urlparse(content_url)
     query_params = parse_qs(parsed_url.query)
@@ -325,10 +350,29 @@ def preview_iframe_module(request, module_id):
     if query_params.get('tool', [''])[0] == 'codecheck' and 'sub' in query_params:
         sub_param = query_params['sub'][0]
         content_url = f'https://codecheck.me/files/wiley/{sub_param}'
-
-    # Determine if we need to proxy HTTP content
-    use_proxy = content_url and content_url.startswith('http://')
+    
+    # Now resolve protocol and proxy settings using the final content_url
+    selected_protocol = module.select_launch_protocol()
+    
+    # Check if proxy is needed for http:// content from known hosts
+    use_proxy = False
+    if content_url:
+        parsed_final = urlparse(content_url)
+        scheme = parsed_final.scheme
+        hostname = parsed_final.hostname
+        use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
+    
+    logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
+    print(f"DEBUG: Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
     print(f"DEBUG: Preview use proxy for HTTP content: {use_proxy}")
+
+    # Generate iframe src based on protocol and proxy needs
+    if selected_protocol == 'lti':
+        iframe_src = f"{reverse('lti_launch')}?tool={module.provider_id}&sub={lti_sub or content_url}&usr={request.user.id}&grp=default"
+    elif use_proxy:
+        iframe_src = to_path_style_proxy(content_url)
+    else:
+        iframe_src = content_url
 
     context = {
         'module': module,
@@ -340,6 +384,7 @@ def preview_iframe_module(request, module_id):
         'selected_protocol': selected_protocol,
         'lti_sub': lti_sub,
         'use_proxy': use_proxy,
+        'iframe_src': iframe_src,
     }
 
     response = render(request, 'courses/module_frame.html', context)

@@ -26,5 +26,6 @@ urlpatterns = [
     # New LTI launcher and proxy routes
     path("lti/launch/", views_lti.launch, name="lti_launch"),
     path("lti/outcome/", views_lti.outcome, name="lti_outcome"),
-    path("proxy/", views_proxy.http_get_proxy, name="http_get_proxy"),
+    path("proxy/", views_proxy.http_get_proxy, name="http_get_proxy"),  # keep query-mode for compatibility
+    path("proxy/<path:rest>", views_proxy.http_get_proxy_path, name="http_get_proxy_path"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
