@@ -176,7 +176,7 @@ console.log(JSON.stringify(data, null, 2));
                     # Clean up the temporary file
                     import os
                     try:
-                    os.unlink(temp_file_path)
+                        os.unlink(temp_file_path)
                     except:
                         pass  # Ignore cleanup errors
                 
