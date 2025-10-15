@@ -387,8 +387,13 @@ function handleFetch() {
                 // Capture error response details
                 responseInfo.error = true;
                 responseInfo.errorMessage = `HTTP error! status: ${response.status}`;
-                document.getElementById('responseDetails').textContent = JSON.stringify(responseInfo, null, 2);
-                throw new Error(`HTTP error! status: ${response.status}`);
+                
+                // Try to get the response body for error details
+                return response.text().then(errorText => {
+                    responseInfo.errorBody = errorText;
+                    document.getElementById('responseDetails').textContent = JSON.stringify(responseInfo, null, 2);
+                    throw new Error(`HTTP error! status: ${response.status}. Response: ${errorText}`);
+                });
             }
             
             // Update debug panel with successful response
@@ -680,7 +685,7 @@ function copyDebugInfo() {
     
     navigator.clipboard.writeText(debugInfo).then(() => {
         // Show temporary success message
-        const button = event.target;
+        const button = document.querySelector('button[onclick="copyDebugInfo()"]');
         const originalText = button.innerHTML;
         button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
         button.classList.add('btn-success');

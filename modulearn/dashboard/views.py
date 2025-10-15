@@ -101,6 +101,30 @@ def fetch_analytics_data(request):
         print(f"Making request to: {api_url}")
         print(f"Parameters: {params}")
         
+        # DEBUG: Test with hardcoded working URL first
+        debug_url = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels?usr=jab464&grp=CMPINF0401Fall20242&sid=5A195&cid=417&mod=all&avgtop=-1&models=-1&removeZeroProgressUsers=true'
+        print(f"DEBUG: Testing hardcoded URL: {debug_url}")
+        
+        try:
+            debug_response = requests.get(debug_url, timeout=30)
+            print(f"DEBUG: Hardcoded URL response status: {debug_response.status_code}")
+            print(f"DEBUG: Hardcoded URL response length: {len(debug_response.text)}")
+            if debug_response.status_code == 200:
+                print("DEBUG: Hardcoded URL works! Proceeding with parameterized request...")
+            else:
+                print(f"DEBUG: Hardcoded URL failed with status {debug_response.status_code}")
+                return JsonResponse({
+                    'error': f'Hardcoded URL test failed with status {debug_response.status_code}',
+                    'debug_url': debug_url,
+                    'debug_response': debug_response.text[:500]
+                }, status=500)
+        except Exception as debug_error:
+            print(f"DEBUG: Hardcoded URL test failed: {debug_error}")
+            return JsonResponse({
+                'error': f'Hardcoded URL test failed: {str(debug_error)}',
+                'debug_url': debug_url
+            }, status=500)
+        
         try:
             # Add network diagnostics
             import socket
