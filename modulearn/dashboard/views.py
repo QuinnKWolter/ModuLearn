@@ -102,12 +102,32 @@ def fetch_analytics_data(request):
         print(f"Parameters: {params}")
         
         try:
-            response = requests.get(api_url, params=params, timeout=30)
+            # Try with different request configurations
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            print(f"Attempting request with headers: {headers}")
+            response = requests.get(api_url, params=params, headers=headers, timeout=30)
+            print(f"Request successful! Status: {response.status_code}")
+            
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
-            return JsonResponse({
-                'error': f'Failed to connect to external API: {str(e)}'
-            }, status=500)
+            print(f"Request details - URL: {api_url}")
+            print(f"Request details - Params: {params}")
+            
+            # Try alternative approach with session
+            try:
+                print("Trying with requests.Session()...")
+                session = requests.Session()
+                session.headers.update(headers)
+                response = session.get(api_url, params=params, timeout=30)
+                print(f"Session request successful! Status: {response.status_code}")
+            except requests.exceptions.RequestException as e2:
+                print(f"Session request also failed: {e2}")
+                return JsonResponse({
+                    'error': f'Failed to connect to external API: {str(e)}. Session fallback also failed: {str(e2)}'
+                }, status=500)
         
         if response.status_code != 200:
             return JsonResponse({
