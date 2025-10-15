@@ -102,6 +102,38 @@ def fetch_analytics_data(request):
         print(f"Parameters: {params}")
         
         try:
+            # Add network diagnostics
+            import socket
+            print(f"DNS Resolution test:")
+            try:
+                ip = socket.gethostbyname('adapt2.sis.pitt.edu')
+                print(f"  adapt2.sis.pitt.edu resolves to: {ip}")
+            except socket.gaierror as dns_error:
+                print(f"  DNS resolution failed: {dns_error}")
+                return JsonResponse({
+                    'error': f'DNS resolution failed: {str(dns_error)}'
+                }, status=500)
+            
+            # Test basic connectivity
+            print(f"Testing basic connectivity to {ip}:80...")
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(10)
+                result = sock.connect_ex((ip, 80))
+                sock.close()
+                if result == 0:
+                    print(f"  Basic connectivity test: SUCCESS")
+                else:
+                    print(f"  Basic connectivity test: FAILED (error code: {result})")
+                    return JsonResponse({
+                        'error': f'Cannot connect to {ip}:80 (error code: {result})'
+                    }, status=500)
+            except Exception as conn_error:
+                print(f"  Basic connectivity test failed: {conn_error}")
+                return JsonResponse({
+                    'error': f'Connectivity test failed: {str(conn_error)}'
+                }, status=500)
+            
             # Try with different request configurations
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
