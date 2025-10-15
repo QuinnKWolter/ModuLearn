@@ -95,95 +95,14 @@ def fetch_analytics_data(request):
             'removeZeroProgressUsers': request.GET.get('removeZeroProgressUsers', 'true')
         }
         
-        # Make request to external API
+        # Direct, simple request - no debugging, no extra headers, no sessions
         api_url = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels'
         
-        print(f"Making request to: {api_url}")
-        print(f"Parameters: {params}")
+        print(f"Making direct request to: {api_url}")
+        print(f"With parameters: {params}")
         
-        # DEBUG: Test with hardcoded working URL first
-        debug_url = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels?usr=jab464&grp=CMPINF0401Fall20242&sid=5A195&cid=417&mod=all&avgtop=-1&models=-1&removeZeroProgressUsers=true'
-        print(f"DEBUG: Testing hardcoded URL: {debug_url}")
-        
-        try:
-            debug_response = requests.get(debug_url, timeout=30)
-            print(f"DEBUG: Hardcoded URL response status: {debug_response.status_code}")
-            print(f"DEBUG: Hardcoded URL response length: {len(debug_response.text)}")
-            if debug_response.status_code == 200:
-                print("DEBUG: Hardcoded URL works! Proceeding with parameterized request...")
-            else:
-                print(f"DEBUG: Hardcoded URL failed with status {debug_response.status_code}")
-                return JsonResponse({
-                    'error': f'Hardcoded URL test failed with status {debug_response.status_code}',
-                    'debug_url': debug_url,
-                    'debug_response': debug_response.text[:500]
-                }, status=500)
-        except Exception as debug_error:
-            print(f"DEBUG: Hardcoded URL test failed: {debug_error}")
-            return JsonResponse({
-                'error': f'Hardcoded URL test failed: {str(debug_error)}',
-                'debug_url': debug_url
-            }, status=500)
-        
-        try:
-            # Add network diagnostics
-            import socket
-            print(f"DNS Resolution test:")
-            try:
-                ip = socket.gethostbyname('adapt2.sis.pitt.edu')
-                print(f"  adapt2.sis.pitt.edu resolves to: {ip}")
-            except socket.gaierror as dns_error:
-                print(f"  DNS resolution failed: {dns_error}")
-                return JsonResponse({
-                    'error': f'DNS resolution failed: {str(dns_error)}'
-                }, status=500)
-            
-            # Test basic connectivity
-            print(f"Testing basic connectivity to {ip}:80...")
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(10)
-                result = sock.connect_ex((ip, 80))
-                sock.close()
-                if result == 0:
-                    print(f"  Basic connectivity test: SUCCESS")
-                else:
-                    print(f"  Basic connectivity test: FAILED (error code: {result})")
-                    return JsonResponse({
-                        'error': f'Cannot connect to {ip}:80 (error code: {result})'
-                    }, status=500)
-            except Exception as conn_error:
-                print(f"  Basic connectivity test failed: {conn_error}")
-                return JsonResponse({
-                    'error': f'Connectivity test failed: {str(conn_error)}'
-                }, status=500)
-            
-            # Try with different request configurations
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            print(f"Attempting request with headers: {headers}")
-            response = requests.get(api_url, params=params, headers=headers, timeout=30)
-            print(f"Request successful! Status: {response.status_code}")
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
-            print(f"Request details - URL: {api_url}")
-            print(f"Request details - Params: {params}")
-            
-            # Try alternative approach with session
-            try:
-                print("Trying with requests.Session()...")
-                session = requests.Session()
-                session.headers.update(headers)
-                response = session.get(api_url, params=params, timeout=30)
-                print(f"Session request successful! Status: {response.status_code}")
-            except requests.exceptions.RequestException as e2:
-                print(f"Session request also failed: {e2}")
-                return JsonResponse({
-                    'error': f'Failed to connect to external API: {str(e)}. Session fallback also failed: {str(e2)}'
-                }, status=500)
+        # Simple, direct request
+        response = requests.get(api_url, params=params, timeout=30)
         
         if response.status_code != 200:
             return JsonResponse({
@@ -257,7 +176,7 @@ console.log(JSON.stringify(data, null, 2));
                     # Clean up the temporary file
                     import os
                     try:
-                        os.unlink(temp_file_path)
+                    os.unlink(temp_file_path)
                     except:
                         pass  # Ignore cleanup errors
                 
