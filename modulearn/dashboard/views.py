@@ -101,7 +101,13 @@ def fetch_analytics_data(request):
         print(f"Making request to: {api_url}")
         print(f"Parameters: {params}")
         
-        response = requests.get(api_url, params=params, timeout=30)
+        try:
+            response = requests.get(api_url, params=params, timeout=30)
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            return JsonResponse({
+                'error': f'Failed to connect to external API: {str(e)}'
+            }, status=500)
         
         if response.status_code != 200:
             return JsonResponse({
@@ -154,17 +160,30 @@ console.log(JSON.stringify(data, null, 2));
                     result = subprocess.run(['node', temp_file_path], 
                                           capture_output=True, text=True, timeout=30)
                     
+                    print(f"Node.js return code: {result.returncode}")
+                    print(f"Node.js stdout: {result.stdout[:200]}...")
+                    print(f"Node.js stderr: {result.stderr}")
+                    
                     if result.returncode == 0:
                         # Parse the JSON output from Node.js
                         data = json.loads(result.stdout)
                         print("Successfully parsed using Node.js")
                     else:
-                        raise Exception(f"Node.js failed: {result.stderr}")
+                        raise Exception(f"Node.js failed with return code {result.returncode}: {result.stderr}")
                         
+                except subprocess.TimeoutExpired:
+                    print("Node.js execution timed out")
+                    raise Exception("Node.js execution timed out after 30 seconds")
+                except FileNotFoundError:
+                    print("Node.js not found in PATH")
+                    raise Exception("Node.js is not installed or not in PATH")
                 finally:
                     # Clean up the temporary file
                     import os
-                    os.unlink(temp_file_path)
+                    try:
+                        os.unlink(temp_file_path)
+                    except:
+                        pass  # Ignore cleanup errors
                 
             except Exception as eval_error:
                 import traceback
@@ -208,7 +227,10 @@ console.log(JSON.stringify(data, null, 2));
             'error': f'Request error: {str(e)}'
         }, status=500)
     except Exception as e:
+        import traceback
         print(f"Unexpected error: {e}")
+        print(f"Full traceback: {traceback.format_exc()}")
         return JsonResponse({
-            'error': f'An unexpected error occurred: {str(e)}'
+            'error': f'An unexpected error occurred: {str(e)}',
+            'traceback': traceback.format_exc()
         }, status=500)
