@@ -342,18 +342,18 @@ function handleFetch() {
         removeZeroProgressUsers: document.getElementById('removeZero').value
     };
     
-    // Make real API call to our proxy endpoint
-    const apiUrl = btn.getAttribute('data-api-url');
-    const url = `${apiUrl}?${new URLSearchParams(formData)}`;
-    console.log('Making API request to:', url);
+    // Make DIRECT API call to external API - bypass Django completely
+    const externalApiUrl = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels';
+    const url = `${externalApiUrl}?${new URLSearchParams(formData)}`;
+    console.log('Making DIRECT API request to:', url);
     
     // Capture request details for debug panel
     const requestInfo = {
         url: url,
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json'
+            'Accept': 'application/json, text/plain, */*',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         },
         formData: formData,
         timestamp: new Date().toISOString()
@@ -366,10 +366,10 @@ function handleFetch() {
     fetch(url, {
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json'
+            'Accept': 'application/json, text/plain, */*',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         },
-        credentials: 'same-origin'
+        mode: 'cors'
     })
         .then(response => {
             console.log('Response status:', response.status);
@@ -399,29 +399,41 @@ function handleFetch() {
             // Update debug panel with successful response
             document.getElementById('responseDetails').textContent = JSON.stringify(responseInfo, null, 2);
             
-            return response.json();
+            // The external API returns a JavaScript object literal, not JSON
+            return response.text();
         })
-        .then(data => {
-            console.log('Received data:', data);
-            if (data.error) {
-                // Log detailed error information
-                console.error('API Error Details:', {
-                    error: data.error,
-                    traceback: data.traceback || 'No traceback available',
-                    status: data.status || 'Unknown status'
-                });
+        .then(responseText => {
+            console.log('Received response text:', responseText.substring(0, 200) + '...');
+            
+            try {
+                // Parse the JavaScript object literal response
+                // The API returns a JS object, not JSON, so we need to evaluate it
+                const data = eval('(' + responseText + ')');
+                console.log('Parsed data:', data);
                 
-                // Show detailed error in UI
-                let errorMessage = `API Error: ${data.error}`;
-                if (data.traceback) {
-                    errorMessage += `\n\nTraceback:\n${data.traceback}`;
+                if (data.error) {
+                    // Log detailed error information
+                    console.error('API Error Details:', {
+                        error: data.error,
+                        traceback: data.traceback || 'No traceback available',
+                        status: data.status || 'Unknown status'
+                    });
+                    
+                    // Show detailed error in UI
+                    let errorMessage = `API Error: ${data.error}`;
+                    if (data.traceback) {
+                        errorMessage += `\n\nTraceback:\n${data.traceback}`;
+                    }
+                    showError(errorMessage);
+                    return;
                 }
-                showError(errorMessage);
-                return;
+                responseData = data;
+                showDashboard();
+                updateDashboard();
+            } catch (parseError) {
+                console.error('Failed to parse response:', parseError);
+                showError('Failed to parse API response: ' + parseError.message);
             }
-            responseData = data;
-            showDashboard();
-            updateDashboard();
         })
         .catch(error => {
             console.error('Fetch error:', error);
