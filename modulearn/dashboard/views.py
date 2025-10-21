@@ -124,9 +124,17 @@ def fetch_analytics_data(request):
         except requests.RequestException as e:
             print(f"Direct request failed: {e}")
             
-            # Only try proxy if the URL is in the allowed hosts
+            # For localhost requests, don't try proxy - just return the error
             from urllib.parse import urlparse
             parsed_url = urlparse(api_url)
+            
+            if parsed_url.hostname in ['localhost', '127.0.0.1']:
+                print(f"Localhost request failed - service may not be running on {parsed_url.hostname}")
+                return JsonResponse({
+                    'error': f'Localhost service not available. Please ensure the ADAPT2 service is running on {parsed_url.hostname}. Error: {str(e)}'
+                }, status=503)
+            
+            # For other hosts, try proxy as fallback
             if parsed_url.hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', set()):
                 print("Falling back to internal proxy...")
                 

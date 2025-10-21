@@ -335,6 +335,8 @@ PROXY_ALLOWED_HOSTS = {
     "columbus.exp.sis.pitt.edu",
     "pawscomp2.sis.pitt.edu",
     "adapt2.sis.pitt.edu",
+    "localhost",
+    "127.0.0.1",
 }
 PROXY_MAX_BYTES = 5 * 1024 * 1024
 PROXY_CORS_ORIGIN = 'https://proxy.personalized-learning.org'
