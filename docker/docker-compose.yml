@@ -11,3 +11,5 @@ services:
     restart: always
     volumes:
       - ./modulearn-storage/db:/modulearn-storage/db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
