@@ -7,3 +7,4 @@ crispy-bootstrap5
 PyLTI1p3==2.0.0
 oauthlib
 requests
+demjson3
