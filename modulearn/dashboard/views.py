@@ -4,8 +4,9 @@ from django.contrib.auth.decorators import login_required
 import requests
 from django.http import JsonResponse
 from courses.utils import get_course_auth_token
-import demjson3
+import json
 from urllib.parse import urlparse
+from py_mini_racer import MiniRacer
 
 @login_required
 def student_dashboard(request):
@@ -115,17 +116,29 @@ def fetch_analytics_data(request):
         response_text = response.text.strip()
         print(f"Raw response: {response_text[:200]}...")
 
-        # --- Your new, secure parsing logic (which is perfect) ---
+        # --- Parse the response - it's a full JS object with functions ---
         try:
-            data = demjson3.decode(response_text)
-        except demjson3.JSONDecodeError as e:
-            print(f"Failed to parse response as JS object literal: {e}")
+            # 1. Create a sandboxed JS runtime
+            ctx = MiniRacer()
+
+            # 2. Evaluate the response text and stringify it to proper JSON
+            # We wrap the response in parentheses to evaluate it as an expression
+            json_string = ctx.eval(f"JSON.stringify(({response_text}))")
+
+            # 3. Now parse the clean, valid JSON string
+            data = json.loads(json_string)
+
+        except Exception as e:
+            # This will catch any JS evaluation errors
+            print(f"Failed to parse response with MiniRacer: {e}")
+            print(f"Response length: {len(response_text)} characters")
+            print(f"First 500 chars: {response_text[:500]}")
             return JsonResponse({
-                'error': 'Unable to parse response data from upstream API',
+                'error': 'Failed to parse JavaScript response from upstream API',
                 'details': str(e),
-            }, status=502) # 502 Bad Gateway is good here
-        
-        print(f"Successfully parsed data.")
+            }, status=502) # 502 Bad Gateway
+
+        print(f"Successfully parsed data with keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
         return JsonResponse(data)
 
     # --- Simplified Error Handling ---
