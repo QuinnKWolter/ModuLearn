@@ -96,7 +96,14 @@ def fetch_analytics_data(request):
         }
         
         # Make request to external API via internal proxy to handle network restrictions
-        api_url = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels'
+        # Use different URLs based on DEBUG setting
+        from django.conf import settings
+        if settings.DEBUG:
+            # In development, use the remote server
+            api_url = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels'
+        else:
+            # In production, use localhost
+            api_url = 'http://localhost/aggregate2/GetContentLevels'
         
         print(f"Making request to: {api_url}")
         print(f"Parameters: {params}")
