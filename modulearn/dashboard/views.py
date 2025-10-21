@@ -123,37 +123,46 @@ def fetch_analytics_data(request):
                 
         except requests.RequestException as e:
             print(f"Direct request failed: {e}")
-            print("Falling back to internal proxy...")
             
-            # Fallback to internal proxy
-            try:
-                # Build the full URL with parameters for proxy
-                full_api_url = f"{api_url}?{urlencode(params)}"
-                print(f"Proxy URL: {full_api_url}")
+            # Only try proxy if the URL is in the allowed hosts
+            from urllib.parse import urlparse
+            parsed_url = urlparse(api_url)
+            if parsed_url.hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', set()):
+                print("Falling back to internal proxy...")
                 
-                # Make internal request to our own proxy endpoint
-                from django.conf import settings
-                base_url = request.build_absolute_uri('/').rstrip('/')
-                proxy_url = f"{base_url}/proxy/"
-                
-                print(f"Making internal proxy request to: {proxy_url}")
-                proxy_response = requests.get(proxy_url, params={'url': full_api_url}, timeout=30)
-                
-                if proxy_response.status_code != 200:
-                    error_content = proxy_response.text
-                    print(f"Proxy request failed with status {proxy_response.status_code}: {error_content}")
+                # Fallback to internal proxy
+                try:
+                    # Build the full URL with parameters for proxy
+                    full_api_url = f"{api_url}?{urlencode(params)}"
+                    print(f"Proxy URL: {full_api_url}")
+                    
+                    # Make internal request to our own proxy endpoint
+                    base_url = request.build_absolute_uri('/').rstrip('/')
+                    proxy_url = f"{base_url}/proxy/"
+                    
+                    print(f"Making internal proxy request to: {proxy_url}")
+                    proxy_response = requests.get(proxy_url, params={'url': full_api_url}, timeout=30)
+                    
+                    if proxy_response.status_code != 200:
+                        error_content = proxy_response.text
+                        print(f"Proxy request failed with status {proxy_response.status_code}: {error_content}")
+                        return JsonResponse({
+                            'error': f'Both direct and proxy requests failed. Proxy status: {proxy_response.status_code}',
+                            'details': error_content
+                        }, status=503)
+                    
+                    response_text = proxy_response.text
+                    print(f"Proxy request successful")
+                    
+                except Exception as proxy_error:
+                    print(f"Proxy request also failed: {proxy_error}")
                     return JsonResponse({
-                        'error': f'Both direct and proxy requests failed. Proxy status: {proxy_response.status_code}',
-                        'details': error_content
+                        'error': f'Both direct request and proxy failed. Direct: {str(e)}, Proxy: {str(proxy_error)}'
                     }, status=503)
-                
-                response_text = proxy_response.text
-                print(f"Proxy request successful")
-                
-            except Exception as proxy_error:
-                print(f"Proxy request also failed: {proxy_error}")
+            else:
+                print(f"Host {parsed_url.hostname} not in allowed hosts, cannot use proxy")
                 return JsonResponse({
-                    'error': f'Both direct request and proxy failed. Direct: {str(e)}, Proxy: {str(proxy_error)}'
+                    'error': f'Direct request failed and host {parsed_url.hostname} not allowed for proxy. Error: {str(e)}'
                 }, status=503)
         
         print(f"Response size: {len(response_text)} characters")
