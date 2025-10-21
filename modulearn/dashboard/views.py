@@ -66,11 +66,11 @@ def generate_course_auth_url(request):
         return JsonResponse({"error": f"An unexpected error occurred during token request: {e}"}, status=500)
 
 @login_required
-def mockup_student_dashboard(request):
+def mockup_dashboard(request):
     """
-    Displays the mockup student dashboard with learning analytics.
+    Displays the mockup dashboard with learning analytics.
     """
-    return render(request, 'dashboard/mockup_student_dashboard.html', {
+    return render(request, 'dashboard/mockup_dashboard.html', {
         'user': request.user
     })
 
@@ -101,7 +101,14 @@ def fetch_analytics_data(request):
         print(f"Making request to: {api_url}")
         print(f"Parameters: {params}")
         
-        response = requests.get(api_url, params=params, timeout=30)
+        # Add retry logic and better error handling for production robustness
+        try:
+            response = requests.get(api_url, params=params, timeout=30)
+        except requests.exceptions.RequestException as e:
+            print(f"Request to {api_url} failed: {e}")
+            return JsonResponse({
+                'error': f'Failed to fetch data from external API: {str(e)}'
+            }, status=503)
         
         if response.status_code != 200:
             return JsonResponse({

@@ -14,28 +14,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True  # Set to True for local development, False for production
+DEBUG = False  # Set to True for local development, False for production
 
-# Helper function to handle ngrok URLs in development
-def get_ngrok_urls():
-    if DEBUG:  # Only allow ngrok in development
-        from urllib.request import urlopen
-        try:
-            # Get ngrok tunnels info
-            ngrok_tunnels = urlopen('http://127.0.0.1:4040/api/tunnels').read()
-            import json
-            tunnels = json.loads(ngrok_tunnels)['tunnels']
-            return [tunnel['public_url'].replace('https://', '').replace('http://', '') 
-                   for tunnel in tunnels]
-        except:
-            return []
-    return []
 
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'proxy.personalized-learning.org',
-    # *get_ngrok_urls()  # Dynamically add ngrok URLs
 ]
 
 # Application definition
@@ -179,7 +164,6 @@ OAUTH2_PROVIDER = {
 CORS_ALLOWED_ORIGINS = [
     'https://canvas.instructure.com',
     'https://saltire.lti.app',
-    *[f'https://{host}' for host in get_ngrok_urls()]  # Add ngrok URLs with https://
 ]
 
 # Security Settings
@@ -285,15 +269,8 @@ LTI_CONSUMER_CONFIG = {
 def get_primary_domain():
     """Returns the primary domain to use for the application"""
     if DEBUG:
-        # Try to get ngrok URL first
-        ngrok_urls = get_ngrok_urls()
-        if ngrok_urls:
-            domain = f"https://{ngrok_urls[0]}"
-            print(f"Using ngrok domain: {domain}")  # Debug print
-            return domain
-        print("No ngrok URLs found, using localhost")  # Debug print
-        return "http://localhost:8000"  # Fallback to localhost
-    return "https://proxy.personalized-learning.org"  # Production domain
+        return "http://localhost:8000"
+    return "https://proxy.personalized-learning.org"
 
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
@@ -317,10 +294,9 @@ LTI_TOOL_CONFIG = {
     ]
 }
 
-# Add CSRF trusted origins for your ngrok domain
+# CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     'https://proxy.personalized-learning.org',
-    'https://*.ngrok-free.app',
 ]
 
 # LTI 1.1 Configuration
