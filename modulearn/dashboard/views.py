@@ -95,31 +95,43 @@ def fetch_analytics_data(request):
             'removeZeroProgressUsers': request.GET.get('removeZeroProgressUsers', 'true')
         }
         
-        # Make request to external API
+        # Make request to external API via internal proxy to handle network restrictions
         api_url = 'http://adapt2.sis.pitt.edu/aggregate2/GetContentLevels'
         
         print(f"Making request to: {api_url}")
         print(f"Parameters: {params}")
         
-        # Add retry logic and better error handling for production robustness
-        try:
-            response = requests.get(api_url, params=params, timeout=30)
-        except requests.exceptions.RequestException as e:
-            print(f"Request to {api_url} failed: {e}")
-            return JsonResponse({
-                'error': f'Failed to fetch data from external API: {str(e)}'
-            }, status=503)
+        # Use internal proxy to bypass network restrictions on production server
+        from django.test import RequestFactory
+        from modulearn.views_proxy import http_get_proxy
+        from django.http import QueryDict
         
-        if response.status_code != 200:
-            return JsonResponse({
-                'error': f'API request failed with status {response.status_code}',
-                'details': response.text
-            }, status=response.status_code)
+        # Build the full URL with parameters
+        from urllib.parse import urlencode
+        full_api_url = f"{api_url}?{urlencode(params)}"
+        print(f"Full API URL: {full_api_url}")
         
-        # Get the response text
-        response_text = response.text.strip()
-        print(f"Raw response: {response_text[:200]}...")  # Log first 200 chars
+        # Create a fake request for the proxy
+        factory = RequestFactory()
+        proxy_request = factory.get('/proxy/', {'url': full_api_url})
+        
+        print(f"Routing through internal proxy...")
+        proxy_response = http_get_proxy(proxy_request)
+        
+        if proxy_response.status_code != 200:
+            return JsonResponse({
+                'error': f'Proxy request failed with status {proxy_response.status_code}',
+                'details': proxy_response.content.decode('utf-8') if proxy_response.content else 'No details'
+            }, status=proxy_response.status_code)
+        
+        # Get the response content from proxy
+        response_text = proxy_response.content.decode('utf-8')
+        print(f"Proxy request completed successfully")
         print(f"Response size: {len(response_text)} characters")
+        
+        # Clean up the response text
+        response_text = response_text.strip()
+        print(f"Raw response: {response_text[:200]}...")  # Log first 200 chars
         
         # Debug: Check for specific problematic patterns
         print(f"Contains 'function': {'function' in response_text}")
