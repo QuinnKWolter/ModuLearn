@@ -101,32 +101,54 @@ def fetch_analytics_data(request):
         print(f"Making request to: {api_url}")
         print(f"Parameters: {params}")
         
-        # Use internal proxy to bypass network restrictions on production server
-        from django.test import RequestFactory
-        from modulearn.views_proxy import http_get_proxy
-        from django.http import QueryDict
-        
-        # Build the full URL with parameters
+        # Try direct request first, fallback to proxy if it fails
         from urllib.parse import urlencode
-        full_api_url = f"{api_url}?{urlencode(params)}"
-        print(f"Full API URL: {full_api_url}")
         
-        # Create a fake request for the proxy
-        factory = RequestFactory()
-        proxy_request = factory.get('/proxy/', {'url': full_api_url})
+        try:
+            # Try direct request first (works locally)
+            print(f"Attempting direct request to: {api_url}")
+            response = requests.get(api_url, params=params, timeout=30)
+            response_text = response.text
+            print(f"Direct request successful with status: {response.status_code}")
+            
+            if response.status_code != 200:
+                raise requests.RequestException(f"API returned status {response.status_code}")
+                
+        except requests.RequestException as e:
+            print(f"Direct request failed: {e}")
+            print("Falling back to internal proxy...")
+            
+            # Fallback to internal proxy
+            try:
+                # Build the full URL with parameters for proxy
+                full_api_url = f"{api_url}?{urlencode(params)}"
+                print(f"Proxy URL: {full_api_url}")
+                
+                # Make internal request to our own proxy endpoint
+                from django.conf import settings
+                base_url = request.build_absolute_uri('/').rstrip('/')
+                proxy_url = f"{base_url}/proxy/"
+                
+                print(f"Making internal proxy request to: {proxy_url}")
+                proxy_response = requests.get(proxy_url, params={'url': full_api_url}, timeout=30)
+                
+                if proxy_response.status_code != 200:
+                    error_content = proxy_response.text
+                    print(f"Proxy request failed with status {proxy_response.status_code}: {error_content}")
+                    return JsonResponse({
+                        'error': f'Both direct and proxy requests failed. Proxy status: {proxy_response.status_code}',
+                        'details': error_content
+                    }, status=503)
+                
+                response_text = proxy_response.text
+                print(f"Proxy request successful")
+                
+            except Exception as proxy_error:
+                print(f"Proxy request also failed: {proxy_error}")
+                return JsonResponse({
+                    'error': f'Both direct request and proxy failed. Direct: {str(e)}, Proxy: {str(proxy_error)}'
+                }, status=503)
         
-        print(f"Routing through internal proxy...")
-        proxy_response = http_get_proxy(proxy_request)
-        
-        if proxy_response.status_code != 200:
-            return JsonResponse({
-                'error': f'Proxy request failed with status {proxy_response.status_code}',
-                'details': proxy_response.content.decode('utf-8') if proxy_response.content else 'No details'
-            }, status=proxy_response.status_code)
-        
-        # Get the response content from proxy
-        response_text = proxy_response.content.decode('utf-8')
-        print(f"Proxy request completed successfully")
         print(f"Response size: {len(response_text)} characters")
         
         # Clean up the response text
