@@ -14,7 +14,67 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False  # Set to True for local development, False for production
+# Automatic environment detection
+def get_debug_setting():
+    """
+    Automatically detect if we're in development or production environment.
+    Returns True for development, False for production.
+    """
+    # Check for explicit DEBUG environment variable first
+    debug_env = os.getenv('DEBUG')
+    if debug_env is not None:
+        return debug_env.lower() in ('true', '1', 'yes', 'on')
+    
+    # Check for development indicators
+    development_indicators = [
+        # Environment variables that indicate development
+        os.getenv('DJANGO_DEVELOPMENT'),
+        os.getenv('DEVELOPMENT'),
+        os.getenv('DEV'),
+        
+        # Check if running in development mode
+        os.getenv('RUNSERVER', '').lower() == 'true',
+        
+        # Check for common development hostnames
+        os.getenv('HOSTNAME', '').lower() in ['localhost', 'dev', 'development'],
+        
+        # Check if we're running on localhost (common in development)
+        os.getenv('SERVER_NAME', '').lower() in ['localhost', '127.0.0.1'],
+    ]
+    
+    # If any development indicator is set, we're in development
+    if any(development_indicators):
+        return True
+    
+    # Check for production indicators
+    production_indicators = [
+        # Environment variables that indicate production
+        os.getenv('DJANGO_PRODUCTION'),
+        os.getenv('PRODUCTION'),
+        os.getenv('PROD'),
+        
+        # Check for common production environment variables
+        os.getenv('ENVIRONMENT', '').lower() == 'production',
+        os.getenv('ENV', '').lower() == 'production',
+        
+        # Check for production hostnames
+        'proxy.personalized-learning.org' in os.getenv('HOSTNAME', ''),
+        'proxy.personalized-learning.org' in os.getenv('SERVER_NAME', ''),
+    ]
+    
+    # If any production indicator is set, we're in production
+    if any(production_indicators):
+        return False
+    
+    # Default to production for safety (more secure)
+    return False
+
+DEBUG = get_debug_setting()
+
+# Log the detected environment for debugging
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"Environment detected: {'DEVELOPMENT' if DEBUG else 'PRODUCTION'}")
 
 
 ALLOWED_HOSTS = [
