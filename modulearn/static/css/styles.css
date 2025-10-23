@@ -126,7 +126,7 @@ footer {
 }
 
 .btn {
-  color: #fff !important;
+  /* color: #fff !important; */
   text-decoration: none;
   border: none; /* Remove outline style */
 }
