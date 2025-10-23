@@ -61,7 +61,7 @@
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center mb-4">
                             <div class="bg-gradient-primary rounded-circle p-3 me-3">
-                                <i class="fas fa-chart-line text-white fs-4"></i>
+                                <i class="fas fa-chart-line fs-4"></i>
                             </div>
                             <div>
                                 <h2 id="courseTitle" class="h3 mb-1 fw-bold">Course Analytics</h2>
@@ -75,7 +75,7 @@
                                 <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                                     <div class="card-body text-white text-center p-4">
                                         <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-percentage fs-4"></i>
+                                            <i class="fas fa-percentage fs-4 text-dark"></i>
                                         </div>
                                         <h6 class="text-white-50 fw-bold mb-2">Overall Progress</h6>
                                         <div class="display-4 fw-bold" id="overallProgress">-</div>
@@ -86,7 +86,7 @@
                                 <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                                     <div class="card-body text-white text-center p-4">
                                         <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-users fs-4"></i>
+                                            <i class="fas fa-users fs-4 text-dark"></i>
                                         </div>
                                         <h6 class="text-white-50 fw-bold mb-2">Students</h6>
                                         <div class="display-4 fw-bold" id="studentsEnrolled">-</div>
@@ -97,7 +97,7 @@
                                 <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                                     <div class="card-body text-white text-center p-4">
                                         <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-book fs-4"></i>
+                                            <i class="fas fa-book fs-4 text-dark"></i>
                                         </div>
                                         <h6 class="text-white-50 fw-bold mb-2">Topics</h6>
                                         <div class="display-4 fw-bold" id="topicsCovered">-</div>
@@ -108,7 +108,7 @@
                                 <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
                                     <div class="card-body text-white text-center p-4">
                                         <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-fire fs-4"></i>
+                                            <i class="fas fa-fire fs-4 text-dark"></i>
                                         </div>
                                         <h6 class="text-white-50 fw-bold mb-2">Active Topic</h6>
                                         <div class="fw-bold" id="mostActiveTopic" style="font-size: 1.1rem; line-height: 1.2;">-</div>
@@ -125,15 +125,15 @@
         <div class="row">
             <div class="col-12">
                 <div class="card border-0 shadow-lg">
-                    <div class="card-header bg-white border-0 py-4">
+                    <div class="card-header border-0 py-4">
                         <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center">
                                 <div class="bg-gradient-primary rounded-circle p-2 me-3">
-                                    <i class="fas fa-th text-white"></i>
+                                    <i class="fas fa-th"></i>
                                 </div>
                                 <div>
-                                    <h4 class="mb-1 fw-bold">Mastery Grid</h4>
-                                    <p class="text-muted mb-0">Click any cell to view detailed progress</p>
+                                    <h4 class="mb-1 fw-bold" id="viewTitle">Mastery Grid</h4>
+                                    <p class="text-muted mb-0" id="viewDescription">Click any cell to view detailed progress</p>
                                 </div>
                             </div>
                             <div class="d-flex gap-2">
@@ -141,6 +141,10 @@
                                     <input type="radio" class="btn-check" name="viewMode" id="myProgress" value="myProgress" checked>
                                     <label class="btn btn-outline-secondary" for="myProgress">
                                         <i class="fas fa-user me-1"></i>My Progress
+                                    </label>
+                                    <input type="radio" class="btn-check" name="viewMode" id="comparative" value="comparative">
+                                    <label class="btn btn-outline-warning" for="comparative">
+                                        <i class="fas fa-balance-scale me-1"></i>Comparative
                                     </label>
                                     <input type="radio" class="btn-check" name="viewMode" id="classAverage" value="classAverage">
                                     <label class="btn btn-outline-success" for="classAverage">
@@ -155,15 +159,16 @@
                         </div>
                     </div>
                     <div class="card-body p-0">
+                        <!-- Mastery Grid View -->
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0" id="masteryGrid">
-                                <thead class="table-light">
+                            <table class="table mb-0 custom-table" id="masteryGrid">
+                                <thead>
                                     <tr id="gridHeaders">
-                                        <th class="border-0 fw-bold py-3" style="min-width: 300px;">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-graduation-cap text-primary me-2"></i>
+                                        <th class="border-0 fw-bold py-3 text-center" style="min-width: 300px;">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <i class="fas fa-graduation-cap text-primary mb-1"></i>
                                                 Topics
-                </div>
+                                            </div>
                                         </th>
                                     </tr>
                                 </thead>
@@ -171,133 +176,44 @@
                                     <!-- Dynamic grid content will be inserted here -->
                                 </tbody>
                             </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-        <!-- Per Student View -->
-        <div class="row" id="perStudentView" style="display: none;">
-            <div class="col-12">
-                <div class="card border-0 shadow-lg">
-                    <div class="card-header bg-white border-0 py-4">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-gradient-info rounded-circle p-2 me-3">
-                                    <i class="fas fa-users text-white"></i>
-                                </div>
-                                <div>
-                                    <h4 class="mb-1 fw-bold">Student Progress Overview</h4>
-                                    <p class="text-muted mb-0">Individual student progress tracking</p>
-                                </div>
-                            </div>
                         </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0" id="studentTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="border-0 fw-bold py-3">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-graduate text-primary me-2"></i>
-                                                Student ID
-                                            </div>
-                                        </th>
-                                        <th class="border-0 fw-bold py-3 text-center">
-                                            <div class="d-flex align-items-center justify-content-center">
-                                                <i class="fas fa-chart-line text-primary me-2"></i>
-                                                Overall Progress
-                                            </div>
-                                        </th>
-                                        <th class="border-0 fw-bold py-3 text-center">
-                                            <div class="d-flex align-items-center justify-content-center">
-                                                <i class="fas fa-book text-primary me-2"></i>
-                                                Topics Completed
-                                            </div>
-                                        </th>
-                                        <th class="border-0 fw-bold py-3 text-center">
-                                            <div class="d-flex align-items-center justify-content-center">
-                                                <i class="fas fa-star text-primary me-2"></i>
-                                                Performance
-                                            </div>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody id="studentTableBody">
-                                    <!-- Dynamic student rows will be inserted here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modern Legend -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-3">
-                            <i class="fas fa-info-circle text-primary me-2"></i>
-                            Progress Legend
-                        </h6>
-                        <div class="row g-3">
-                            <div class="col-md-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="cell-not-started me-3" style="width: 24px; height: 24px;"></div>
-                                    <div>
-                                        <div class="fw-semibold">Not Started</div>
-                                        <small class="text-muted">0% progress</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="cell-low me-3" style="width: 24px; height: 24px;"></div>
-                                    <div>
-                                        <div class="fw-semibold">Getting Started</div>
-                                        <small class="text-muted">1-25% progress</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="cell-medium-low me-3" style="width: 24px; height: 24px;"></div>
-                                    <div>
-                                        <div class="fw-semibold">Making Progress</div>
-                                        <small class="text-muted">26-50% progress</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="cell-medium me-3" style="width: 24px; height: 24px;"></div>
-                                    <div>
-                                        <div class="fw-semibold">Good Progress</div>
-                                        <small class="text-muted">51-75% progress</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="cell-high me-3" style="width: 24px; height: 24px;"></div>
-                                    <div>
-                                        <div class="fw-semibold">Almost There</div>
-                                        <small class="text-muted">76-90% progress</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex align-items-center">
-                                    <div class="cell-complete me-3" style="width: 24px; height: 24px;"></div>
-                                    <div>
-                                        <div class="fw-semibold">Complete</div>
-                                        <small class="text-muted">91-100% progress</small>
-                                    </div>
-                                </div>
+                        
+                        <!-- Per Student View - Hidden by default, content will be swapped in -->
+                        <div id="perStudentContent" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 custom-table" id="studentTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="border-0 fw-bold py-3">
+                                                <div class="d-flex flex-column align-items-center text-center">
+                                                    <i class="fas fa-user-graduate text-primary mb-1"></i>
+                                                    Student ID
+                                                </div>
+                                            </th>
+                                            <th class="border-0 fw-bold py-3 text-center">
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <i class="fas fa-chart-line text-primary mb-1"></i>
+                                                    Overall Progress
+                                                </div>
+                                            </th>
+                                            <th class="border-0 fw-bold py-3 text-center">
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <i class="fas fa-book text-primary mb-1"></i>
+                                                    Topics Completed
+                                                </div>
+                                            </th>
+                                            <th class="border-0 fw-bold py-3 text-center">
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <i class="fas fa-chart-bar text-primary mb-1"></i>
+                                                    Analytics
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentTableBody">
+                                        <!-- Dynamic student rows will be inserted here -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -339,14 +255,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 <style>
 /* Modern Dashboard Styling */
-.student-row {
-    transition: all 0.2s ease;
-}
-.student-row:hover {
-    background-color: rgba(13, 110, 253, 0.05) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
+/* Removed student row hover effects */
 
 .card {
     transition: all 0.3s ease;
@@ -398,15 +307,15 @@
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
 }
 
-/* Ensure all text is visible */
+/* Text colors - let theme control */
 .text-primary {
-    color: #0d6efd !important;
+    color: #0d6efd;
 }
 .text-white {
-    color: white !important;
+    color: white;
 }
 .text-muted {
-    color: #6c757d !important;
+    color: #6c757d;
 }
 
 /* Fix button styling */
@@ -429,203 +338,104 @@
     color: white !important;
 }
 
-/* Fix card backgrounds */
+/* Card and table styling - let theme control colors */
 .card {
-    background-color: #ffffff !important;
-    border: 1px solid #dee2e6 !important;
-    color: #212529 !important;
+    border: 1px solid #dee2e6;
 }
 
 .card-header {
-    background-color: #f8f9fa !important;
-    border-bottom: 1px solid #dee2e6 !important;
-    color: #212529 !important;
-}
-
-/* Fix table backgrounds */
-.table {
-    background-color: #ffffff !important;
-    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
 }
 
 .table th {
-    background-color: #f8f9fa !important;
-    color: #212529 !important;
-    border-bottom: 2px solid #dee2e6 !important;
-    font-weight: 600 !important;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
 }
 
-.table td {
-    background-color: #ffffff !important;
-    color: #212529 !important;
-    border-bottom: 1px solid #dee2e6 !important;
-}
-
-.table-light {
-    background-color: #f8f9fa !important;
-}
-
-.table tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.05) !important;
-}
-
-/* Fix form controls */
-.form-control {
-    background-color: #ffffff !important;
-    border: 1px solid #ced4da !important;
-    color: #212529 !important;
-}
-
+/* Form controls - let theme control */
 .form-control:focus {
-    background-color: #ffffff !important;
-    border-color: #86b7fe !important;
-    color: #212529 !important;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
 .form-label {
-    color: #212529 !important;
-    font-weight: 600 !important;
+    font-weight: 600;
 }
 
-/* Modern grid cell styling with improved color scale */
-.cell-not-started {
-    background-color: #f8f9fa !important;
-    border: 2px solid #e9ecef !important;
-    color: #6c757d !important;
-    font-weight: 600 !important;
+/* Override Bootstrap CSS variables for tables */
+.table {
+    --bs-table-bg: transparent !important;
+    --bs-table-color: inherit !important;
+    --bs-table-bg-state: transparent !important;
+    --bs-table-bg-type: transparent !important;
+    --bs-table-accent-bg: transparent !important;
+    --bs-table-color-state: inherit !important;
+    --bs-table-color-type: inherit !important;
 }
 
-.cell-low {
-    background-color: #fff3cd !important;
-    border: 2px solid #ffc107 !important;
-    color: #856404 !important;
-    font-weight: 600 !important;
+/* Force override Bootstrap table styles with higher specificity */
+#masteryGrid>:not(caption)>*>*,
+#studentTable>:not(caption)>*>* {
+    color: inherit !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 
-.cell-medium-low {
-    background-color: #d1ecf1 !important;
-    border: 2px solid #17a2b8 !important;
-    color: #0c5460 !important;
-    font-weight: 600 !important;
+/* Target table elements more specifically */
+#masteryGrid th,
+#masteryGrid td,
+#studentTable th,
+#studentTable td {
+    color: inherit !important;
+    background-color: transparent !important;
 }
 
-.cell-medium {
-    background-color: #d4edda !important;
-    border: 2px solid #28a745 !important;
-    color: #155724 !important;
-    font-weight: 600 !important;
+/* Nuclear option - completely override Bootstrap table styles */
+.custom-table>:not(caption)>*>* {
+    color: inherit !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-color: inherit !important;
 }
 
-.cell-high {
-    background-color: #cce5ff !important;
-    border: 2px solid #007bff !important;
-    color: #004085 !important;
-    font-weight: 600 !important;
+.custom-table th,
+.custom-table td {
+    color: inherit !important;
+    background-color: transparent !important;
+    border-color: inherit !important;
 }
 
-.cell-complete {
-    background-color: #28a745 !important;
-    border: 2px solid #1e7e34 !important;
-    color: #ffffff !important;
-    font-weight: 700 !important;
+/* Dynamic grid cell styling with three-point gradient */
+.progress-cell {
+    border: 2px solid;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Dark mode support for grid cells - improved contrast */
+/* Hover effect for grid cells - swap text and background colors */
+.progress-cell:hover {
+    transition: all 0.15s ease;
+}
+
+.progress-cell:hover .fw-bold {
+    transition: all 0.15s ease;
+}
+
+/* Dark mode support for dynamic cells */
 @media (prefers-color-scheme: dark) {
-    .cell-not-started {
-        background-color: #2d3748 !important;
-        border-color: #4a5568 !important;
-        color: #a0aec0 !important;
-    }
-    
-    .cell-low {
-        background-color: #744210 !important;
-        border-color: #ffc107 !important;
-        color: #ffffff !important;
-    }
-    
-    .cell-medium-low {
-        background-color: #0c5460 !important;
-        border-color: #17a2b8 !important;
-        color: #ffffff !important;
-    }
-    
-    .cell-medium {
-        background-color: #155724 !important;
-        border-color: #28a745 !important;
-        color: #ffffff !important;
-    }
-    
-    .cell-high {
-        background-color: #004085 !important;
-        border-color: #007bff !important;
-        color: #ffffff !important;
-    }
-    
-    .cell-complete {
-        background-color: #28a745 !important;
-        border-color: #1e7e34 !important;
-        color: #ffffff !important;
+    .progress-cell {
+        color: #ffffff;
     }
 }
 
-.cursor-pointer:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.cursor-pointer:hover .fw-bold {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
 }
 
-/* Progress bar color scale - improved visibility */
-.progress-minimal {
-    background-color: #6c757d !important;
-}
-
-.progress-low {
-    background-color: #ffc107 !important;
-}
-
-.progress-medium {
-    background-color: #17a2b8 !important;
-}
-
-.progress-high {
-    background-color: #007bff !important;
-}
-
-.progress-complete {
-    background-color: #28a745 !important;
-}
-
-/* Badge color scale - improved visibility */
-.badge-minimal {
-    background-color: #6c757d !important;
-    color: white !important;
-    font-weight: 600 !important;
-}
-
-.badge-low {
-    background-color: #ffc107 !important;
-    color: #212529 !important;
-    font-weight: 600 !important;
-}
-
-.badge-medium {
-    background-color: #17a2b8 !important;
-    color: white !important;
-    font-weight: 600 !important;
-}
-
-.badge-high {
-    background-color: #007bff !important;
-    color: white !important;
-    font-weight: 600 !important;
-}
-
-.badge-complete {
-    background-color: #28a745 !important;
-    color: white !important;
-    font-weight: 700 !important;
-}
+/* Dynamic progress styling - colors will be set via JavaScript */
 
 /* Badge styling - improved visibility */
 .badge {
@@ -641,20 +451,11 @@
     transition: all 0.2s ease;
 }
 
-.cursor-pointer:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10;
-    position: relative;
-}
+/* Removed cell swelling hover effect */
 
-/* Ensure all text is readable */
+/* Text elements - let theme control */
 h1, h2, h3, h4, h5, h6 {
-    color: #212529 !important;
-}
-
-p, span, div {
-    color: inherit;
+    color: #212529;
 }
 
 /* Icon improvements */
@@ -810,9 +611,7 @@ p, span, div {
 }
 
 /* Table row hover effects */
-.table tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.05) !important;
-}
+/* Removed table row hover effect */
 
 /* Dark mode support for overall theme - improved contrast */
 @media (prefers-color-scheme: dark) {
@@ -855,68 +654,6 @@ p, span, div {
     
     .table tbody tr:hover {
         background-color: rgba(66, 153, 225, 0.1) !important;
-    }
-    
-    .table-light {
-        background-color: #4a5568 !important;
-    }
-    
-    /* Buttons - improved visibility */
-    .btn-outline-primary {
-        color: #63b3ed !important;
-        border-color: #63b3ed !important;
-        background-color: transparent !important;
-        border-width: 2px !important;
-    }
-    
-    .btn-outline-primary:hover {
-        background-color: #63b3ed !important;
-        border-color: #63b3ed !important;
-        color: #1a202c !important;
-    }
-    
-    .btn-group .btn-check:checked + .btn-outline-primary {
-        background-color: #63b3ed !important;
-        border-color: #63b3ed !important;
-        color: #1a202c !important;
-    }
-    
-    .btn-primary {
-        background-color: #63b3ed !important;
-        border-color: #63b3ed !important;
-        color: #1a202c !important;
-    }
-    
-    .btn-primary:hover {
-        background-color: #4299e1 !important;
-        border-color: #4299e1 !important;
-        color: #1a202c !important;
-    }
-    
-    /* Text colors */
-    .text-primary {
-        color: #63b3ed !important;
-    }
-    
-    .text-muted {
-        color: #a0aec0 !important;
-    }
-    
-    .text-white {
-        color: white !important;
-    }
-    
-    /* Background colors */
-    .bg-primary {
-        background-color: #63b3ed !important;
-    }
-    
-    .bg-info {
-        background-color: #0bc5ea !important;
-    }
-    
-    .bg-white {
-        background-color: #2d3748 !important;
     }
     
     /* Modals */
@@ -977,12 +714,27 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', function() {
             currentViewMode = this.value;
             updateGrid();
+            
+            // Update all radio buttons to reflect the current selection
+            document.querySelectorAll('input[name="viewMode"]').forEach(r => {
+                r.checked = (r.value === currentViewMode);
+            });
         });
     });
+    
+    // Initialize button states on page load
+    updateButtonStates();
 });
 
 let responseData = null;
 let currentViewMode = 'myProgress';
+
+function updateButtonStates() {
+    // Update all radio buttons to reflect the current selection
+    document.querySelectorAll('input[name="viewMode"]').forEach(r => {
+        r.checked = (r.value === currentViewMode);
+    });
+}
 
 function handleFetch() {
     const btn = document.getElementById('fetchDataBtn');
@@ -1084,18 +836,52 @@ function populateKPIs() {
 function updateGrid() {
     if (!responseData) return;
     
-    // Show/hide views based on current mode
-    const masteryGrid = document.getElementById('masteryGrid').closest('.row');
-    const perStudentView = document.getElementById('perStudentView');
+    // Update button states
+    updateButtonStates();
+    
+    // Update title and description based on current view
+    updateViewHeader();
+    
+    // Get the content containers
+    const masteryGrid = document.getElementById('masteryGrid').closest('.table-responsive');
+    const perStudentContent = document.getElementById('perStudentContent');
     
     if (currentViewMode === 'perStudent') {
+        // Hide mastery grid and show per student content
         masteryGrid.style.display = 'none';
-        perStudentView.style.display = 'block';
+        perStudentContent.style.display = 'block';
         updatePerStudentView();
     } else {
+        // Show mastery grid and hide per student content
         masteryGrid.style.display = 'block';
-        perStudentView.style.display = 'none';
+        perStudentContent.style.display = 'none';
         updateMasteryGrid();
+    }
+}
+
+function updateViewHeader() {
+    const titleElement = document.getElementById('viewTitle');
+    const descriptionElement = document.getElementById('viewDescription');
+    
+    if (!titleElement || !descriptionElement) return;
+    
+    switch (currentViewMode) {
+        case 'myProgress':
+            titleElement.textContent = 'My Progress';
+            descriptionElement.textContent = 'Your individual progress across all topics';
+            break;
+        case 'comparative':
+            titleElement.textContent = 'Comparative View';
+            descriptionElement.textContent = 'Your progress compared to class average';
+            break;
+        case 'classAverage':
+            titleElement.textContent = 'Class Average';
+            descriptionElement.textContent = 'Average class progress across all topics';
+            break;
+        case 'perStudent':
+            titleElement.textContent = 'Student Progress Overview';
+            descriptionElement.textContent = 'Individual student progress tracking';
+            break;
     }
 }
 
@@ -1125,9 +911,15 @@ function updateMasteryGrid() {
     gridBody.innerHTML = '';
     
     // Get current data based on view mode
-    const currentData = currentViewMode === 'myProgress' 
-        ? responseData.learners.find(learner => learner.id === responseData.context.learnerId)
-        : responseData.groups.find(group => group.name === 'Class Average');
+    let currentData;
+    if (currentViewMode === 'myProgress') {
+        currentData = responseData.learners.find(learner => learner.id === responseData.context.learnerId);
+    } else if (currentViewMode === 'comparative') {
+        // For comparative view, we'll calculate the difference between my progress and class average
+        currentData = calculateComparativeData();
+    } else {
+        currentData = responseData.groups.find(group => group.name === 'Class Average');
+    }
     
     if (!currentData) return;
     
@@ -1137,9 +929,13 @@ function updateMasteryGrid() {
     // Create grid rows
     sortedTopics.forEach((topic, index) => {
         const row = document.createElement('tr');
-        row.className = index % 2 === 0 ? 'table-light' : '';
         
-        // Topic cell with modern styling
+        // Topic cell with gradient styling
+        const topicProgress = getTopicProgress(currentData, topic.id);
+        const progressPercent = Math.round(topicProgress * 100);
+        const progressColor = getTextColor(topicProgress);
+        const progressBarStyle = getProgressBarStyle(progressPercent);
+        
         const topicCell = document.createElement('td');
         topicCell.className = 'border-0 py-3';
         topicCell.innerHTML = `
@@ -1150,33 +946,63 @@ function updateMasteryGrid() {
                 <div class="flex-grow-1">
                     <div class="fw-bold mb-1">${topic.name}</div>
                     <div class="progress" style="height: 6px; background-color: rgba(0,0,0,0.1);">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${getTopicProgress(currentData, topic.id) * 100}%"></div>
+                        <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(progressBarStyle).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                     </div>
                 </div>
                 <div class="ms-3">
-                    <span class="badge bg-primary">${Math.round(getTopicProgress(currentData, topic.id) * 100)}%</span>
+                    <span class="badge fw-bold" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}; min-width: 50px; text-align: center;">${progressPercent}%</span>
                 </div>
             </div>
         `;
         row.appendChild(topicCell);
         
-        // Resource cells with modern grid styling
+        // Resource cells with text gradient styling
         responseData.resources.forEach(resource => {
             const cell = document.createElement('td');
             const value = getCellValue(currentData, topic.id, resource.id);
-            const cellClass = getCellClass(value);
+            const textColor = getTextColor(value);
             
-            cell.className = `text-center border-0 py-3 ${cellClass} cursor-pointer`;
+            cell.className = 'text-center border-0 py-3 progress-cell cursor-pointer';
             cell.style.cursor = 'pointer';
-            cell.style.transition = 'all 0.2s ease';
             cell.style.borderRadius = '0';
             cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resource.name);
             
+            // Store original colors for hover effect
+            cell.dataset.originalTextColor = textColor;
+            cell.dataset.originalBgColor = 'transparent';
+            
+            // Format the display value based on view mode
+            let displayValue;
+            if (currentViewMode === 'comparative') {
+                const percentage = Math.round(value * 100);
+                displayValue = percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+            } else {
+                displayValue = `${Math.round(value * 100)}%`;
+            }
+            
             cell.innerHTML = `
                 <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-5">${Math.round(value * 100)}%</div>
+                    <div class="fw-bold fs-5" style="color: ${textColor};">${displayValue}</div>
                 </div>
             `;
+            
+            // Add hover event listeners for gentle highlight effect
+            cell.addEventListener('mouseenter', function() {
+                // Apply gentle background highlight to all cells
+                this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+                // Keep original text color but make it slightly darker for contrast
+                if (textColor !== 'inherit') {
+                    this.querySelector('.fw-bold').style.color = textColor;
+                } else {
+                    this.querySelector('.fw-bold').style.color = '#6c757d';
+                }
+            });
+            
+            cell.addEventListener('mouseleave', function() {
+                // Restore original state for all cells
+                this.style.backgroundColor = 'transparent';
+                this.querySelector('.fw-bold').style.color = textColor;
+            });
             
             row.appendChild(cell);
         });
@@ -1218,7 +1044,6 @@ function updatePerStudentView() {
         const performance = Math.round(overallProgress * 100);
         
         const row = document.createElement('tr');
-        row.className = index % 2 === 0 ? 'table-light' : '';
         row.style.cursor = 'pointer';
         row.onclick = () => showStudentDetails(learner.id);
         
@@ -1235,7 +1060,7 @@ function updatePerStudentView() {
                 <div class="d-flex flex-column align-items-center">
                     <div class="fw-bold fs-5 mb-2">${progressPercent}%</div>
                     <div class="progress" style="width: 120px; height: 8px; border-radius: 4px;">
-                        <div class="progress-bar ${getProgressBarClass(progressPercent)}" role="progressbar" style="width: ${progressPercent}%"></div>
+                        <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                     </div>
                 </div>
             </td>
@@ -1247,8 +1072,8 @@ function updatePerStudentView() {
             </td>
             <td class="border-0 py-3 text-center">
                 <div class="d-flex flex-column align-items-center">
-                    <span class="badge ${getPerformanceBadgeClass(performance)} fs-6">${performance}%</span>
-                    <div class="small text-muted mt-1">Performance</div>
+                    <i class="fas fa-chart-line text-primary fs-4 mb-1"></i>
+                    <div class="small text-muted">Analytics</div>
                 </div>
             </td>
         `;
@@ -1258,8 +1083,73 @@ function updatePerStudentView() {
 }
 
 function getTopicProgress(data, topicId) {
-    if (!data?.state?.topics?.[topicId]?.overall) return 0;
-    return data.state.topics[topicId].overall.p || 0;
+    if (!data?.state?.topics?.[topicId]) return 0;
+    
+    // Try overall progress first
+    if (data.state.topics[topicId].overall?.p !== undefined) {
+        return data.state.topics[topicId].overall.p;
+    }
+    
+    // For class average, try to calculate from individual resources
+    const topicData = data.state.topics[topicId];
+    if (topicData.values) {
+        const resourceValues = Object.values(topicData.values);
+        if (resourceValues.length > 0) {
+            const totalProgress = resourceValues.reduce((sum, resource) => sum + (resource.p || 0), 0);
+            return totalProgress / resourceValues.length;
+        }
+    }
+    
+    return 0;
+}
+
+function calculateComparativeData() {
+    // Get my progress data
+    const myData = responseData.learners.find(learner => learner.id === responseData.context.learnerId);
+    const classData = responseData.groups.find(group => group.name === 'Class Average');
+    
+    if (!myData || !classData) return null;
+    
+    // Create comparative data structure
+    const comparativeData = {
+        state: {
+            topics: {}
+        }
+    };
+    
+    // Calculate differences for each topic
+    responseData.topics.forEach(topic => {
+        const myTopic = myData.state.topics[topic.id];
+        const classTopic = classData.state.topics[topic.id];
+        
+        if (myTopic && classTopic) {
+            comparativeData.state.topics[topic.id] = {
+                values: {}
+            };
+            
+            // Calculate differences for each resource
+            responseData.resources.forEach(resource => {
+                const myValue = myTopic.values?.[resource.id]?.p || 0;
+                const classValue = classTopic.values?.[resource.id]?.p || 0;
+                const difference = myValue - classValue; // Positive = ahead, Negative = behind
+                
+                comparativeData.state.topics[topic.id].values[resource.id] = {
+                    p: difference
+                };
+            });
+            
+            // Calculate overall topic difference
+            const myOverall = myTopic.overall?.p || 0;
+            const classOverall = classTopic.overall?.p || 0;
+            const overallDifference = myOverall - classOverall;
+            
+            comparativeData.state.topics[topic.id].overall = {
+                p: overallDifference
+            };
+        }
+    });
+    
+    return comparativeData;
 }
 
 function getCellValue(data, topicId, resourceId) {
@@ -1267,30 +1157,145 @@ function getCellValue(data, topicId, resourceId) {
     return data.state.topics[topicId].values[resourceId].p || 0;
 }
 
-function getCellClass(value) {
-    // Smooth color scale based on value
-    if (value === 0) return 'cell-not-started';
-    if (value <= 0.25) return 'cell-low';
-    if (value <= 0.5) return 'cell-medium-low';
-    if (value <= 0.75) return 'cell-medium';
-    if (value <= 0.9) return 'cell-high';
-    return 'cell-complete';
+function getTextColor(value) {
+    // Handle comparative view (can be negative or positive)
+    if (currentViewMode === 'comparative') {
+        // Determine if we're in dark mode using the same logic as base.html
+        const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const savedTheme = localStorage.getItem('theme');
+        const isDarkMode = savedTheme ? savedTheme === 'dark' : userPrefersDark;
+        if (value === 0) {
+            return '#6c757d'; // Bootstrap secondary color for neutral
+        } else if (value > 0) {
+            // Positive difference (ahead of class) - use green
+            const intensity = Math.min(Math.abs(value), 1); // Cap at 1        
+            if (isDarkMode) {
+                // Green shade, with white base, for dark mode
+                const r = Math.round(40 + (255 - 40) * (1 - intensity));
+                const g = Math.round(167 + (255 - 167) * (1 - intensity));
+                const b = Math.round(69 + (255 - 69) * (1 - intensity));
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                // Green shade, with black base, for light mode
+                const r = Math.round(40 * intensity);
+                const g = Math.round(167 * intensity);
+                const b = Math.round(69 * intensity);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        } else {
+            // Negative difference (behind class) - use red
+            const intensity = Math.min(Math.abs(value), 1); // Cap at 1
+            if (isDarkMode) {
+                // Red shade, with white base, for dark mode
+                const r = Math.round(220 + (255 - 220) * (1 - intensity));
+                const g = Math.round(53 + (255 - 53) * (1 - intensity));
+                const b = Math.round(69 + (255 - 69) * (1 - intensity));
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                // Red shade, with black base, for light mode
+                const r = Math.round(220 * intensity);
+                const g = Math.round(53 * intensity);
+                const b = Math.round(69 * intensity);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        }
+    }
+    
+    // Regular progress view
+    const percent = Math.round(value * 100);
+    
+    // Return secondary color for 0%
+    if (percent === 0) {
+        return '#6c757d'; // Bootstrap secondary color
+    }
+    
+    if (percent <= 50) {
+        // Linear interpolation from Bootstrap danger to warning
+        const ratio = percent / 50;
+        // Bootstrap danger: #dc3545 (220, 53, 69) to warning: #ffc107 (255, 193, 7)
+        const r = Math.round(220 + (255 - 220) * ratio);
+        const g = Math.round(53 + (193 - 53) * ratio);
+        const b = Math.round(69 + (7 - 69) * ratio);
+        
+        return `rgb(${r}, ${g}, ${b})`;
+    } else {
+        // Linear interpolation from warning to success
+        const ratio = (percent - 50) / 50;
+        // Warning: #ffc107 (255, 193, 7) to success: #28a745 (40, 167, 69)
+        const r = Math.round(255 + (40 - 255) * ratio);
+        const g = Math.round(193 + (167 - 193) * ratio);
+        const b = Math.round(7 + (69 - 7) * ratio);
+        
+        return `rgb(${r}, ${g}, ${b})`;
+    }
 }
 
-function getProgressBarClass(percent) {
-    if (percent >= 90) return 'progress-complete';
-    if (percent >= 70) return 'progress-high';
-    if (percent >= 50) return 'progress-medium';
-    if (percent >= 25) return 'progress-low';
-    return 'progress-minimal';
+function getCellStyle(value) {
+    // Keep this function for backward compatibility but return neutral styles
+    return {
+        backgroundColor: 'transparent',
+        borderColor: '#dee2e6',
+        color: getTextColor(value)
+    };
 }
 
-function getPerformanceBadgeClass(percent) {
-    if (percent >= 90) return 'badge-complete';
-    if (percent >= 70) return 'badge-high';
-    if (percent >= 50) return 'badge-medium';
-    if (percent >= 25) return 'badge-low';
-    return 'badge-minimal';
+function getProgressBarStyle(percent) {
+    // Use the same three-point gradient logic for progress bars
+    const value = percent / 100;
+    const color = getTextColor(value);
+    
+    // For 0%, use default Bootstrap styling
+    if (percent === 0) {
+        return {
+            backgroundColor: '#6c757d' // Bootstrap secondary color
+        };
+    }
+    
+    return {
+        backgroundColor: color
+    };
+}
+
+function getBadgeStyle(percent) {
+    // Handle comparative view differently
+    if (currentViewMode === 'comparative') {
+        const value = percent / 100;
+        if (value === 0) {
+            return {
+                backgroundColor: '#6c757d', // Bootstrap secondary color
+                color: '#ffffff'
+            };
+        } else if (value > 0) {
+            // Positive difference - green badge
+            return {
+                backgroundColor: '#28a745', // Bootstrap success color
+                color: '#ffffff'
+            };
+        } else {
+            // Negative difference - red badge
+            return {
+                backgroundColor: '#dc3545', // Bootstrap danger color
+                color: '#ffffff'
+            };
+        }
+    }
+    
+    // Regular progress view
+    const value = percent / 100;
+    const color = getTextColor(value);
+    
+    // For 0%, use default Bootstrap styling
+    if (percent === 0) {
+        return {
+            backgroundColor: '#6c757d', // Bootstrap secondary color
+            color: '#ffffff'
+        };
+    }
+    
+    return {
+        backgroundColor: color,
+        color: '#ffffff'
+    };
 }
 
 function showStudentDetails(learnerId) {
@@ -1325,10 +1330,10 @@ function showStudentDetails(learnerId) {
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                                     <h6 class="card-title mb-0 fw-bold">${topic.name}</h6>
-                                                    <span class="badge ${getPerformanceBadgeClass(progressPercent)}">${progressPercent}%</span>
+                                                    <span class="badge" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}">${progressPercent}%</span>
                                                 </div>
                                                 <div class="progress mb-3" style="height: 8px;">
-                                                    <div class="progress-bar ${getProgressBarClass(progressPercent)}" style="width: ${progressPercent}%"></div>
+                                                    <div class="progress-bar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                                                 </div>
                                                 <div class="row g-2">
                                                     ${responseData.resources.map(resource => {
@@ -1341,7 +1346,7 @@ function showStudentDetails(learnerId) {
                                                                     <small class="fw-semibold">${resourcePercent}%</small>
                                                                 </div>
                                                                 <div class="progress" style="height: 4px;">
-                                                                    <div class="progress-bar ${getProgressBarClass(resourcePercent)}" style="width: ${resourcePercent}%"></div>
+                                                                    <div class="progress-bar" style="width: ${resourcePercent}%; ${Object.entries(getProgressBarStyle(resourcePercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                                                                 </div>
                                                             </div>
                                                         `;
