@@ -94,7 +94,7 @@
                                         </div>
                                         <h6 class="text-white-50 fw-bold mb-2">Engagement Score</h6>
                                         <div class="display-4 fw-bold" id="engagementScore">-</div>
-                                        <small class="text-white-50">Avg participation</small>
+                                        <small class="text-white-50">Resources with activity</small>
                                     </div>
                                 </div>
                             </div>
@@ -266,7 +266,7 @@
                     <h6 class="fw-bold mb-2">KPIs</h6>
                     <ul class="mb-3">
                         <li><b>Students</b>: number of learners returned.</li>
-                        <li><b>Engagement Score</b>: average of learners’ resource progress percentages.</li>
+                        <li><b>Engagement Score</b>: percent of resources with any class activity (> 0 progress).</li>
                         <li><b>Overall Progress</b>: class-average completion across all topics/resources.</li>
                         <li><b>Struggling Students</b>: learners below 50% of class average on >30% of active resources.</li>
                     </ul>
@@ -971,33 +971,21 @@ function populateKPIs() {
     // Students Enrolled
     document.getElementById('studentsEnrolled').textContent = responseData.learners.length;
 
-    // Engagement Score - Calculate based on student activity and progress
-    let totalEngagement = 0;
-    let studentCount = 0;
+    // Engagement Score - Percent of resources with any class activity (> 0 progress)
+    let totalResources = 0;
+    let engagedResources = 0;
     
-    responseData.learners.forEach(learner => {
-        let studentEngagement = 0;
-        let resourceCount = 0;
-        
-        // Calculate engagement across all topics and resources
-        responseData.topics.forEach(topic => {
-            const topicData = learner.state.topics?.[topic.id];
-            if (topicData?.values) {
-                Object.values(topicData.values).forEach(resource => {
-                    resourceCount++;
-                    // Higher progress = higher engagement
-                    studentEngagement += resource.p || 0;
-                });
-            }
-        });
-        
-        if (resourceCount > 0) {
-            totalEngagement += (studentEngagement / resourceCount) * 100;
-            studentCount++;
+    responseData.topics.forEach(topic => {
+        const topicData = classAvgData.state.topics?.[topic.id];
+        if (topicData?.values) {
+            Object.values(topicData.values).forEach(resource => {
+                totalResources++;
+                if ((resource?.p || 0) > 0) engagedResources++;
+            });
         }
     });
     
-    const engagementScore = studentCount > 0 ? Math.round(totalEngagement / studentCount) : 0;
+    const engagementScore = totalResources > 0 ? Math.round((engagedResources / totalResources) * 100) : 0;
     document.getElementById('engagementScore').textContent = `${engagementScore}%`;
 
     // Most Active Topic
