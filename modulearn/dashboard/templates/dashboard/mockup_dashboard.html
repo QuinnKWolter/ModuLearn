@@ -29,7 +29,7 @@
                         </div>
                         <div class="col-md-3">
                             <label for="grp" class="form-label fw-semibold text-white">Group ID</label>
-                            <input type="text" class="form-control form-control-lg" id="grp" value="CMPINF0401Fall20242" placeholder="Enter group ID">
+                            <input type="text" class="form-control form-control-lg" id="grp" value="" placeholder="Enter group ID">
                         </div>
                         <div class="col-md-3" style="display: none;">
                             <label for="sid" class="form-label fw-semibold text-white">Session ID</label>
@@ -37,14 +37,17 @@
                         </div>
                         <div class="col-md-3">
                             <label for="cid" class="form-label fw-semibold text-white">Course ID</label>
-                            <input type="text" class="form-control form-control-lg" id="cid" value="417" placeholder="Enter course ID">
+                            <input type="text" class="form-control form-control-lg" id="cid" value="" placeholder="Enter course ID">
                         </div>
                     </div>
-                    <div class="text-center mt-4">
+                    <div class="d-flex justify-content-between align-items-center mt-4">
                         <button class="btn btn-dark btn-lg px-5 fw-bold" id="fetchDataBtn" data-api-url="{% url 'dashboard:fetch_analytics_data' %}">
                             <i class="fas fa-rocket me-2"></i>
                             <span id="fetchBtnText">Launch Analytics</span>
                             <div class="spinner-border spinner-border-sm ms-2 d-none" id="fetchSpinner"></div>
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" id="dashboardInfoBtn" data-bs-toggle="modal" data-bs-target="#dashboardInfoModal">
+                            <i class="fas fa-info-circle me-1"></i>Click Here For Info
                         </button>
                     </div>
                 </div>
@@ -136,7 +139,11 @@
                                     <i class="fas fa-th"></i>
                                 </div>
                                 <div>
-                                    <h4 class="mb-1 fw-bold" id="viewTitle">Mastery Grid</h4>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h4 class="mb-1 fw-bold" id="viewTitle">Mastery Grid</h4>
+                                        <button type="button" id="classAverageHelpBtn" class="btn btn-outline-secondary btn-sm rounded-circle p-0 px-2 d-none" data-bs-toggle="modal" data-bs-target="#classAverageHelpModal" aria-label="Class Average Help" title="Class Average Help">?</button>
+                                        <button type="button" id="perStudentHelpBtn" class="btn btn-outline-secondary btn-sm rounded-circle p-0 px-2 d-none" data-bs-toggle="modal" data-bs-target="#perStudentHelpModal" aria-label="Per Student Help" title="Per Student Help">?</button>
+                                    </div>
                                     <p class="text-muted mb-0" id="viewDescription">Click any cell to view detailed progress</p>
                                 </div>
                             </div>
@@ -151,11 +158,11 @@
                                         <i class="fas fa-balance-scale me-1"></i>Comparative
                                     </label> -->
                                     <input type="radio" class="btn-check" name="viewMode" id="classAverage" value="classAverage">
-                                    <label class="btn btn-outline-success" for="classAverage">
+                                    <label class="btn btn-outline-success d-inline-flex align-items-center gap-2" for="classAverage">
                                         <i class="fas fa-users me-1"></i>Class Average
                                     </label>
                                     <input type="radio" class="btn-check" name="viewMode" id="perStudent" value="perStudent">
-                                    <label class="btn btn-outline-primary" for="perStudent">
+                                    <label class="btn btn-outline-primary d-inline-flex align-items-center gap-2 ms-2" for="perStudent">
                                         <i class="fas fa-list me-1"></i>Per Student
                                     </label>
                                 </div>
@@ -242,6 +249,80 @@
         </div>
     </div>
 </div>
+
+    <!-- Dashboard Info Modal (Overview) -->
+    <div class="modal fade" id="dashboardInfoModal" tabindex="-1" aria-labelledby="dashboardInfoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title fw-bold" id="dashboardInfoLabel"><i class="fas fa-info-circle me-2"></i>Dashboard Overview</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <h6 class="fw-bold mb-2">Header & Data Fetch</h6>
+                    <ul class="mb-3">
+                        <li>Configure Group ID and Course ID, then click Launch Analytics to fetch data.</li>
+                    </ul>
+                    <h6 class="fw-bold mb-2">KPIs</h6>
+                    <ul class="mb-3">
+                        <li><b>Students</b>: number of learners returned.</li>
+                        <li><b>Engagement Score</b>: average of learners’ resource progress percentages.</li>
+                        <li><b>Overall Progress</b>: class-average completion across all topics/resources.</li>
+                        <li><b>Struggling Students</b>: learners below 50% of class average on >30% of active resources.</li>
+                    </ul>
+                    <h6 class="fw-bold mb-2">Class Average View</h6>
+                    <ul class="mb-3">
+                        <li>Rows are topics; columns are resources.</li>
+                        <li>Cells show class-average progress for topic-resource.</li>
+                        <li>Click a cell to open detailed breakdown with per-student sorting and activity-level rows.</li>
+                    </ul>
+                    <h6 class="fw-bold mb-2">Per Student View</h6>
+                    <ul class="mb-0">
+                        <li>Lists students with overall progress and topics completed.</li>
+                        <li>Click a student to open a modal with topic cards, resource progress, and collapsible activity lists.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Average Help Modal -->
+    <div class="modal fade" id="classAverageHelpModal" tabindex="-1" aria-labelledby="classAverageHelpLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title fw-bold" id="classAverageHelpLabel"><i class="fas fa-users me-2"></i>Class Average View</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <ul class="mb-0">
+                        <li>Grid shows class-average progress per topic-resource.</li>
+                        <li>Click a cell to view per-student breakdown and activity-level details for that topic-resource.</li>
+                        <li>“Struggling” students in the breakdown are those below 50% of class average for that resource.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per Student Help Modal -->
+    <div class="modal fade" id="perStudentHelpModal" tabindex="-1" aria-labelledby="perStudentHelpLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title fw-bold" id="perStudentHelpLabel"><i class="fas fa-list me-2"></i>Per Student View</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <ul class="mb-0">
+                        <li>Table lists each student with overall progress and topics completed.</li>
+                        <li>Click a student to see topic-level cards with resource progress bars.</li>
+                        <li>Expand a resource to view its activities with individual completion percentages and status.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Error Alert -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
@@ -728,6 +809,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize button states on page load
     updateButtonStates();
+
+    // Simple validation for required fields (Group ID and Course ID)
+    const grpInput = document.getElementById('grp');
+    const cidInput = document.getElementById('cid');
+    const fetchBtn = document.getElementById('fetchDataBtn');
+
+    function updateFetchButtonState() {
+        const hasGrp = (grpInput?.value || '').trim().length > 0;
+        const hasCid = (cidInput?.value || '').trim().length > 0;
+        if (fetchBtn) {
+            fetchBtn.disabled = !(hasGrp && hasCid);
+        }
+    }
+
+    grpInput?.addEventListener('input', updateFetchButtonState);
+    cidInput?.addEventListener('input', updateFetchButtonState);
+    updateFetchButtonState();
 });
 
 let responseData = null;
@@ -744,6 +842,11 @@ function handleFetch() {
     const btn = document.getElementById('fetchDataBtn');
     const btnText = document.getElementById('fetchBtnText');
     const spinner = document.getElementById('fetchSpinner');
+    const grpVal = (document.getElementById('grp')?.value || '').trim();
+    const cidVal = (document.getElementById('cid')?.value || '').trim();
+    if (!grpVal || !cidVal) {
+        return; // Guard: do nothing if required fields are empty
+    }
     
     btn.disabled = true;
     btnText.textContent = 'Loading...';
@@ -976,6 +1079,8 @@ function updateGrid() {
 function updateViewHeader() {
     const titleElement = document.getElementById('viewTitle');
     const descriptionElement = document.getElementById('viewDescription');
+    const classAvgHelp = document.getElementById('classAverageHelpBtn');
+    const perStudentHelp = document.getElementById('perStudentHelpBtn');
     
     if (!titleElement || !descriptionElement) return;
     
@@ -983,18 +1088,26 @@ function updateViewHeader() {
         case 'myProgress':
             titleElement.textContent = 'My Progress';
             descriptionElement.textContent = 'Your individual progress across all topics';
+            if (classAvgHelp) classAvgHelp.classList.add('d-none');
+            if (perStudentHelp) perStudentHelp.classList.add('d-none');
             break;
         case 'comparative':
             titleElement.textContent = 'Comparative View';
             descriptionElement.textContent = 'Your progress compared to class average';
+            if (classAvgHelp) classAvgHelp.classList.add('d-none');
+            if (perStudentHelp) perStudentHelp.classList.add('d-none');
             break;
         case 'classAverage':
             titleElement.textContent = 'Class Average';
             descriptionElement.textContent = 'Average class progress across all topics';
+            if (classAvgHelp) classAvgHelp.classList.remove('d-none');
+            if (perStudentHelp) perStudentHelp.classList.add('d-none');
             break;
         case 'perStudent':
             titleElement.textContent = 'Student Progress Overview';
             descriptionElement.textContent = 'Individual student progress tracking';
+            if (classAvgHelp) classAvgHelp.classList.add('d-none');
+            if (perStudentHelp) perStudentHelp.classList.remove('d-none');
             break;
     }
 }
@@ -1447,17 +1560,64 @@ function showStudentDetails(learnerId) {
                                                     <div class="progress-bar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                                                 </div>
                                                 <div class="row g-2">
-                                                    ${responseData.resources.map(resource => {
+                                                    ${responseData.resources.map((resource, rIdx) => {
                                                         const resourceProgress = (topicData?.values?.[resource.id]?.p || 0) * 100;
                                                         const resourcePercent = Math.round(resourceProgress);
+                                                        const actList = (responseData.topics.find(t => t.id === topic.id)?.activities?.[resource.id]) || [];
+                                                        const collapseId = `topic-${topic.id}-res-${resource.id}-${rIdx}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+                                                        const activitiesRows = actList.map(activity => {
+                                                            const aProg = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values?.p || 0;
+                                                            const aPerf = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values?.k;
+                                                            const aPct = Math.round(aProg * 100);
+                                                            const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
+                                                            const linkHtml = activity.url ? `<a href="${activity.url}" target="_blank" rel="noopener">Open</a>` : '-';
                                                         return `
-                                                            <div class="col-6">
+                                                                <tr>
+                                                                    <td class="text-break">${activity.name || activity.id}</td>
+                                                                    <td class="text-center">
+                            <div class="progress" style="width: 100px; height: 14px; margin: 0 auto;">
+                                                                            <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="text-center fw-semibold">${aPct}%</td>
+                                                                    <td class="text-center">
+                                                                        ${status === 'Completed' ? '<span class="badge bg-success">Completed</span>' : status === 'In Progress' ? '<span class="badge bg-secondary">In Progress</span>' : '<span class="badge bg-light text-dark">Not Started</span>'}
+                                                                    </td>
+                                                                    
+                                                                    
+                                                                </tr>`;
+                                                        }).join('');
+                                                        return `
+                                                            <div class="col-12">
                                                                 <div class="d-flex justify-content-between align-items-center">
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                                                                            <i class="fas fa-chevron-down"></i>
+                                                                        </button>
                                                                     <small class="text-muted">${resource.name}</small>
+                                                                    </div>
                                                                     <small class="fw-semibold">${resourcePercent}%</small>
                                                                 </div>
-                                                                <div class="progress" style="height: 4px;">
+                                                                <div class="progress mt-1" style="height: 4px;">
                                                                     <div class="progress-bar" style="width: ${resourcePercent}%; ${Object.entries(getProgressBarStyle(resourcePercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                                                                </div>
+                                                                <div class="collapse mt-2" id="${collapseId}">
+                                                                    ${actList.length ? `
+                                                                    <div class="table-responsive">
+                                                                        <table class="table table-sm align-middle mb-0">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th>Activity</th>
+                                                                                    <th class="text-center">Progress</th>
+                                                                                    <th class="text-center">%</th>
+                                                                                    <th class="text-center">Status</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                ${activitiesRows}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>` : '<div class="text-muted">No activities listed for this resource.</div>'}
                                                                 </div>
                                                             </div>
                                                         `;
@@ -1623,8 +1783,8 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
                                                                 <td class="text-center">
                                                                     ${status === 'Completed' ? '<span class="badge bg-success">Completed</span>' : status === 'In Progress' ? '<span class="badge bg-secondary">In Progress</span>' : '<span class="badge bg-light text-dark">Not Started</span>'}
                                                                 </td>
-                                                                <td class="text-center">${aPerf !== undefined ? aPerf : '-'}</td>
-                                                                <td class="text-center">${linkHtml}</td>
+                                                                    
+                                                                    
                                                             </tr>`;
                                                     }).join('');
                                                     return `
@@ -1668,8 +1828,6 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
                                                                                 <th class="text-center">Progress</th>
                                                                                 <th class="text-center">%</th>
                                                                                 <th class="text-center">Status</th>
-                                                                                <th class="text-center">Performance</th>
-                                                                                <th class="text-center">Link</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>

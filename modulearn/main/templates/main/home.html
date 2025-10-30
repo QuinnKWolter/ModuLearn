@@ -12,17 +12,17 @@
             <div class="d-flex justify-content-center gap-3 mb-5">
                 {% if user.is_authenticated %}
                     {% if user.is_student %}
-                        <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}" role="button">
+                        <a class="btn btn-primary btn-lg text-white" href="{% url 'dashboard:student_dashboard' %}" role="button">
                             <i class="bi bi-mortarboard me-2"></i>Student Dashboard
                         </a>
                     {% endif %}
                     {% if user.is_instructor %}
-                        <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}" role="button">
+                        <a class="btn btn-primary btn-lg text-white" href="{% url 'dashboard:instructor_dashboard' %}" role="button">
                             <i class="bi bi-easel me-2"></i>Instructor Dashboard
                         </a>
                     {% endif %}
                 {% else %}
-                    <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}" role="button">
+                    <a class="btn btn-primary btn-lg text-white" href="{% url 'accounts:login' %}" role="button">
                         <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
                     </a>
                     <a class="btn btn-outline-primary btn-lg" href="{% url 'accounts:signup' %}" role="button">
