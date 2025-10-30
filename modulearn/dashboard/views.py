@@ -73,6 +73,62 @@ def mockup_dashboard(request):
     })
 
 @login_required
+def fetch_class_list(request):
+    """
+    Fetch the class list with real learner IDs from ADAPT2 API.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        # Get group ID from request
+        group_id = request.GET.get('grp', 'CMPINF0401Fall20242')
+        
+        # Use different URLs based on DEBUG setting
+        from django.conf import settings
+        if settings.DEBUG:
+            api_url = 'http://adapt2.sis.pitt.edu/aggregateUMServices/GetClassList'
+        else:
+            api_url = 'http://host.docker.internal/aggregateUMServices/GetClassList'
+        
+        params = {
+            'grp': group_id,
+            'key': 'AHD91JSKC72'  # Fixed key as mentioned
+        }
+        
+        print(f"Fetching class list from: {api_url}")
+        response = requests.get(api_url, params=params, timeout=30)
+        response.raise_for_status()
+        
+        response_text = response.text.strip()
+        print(f"Class list response: {response_text[:200]}...")
+        
+        # Parse the response - it's JavaScript object notation, not JSON
+        try:
+            ctx = MiniRacer()
+            json_string = ctx.eval(f"JSON.stringify(({response_text}))")
+            data = json.loads(json_string)
+        except Exception as e:
+            print(f"Failed to parse class list response: {e}")
+            return JsonResponse({
+                'error': 'Failed to parse class list response',
+                'details': str(e)
+            }, status=502)
+        
+        return JsonResponse(data)
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Class list request failed: {e}")
+        return JsonResponse({
+            'error': f'Failed to fetch class list: {str(e)}'
+        }, status=503)
+    except Exception as e:
+        print(f"Unexpected error in fetch_class_list: {e}")
+        return JsonResponse({
+            'error': f'An unexpected error occurred: {str(e)}'
+        }, status=500)
+
+@login_required
 def fetch_analytics_data(request):
     """
     Proxy endpoint to fetch analytics data from external ADAPT2 API.
@@ -91,8 +147,8 @@ def fetch_analytics_data(request):
             'cid': request.GET.get('cid', '417'),
             'mod': request.GET.get('mod', 'all'),
             'models': request.GET.get('models', '-1'),
-            'avgtop': request.GET.get('avgtop', '-1'),
-            'removeZeroProgressUsers': request.GET.get('removeZeroProgressUsers', 'true')
+            'avgtop': request.GET.get('avgtop', '-1')
+            # Removed removeZeroProgressUsers parameter
         }
         
         # Use different URLs based on DEBUG setting

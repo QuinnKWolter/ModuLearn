@@ -23,17 +23,17 @@
                     
                     <!-- Configuration Form -->
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-3" style="display: none;">
                             <label for="usr" class="form-label fw-semibold text-white">User ID</label>
-                            <input type="text" class="form-control form-control-lg" id="usr" value="jab464" placeholder="Enter user ID">
+                            <input type="text" class="form-control form-control-lg" id="usr" placeholder="Enter user ID">
                         </div>
                         <div class="col-md-3">
                             <label for="grp" class="form-label fw-semibold text-white">Group ID</label>
                             <input type="text" class="form-control form-control-lg" id="grp" value="CMPINF0401Fall20242" placeholder="Enter group ID">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-3" style="display: none;">
                             <label for="sid" class="form-label fw-semibold text-white">Session ID</label>
-                            <input type="text" class="form-control form-control-lg" id="sid" value="5A195" placeholder="Enter session ID">
+                            <input type="text" class="form-control form-control-lg" id="sid" placeholder="Enter session ID">
                         </div>
                         <div class="col-md-3">
                             <label for="cid" class="form-label fw-semibold text-white">Course ID</label>
@@ -72,17 +72,6 @@
                         <!-- KPI Cards Grid -->
                         <div class="row g-4">
                             <div class="col-lg-3 col-md-6">
-                                <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <div class="card-body text-white text-center p-4">
-                                        <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-percentage fs-4 text-dark"></i>
-                                        </div>
-                                        <h6 class="text-white-50 fw-bold mb-2">Overall Progress</h6>
-                                        <div class="display-4 fw-bold" id="overallProgress">-</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-md-6">
                                 <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                                     <div class="card-body text-white text-center p-4">
                                         <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
@@ -90,6 +79,7 @@
                                         </div>
                                         <h6 class="text-white-50 fw-bold mb-2">Students</h6>
                                         <div class="display-4 fw-bold" id="studentsEnrolled">-</div>
+                                        <small class="text-white-50">Total enrolled</small>
                                     </div>
                                 </div>
                             </div>
@@ -97,24 +87,38 @@
                                 <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                                     <div class="card-body text-white text-center p-4">
                                         <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-book fs-4 text-dark"></i>
-                                        </div>
-                                        <h6 class="text-white-50 fw-bold mb-2">Topics</h6>
-                                        <div class="display-4 fw-bold" id="topicsCovered">-</div>
-                             </div>
-                             </div>
-                         </div>
-                            <div class="col-lg-3 col-md-6">
-                                <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                                    <div class="card-body text-white text-center p-4">
-                                        <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                                             <i class="fas fa-fire fs-4 text-dark"></i>
                                         </div>
-                                        <h6 class="text-white-50 fw-bold mb-2">Active Topic</h6>
-                                        <div class="fw-bold" id="mostActiveTopic" style="font-size: 1.1rem; line-height: 1.2;">-</div>
+                                        <h6 class="text-white-50 fw-bold mb-2">Engagement Score</h6>
+                                        <div class="display-4 fw-bold" id="engagementScore">-</div>
+                                        <small class="text-white-50">Avg participation</small>
                                     </div>
-                             </div>
-                             </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    <div class="card-body text-white text-center p-4">
+                                        <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-percentage fs-4 text-dark"></i>
+                                        </div>
+                                        <h6 class="text-white-50 fw-bold mb-2">Overall Progress</h6>
+                                        <div class="display-4 fw-bold" id="overallProgress">-</div>
+                                        <small class="text-white-50">Course completion</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);">
+                                    <div class="card-body text-white text-center p-4">
+                                        <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-exclamation-triangle fs-4 text-dark"></i>
+                                        </div>
+                                        <h6 class="text-white-50 fw-bold mb-2">Struggling Students</h6>
+                                        <div class="display-4 fw-bold" id="studentsNeedingHelp">0</div>
+                                        <small class="text-white-50">Behind in 30%+ of work</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -138,14 +142,14 @@
                             </div>
                             <div class="d-flex gap-2">
                                 <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="viewMode" id="myProgress" value="myProgress" checked>
-                                    <label class="btn btn-outline-secondary" for="myProgress">
+                                    <!-- <input type="radio" class="btn-check" name="viewMode" id="myProgress" value="myProgress" checked style="display: none;">
+                                    <label class="btn btn-outline-secondary" for="myProgress" style="display: none;">
                                         <i class="fas fa-user me-1"></i>My Progress
-                                    </label>
-                                    <input type="radio" class="btn-check" name="viewMode" id="comparative" value="comparative">
-                                    <label class="btn btn-outline-warning" for="comparative">
+                                    </label> -->
+                                    <!-- <input type="radio" class="btn-check" name="viewMode" id="comparative" value="comparative" style="display: none;">
+                                    <label class="btn btn-outline-warning" for="comparative" style="display: none;">
                                         <i class="fas fa-balance-scale me-1"></i>Comparative
-                                    </label>
+                                    </label> -->
                                     <input type="radio" class="btn-check" name="viewMode" id="classAverage" value="classAverage">
                                     <label class="btn btn-outline-success" for="classAverage">
                                         <i class="fas fa-users me-1"></i>Class Average
@@ -164,7 +168,7 @@
                             <table class="table mb-0 custom-table" id="masteryGrid">
                                 <thead>
                                     <tr id="gridHeaders">
-                                        <th class="border-0 fw-bold py-3 text-center" style="min-width: 300px;">
+                                        <th class="border-0 fw-bold py-2 text-center" style="min-width: 250px;">
                                             <div class="d-flex flex-column align-items-center">
                                                 <i class="fas fa-graduation-cap text-primary mb-1"></i>
                                                 Topics
@@ -180,32 +184,32 @@
                         
                         <!-- Per Student View - Hidden by default, content will be swapped in -->
                         <div id="perStudentContent" style="display: none;">
-                            <div class="table-responsive">
+                            <div class="table-responsive" style="width: 50%; margin: 0 auto;">
                                 <table class="table table-hover mb-0 custom-table" id="studentTable">
                                     <thead>
                                         <tr>
-                                            <th class="border-0 fw-bold py-3">
-                                                <div class="d-flex flex-column align-items-center text-center">
-                                                    <i class="fas fa-user-graduate text-primary mb-1"></i>
-                                                    Student ID
+                                            <th class="border-0 fw-bold py-1 text-center">
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <i class="fas fa-user-graduate text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                                    <span style="font-size: 0.8rem;">Student ID</span>
                                                 </div>
                                             </th>
-                                            <th class="border-0 fw-bold py-3 text-center">
+                                            <th class="border-0 fw-bold py-1 text-center">
                                                 <div class="d-flex flex-column align-items-center">
-                                                    <i class="fas fa-chart-line text-primary mb-1"></i>
-                                                    Overall Progress
+                                                    <i class="fas fa-chart-line text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                                    <span style="font-size: 0.8rem;">Overall Progress</span>
                                                 </div>
                                             </th>
-                                            <th class="border-0 fw-bold py-3 text-center">
+                                            <th class="border-0 fw-bold py-1 text-center">
                                                 <div class="d-flex flex-column align-items-center">
-                                                    <i class="fas fa-book text-primary mb-1"></i>
-                                                    Topics Completed
+                                                    <i class="fas fa-book text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                                    <span style="font-size: 0.8rem;">Topics Completed</span>
                                                 </div>
                                             </th>
-                                            <th class="border-0 fw-bold py-3 text-center">
+                                            <th class="border-0 fw-bold py-1 text-center">
                                                 <div class="d-flex flex-column align-items-center">
-                                                    <i class="fas fa-chart-bar text-primary mb-1"></i>
-                                                    Analytics
+                                                    <i class="fas fa-chart-bar text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                                    <span style="font-size: 0.8rem;">Analytics</span>
                                                 </div>
                                             </th>
                                         </tr>
@@ -727,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 let responseData = null;
-let currentViewMode = 'myProgress';
+let currentViewMode = 'classAverage';
 
 function updateButtonStates() {
     // Update all radio buttons to reflect the current selection
@@ -745,32 +749,50 @@ function handleFetch() {
     btnText.textContent = 'Loading...';
     spinner.classList.remove('d-none');
     
-    const params = {
-        usr: document.getElementById('usr').value,
-        grp: document.getElementById('grp').value,
-        sid: document.getElementById('sid').value,
-        cid: document.getElementById('cid').value,
-        mod: 'all',
-        models: '-1',
-        avgtop: '-1',
-        removeZeroProgressUsers: 'true'
+    // First, fetch the class list to get real learner IDs
+    const classListParams = {
+        grp: document.getElementById('grp').value
     };
     
-    const apiUrl = btn.getAttribute('data-api-url');
-    const url = `${apiUrl}?${new URLSearchParams(params)}`;
-
-    fetch(url)
+    const classListUrl = `{% url 'dashboard:fetch_class_list' %}?${new URLSearchParams(classListParams)}`;
+    
+    fetch(classListUrl)
         .then(response => {
-            if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+            if (!response.ok) throw new Error(`Class List API Error: ${response.statusText}`);
             return response.json();
         })
-        .then(data => {
-            if (data.error) throw new Error(data.error);
-            responseData = data;
-            const dashboardContent = document.getElementById('dashboardContent');
-            dashboardContent.classList.remove('d-none');
-            dashboardContent.classList.add('fade-in');
-            renderDashboard();
+        .then(classListData => {
+            if (classListData.error) throw new Error(classListData.error);
+            
+            // Now fetch analytics data without removeZeroProgressUsers
+            const analyticsParams = {
+                usr: document.getElementById('usr').value,
+                grp: document.getElementById('grp').value,
+                sid: document.getElementById('sid').value,
+                cid: document.getElementById('cid').value,
+                mod: 'all',
+                models: '-1',
+                avgtop: '-1'
+                // Removed removeZeroProgressUsers parameter
+            };
+            
+            const analyticsUrl = btn.getAttribute('data-api-url');
+            const url = `${analyticsUrl}?${new URLSearchParams(analyticsParams)}`;
+            
+            return fetch(url).then(response => {
+                if (!response.ok) throw new Error(`Analytics API Error: ${response.statusText}`);
+                return response.json();
+            }).then(analyticsData => {
+                if (analyticsData.error) throw new Error(analyticsData.error);
+                
+                // Map real learner IDs to the analytics data
+                responseData = mapLearnerIds(analyticsData, classListData);
+                
+                const dashboardContent = document.getElementById('dashboardContent');
+                dashboardContent.classList.remove('d-none');
+                dashboardContent.classList.add('fade-in');
+                renderDashboard();
+            });
         })
         .catch(error => {
             console.error('Fetch error:', error);
@@ -781,6 +803,30 @@ function handleFetch() {
             btnText.textContent = 'Launch Analytics';
             spinner.classList.add('d-none');
         });
+}
+
+function mapLearnerIds(analyticsData, classListData) {
+    // Step 1: Sort analytics learners by their integer ID (lowest to highest)
+    const sortedAnalyticsLearners = analyticsData.learners.sort((a, b) => {
+        const aId = parseInt(a.id);
+        const bId = parseInt(b.id);
+        return aId - bId;
+    });
+    
+    // Step 2: Create mapping from sorted position to real learner ID
+    const learnerIdMap = classListData.learners.map(learner => learner.learnerId);
+    
+    // Step 3: Update the sorted learners with real IDs
+    sortedAnalyticsLearners.forEach((learner, index) => {
+        if (index < learnerIdMap.length) {
+            learner.id = learnerIdMap[index];
+        }
+    });
+    
+    // Step 4: Replace the original learners array with the sorted and mapped one
+    analyticsData.learners = sortedAnalyticsLearners;
+    
+    return analyticsData;
 }
 
 function renderDashboard() {
@@ -797,18 +843,59 @@ function populateKPIs() {
     // Course Title
     document.getElementById('courseTitle').textContent = responseData.context.group.name;
 
-    // Overall Progress
-    const topicProgresses = responseData.topics.map(topic => classAvgData.state.topics[topic.id]?.values['Coding Problems']?.p || 0);
-    const overallProgress = topicProgresses.reduce((acc, val) => acc + val, 0) / (topicProgresses.length || 1);
-    const overallProgressPercent = Math.round(overallProgress * 100);
+    // Overall Progress - Calculate true class completion percentage
+    let totalPossibleProgress = 0;
+    let totalActualProgress = 0;
+    
+    responseData.topics.forEach(topic => {
+        const topicData = classAvgData.state.topics[topic.id];
+        if (topicData) {
+            // Count all resources for this topic
+            const resourceCount = Object.keys(topicData.values || {}).length;
+            totalPossibleProgress += resourceCount;
+            
+            // Sum actual progress across all resources
+            Object.values(topicData.values || {}).forEach(resource => {
+                totalActualProgress += resource.p || 0;
+            });
+        }
+    });
+    
+    const overallProgressPercent = totalPossibleProgress > 0 ? 
+        Math.round((totalActualProgress / totalPossibleProgress) * 100) : 0;
     document.getElementById('overallProgress').textContent = `${overallProgressPercent}%`;
 
     // Students Enrolled
     document.getElementById('studentsEnrolled').textContent = responseData.learners.length;
 
-    // Topics Covered
-    const topicsCovered = responseData.topics.filter(topic => (classAvgData.state.topics[topic.id]?.values['Coding Problems']?.p || 0) > 0).length;
-    document.getElementById('topicsCovered').textContent = `${topicsCovered} / ${responseData.topics.length}`;
+    // Engagement Score - Calculate based on student activity and progress
+    let totalEngagement = 0;
+    let studentCount = 0;
+    
+    responseData.learners.forEach(learner => {
+        let studentEngagement = 0;
+        let resourceCount = 0;
+        
+        // Calculate engagement across all topics and resources
+        responseData.topics.forEach(topic => {
+            const topicData = learner.state.topics?.[topic.id];
+            if (topicData?.values) {
+                Object.values(topicData.values).forEach(resource => {
+                    resourceCount++;
+                    // Higher progress = higher engagement
+                    studentEngagement += resource.p || 0;
+                });
+            }
+        });
+        
+        if (resourceCount > 0) {
+            totalEngagement += (studentEngagement / resourceCount) * 100;
+            studentCount++;
+        }
+    });
+    
+    const engagementScore = studentCount > 0 ? Math.round(totalEngagement / studentCount) : 0;
+    document.getElementById('engagementScore').textContent = `${engagementScore}%`;
 
     // Most Active Topic
     let mostActiveTopic = null;
@@ -821,16 +908,43 @@ function populateKPIs() {
         }
     });
     
-    if (mostActiveTopic) {
-        const progressPercent = Math.round(highestProgress * 100);
-        let displayName = mostActiveTopic.name;
-        if (displayName.length > 25) {
-            displayName = displayName.substring(0, 22) + '...';
+    // Students Needing Intervention - Check ALL resources
+    let studentsNeedingHelp = 0;
+    responseData.learners.forEach(learner => {
+        const learnerProgress = learner.state.topics;
+        let strugglingResources = 0;
+        let totalResources = 0;
+        
+        responseData.topics.forEach(topic => {
+            const learnerTopicData = learnerProgress[topic.id];
+            const classTopicData = classAvgData.state.topics[topic.id];
+            
+            if (learnerTopicData?.values && classTopicData?.values) {
+                // Check each resource in this topic
+                Object.keys(classTopicData.values).forEach(resourceId => {
+                    const learnerResourceProgress = learnerTopicData.values[resourceId]?.p || 0;
+                    const classResourceProgress = classTopicData.values[resourceId]?.p || 0;
+                    
+                    if (classResourceProgress > 0) { // Only consider resources with class activity
+                        totalResources++;
+                        if (learnerResourceProgress < (classResourceProgress * 0.5)) { // Struggling if < 50% of class average
+                            strugglingResources++;
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Student needs intervention if struggling in > 30% of active resources
+        if (totalResources > 0 && (strugglingResources / totalResources) > 0.3) {
+            studentsNeedingHelp++;
         }
-        document.getElementById('mostActiveTopic').innerHTML = `${displayName}<br><small class="text-white-50">${progressPercent}%</small>`;
-    } else {
-        document.getElementById('mostActiveTopic').textContent = 'No activity yet';
-    }
+    });
+    
+    document.getElementById('studentsNeedingHelp').textContent = studentsNeedingHelp;
+    
+    // Debug logging to verify calculation
+    console.log(`Struggling Students Calculation: ${studentsNeedingHelp} out of ${responseData.learners.length} total students`);
 }
 
 function updateGrid() {
@@ -937,7 +1051,7 @@ function updateMasteryGrid() {
         const progressBarStyle = getProgressBarStyle(progressPercent);
         
         const topicCell = document.createElement('td');
-        topicCell.className = 'border-0 py-3';
+        topicCell.className = 'border-0 py-2';
         topicCell.innerHTML = `
             <div class="d-flex align-items-center">
                 <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
@@ -962,7 +1076,7 @@ function updateMasteryGrid() {
             const value = getCellValue(currentData, topic.id, resource.id);
             const textColor = getTextColor(value);
             
-            cell.className = 'text-center border-0 py-3 progress-cell cursor-pointer';
+            cell.className = 'text-center border-0 py-2 progress-cell cursor-pointer';
             cell.style.cursor = 'pointer';
             cell.style.borderRadius = '0';
             cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resource.name);
@@ -982,7 +1096,7 @@ function updateMasteryGrid() {
             
             cell.innerHTML = `
                 <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-5" style="color: ${textColor};">${displayValue}</div>
+                    <div class="fw-bold fs-6" style="color: ${textColor};">${displayValue}</div>
                 </div>
             `;
             
@@ -1015,12 +1129,9 @@ function updatePerStudentView() {
     const tableBody = document.getElementById('studentTableBody');
     tableBody.innerHTML = '';
     
-    // Sort learners alphanumerically by ID
+    // Keep learners in their current order (already sorted by integer ID and mapped)
     const sortedLearners = responseData.learners
-        .filter(learner => !learner.isHidden)
-        .sort((a, b) => {
-            return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
-        });
+        .filter(learner => !learner.isHidden);
 
     sortedLearners.forEach((learner, index) => {
         // Calculate overall progress
@@ -1048,32 +1159,32 @@ function updatePerStudentView() {
         row.onclick = () => showStudentDetails(learner.id);
         
         row.innerHTML = `
-            <td class="border-0 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
-                        <i class="fas fa-user text-white"></i>
+            <td class="border-0 py-1 text-center">
+                <div class="d-flex align-items-center justify-content-center">
+                    <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <i class="fas fa-user text-white" style="font-size: 0.7rem;"></i>
                     </div>
-                    <div class="fw-bold">${learner.id}</div>
+                    <div class="fw-bold" style="font-size: 0.9rem;">${learner.id}</div>
                 </div>
             </td>
-            <td class="border-0 py-3 text-center">
+            <td class="border-0 py-1 text-center">
                 <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-5 mb-2">${progressPercent}%</div>
-                    <div class="progress" style="width: 120px; height: 8px; border-radius: 4px;">
+                    <div class="fw-bold fs-6 mb-1">${progressPercent}%</div>
+                    <div class="progress" style="width: 80px; height: 4px; border-radius: 2px;">
                         <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                     </div>
                 </div>
             </td>
-            <td class="border-0 py-3 text-center">
+            <td class="border-0 py-1 text-center">
                 <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-5 mb-1">${topicsCompleted}/${totalTopics}</div>
-                    <div class="small text-muted">Topics</div>
+                    <div class="fw-bold fs-6 mb-1">${topicsCompleted}/${totalTopics}</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">Topics</div>
                 </div>
             </td>
-            <td class="border-0 py-3 text-center">
+            <td class="border-0 py-1 text-center">
                 <div class="d-flex flex-column align-items-center">
-                    <i class="fas fa-chart-line text-primary fs-4 mb-1"></i>
-                    <div class="small text-muted">Analytics</div>
+                    <i class="fas fa-chart-line text-primary mb-1" style="font-size: 1rem;"></i>
+                    <div class="text-muted" style="font-size: 0.7rem;">Analytics</div>
                 </div>
             </td>
         `;
@@ -1381,10 +1492,40 @@ function showStudentDetails(learnerId) {
 function handleCellClick(topicId, resourceId, topicName, resourceName) {
     console.log('Cell clicked:', { topicId, resourceId, topicName, resourceName });
     
-    // Create a modern modal for cell details
+    // Get class average data for this topic/resource
+    const classAvgData = responseData.groups.find(g => g.name === 'Class Average');
+    const classProgress = classAvgData?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+    const classProgressPercent = Math.round(classProgress * 100);
+    
+    // Get individual student data for this topic/resource
+    const studentData = responseData.learners.map(learner => {
+        const progress = learner.state.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+        const progressPercent = Math.round(progress * 100);
+        return {
+            id: learner.id,
+            progress: progress,
+            progressPercent: progressPercent,
+            isAboveAverage: progress > classProgress,
+            isStruggling: classProgress > 0 && progress < (classProgress * 0.5)
+        };
+    }).sort((a, b) => b.progress - a.progress); // Sort by progress (highest first)
+    
+    // Calculate statistics
+    const totalStudents = studentData.length;
+    const studentsAboveAverage = studentData.filter(s => s.isAboveAverage).length;
+    const studentsStruggling = studentData.filter(s => s.isStruggling).length;
+    const studentsCompleted = studentData.filter(s => s.progressPercent >= 90).length;
+    const averageProgress = studentData.reduce((sum, s) => sum + s.progress, 0) / totalStudents;
+    const averageProgressPercent = Math.round(averageProgress * 100);
+    
+    // Prepare activity definitions for this topic/resource
+    const topicDef = responseData.topics.find(t => t.id === topicId);
+    const activitiesList = topicDef?.activities?.[resourceId] || [];
+
+    // Create comprehensive modal
     const modalHtml = `
         <div class="modal fade" id="cellModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title">
@@ -1392,20 +1533,164 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
                             ${topicName} → ${resourceName}
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                    <div class="modal-body p-4">
-                        <div class="text-center py-5">
-                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
-                                <i class="fas fa-chart-pie text-primary fs-3"></i>
-                            </div>
-                            <h6 class="fw-bold">Detailed Progress Information</h6>
-                            <p class="text-muted">This feature will show detailed progress breakdown for the selected topic and resource combination.</p>
-                        </div>
                     </div>
+                    <div class="modal-body p-4">
+                        <!-- Overview Cards -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center">
+                                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-percentage text-white"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Class Average</h6>
+                                        <div class="h4 fw-bold text-primary">${classProgressPercent}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center">
+                                        <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-check-circle text-white"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Completed</h6>
+                                        <div class="h4 fw-bold text-success">${studentsCompleted}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center">
+                                        <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-exclamation-triangle text-white"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Struggling</h6>
+                                        <div class="h4 fw-bold text-warning">${studentsStruggling}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center">
+                                        <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-users text-white"></i>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">Above Average</h6>
+                                        <div class="h4 fw-bold text-info">${studentsAboveAverage}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Student Progress Breakdown (with expandable activity rows) -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="fas fa-list me-2"></i>Student Progress Breakdown
+                                </h6>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="fw-bold">Student</th>
+                                                <th class="fw-bold text-center">Progress</th>
+                                                <th class="fw-bold text-center">Status</th>
+                                                <th class="fw-bold text-center">vs Class Avg</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(() => {
+                                                const learnerById = Object.fromEntries(responseData.learners.map(l => [l.id, l]));
+                                                return studentData.map((student, idx) => {
+                                                    const safeId = String(student.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + idx;
+                                                    const learner = learnerById[student.id];
+                                                    const activityRows = activitiesList.map(activity => {
+                                                        const aProg = learner?.state?.activities?.[topicId]?.[resourceId]?.[activity.id]?.values?.p || 0;
+                                                        const aPerf = learner?.state?.activities?.[topicId]?.[resourceId]?.[activity.id]?.values?.k;
+                                                        const aPct = Math.round(aProg * 100);
+                                                        const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
+                                                        const linkHtml = activity.url ? `<a href="${activity.url}" target="_blank" rel="noopener">Open</a>` : '-';
+                                                        return `
+                                                            <tr>
+                                                                <td class="text-break">${activity.name || activity.id}</td>
+                                                                <td class="text-center">
+                                                                    <div class="progress" style="width: 100px; height: 14px;">
+                                                                        <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-center fw-semibold">${aPct}%</td>
+                                                                <td class="text-center">
+                                                                    ${status === 'Completed' ? '<span class="badge bg-success">Completed</span>' : status === 'In Progress' ? '<span class="badge bg-secondary">In Progress</span>' : '<span class="badge bg-light text-dark">Not Started</span>'}
+                                                                </td>
+                                                                <td class="text-center">${aPerf !== undefined ? aPerf : '-'}</td>
+                                                                <td class="text-center">${linkHtml}</td>
+                                                            </tr>`;
+                                                    }).join('');
+                                                    return `
+                                                        <tr class="${student.isStruggling ? 'table-warning' : student.isAboveAverage ? 'table-success' : ''}">
+                                                            <td class="fw-bold">
+                                                                <button class="btn btn-sm btn-outline-secondary me-2" type="button" data-bs-toggle="collapse" data-bs-target="#act-${safeId}" aria-expanded="false" aria-controls="act-${safeId}">
+                                                                    <i class="fas fa-chevron-down"></i>
+                                                                </button>
+                                                                ${student.id}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div class="d-flex align-items-center justify-content-center">
+                                                                    <div class="progress me-2" style="width: 100px; height: 20px;">
+                                                                        <div class="progress-bar" style="width: ${student.progressPercent}%; background-color: ${getTextColor(student.progress)};"></div>
+                                                                    </div>
+                                                                    <span class="fw-bold">${student.progressPercent}%</span>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                ${student.progressPercent >= 90 ? '<span class="badge bg-success">Completed</span>' : 
+                                                                  student.isStruggling ? '<span class="badge bg-warning">Struggling</span>' : 
+                                                                  '<span class="badge bg-secondary">In Progress</span>'}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                ${student.isAboveAverage ? 
+                                                                    `<span class="text-success fw-bold">+${student.progressPercent - classProgressPercent}%</span>` :
+                                                                    student.progress > 0 ? 
+                                                                        `<span class="text-danger fw-bold">${student.progressPercent - classProgressPercent}%</span>` :
+                                                                        '<span class="text-muted">-</span>'
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="collapse bg-light" id="act-${safeId}">
+                                                            <td colspan="4">
+                                                                ${activitiesList.length ? `
+                                                                <div class="table-responsive">
+                                                                    <table class="table table-sm align-middle mb-0">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Activity</th>
+                                                                                <th class="text-center">Progress</th>
+                                                                                <th class="text-center">%</th>
+                                                                                <th class="text-center">Status</th>
+                                                                                <th class="text-center">Performance</th>
+                                                                                <th class="text-center">Link</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            ${activityRows}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>` : '<div class="text-muted">No activities listed for this resource.</div>'}
+                                                            </td>
+                                                        </tr>`;
+                                                }).join('');
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        `;
+        </div>
+    `;
     
     // Remove existing modal if any
     const existingModal = document.getElementById('cellModal');

@@ -10,4 +10,5 @@ urlpatterns = [
     path('mockup/', views.mockup_dashboard, name='mockup_dashboard'),
     path("api/generate_course_auth_url/", generate_course_auth_url, name="generate_course_auth_url"),
     path("api/fetch_analytics_data/", views.fetch_analytics_data, name="fetch_analytics_data"),
+    path("api/fetch_class_list/", views.fetch_class_list, name="fetch_class_list"),
 ]
