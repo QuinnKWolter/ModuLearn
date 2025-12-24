@@ -1,0 +1,101 @@
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold" id="studentDetailModalLabel">
+                    <i class="fas fa-user-graduate me-2"></i>Student Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="studentDetailModalBody">
+                <!-- Student-specific breakdown will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Info Modal (Overview) -->
+<div class="modal fade" id="dashboardInfoModal" tabindex="-1" aria-labelledby="dashboardInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold" id="dashboardInfoLabel"><i class="fas fa-info-circle me-2"></i>Dashboard Overview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <h6 class="fw-bold mb-2">Header & Data Fetch</h6>
+                <ul class="mb-3">
+                    <li>Configure Group ID and Course ID, then click Launch Analytics to fetch data.</li>
+                </ul>
+                <h6 class="fw-bold mb-2">KPIs</h6>
+                <ul class="mb-3">
+                    <li><b>Students</b>: number of learners returned.</li>
+                    <li><b>Engagement Score</b>: percent of resources with any class activity (> 0 progress).</li>
+                    <li><b>Overall Progress</b>: class-average completion across all topics/resources.</li>
+                    <li><b>Struggling Students</b>: learners below 50% of class average on >30% of active resources.</li>
+                </ul>
+                <h6 class="fw-bold mb-2">Class Average View</h6>
+                <ul class="mb-3">
+                    <li>Rows are topics; columns are resources.</li>
+                    <li>Cells show class-average progress for topic-resource.</li>
+                    <li>Click a cell to open detailed breakdown with per-student sorting and activity-level rows.</li>
+                </ul>
+                <h6 class="fw-bold mb-2">Per Student View</h6>
+                <ul class="mb-0">
+                    <li>Lists students with overall progress and topics completed.</li>
+                    <li>Click a student to open a modal with topic cards, resource progress, and collapsible activity lists.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Class Average Help Modal -->
+<div class="modal fade" id="classAverageHelpModal" tabindex="-1" aria-labelledby="classAverageHelpLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title fw-bold" id="classAverageHelpLabel"><i class="fas fa-users me-2"></i>Class Average View</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <ul class="mb-0">
+                    <li>Grid shows class-average progress per topic-resource.</li>
+                    <li>Click a cell to view per-student breakdown and activity-level details for that topic-resource.</li>
+                    <li>"Struggling" students in the breakdown are those below 50% of class average for that resource.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Per Student Help Modal -->
+<div class="modal fade" id="perStudentHelpModal" tabindex="-1" aria-labelledby="perStudentHelpLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold" id="perStudentHelpLabel"><i class="fas fa-list me-2"></i>Per Student View</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <ul class="mb-0">
+                    <li>Table lists each student with overall progress and topics completed.</li>
+                    <li>Click a student to see topic-level cards with resource progress bars.</li>
+                    <li>Expand a resource to view its activities with individual completion percentages and status.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Alert -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="errorAlert" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="errorMessage"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+

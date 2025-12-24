@@ -1,32 +1,83 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
 
 {% block title %}Profile - ModuLearn{% endblock %}
 
 {% block content %}
 <div class="container">
   <h1 class="mt-4">Your Profile</h1>
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="card-title">User Information</h5>
-      <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
-      <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
-      <p class="card-text"><strong>Full Name:</strong> {{ user.full_name }}</p>
-      <p class="card-text"><strong>Role:</strong> 
-        {% if user.is_instructor and user.is_student %}
-          Instructor & Student
-        {% elif user.is_instructor %}
-          Instructor
-        {% elif user.is_student %}
-          Student
-        {% else %}
-          None
-        {% endif %}
-      </p>
-      {% if user.lti_data %}
-        <p class="card-text"><strong>LTI Data:</strong> {{ user.lti_data }}</p>
-      {% endif %}
+  
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+  
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">User Information</h5>
+        </div>
+        <div class="card-body">
+          <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
+          <p class="card-text"><strong>Role:</strong> 
+            {% if user.is_instructor and user.is_student %}
+              Instructor & Student
+            {% elif user.is_instructor %}
+              Instructor
+            {% elif user.is_student %}
+              Student
+            {% else %}
+              None
+            {% endif %}
+          </p>
+          {% if user.kt_login %}
+            <p class="card-text"><small class="text-muted">Linked to KnowledgeTree account: {{ user.kt_login }}</small></p>
+          {% endif %}
+          {% if user.lti_data %}
+            <p class="card-text"><strong>LTI Data:</strong> {{ user.lti_data }}</p>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
-  <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Logout</a>
+  
+  <!-- Profile Edit Form -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="card-title mb-0">Edit Profile Information</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="update_profile" value="1">
+        {{ profile_form|crispy }}
+        <button type="submit" class="btn btn-primary">Update Profile</button>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Password Change Form -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="card-title mb-0">Change Password</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="change_password" value="1">
+        {{ password_form|crispy }}
+        <button type="submit" class="btn btn-primary">Change Password</button>
+      </form>
+    </div>
+  </div>
+  
+  <div class="mb-4">
+    <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Logout</a>
+  </div>
 </div>
 {% endblock %}

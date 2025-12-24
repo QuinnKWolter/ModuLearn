@@ -1,0 +1,96 @@
+<!-- Modern Mastery Grid -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header border-0 py-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-gradient-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-th"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h4 class="mb-1 fw-bold" id="viewTitle">Mastery Grid</h4>
+                                <button type="button" id="classAverageHelpBtn" class="btn btn-outline-secondary btn-sm rounded-circle p-0 px-2 d-none" data-bs-toggle="modal" data-bs-target="#classAverageHelpModal" aria-label="Class Average Help" title="Class Average Help">?</button>
+                                <button type="button" id="perStudentHelpBtn" class="btn btn-outline-secondary btn-sm rounded-circle p-0 px-2 d-none" data-bs-toggle="modal" data-bs-target="#perStudentHelpModal" aria-label="Per Student Help" title="Per Student Help">?</button>
+                            </div>
+                            <p class="text-muted mb-0" id="viewDescription">Click any cell to view detailed progress</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="viewMode" id="classAverage" value="classAverage">
+                            <label class="btn btn-outline-success d-inline-flex align-items-center gap-2" for="classAverage">
+                                <i class="fas fa-users me-1"></i>Class Average
+                            </label>
+                            <input type="radio" class="btn-check" name="viewMode" id="perStudent" value="perStudent">
+                            <label class="btn btn-outline-primary d-inline-flex align-items-center gap-2 ms-2" for="perStudent">
+                                <i class="fas fa-list me-1"></i>Per Student
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Mastery Grid View -->
+                <div class="table-responsive">
+                    <table class="table mb-0 custom-table" id="masteryGrid">
+                        <thead>
+                            <tr id="gridHeaders">
+                                <th class="border-0 fw-bold py-2 text-center" style="min-width: 250px;">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="fas fa-graduation-cap text-primary mb-1"></i>
+                                        Topics
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="gridBody">
+                            <!-- Dynamic grid content will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Per Student View - Hidden by default, content will be swapped in -->
+                <div id="perStudentContent" style="display: none;">
+                    <div class="table-responsive" style="width: 50%; margin: 0 auto;">
+                        <table class="table table-hover mb-0 custom-table" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th class="border-0 fw-bold py-1 text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-user-graduate text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                            <span style="font-size: 0.8rem;">Student ID</span>
+                                        </div>
+                                    </th>
+                                    <th class="border-0 fw-bold py-1 text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-chart-line text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                            <span style="font-size: 0.8rem;">Overall Progress</span>
+                                        </div>
+                                    </th>
+                                    <th class="border-0 fw-bold py-1 text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-book text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                            <span style="font-size: 0.8rem;">Topics Completed</span>
+                                        </div>
+                                    </th>
+                                    <th class="border-0 fw-bold py-1 text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-chart-bar text-primary mb-1" style="font-size: 0.8rem;"></i>
+                                            <span style="font-size: 0.8rem;">Analytics</span>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody">
+                                <!-- Dynamic student rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

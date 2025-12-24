@@ -74,11 +74,12 @@
   window.addEventListener('message', function(event) {
     // Validate the origin for security
     // Build a flexible allowlist; your origin is critical when proxying.
+    // NOTE: PAWS content (pawscomp2, adapt2, columbus) is proxied through ModuLearn,
+    // so it will appear to come from window.location.origin, not the external domain.
     const expectedOrigins = new Set([
-      window.location.origin,           // e.g., http://127.0.0.1:8000
-      'http://pawscomp2.sis.pitt.edu',
-      'https://codecheck.me',
-      'https://codecheck.io',
+      window.location.origin,           // ModuLearn origin (includes proxied PAWS content)
+      'https://codecheck.me',          // External CodeCheck (if not proxied)
+      'https://codecheck.io',          // External CodeCheck (if not proxied)
     ]);
     // DEBUG: see literally everything first
     console.log('[ALL postMessage]', event.origin, event.data);
