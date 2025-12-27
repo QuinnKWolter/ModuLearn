@@ -8,7 +8,6 @@ import json
 from urllib.parse import urlparse
 from py_mini_racer import MiniRacer
 from .kt_utils import get_user_groups_with_course_ids
-from .db_query_interface import DatabaseQueryInterface
 import logging
 
 logger = logging.getLogger(__name__)
@@ -69,9 +68,9 @@ def generate_course_auth_url(request):
         return JsonResponse({"error": f"An unexpected error occurred during token request: {e}"}, status=500)
 
 @login_required
-def mockup_dashboard(request):
+def legacy_dashboard(request):
     """
-    Displays the mockup dashboard with learning analytics.
+    Displays the legacy dashboard with learning analytics for MasteryGrids courses.
     """
     # Try to get user's KnowledgeTree groups and Course IDs automatically
     auto_groups = []
@@ -83,7 +82,7 @@ def mockup_dashboard(request):
             logger.warning(f"Failed to auto-discover groups for user {request.user.username}: {str(e)}")
             auto_groups = []
     
-    return render(request, 'dashboard/mockup_dashboard.html', {
+    return render(request, 'dashboard/legacy_dashboard.html', {
         'user': request.user,
         'auto_groups': auto_groups,  # Pass groups to template
     })
@@ -158,254 +157,6 @@ def discover_course_ids(request):
             'course_ids': []
         }, status=500)
 
-
-@login_required
-def db_query_interface(request):
-    """
-    Database query interface for testing and exploring MySQL databases.
-    Allows entering credentials and running SELECT queries.
-    
-    WARNING: This is a testing tool. Restrict access in production!
-    """
-    if request.method == 'POST':
-        action = request.POST.get('action', '')
-        
-        if action == 'connect':
-            # Get connection parameters
-            host = request.POST.get('host', '').strip()
-            port = int(request.POST.get('port', 3306))
-            user = request.POST.get('user', '').strip()
-            password = request.POST.get('password', '').strip()
-            database = request.POST.get('database', '').strip()
-            
-            # Get SSH tunnel parameters
-            use_ssh = request.POST.get('use_ssh') == 'on'
-            ssh_host = request.POST.get('ssh_host', '').strip() if use_ssh else None
-            ssh_port = int(request.POST.get('ssh_port', 22)) if use_ssh else 22
-            ssh_user = request.POST.get('ssh_user', '').strip() if use_ssh else None
-            ssh_auth_method = request.POST.get('ssh_auth_method', 'password') if use_ssh else None
-            ssh_password = request.POST.get('ssh_password', '').strip() if use_ssh and ssh_auth_method == 'password' else None
-            ssh_key_path = request.POST.get('ssh_key_path', '').strip() if use_ssh and ssh_auth_method == 'key' else None
-            
-            if not all([host, user, password, database]):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'All database connection fields are required'
-                })
-            
-            if use_ssh:
-                if not ssh_host or not ssh_user:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'SSH host and username are required when using SSH tunnel'
-                    })
-                if ssh_auth_method == 'password' and not ssh_password:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'SSH password is required when using password authentication'
-                    })
-                if ssh_auth_method == 'key' and not ssh_key_path:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'SSH key path is required when using key authentication'
-                    })
-            
-            # Create database interface
-            db_interface = DatabaseQueryInterface(
-                host=host,
-                port=port,
-                user=user,
-                password=password,
-                database=database,
-                ssh_host=ssh_host,
-                ssh_port=ssh_port,
-                ssh_user=ssh_user,
-                ssh_password=ssh_password,
-                ssh_key_path=ssh_key_path
-            )
-            
-            success, message = db_interface.connect()
-            
-            if success:
-                # Store connection info in session (passwords stored temporarily - not ideal but for testing)
-                request.session['db_test_connection'] = {
-                    'host': host,
-                    'port': port,
-                    'user': user,
-                    'password': password,
-                    'database': database,
-                    'use_ssh': use_ssh,
-                    'ssh_host': ssh_host,
-                    'ssh_port': ssh_port,
-                    'ssh_user': ssh_user,
-                    'ssh_password': ssh_password,
-                    'ssh_key_path': ssh_key_path
-                }
-                return JsonResponse({
-                    'success': True,
-                    'message': message
-                })
-            else:
-                # Clean up on failure
-                db_interface.disconnect()
-                return JsonResponse({
-                    'success': False,
-                    'message': message
-                })
-        
-        elif action == 'disconnect':
-            # Clear session
-            if 'db_test_connection' in request.session:
-                del request.session['db_test_connection']
-            return JsonResponse({'success': True, 'message': 'Disconnected'})
-        
-        elif action == 'query':
-            # Execute SQL query
-            if 'db_test_connection' not in request.session:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Not connected. Please connect first.'
-                })
-            
-            query = request.POST.get('query', '').strip()
-            max_rows = int(request.POST.get('max_rows', 100))
-            
-            if not query:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Query is required'
-                })
-            
-            # Reconnect using session data
-            conn_info = request.session['db_test_connection']
-            db_interface = DatabaseQueryInterface(
-                host=conn_info['host'],
-                port=conn_info['port'],
-                user=conn_info['user'],
-                password=conn_info['password'],
-                database=conn_info['database'],
-                ssh_host=conn_info.get('ssh_host'),
-                ssh_port=conn_info.get('ssh_port', 22),
-                ssh_user=conn_info.get('ssh_user'),
-                ssh_password=conn_info.get('ssh_password'),
-                ssh_key_path=conn_info.get('ssh_key_path')
-            )
-            
-            success, message = db_interface.connect()
-            if not success:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Reconnection failed: {message}'
-                })
-            
-            try:
-                success, results, message, row_count = db_interface.execute_query(query, max_rows)
-                return JsonResponse({
-                    'success': success,
-                    'results': results,
-                    'message': message,
-                    'row_count': row_count
-                })
-            finally:
-                db_interface.disconnect()
-        
-        elif action == 'SHOW TABLES':
-            # Quick action: Show tables
-            if 'db_test_connection' not in request.session:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Not connected. Please connect first.'
-                })
-            
-            conn_info = request.session['db_test_connection']
-            db_interface = DatabaseQueryInterface(
-                host=conn_info['host'],
-                port=conn_info['port'],
-                user=conn_info['user'],
-                password=conn_info['password'],
-                database=conn_info['database'],
-                ssh_host=conn_info.get('ssh_host'),
-                ssh_port=conn_info.get('ssh_port', 22),
-                ssh_user=conn_info.get('ssh_user'),
-                ssh_password=conn_info.get('ssh_password'),
-                ssh_key_path=conn_info.get('ssh_key_path')
-            )
-            
-            success, message = db_interface.connect()
-            if not success:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Reconnection failed: {message}'
-                })
-            
-            try:
-                success, tables, message = db_interface.get_tables()
-                if success:
-                    # Convert to list of dicts for display
-                    results = [{'Tables_in_' + conn_info['database']: table} for table in tables]
-                    return JsonResponse({
-                        'success': True,
-                        'results': results,
-                        'message': message,
-                        'row_count': len(results)
-                    })
-                else:
-                    return JsonResponse({
-                        'success': False,
-                        'message': message
-                    })
-            finally:
-                db_interface.disconnect()
-        
-        elif action == 'search':
-            # Quick action: Search for columns/tables
-            if 'db_test_connection' not in request.session:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Not connected. Please connect first.'
-                })
-            
-            search_term = request.POST.get('param', '').strip()
-            if not search_term:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Search term is required'
-                })
-            
-            conn_info = request.session['db_test_connection']
-            db_interface = DatabaseQueryInterface(
-                host=conn_info['host'],
-                port=conn_info['port'],
-                user=conn_info['user'],
-                password=conn_info['password'],
-                database=conn_info['database'],
-                ssh_host=conn_info.get('ssh_host'),
-                ssh_port=conn_info.get('ssh_port', 22),
-                ssh_user=conn_info.get('ssh_user'),
-                ssh_password=conn_info.get('ssh_password'),
-                ssh_key_path=conn_info.get('ssh_key_path')
-            )
-            
-            success, message = db_interface.connect()
-            if not success:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Reconnection failed: {message}'
-                })
-            
-            try:
-                success, results, message = db_interface.search_tables_for_columns(search_term)
-                return JsonResponse({
-                    'success': success,
-                    'results': results,
-                    'message': message,
-                    'row_count': len(results) if results else 0
-                })
-            finally:
-                db_interface.disconnect()
-    
-    # GET request - show the interface
-    return render(request, 'dashboard/db_query_interface.html')
 
 @login_required
 def fetch_class_list(request):

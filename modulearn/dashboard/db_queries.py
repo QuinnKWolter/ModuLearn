@@ -77,7 +77,6 @@ def get_class_list_from_db(group_login: str) -> Dict[str, Any]:
                     cursor.execute(non_students_sql, (group_login,))
                     non_student_rows = cursor.fetchall()
                     non_students = {row['user_id'] for row in non_student_rows}
-                    logger.debug(f"Found {len(non_students)} non-students to exclude")
                 except Exception as e:
                     logger.warning(f"Could not fetch non-students list: {str(e)}")
                 
@@ -305,9 +304,9 @@ def parse_computed_model(model_string: str, is_topics: bool = True, resource_nam
     """
     Parse pipe-delimited model data from ent_computed_models.
     
-    ACTUAL FORMAT (from debug logs):
-    - Topics: "topic_name:0,1,0,1,0,1,0,1,0,1|topic_name:0,1,0,1,..."
-    - Content: "content_name:0,1,10,-1,1,-1,-1,-1,5,\"\"|content_name:..."
+    Format:
+    - Topics: "topic_name:value1,value2,...,value10|topic_name:..."
+    - Content: "content_name:value1,value2,...|content_name:..."
     
     For topics: Each entry is `topic_name:value1,value2,...,value10`
     - 10 values total = 5 resources × 2 values per resource (k, p)
@@ -373,9 +372,8 @@ def parse_computed_model(model_string: str, is_topics: bool = True, resource_nam
             else:
                 # For content: Activity-level progress data
                 # Format: content_name:value1,value2,value3,...
-                # From debug logs: "ae_JavaTutorial_4_6_6:0,1,10,-1,1,-1,-1,-1,5,\"\""
-                # The first two values appear to be k and p (knowledge and progress)
-                # Store as simple dict: {content_name: {k: float, p: float}}
+                # The first two values are k (knowledge) and p (progress)
+                # Store as dict: {content_name: {k: float, p: float}}
                 if len(values) >= 2:
                     try:
                         k = float(values[0]) if values[0] else 0.0
@@ -466,17 +464,7 @@ def fetch_all_students_analytics(group_login: str, course_id: int) -> Dict[str, 
             
             progress_data = all_progress.get(learner_id, {})
             topics_data = progress_data.get('topics', {})
-            content_data = progress_data.get('content', {})  # Activity-level progress
-            
-            # Debug: Log first student's content data
-            if len(learners) == 0:
-                logger.debug(f"First student {learner_id}: content_data has {len(content_data)} activities")
-                if content_data:
-                    sample_activities = list(content_data.keys())[:5]
-                    logger.debug(f"Sample activity IDs in content_data: {sample_activities}")
-                    if sample_activities:
-                        sample_id = sample_activities[0]
-                        logger.debug(f"Sample activity '{sample_id}' progress: {content_data[sample_id]}")
+            content_data = progress_data.get('content', {})
             
             # Build state structure
             state = {
@@ -507,12 +495,7 @@ def fetch_all_students_analytics(group_login: str, course_id: int) -> Dict[str, 
                     activities_obj = {}
                     for activity in activities:
                         activity_id = activity['id']
-                        # Get activity progress from content_data (keyed by content_name/activity_id)
                         activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
-                        
-                        # Debug: Log first activity lookup
-                        if len(learners) == 0 and len(activities_obj) == 0:
-                            logger.debug(f"Looking up activity '{activity_id}' in content_data: found={activity_id in content_data}, progress={activity_progress}")
                         
                         activities_obj[activity_id] = {
                             'id': activity_id,
@@ -652,7 +635,6 @@ def get_student_progress_from_db(learner_id: str, course_id: int) -> Optional[Di
                 row = cursor.fetchone()
                 
                 if not row:
-                    logger.debug(f"No progress data found for student {learner_id}, course {course_id}")
                     return None
                 
                 # Parse model data
@@ -887,26 +869,8 @@ def get_all_students_progress_from_db(learner_ids: List[str], course_id: int, re
                         continue  # Already have most recent for this user
                     seen_users.add(user_id)
                     
-                    # Log sample of raw data for first user to debug format
-                    if len(result) == 0:
-                        model4topics_sample = (row['model4topics'] or '')[:200] if row['model4topics'] else ''
-                        model4content_sample = (row['model4content'] or '')[:200] if row['model4content'] else ''
-                        logger.debug(f"Sample model4topics (first 200 chars): {model4topics_sample}")
-                        logger.debug(f"Sample model4content (first 200 chars): {model4content_sample}")
-                    
                     topics_data = parse_computed_model(row['model4topics'] or '', is_topics=True, resource_names=resource_names)
                     content_data = parse_computed_model(row['model4content'] or '', is_topics=False, resource_names=resource_names)
-                    
-                    # Log parsing results for first user
-                    if len(result) == 0:
-                        logger.debug(f"Parsed topics_data keys: {list(topics_data.keys())[:5] if topics_data else 'EMPTY'}")
-                        logger.debug(f"Parsed content_data keys: {list(content_data.keys())[:5] if content_data else 'EMPTY'}")
-                        if topics_data:
-                            first_topic = list(topics_data.keys())[0]
-                            logger.debug(f"First topic '{first_topic}' has {len(topics_data[first_topic].get('values', {}))} resources")
-                        if content_data:
-                            sample_activity_id = list(content_data.keys())[0]
-                            logger.debug(f"Sample activity '{sample_activity_id}' from content_data: {content_data[sample_activity_id]}")
                     
                     result[user_id] = {
                         'topics': topics_data,

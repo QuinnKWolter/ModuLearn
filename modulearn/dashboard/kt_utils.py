@@ -30,11 +30,6 @@ def get_kt_user_id_by_login(kt_login: str) -> Optional[int]:
         return None
     
     try:
-        # Log configuration for debugging
-        from django.conf import settings
-        db_config = getattr(settings, 'PAWS_DATABASE', {})
-        logger.debug(f"Database config - USE_SSH: {db_config.get('USE_SSH')}, HOST: {db_config.get('HOST')}, SSH_HOST: {db_config.get('SSH_HOST')}, SSH_USER: {db_config.get('SSH_USER')}")
-        
         db_conn = get_paws_db_connection()
         success, message = db_conn.connect()
         
@@ -55,7 +50,6 @@ def get_kt_user_id_by_login(kt_login: str) -> Optional[int]:
                       AND isGroup = 0
                     LIMIT 1
                 """
-                logger.debug(f"Looking up KT UserID for login: {kt_login}")
                 cursor.execute(sql, (kt_login,))
                 row = cursor.fetchone()
                 
@@ -101,7 +95,6 @@ def get_user_groups_from_kt_db(kt_user_id: int) -> List[Dict[str, Any]]:
             db_config = getattr(settings, 'PAWS_DATABASE', {})
             kt_schema = db_config.get('KNOWLEDGETREE_SCHEMA', 'portal_test2')
             
-            logger.debug(f"Querying groups for KT UserID {kt_user_id} from schema {kt_schema}")
             
             with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                 sql = f"""
@@ -147,7 +140,6 @@ def get_course_ids_from_aggregate_db(group_logins: List[str]) -> Dict[str, List[
         Dict mapping group_login to list of course_id strings: {group_login: [course_id1, course_id2, ...]}
     """
     if not group_logins:
-        logger.debug("get_course_ids_from_aggregate_db called with empty group_logins list")
         return {}
     
     try:
@@ -163,7 +155,6 @@ def get_course_ids_from_aggregate_db(group_logins: List[str]) -> Dict[str, List[
             db_config = getattr(settings, 'PAWS_DATABASE', {})
             agg_schema = db_config.get('AGGREGATE_SCHEMA', 'aggregate')
             
-            logger.debug(f"Querying Course IDs for {len(group_logins)} groups from schema {agg_schema}")
             
             with connection.cursor(pymysql.cursors.DictCursor) as cursor:
                 # Use IN clause for multiple groups
@@ -242,7 +233,6 @@ def get_user_groups_with_course_ids(user) -> List[Dict[str, Any]]:
         return []
     
     # Step 2: Get groups from KnowledgeTree database
-    logger.debug(f"Fetching groups for KT UserID {kt_user_id}")
     kt_groups = get_user_groups_from_kt_db(kt_user_id)
     
     if not kt_groups:
@@ -253,7 +243,6 @@ def get_user_groups_with_course_ids(user) -> List[Dict[str, Any]]:
     
     # Step 3: Get Course IDs from Aggregate database
     group_logins = [g['group_login'] for g in kt_groups]
-    logger.debug(f"Fetching Course IDs for groups: {group_logins}")
     course_id_mappings = get_course_ids_from_aggregate_db(group_logins)
     
     # Step 4: Combine results
@@ -269,7 +258,6 @@ def get_user_groups_with_course_ids(user) -> List[Dict[str, Any]]:
             'course_ids': course_ids  # List of Course IDs (usually just one)
         })
         
-        logger.debug(f"Group {group_login}: {len(course_ids)} Course IDs found")
     
     logger.info(f"Retrieved {len(result)} groups with Course IDs for user {user.username}")
     return result

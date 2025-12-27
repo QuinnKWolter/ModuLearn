@@ -3,6 +3,16 @@
 {% block title %}Instructor Dashboard - ModuLearn{% endblock %}
 
 {% block content %}
+<!-- Legacy Dashboard Callout -->
+<div class="alert alert-info alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-info-circle me-2" style="font-size: 1.25rem;"></i>
+  <div class="flex-grow-1">
+    <strong>Legacy Courses Dashboard:</strong> 
+    <a href="{% url 'dashboard:legacy_dashboard' %}" class="alert-link">Click here for a dashboard of legacy courses run via MasteryGrids!</a>
+  </div>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
 <h1 class="display-4 mb-4">Instructor Dashboard</h1>
 <div class="d-flex justify-content-between mb-4">
   <button class="btn btn-secondary" id="importCourseButton">
@@ -400,13 +410,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const groupName = document.getElementById('groupName').value.trim();
       const submitButton = this.querySelector('button[type="submit"]');
       
-      console.log('Submitting new session:', { courseId, groupName }); // Debug log
       
       submitButton.disabled = true;
       submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
       
       const url = "{% url 'courses:create_course_instance' 'COURSE_ID' %}".replace('COURSE_ID', courseId);
-      console.log('Submitting to URL:', url); // Debug log
       
       fetch(url, {
         method: 'POST',
@@ -418,7 +426,6 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .then(async response => {
         const data = await response.json();
-        console.log('Response:', data); // Debug log
         if (data.success) {
           window.location.reload();
         } else {
@@ -764,10 +771,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', data.error);
             alert('Error: ' + data.error);
         } else {
-            console.log('Token:', data.token);
-
-            // Debug log before POST request
-            console.log('Attempting to POST to x-login with token:', data.token);
 
             // Post to x-login with the token
             const loginResponse = await fetch("https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login", {
@@ -778,23 +781,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ token: data.token })
             });
 
-            // Debug log for response
-            console.log('Login response status:', loginResponse.status);
-            console.log('Login response headers:', loginResponse.headers);
-
             if (!loginResponse.ok) {
                 throw new Error('Failed to log in with token');
             }
 
             const loginData = await loginResponse.json();
-            console.log('Login response data:', loginData);
 
             if (loginData.error) {
                 console.error('Login Error:', loginData.error);
                 alert('Login Error: ' + loginData.error);
             } else {
-                // Debug log before navigation
-                console.log('Navigating to course authoring tool');
                 // Redirect the user to the course authoring tool
                 window.location.href = "https://proxy.personalized-learning.org/next.course-authoring/#/modulearn";
             }

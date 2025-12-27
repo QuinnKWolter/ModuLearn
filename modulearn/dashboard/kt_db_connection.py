@@ -54,9 +54,6 @@ class DatabaseConnection:
             (success: bool, message: str)
         """
         try:
-            logger.debug(f"Connecting to database - use_ssh={self.use_ssh}, host={self.host}, port={self.port}, "
-                        f"ssh_host={self.ssh_host or 'None'}, ssh_user={self.ssh_user or 'None'}")
-            
             # If SSH tunnel is required, set it up first
             if self.use_ssh:
                 logger.info(f"Establishing SSH tunnel to {self.ssh_host}:{self.ssh_port} for database {self.host}:{self.port}")
@@ -173,7 +170,6 @@ def get_paws_db_connection():
     if not db_config:
         raise ValueError("PAWS database not configured")
     
-    # Log configuration for debugging (without sensitive data)
     use_ssh = db_config.get('USE_SSH', False)
     ssh_host = db_config.get('SSH_HOST', '')
     ssh_user = db_config.get('SSH_USER', '')

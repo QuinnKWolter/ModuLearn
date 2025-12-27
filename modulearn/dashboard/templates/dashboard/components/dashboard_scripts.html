@@ -60,18 +60,14 @@ async function autoLoadUserGroups() {
         
         if (data.success && data.groups && data.groups.length > 0) {
             const groups = data.groups;
-            console.log('Auto-loaded groups:', groups);
-            
             // Show group dropdown selector (no auto-select - let user choose)
             showGroupDropdown(groups, grpInput, cidInput);
         } else {
             // No groups found or error - silently fail, manual input available
             if (data.error) {
-                console.log('Auto-load failed:', data.error);
             }
         }
     } catch (error) {
-        console.log('Auto-load error:', error);
         // Silently fail - user can still use manual input
     } finally {
         // Restore button
@@ -376,11 +372,6 @@ function handleFetch() {
             // The batch endpoint returns the complete response structure
             responseData = data;
             
-            console.log('=== BATCH FETCH COMPLETE ===');
-            console.log('Total learners:', responseData.learners.length);
-            console.log('Topics:', responseData.topics.length);
-            console.log('Resources:', responseData.resources.length);
-            
             progressBar.style.width = '100%';
             progressPercent.textContent = '100%';
             progressText.textContent = 'Complete!';
@@ -532,8 +523,6 @@ function populateKPIs() {
     
     document.getElementById('studentsNeedingHelp').textContent = studentsNeedingHelp;
     
-    // Debug logging to verify calculation
-    console.log(`Struggling Students Calculation: ${studentsNeedingHelp} out of ${responseData.learners.length} total students`);
 }
 
 function updateGrid() {
@@ -729,14 +718,9 @@ function updatePerStudentView() {
     tableBody.innerHTML = '';
     
     // Log before filtering
-    console.log('=== PER STUDENT VIEW RENDERING ===');
-    console.log('Total learners:', responseData.learners.length);
-    
     // Show ALL learners (including those with isHidden: true) - no filtering
     const sortedLearners = responseData.learners;
     
-    console.log('Total learners to display (all students):', sortedLearners.length);
-    console.log('All students with isHidden status:', sortedLearners.map(l => ({ id: l.id, isHidden: l.isHidden })));
 
     sortedLearners.forEach((learner, index) => {
         // Calculate overall progress
@@ -755,23 +739,6 @@ function updatePerStudentView() {
         // Calculate topics completed
         const topicsCompleted = topicProgresses.filter(p => p >= 0.9).length;
         const totalTopics = responseData.topics.length;
-        
-        // Log progress calculation for this student
-        console.log(`Rendering student ${learner.id} (index ${index}):`, {
-            studentId: learner.id,
-            hasState: !!learner.state,
-            hasTopics: !!learner.state?.topics,
-            topicProgresses: topicProgresses.map((p, i) => ({
-                topicId: responseData.topics[i].id,
-                topicName: responseData.topics[i].name,
-                progress: p,
-                topicData: learner.state?.topics?.[responseData.topics[i].id]
-            })),
-            overallProgress: overallProgress,
-            progressPercent: progressPercent,
-            topicsCompleted: topicsCompleted,
-            totalTopics: totalTopics
-        });
         
         // Calculate performance (average of all topic progress)
         const performance = Math.round(overallProgress * 100);
@@ -1159,7 +1126,6 @@ function showStudentDetails(learnerId) {
 }
 
 function handleCellClick(topicId, resourceId, topicName, resourceName) {
-    console.log('Cell clicked:', { topicId, resourceId, topicName, resourceName });
     
     // Get class average data for this topic/resource
     const classAvgData = responseData.groups.find(g => g.name === 'Class Average');

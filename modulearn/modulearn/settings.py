@@ -84,10 +84,8 @@ def get_debug_setting():
 
 DEBUG = get_debug_setting()
 
-# Log the detected environment for debugging
 import logging
 logger = logging.getLogger(__name__)
-logger.info(f"Environment detected: {'DEVELOPMENT' if DEBUG else 'PRODUCTION'}")
 
 # Log .env file loading status (now that logger is defined)
 if env_loaded:
@@ -358,12 +356,12 @@ LOGGING = {
         },
         'dashboard': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # Enable DEBUG for dashboard to see connection details
+            'level': 'INFO',
             'propagate': False,
         },
         'modulearn.dashboard.db_queries': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # Enable DEBUG to see parsing details
+            'level': 'INFO',
             'propagate': False,
         },
     },
