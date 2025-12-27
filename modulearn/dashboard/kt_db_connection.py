@@ -179,9 +179,11 @@ def get_paws_db_connection():
                 f"USER: {db_config.get('USER', '')[:3] + '...' if db_config.get('USER') else 'Not set'}")
     
     # Warn if SSH credentials are provided but USE_SSH is False
+    # Note: If MySQL is on the same server as Docker, use host.docker.internal (or host IP) and set USE_SSH=False
     if not use_ssh and ssh_host and ssh_user:
         logger.warning(f"SSH credentials detected (SSH_HOST={ssh_host}, SSH_USER={ssh_user}) but USE_SSH=False. "
-                      f"Connection will fail if database is not accessible directly. Set PAWS_DB_USE_SSH=True in .env")
+                      f"If MySQL is on the same server, use host.docker.internal as PAWS_DB_HOST and set USE_SSH=False. "
+                      f"If MySQL is remote, set PAWS_DB_USE_SSH=True in .env to enable SSH tunneling.")
     
     # Use aggregate schema as the default database (can query other schemas using schema.table syntax)
     return DatabaseConnection(

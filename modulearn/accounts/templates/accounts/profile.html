@@ -7,15 +7,6 @@
 <div class="container">
   <h1 class="mt-4">Your Profile</h1>
   
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    {% endfor %}
-  {% endif %}
-  
   <div class="row">
     <div class="col-md-6">
       <div class="card mb-4">
@@ -24,6 +15,12 @@
         </div>
         <div class="card-body">
           <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
+          {% if user.email %}
+            <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+          {% endif %}
+          {% if user.full_name %}
+            <p class="card-text"><strong>Full Name:</strong> {{ user.full_name }}</p>
+          {% endif %}
           <p class="card-text"><strong>Role:</strong> 
             {% if user.is_instructor and user.is_student %}
               Instructor & Student
@@ -35,11 +32,23 @@
               None
             {% endif %}
           </p>
-          {% if user.kt_login %}
-            <p class="card-text"><small class="text-muted">Linked to KnowledgeTree account: {{ user.kt_login }}</small></p>
+          {% if user.kt_login or user.kt_user_id %}
+            <hr>
+            <h6 class="text-muted">KnowledgeTree Integration</h6>
+            {% if user.kt_login %}
+              <p class="card-text"><small class="text-muted"><strong>KT Login:</strong> {{ user.kt_login }}</small></p>
+            {% endif %}
+            {% if user.kt_user_id %}
+              <p class="card-text"><small class="text-muted"><strong>KT User ID:</strong> {{ user.kt_user_id }}</small></p>
+            {% endif %}
+            {% if user.kt_groups %}
+              <p class="card-text"><small class="text-muted"><strong>KT Groups:</strong> {{ user.kt_groups|join:", " }}</small></p>
+            {% endif %}
           {% endif %}
           {% if user.lti_data %}
-            <p class="card-text"><strong>LTI Data:</strong> {{ user.lti_data }}</p>
+            <hr>
+            <h6 class="text-muted">LTI Information</h6>
+            <p class="card-text"><small class="text-muted"><strong>LTI Data:</strong> {{ user.lti_data }}</small></p>
           {% endif %}
         </div>
       </div>

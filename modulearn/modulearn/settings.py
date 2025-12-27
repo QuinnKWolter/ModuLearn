@@ -228,6 +228,7 @@ KNOWLEDGETREE = {
 # PAWS MySQL Database Configuration (single database server with multiple schemas)
 # This database contains both KnowledgeTree (portal_test2 schema) and Aggregate (aggregate schema) data
 PAWS_DATABASE = {
+    # Database connection (use 'host.docker.internal' if MySQL is on Docker host, or direct IP if on same server)
     'HOST': os.getenv('PAWS_DB_HOST', '127.0.0.1'),
     'PORT': int(os.getenv('PAWS_DB_PORT', '3306')),
     'USER': os.getenv('PAWS_DB_USER', ''),
@@ -235,19 +236,21 @@ PAWS_DATABASE = {
     # Schema names (databases on the same MySQL server)
     'KNOWLEDGETREE_SCHEMA': os.getenv('PAWS_DB_KT_SCHEMA', 'portal_test2'),
     'AGGREGATE_SCHEMA': os.getenv('PAWS_DB_AGGREGATE_SCHEMA', 'aggregate'),
-    # SSH Tunnel configuration (for development)
+    # SSH Tunnel configuration (only needed if MySQL is on a remote server)
     'SSH_HOST': os.getenv('PAWS_DB_SSH_HOST', ''),
     'SSH_PORT': int(os.getenv('PAWS_DB_SSH_PORT', '22')),
     'SSH_USER': os.getenv('PAWS_DB_SSH_USER', ''),
     'SSH_PASSWORD': os.getenv('PAWS_DB_SSH_PASSWORD', ''),
     'SSH_KEY_PATH': os.getenv('PAWS_DB_SSH_KEY_PATH', ''),
-    'USE_SSH': os.getenv('PAWS_DB_USE_SSH', 'False').lower() == 'true',  # Set to True for development
+    'USE_SSH': os.getenv('PAWS_DB_USE_SSH', 'False').lower() == 'true',  # Only True if MySQL is on remote server
 }
 
 # Auto-detect if SSH should be used if credentials are provided but USE_SSH is False
+# Note: If MySQL is on the same server as Docker, use host.docker.internal (or host IP) and set USE_SSH=False
 if not PAWS_DATABASE['USE_SSH'] and PAWS_DATABASE.get('SSH_HOST') and PAWS_DATABASE.get('SSH_USER'):
     logger.warning(f"SSH credentials provided (SSH_HOST={PAWS_DATABASE['SSH_HOST']}, SSH_USER={PAWS_DATABASE['SSH_USER']}) "
-                  f"but PAWS_DB_USE_SSH is False. Set PAWS_DB_USE_SSH=True in .env to enable SSH tunneling.")
+                  f"but PAWS_DB_USE_SSH is False. If MySQL is on the same server, use host.docker.internal and set USE_SSH=False. "
+                  f"If MySQL is remote, set PAWS_DB_USE_SSH=True to enable SSH tunneling.")
 
 # Legacy compatibility - map to old structure if needed
 if KNOWLEDGETREE['AUTH_METHOD'] in ('database', 'both'):
