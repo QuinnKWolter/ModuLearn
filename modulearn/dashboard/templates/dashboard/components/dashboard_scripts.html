@@ -42,40 +42,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Automatically load user's KnowledgeTree groups and Course IDs.
+ * Uses groups data provided by backend (from direct database query).
  * If successful, show dropdown for group selection.
  */
-async function autoLoadUserGroups() {
+function autoLoadUserGroups() {
     const grpInput = document.getElementById('grp');
     const cidInput = document.getElementById('cid');
     const fetchBtn = document.getElementById('fetchDataBtn');
     
-    // Show loading indicator
-    const originalBtnText = fetchBtn.querySelector('#fetchBtnText').textContent;
-    fetchBtn.querySelector('#fetchBtnText').textContent = 'Loading groups...';
-    fetchBtn.disabled = true;
+    // Get groups from backend-provided data (already fetched via direct DB query)
+    const groups = window.autoGroups || [];
     
-    try {
-        const response = await fetch('{% url "dashboard:fetch_user_groups" %}');
-        const data = await response.json();
-        
-        if (data.success && data.groups && data.groups.length > 0) {
-            const groups = data.groups;
-            // Show group dropdown selector (no auto-select - let user choose)
-            showGroupDropdown(groups, grpInput, cidInput);
-        } else {
-            // No groups found or error - silently fail, manual input available
-            if (data.error) {
-            }
-        }
-    } catch (error) {
-        // Silently fail - user can still use manual input
-    } finally {
-        // Restore button
-        fetchBtn.querySelector('#fetchBtnText').textContent = originalBtnText;
-        if (window.updateFetchButtonState) {
-            window.updateFetchButtonState();
-        }
+    if (groups && groups.length > 0) {
+        // Show group dropdown selector (no auto-select - let user choose)
+        showGroupDropdown(groups, grpInput, cidInput);
     }
+    // If no groups, silently fail - manual input is still available
 }
 
 /**
@@ -203,7 +185,7 @@ async function selectGroup(group, grpInput, cidInput) {
             if (data.course_ids.length === 1) {
                 // Single Course ID - auto-populate
                 cidInput.value = data.course_ids[0];
-            } else {
+                    } else {
                 // Multiple Course IDs - show dropdown
                 showCourseIdDropdown(data.course_ids, cidInput);
             }
@@ -375,8 +357,8 @@ function handleFetch() {
             progressBar.style.width = '100%';
             progressPercent.textContent = '100%';
             progressText.textContent = 'Complete!';
-            
-            // Hide progress bar and show dashboard
+                
+                // Hide progress bar and show dashboard
             setTimeout(() => {
                 progressContainer.classList.add('d-none');
                 const dashboardContent = document.getElementById('dashboardContent');

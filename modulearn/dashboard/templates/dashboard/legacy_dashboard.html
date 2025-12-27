@@ -24,6 +24,12 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ auto_groups|json_script:"auto-groups-data" }}
+<script>
+    // Pass auto_groups from backend to frontend JavaScript (already fetched via direct DB query)
+    const autoGroupsElement = document.getElementById('auto-groups-data');
+    window.autoGroups = autoGroupsElement ? JSON.parse(autoGroupsElement.textContent) : [];
+</script>
 {% include 'dashboard/components/dashboard_scripts.html' %}
 {% endblock %}
 

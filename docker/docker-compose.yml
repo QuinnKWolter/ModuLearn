@@ -6,10 +6,15 @@ services:
     build:
       context: ./ModuLearn/modulearn/
       dockerfile: ./Dockerfile
+    privileged: true
     ports:
-      - "8000:8000"
+      - "20600:8000"
     restart: always
+    env_file:
+      - ./.env
     volumes:
       - ./modulearn-storage/db:/modulearn-storage/db
+      - ./.env:/.env:ro
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:172.17.0.1"
+      - "adapt2.sis.pitt.edu:172.17.0.1"

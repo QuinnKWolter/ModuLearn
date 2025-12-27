@@ -84,40 +84,8 @@ def legacy_dashboard(request):
     
     return render(request, 'dashboard/legacy_dashboard.html', {
         'user': request.user,
-        'auto_groups': auto_groups,  # Pass groups to template
+        'auto_groups': auto_groups,  # Pass groups to template (will be serialized with json_script filter)
     })
-
-
-@login_required
-def fetch_user_groups(request):
-    """
-    API endpoint to fetch user's KnowledgeTree groups (without Course IDs).
-    Used by JavaScript to show group dropdown.
-    Course IDs are discovered on-demand when a group is selected.
-    """
-    if request.method != 'GET':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
-    try:
-        if not (request.user.kt_login or request.user.kt_user_id):
-            return JsonResponse({
-                'error': 'User is not linked to a KnowledgeTree account',
-                'groups': []
-            }, status=404)
-        
-        groups = get_user_groups_with_course_ids(request.user)
-        
-        return JsonResponse({
-            'success': True,
-            'groups': groups
-        })
-    except Exception as e:
-        logger.error(f"Error fetching user groups: {str(e)}", exc_info=True)
-        return JsonResponse({
-            'error': f'Failed to fetch groups: {str(e)}',
-            'groups': []
-        }, status=500)
-
 
 @login_required
 def discover_course_ids(request):
@@ -156,7 +124,6 @@ def discover_course_ids(request):
             'error': f'Failed to discover Course IDs: {str(e)}',
             'course_ids': []
         }, status=500)
-
 
 @login_required
 def fetch_class_list(request):
