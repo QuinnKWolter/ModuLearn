@@ -57,9 +57,6 @@
                 <a class="nav-link text-light" href="{% url 'accounts:profile' %}">Profile</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link text-light" href="{% url 'courses:course_list' %}">Courses</a>
-              </li>
-              <li class="nav-item">
                 <a class="nav-link text-light" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
                 <form id="logout-form" action="{% url 'accounts:logout' %}" method="post" style="display: none;">
                   {% csrf_token %}

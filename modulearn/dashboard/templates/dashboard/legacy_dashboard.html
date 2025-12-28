@@ -29,6 +29,8 @@
     // Pass auto_groups from backend to frontend JavaScript (already fetched via direct DB query)
     const autoGroupsElement = document.getElementById('auto-groups-data');
     window.autoGroups = autoGroupsElement ? JSON.parse(autoGroupsElement.textContent) : [];
+    // Pass preselected group ID from GET parameter
+    window.preselectedGroup = "{{ preselected_group|escapejs }}";
 </script>
 {% include 'dashboard/components/dashboard_scripts.html' %}
 {% endblock %}

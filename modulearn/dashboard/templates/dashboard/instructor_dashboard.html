@@ -3,16 +3,6 @@
 {% block title %}Instructor Dashboard - ModuLearn{% endblock %}
 
 {% block content %}
-<!-- Legacy Dashboard Callout -->
-<div class="alert alert-info alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
-  <i class="bi bi-info-circle me-2" style="font-size: 1.25rem;"></i>
-  <div class="flex-grow-1">
-    <strong>Legacy Courses Dashboard:</strong> 
-    <a href="{% url 'dashboard:legacy_dashboard' %}" class="alert-link">Click here for a dashboard of legacy courses run via MasteryGrids!</a>
-  </div>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-
 <h1 class="display-4 mb-4">Instructor Dashboard</h1>
 <div class="d-flex justify-content-between mb-4">
   <button class="btn btn-secondary" id="importCourseButton">
@@ -20,7 +10,7 @@
   </button>
 </div>
 
-<!-- Courses Section -->
+<!-- Courses Section (Course Structures) -->
 <h2 class="h4 mb-3">Your Courses</h2>
 {% if courses %}
   <div class="row mt-3">
@@ -49,8 +39,138 @@
 
 <!-- Course Instances Section -->
 <h2 class="h4 mt-5 mb-3">Active Course Sessions</h2>
+
+<!-- ModuLearn Courses Cards -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">ModuLearn Courses</h5>
+  </div>
+  <div class="card-body">
+    {% if course_instances or enrolled_instances %}
+      <div class="row">
+        {% for course_instance in course_instances %}
+          <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ course_instance.course.title }}</h5>
+                {% if course_instance.group_name %}
+                  <h6 class="card-subtitle mb-2 text-muted">{{ course_instance.group_name }}</h6>
+                {% endif %}
+                <p class="card-text">{{ course_instance.course.description|truncatewords:20 }}</p>
+                <div class="mt-auto">
+                  <a href="{% url 'courses:course_detail' instance_id=course_instance.id %}" class="btn btn-primary w-100">View Course</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+        {% for course_instance in enrolled_instances %}
+          <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ course_instance.course.title }}</h5>
+                {% if course_instance.group_name %}
+                  <h6 class="card-subtitle mb-2 text-muted">{{ course_instance.group_name }}</h6>
+                {% endif %}
+                <p class="card-text">{{ course_instance.course.description|truncatewords:20 }}</p>
+                {% if course_instance.user_enrollment %}
+                  <div class="mb-3">
+                    <div class="progress" style="height: 10px;">
+                      <div class="progress-bar bg-success" 
+                           role="progressbar" 
+                           style="width: {{ course_instance.user_enrollment.course_progress.overall_progress|floatformat:0 }}%"
+                           aria-valuenow="{{ course_instance.user_enrollment.course_progress.overall_progress|floatformat:0 }}"
+                           aria-valuemin="0" 
+                           aria-valuemax="100">
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-between small mt-1">
+                      <span>Progress: {{ course_instance.user_enrollment.course_progress.overall_progress|floatformat:1 }}%</span>
+                      <span>Score: {{ course_instance.user_enrollment.course_progress.overall_score|floatformat:1 }}%</span>
+                    </div>
+                  </div>
+                {% endif %}
+                <div class="mt-auto">
+                  <a href="{% url 'courses:course_detail' instance_id=course_instance.id %}" class="btn btn-primary w-100">View Course</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">You don't have any active course sessions to manage.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Legacy Courses Cards -->
+{% if legacy_groups %}
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Legacy Courses (MasteryGrids)</h5>
+      <!-- Search/Filter Box -->
+      <div class="d-flex align-items-center" style="flex: 1; max-width: 400px; margin-left: auto;">
+        <input type="text" class="form-control form-control-sm me-2" id="legacyGroupsSearch" placeholder="Search legacy courses...">
+        <button class="btn btn-outline-secondary btn-sm" id="clearLegacySearch" style="display: none;">
+          <i class="bi bi-x-circle"></i>
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="max-height: 500px; overflow-y: auto; overflow-x: hidden;">
+        <div class="row" id="legacyGroupsContainer">
+          {% for group in legacy_groups %}
+            <div class="col-md-4 mb-3 legacy-group-card" data-group-name="{{ group.group_name|lower }}" data-group-login="{{ group.group_login|lower }}">
+              <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                  <h5 class="card-title">{{ group.group_name }}</h5>
+                  <p class="card-text text-muted small mb-2">
+                    <strong>Group ID:</strong> {{ group.group_login }}
+                  </p>
+                  {% if group.course_ids %}
+                    <p class="card-text text-muted small mb-3">
+                      <strong>Course IDs:</strong> {{ group.course_ids|join:", " }}
+                    </p>
+                  {% endif %}
+                  <div class="mt-auto">
+                    <div class="d-grid gap-2">
+                      <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group.group_login }}" class="btn btn-primary">
+                        <i class="bi bi-graph-up-arrow me-2"></i>View Legacy Dashboard
+                      </a>
+                      {% if group.course_ids %}
+                        {# Unified Course Resources button - opens modal with all resources #}
+                        <button type="button" 
+                                class="btn btn-outline-primary btn-sm" 
+                                data-group-login="{{ group.group_login }}"
+                                data-group-name="{{ group.group_name }}"
+                                onclick="openCourseResourcesModal('{{ group.group_login }}', '{{ group.group_name|escapejs }}')">
+                          <i class="bi bi-folder me-2"></i>View Course Resources
+                        </button>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <div id="legacyGroupsEmpty" class="alert alert-info" style="display: none;">
+          <i class="bi bi-info-circle me-2"></i>No legacy courses match your search.
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Active Course Sessions Management -->
 {% if course_instances %}
-  <div class="accordion" id="courseAccordion">
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">Manage Course Sessions</h5>
+    </div>
+    <div class="card-body">
+      <div class="accordion" id="courseAccordion">
     {% for course_instance in course_instances %}
       <div class="accordion-item mb-3">
         <h2 class="accordion-header" id="heading{{ course_instance.id }}">
@@ -114,9 +234,9 @@
         </div>
       </div>
     {% endfor %}
+      </div>
+    </div>
   </div>
-{% else %}
-  <p>You don't have any active course sessions.</p>
 {% endif %}
 
 <!-- ALL MODALS FIRST -->
@@ -800,6 +920,55 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('An error occurred while fetching the token or logging in.');
     }
   });
+  
+  // Legacy courses search functionality
+  {% if legacy_groups %}
+  const legacySearchInput = document.getElementById('legacyGroupsSearch');
+  const legacyClearBtn = document.getElementById('clearLegacySearch');
+  const legacyGroupCards = document.querySelectorAll('.legacy-group-card');
+  const legacyEmptyMsg = document.getElementById('legacyGroupsEmpty');
+  const legacyContainer = document.getElementById('legacyGroupsContainer');
+  
+  if (legacySearchInput) {
+    function filterLegacyGroups() {
+      const searchTerm = legacySearchInput.value.toLowerCase().trim();
+      let visibleCount = 0;
+      
+      legacyGroupCards.forEach(card => {
+        const groupName = card.getAttribute('data-group-name') || '';
+        const groupLogin = card.getAttribute('data-group-login') || '';
+        const matches = !searchTerm || groupName.includes(searchTerm) || groupLogin.includes(searchTerm);
+        
+        if (matches) {
+          card.style.display = 'block';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      
+      if (visibleCount === 0 && searchTerm) {
+        if (legacyEmptyMsg) legacyEmptyMsg.style.display = 'block';
+        if (legacyContainer) legacyContainer.style.display = 'none';
+      } else {
+        if (legacyEmptyMsg) legacyEmptyMsg.style.display = 'none';
+        if (legacyContainer) legacyContainer.style.display = 'flex';
+      }
+      
+      if (legacyClearBtn) legacyClearBtn.style.display = searchTerm ? 'inline-block' : 'none';
+    }
+    
+    legacySearchInput.addEventListener('input', filterLegacyGroups);
+    
+    if (legacyClearBtn) {
+      legacyClearBtn.addEventListener('click', function() {
+        legacySearchInput.value = '';
+        filterLegacyGroups();
+        legacySearchInput.focus();
+      });
+    }
+  }
+  {% endif %}
 });
 </script>
 
@@ -853,4 +1022,291 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </div>
+
+{% include 'dashboard/components/course_resources_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Course Resources Modal Functionality
+let courseResourcesCache = {};
+
+/**
+ * Open course resources modal safely
+ */
+function openCourseResourcesModal(groupLogin, groupName) {
+    // Ensure Bootstrap is loaded before opening modal
+    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        console.error('Bootstrap is not loaded. Cannot open modal.');
+        alert('Please wait for the page to finish loading.');
+        return;
+    }
+    
+    const modalElement = document.getElementById('courseResourcesModal');
+    if (!modalElement) {
+        console.error('Modal element not found');
+        return;
+    }
+    
+    // Open modal using Bootstrap's safe method
+    try {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+        // Load resources after modal is shown
+        loadCourseResources(groupLogin, groupName);
+    } catch (error) {
+        console.error('Error opening modal:', error);
+    }
+}
+
+/**
+ * Load course resources for a group and display in modal
+ */
+async function loadCourseResources(groupLogin, groupName) {
+    // Update modal title
+    const groupNameEl = document.getElementById('courseResourcesGroupName');
+    if (groupNameEl) {
+        groupNameEl.textContent = groupName || groupLogin;
+    }
+    
+    // Check cache first
+    if (courseResourcesCache[groupLogin]) {
+        renderCourseResources(courseResourcesCache[groupLogin]);
+        return;
+    }
+    
+    // Show loading state
+    const resourcesList = document.getElementById('courseResourcesList');
+    if (resourcesList) {
+        resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading resources...</span>
+                </div>
+                <p class="text-muted mt-2 mb-0">Loading resources...</p>
+            </li>
+        `;
+    }
+    
+    // Reset viewer
+    const viewer = document.getElementById('courseResourceViewer');
+    if (viewer) {
+        viewer.innerHTML = `
+            <div class="text-center text-muted p-5">
+                <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3">Select a resource to view</p>
+            </div>
+        `;
+    }
+    
+    try {
+        const response = await fetch(`/dashboard/api/course_resources/${encodeURIComponent(groupLogin)}/`);
+        const data = await response.json();
+        
+        if (data.success && data.resources) {
+            // Cache the results
+            courseResourcesCache[groupLogin] = data.resources;
+            renderCourseResources(data.resources);
+        } else {
+            showCourseResourcesError(data.error || 'Failed to load course resources');
+        }
+    } catch (error) {
+        console.error('Error loading course resources:', error);
+        showCourseResourcesError('Error loading course resources. Please try again.');
+    }
+}
+
+/**
+ * Render course resources list
+ */
+function renderCourseResources(resources) {
+    const resourcesList = document.getElementById('courseResourcesList');
+    if (!resourcesList) return;
+    
+    if (resources.length === 0) {
+        resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                <p class="text-muted mt-2 mb-0">No resources available for this course.</p>
+            </li>
+        `;
+        return;
+    }
+    
+    const html = resources.map(resource => {
+        const isMasteryGrids = resource.resource_type === 'masterygrids';
+        const iconClass = isMasteryGrids ? 'bi-grid-3x3-gap' : 
+                         resource.resource_type === 'folder' ? 'bi-folder' : 'bi-file-earmark';
+        const badgeClass = isMasteryGrids ? 'bg-primary' : 
+                          resource.resource_type === 'folder' ? 'bg-secondary' : 'bg-info';
+        
+        return `
+            <li class="list-group-item list-group-item-action" 
+                onclick="selectCourseResource(${resource.NodeID}, '${escapeHtml(resource.Title)}', '${escapeHtml(resource.show_url)}', '${resource.resource_type}')" 
+                style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <i class="bi ${iconClass} me-2"></i>
+                            <strong>${escapeHtml(resource.Title)}</strong>
+                        </div>
+                        ${resource.Description ? `<small class="text-muted d-block mt-1">${escapeHtml(resource.Description)}</small>` : ''}
+                    </div>
+                    <div class="ms-2">
+                        <span class="badge ${badgeClass}">${resource.resource_type}</span>
+                        <i class="bi bi-chevron-right ms-2 text-muted"></i>
+                    </div>
+                </div>
+            </li>
+        `;
+    }).join('');
+    
+    resourcesList.innerHTML = html;
+}
+
+/**
+ * Select and display a course resource
+ */
+function selectCourseResource(nodeId, title, showUrl, resourceType) {
+    const viewer = document.getElementById('courseResourceViewer');
+    if (!viewer) return;
+    
+    // Update active state in list
+    document.querySelectorAll('#courseResourcesList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.target.closest('.list-group-item').classList.add('active');
+    
+    // Render resource in viewer
+    const html = `
+        <div class="card h-100 border-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi ${resourceType === 'masterygrids' ? 'bi-grid-3x3-gap' : resourceType === 'folder' ? 'bi-folder' : 'bi-file-earmark'} me-2"></i>
+                    ${escapeHtml(title)}
+                </h6>
+                <button class="btn btn-sm btn-primary" onclick="openResourceInFullscreen('${escapeHtml(showUrl)}', '${escapeHtml(title)}')">
+                    <i class="bi bi-arrows-fullscreen me-1"></i>Open Fullscreen
+                </button>
+            </div>
+            <div class="card-body p-0" style="height: calc(600px - 60px);">
+                <iframe 
+                    src="${showUrl}" 
+                    style="width: 100%; height: 100%; border: none;"
+                    allowfullscreen
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups">
+                </iframe>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <strong>Type:</strong> <span class="badge bg-info">${resourceType}</span> | 
+                    <strong>Node ID:</strong> ${nodeId}
+                </small>
+            </div>
+        </div>
+    `;
+    
+    viewer.innerHTML = html;
+}
+
+/**
+ * Open resource in fullscreen modal
+ */
+function openResourceInFullscreen(showUrl, title) {
+    // Ensure Bootstrap is loaded
+    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        console.error('Bootstrap is not loaded. Cannot open modal.');
+        // Fallback: open in new window
+        window.open(showUrl, '_blank');
+        return;
+    }
+    
+    const iframe = document.getElementById('resourceIframe');
+    const modalElement = document.getElementById('resourceIframeModal');
+    const modalLabel = document.getElementById('resourceIframeModalLabel');
+    
+    if (!modalElement) {
+        console.error('Modal element not found');
+        return;
+    }
+    
+    if (iframe) {
+        iframe.src = showUrl;
+    }
+    if (modalLabel) {
+        modalLabel.textContent = title;
+    }
+    
+    // Show fullscreen modal - use getOrCreateInstance for safety
+    try {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    } catch (error) {
+        console.error('Error opening modal:', error);
+        // Fallback: open in new window
+        window.open(showUrl, '_blank');
+    }
+}
+
+/**
+ * Show error message in resources list
+ */
+function showCourseResourcesError(message) {
+    const resourcesList = document.getElementById('courseResourcesList');
+    if (resourcesList) {
+        resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                <p class="text-danger mt-2 mb-0">${escapeHtml(message)}</p>
+            </li>
+        `;
+    }
+}
+
+/**
+ * Utility: Escape HTML
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize modal handlers when DOM and Bootstrap are ready
+(function() {
+    function initModalHandlers() {
+        // Ensure Bootstrap is loaded
+        if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+            // Retry after a short delay if Bootstrap isn't ready yet
+            setTimeout(initModalHandlers, 100);
+            return;
+        }
+        
+        const modal = document.getElementById('courseResourcesModal');
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                // Reset viewer when modal closes
+                const viewer = document.getElementById('courseResourceViewer');
+                if (viewer) {
+                    viewer.innerHTML = `
+                        <div class="text-center text-muted p-5">
+                            <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="mt-3">Select a resource to view</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+    }
+    
+    // Wait for DOM and Bootstrap to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initModalHandlers);
+    } else {
+        // DOM is already ready, but Bootstrap might not be
+        initModalHandlers();
+    }
+})();
+</script>
 {% endblock %}

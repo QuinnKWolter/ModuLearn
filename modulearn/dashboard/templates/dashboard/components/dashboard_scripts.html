@@ -37,25 +37,70 @@ document.addEventListener('DOMContentLoaded', function() {
     window.updateFetchButtonState();
     
     // Auto-fetch user's KnowledgeTree groups and Course IDs
-    autoLoadUserGroups();
+    autoLoadUserGroups().catch(err => console.error('Error loading user groups:', err));
 });
 
 /**
  * Automatically load user's KnowledgeTree groups and Course IDs.
  * Uses groups data provided by backend (from direct database query).
  * If successful, show dropdown for group selection.
+ * If preselected_group is provided (from URL parameter), auto-populate and fetch.
  */
-function autoLoadUserGroups() {
+async function autoLoadUserGroups() {
     const grpInput = document.getElementById('grp');
     const cidInput = document.getElementById('cid');
     const fetchBtn = document.getElementById('fetchDataBtn');
     
     // Get groups from backend-provided data (already fetched via direct DB query)
     const groups = window.autoGroups || [];
+    const preselectedGroup = window.preselectedGroup || '';
     
     if (groups && groups.length > 0) {
         // Show group dropdown selector (no auto-select - let user choose)
         showGroupDropdown(groups, grpInput, cidInput);
+        
+        // If a group is preselected from URL parameter, wait for dropdown to be created, then select it
+        if (preselectedGroup) {
+            // Wait a moment for dropdown to be fully created, then select the group
+            setTimeout(() => {
+                const selectedGroup = groups.find(g => g.group_login === preselectedGroup);
+                if (selectedGroup) {
+                    // Find the dropdown and select the group
+                    const groupSelect = document.getElementById('ktGroupSelect');
+                    if (groupSelect) {
+                        // Find the option index for this group
+                        const groupIndex = groups.findIndex(g => g.group_login === preselectedGroup);
+                        if (groupIndex !== -1) {
+                            groupSelect.value = groupIndex.toString();
+                            // Trigger the change event to populate Course IDs
+                            const changeEvent = new Event('change', { bubbles: true });
+                            groupSelect.dispatchEvent(changeEvent);
+                            
+                            // If there's only one course ID, auto-trigger fetch after Course ID is populated
+                            if (selectedGroup.course_ids && selectedGroup.course_ids.length === 1) {
+                                setTimeout(() => {
+                                    if (fetchBtn && !fetchBtn.disabled) {
+                                        handleFetch();
+                                    }
+                                }, 1200); // Wait for Course ID to be populated
+                            }
+                        }
+                    } else {
+                        // Fallback: set input directly if dropdown not found
+                        grpInput.value = preselectedGroup;
+                        window.updateFetchButtonState();
+                    }
+                } else {
+                    // Group not found in auto-groups, but set it anyway and let user discover course IDs
+                    grpInput.value = preselectedGroup;
+                    window.updateFetchButtonState();
+                }
+            }, 200); // Small delay to ensure dropdown is created
+        }
+    } else if (preselectedGroup) {
+        // No auto-groups but preselected group provided - set it manually
+        grpInput.value = preselectedGroup;
+        window.updateFetchButtonState();
     }
     // If no groups, silently fail - manual input is still available
 }
@@ -111,9 +156,6 @@ function showGroupDropdown(groups, grpInput, cidInput) {
     grpCol.insertBefore(dropdownContainer, originalInput);
     
     // Store groups data globally for access
-    window.ktGroupsData = groups;
-    
-    // Store groups data for access in change handler
     window.ktGroupsData = groups;
     
     // Add change listener for group selection

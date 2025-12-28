@@ -7,7 +7,7 @@ from courses.utils import get_course_auth_token
 import json
 from urllib.parse import urlparse
 from py_mini_racer import MiniRacer
-from .kt_utils import get_user_groups_with_course_ids
+from .kt_utils import get_user_groups_with_course_ids, get_course_resources
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,9 +46,35 @@ def instructor_dashboard(request):
         'enrollments__student'
     )
     
+    # Get enrollments where instructor is enrolled as student
+    student_enrollments = Enrollment.objects.filter(
+        student=request.user
+    ).select_related('course_instance', 'course_instance__course', 'course_progress')
+    
+    # Add enrolled course instances to the list
+    enrolled_instances = []
+    for enrollment in student_enrollments:
+        instance = enrollment.course_instance
+        instance.user_enrollment = enrollment
+        if instance not in course_instances:  # Avoid duplicates
+            enrolled_instances.append(instance)
+    
+    # Fetch KnowledgeTree legacy groups for instructors (with MasteryGrids node IDs)
+    legacy_groups = []
+    if request.user.kt_login or request.user.kt_user_id:
+        try:
+            from .kt_utils import get_user_groups_with_masterygrids_nodes
+            legacy_groups = get_user_groups_with_masterygrids_nodes(request.user)
+            logger.info(f"Found {len(legacy_groups)} legacy groups for instructor {request.user.username}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch legacy groups for instructor {request.user.username}: {str(e)}")
+            legacy_groups = []
+    
     return render(request, 'dashboard/instructor_dashboard.html', {
         'courses': courses,
-        'course_instances': course_instances
+        'course_instances': course_instances,
+        'enrolled_instances': enrolled_instances,
+        'legacy_groups': legacy_groups
     })
 
 @login_required
@@ -71,7 +97,11 @@ def generate_course_auth_url(request):
 def legacy_dashboard(request):
     """
     Displays the legacy dashboard with learning analytics for MasteryGrids courses.
+    Accepts ?grp=GROUP_ID GET parameter to auto-populate and fetch data.
     """
+    # Get Group ID from GET parameter if provided
+    preselected_group = request.GET.get('grp', '').strip()
+    
     # Try to get user's KnowledgeTree groups and Course IDs automatically
     auto_groups = []
     if request.user.kt_login or request.user.kt_user_id:
@@ -85,6 +115,7 @@ def legacy_dashboard(request):
     return render(request, 'dashboard/legacy_dashboard.html', {
         'user': request.user,
         'auto_groups': auto_groups,  # Pass groups to template (will be serialized with json_script filter)
+        'preselected_group': preselected_group,  # Group ID from GET parameter
     })
 
 @login_required
@@ -123,6 +154,33 @@ def discover_course_ids(request):
         return JsonResponse({
             'error': f'Failed to discover Course IDs: {str(e)}',
             'course_ids': []
+        }, status=500)
+
+
+@login_required
+def get_course_resources_api(request, group_login: str):
+    """
+    API endpoint to get course resources for a KnowledgeTree group.
+    
+    Returns JSON with list of resources (MasteryGrids, surveys, etc.) that can be
+    rendered in an IFrame using the Show servlet.
+    """
+    try:
+        resources = get_course_resources(group_login)
+        
+        return JsonResponse({
+            'success': True,
+            'resources': resources,
+            'group_login': group_login,
+            'count': len(resources)
+        })
+    except Exception as e:
+        logger.error(f"Error in get_course_resources_api for group {group_login}: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'resources': [],
+            'group_login': group_login
         }, status=500)
 
 @login_required

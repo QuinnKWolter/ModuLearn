@@ -13,4 +13,5 @@ urlpatterns = [
     path("api/fetch_all_students_analytics/", views.fetch_all_students_analytics, name="fetch_all_students_analytics"),
     path("api/fetch_class_list/", views.fetch_class_list, name="fetch_class_list"),
     path("api/discover_course_ids/", views.discover_course_ids, name="discover_course_ids"),
+    path("api/course_resources/<str:group_login>/", views.get_course_resources_api, name="get_course_resources_api"),
 ]

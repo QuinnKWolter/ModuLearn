@@ -58,8 +58,10 @@ def course_list(request):
     Displays a list of courses with enrollment and progress information.
     Instructors see courses they teach or are enrolled in.
     Students see only courses they are enrolled in.
+    For instructors, also fetches KnowledgeTree legacy groups.
     """
     course_instances = []
+    legacy_groups = []
     
     if request.user.is_authenticated:
         if request.user.is_student:
@@ -92,9 +94,20 @@ def course_list(request):
                 instance.user_enrollment = enrollment
                 if instance not in course_instances:  # Avoid duplicates
                     course_instances.append(instance)
+            
+            # Fetch KnowledgeTree legacy groups for instructors
+            if request.user.kt_login or request.user.kt_user_id:
+                try:
+                    from dashboard.kt_utils import get_user_groups_with_course_ids
+                    legacy_groups = get_user_groups_with_course_ids(request.user)
+                    logger.info(f"Found {len(legacy_groups)} legacy groups for instructor {request.user.username}")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch legacy groups for instructor {request.user.username}: {str(e)}")
+                    legacy_groups = []
     
     return render(request, 'courses/course_list.html', {
         'course_instances': course_instances,
+        'legacy_groups': legacy_groups,
         'lti_data': getattr(request.user, 'lti_data', {})
     })
 

@@ -58,7 +58,7 @@ def login_view(request):
                     
                     if user is not None:
                         login(request, user)
-                        messages.success(request, 'Successfully signed in with your KnowledgeTree account. Please update your profile information.')
+                        messages.success(request, 'Successfully signed in with your KnowledgeTree account.')
                         return redirect('accounts:profile')
                     else:
                         # Both Django and KnowledgeTree authentication failed
@@ -91,6 +91,16 @@ def profile_view(request):
     profile_form = ProfileEditForm(instance=request.user)
     password_form = PasswordChangeFormCustom(user=request.user)
     
+    # Fetch KnowledgeTree groups with course_ids and MasteryGrids node IDs
+    legacy_groups = []
+    if request.user.kt_login or request.user.kt_user_id:
+        try:
+            from dashboard.kt_utils import get_user_groups_with_masterygrids_nodes
+            legacy_groups = get_user_groups_with_masterygrids_nodes(request.user)
+        except Exception as e:
+            logger.warning(f"Failed to fetch legacy groups for profile: {str(e)}")
+            legacy_groups = []
+    
     if request.method == 'POST':
         if 'update_profile' in request.POST:
             profile_form = ProfileEditForm(request.POST, instance=request.user)
@@ -109,4 +119,5 @@ def profile_view(request):
     return render(request, 'accounts/profile.html', {
         'profile_form': profile_form,
         'password_form': password_form,
+        'legacy_groups': legacy_groups,  # Pass groups with course_ids for MasteryGrids links
     })

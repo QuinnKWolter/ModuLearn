@@ -42,7 +42,63 @@
               <p class="card-text"><small class="text-muted"><strong>KT User ID:</strong> {{ user.kt_user_id }}</small></p>
             {% endif %}
             {% if user.kt_groups %}
-              <p class="card-text"><small class="text-muted"><strong>KT Groups:</strong> {{ user.kt_groups|join:", " }}</small></p>
+              <div class="mt-2">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#ktGroupsCollapse" aria-expanded="false" aria-controls="ktGroupsCollapse">
+                  <i class="bi bi-chevron-down"></i> View KT Groups ({{ user.kt_groups|length }})
+                </button>
+                <div class="collapse mt-2" id="ktGroupsCollapse">
+                  <div class="card card-body p-2">
+                    <!-- Search/Filter Box -->
+                    <div class="mb-2">
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="ktGroupsSearch" placeholder="Search groups...">
+                        <button class="btn btn-outline-secondary" type="button" id="clearKtGroupsSearch" style="display: none;">
+                          <i class="bi bi-x-circle"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                      <ul class="list-group list-group-flush mb-0" id="ktGroupsList">
+                        {% if legacy_groups %}
+                          {% for group in legacy_groups %}
+                            <li class="list-group-item p-2 d-flex justify-content-between align-items-center kt-group-item" data-group-name="{{ group.group_name|lower }}">
+                              <span class="text-truncate flex-grow-1">{{ group.group_name }}</span>
+                              <div class="btn-group ms-2" role="group">
+                                <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group.group_login }}" class="btn btn-sm btn-primary" title="View Legacy Dashboard">
+                                  <i class="bi bi-arrow-right-circle"></i> Dashboard
+                                </a>
+                                {% if group.course_ids %}
+                                  {# Unified Course Resources button - opens modal with all resources #}
+                                  <button type="button" 
+                                          class="btn btn-sm btn-outline-primary" 
+                                          data-group-login="{{ group.group_login }}"
+                                          data-group-name="{{ group.group_name }}"
+                                          onclick="openCourseResourcesModal('{{ group.group_login }}', '{{ group.group_name|escapejs }}')"
+                                          title="View all course resources">
+                                    <i class="bi bi-folder"></i>
+                                  </button>
+                                {% endif %}
+                              </div>
+                            </li>
+                          {% endfor %}
+                        {% else %}
+                          {% for group in user.kt_groups %}
+                            <li class="list-group-item p-2 d-flex justify-content-between align-items-center kt-group-item" data-group-name="{{ group|lower }}">
+                              <span class="text-truncate flex-grow-1">{{ group }}</span>
+                              <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group }}" class="btn btn-sm btn-primary ms-2" title="View Legacy Dashboard">
+                                <i class="bi bi-arrow-right-circle"></i> View
+                              </a>
+                            </li>
+                          {% endfor %}
+                        {% endif %}
+                      </ul>
+                      <div id="ktGroupsEmpty" class="text-muted text-center p-2" style="display: none;">
+                        <i class="bi bi-search me-1"></i>No groups match your search.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             {% endif %}
           {% endif %}
           {% if user.lti_data %}
@@ -89,4 +145,408 @@
     <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Logout</a>
   </div>
 </div>
+{% endblock %}
+
+{% if user.kt_groups %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('ktGroupsSearch');
+  const clearBtn = document.getElementById('clearKtGroupsSearch');
+  const emptyMsg = document.getElementById('ktGroupsEmpty');
+  const groupsList = document.getElementById('ktGroupsList');
+  const collapseElement = document.getElementById('ktGroupsCollapse');
+  
+  if (!searchInput) return;
+  
+  function filterGroups() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    let visibleCount = 0;
+    
+    // Re-query items each time to ensure we have the latest DOM state
+    // Query from within the collapse element to ensure we get all items
+    const container = collapseElement || document;
+    const currentGroupItems = container.querySelectorAll('.kt-group-item');
+    
+    if (currentGroupItems.length === 0) {
+      console.warn('No .kt-group-item elements found');
+      return;
+    }
+    
+    currentGroupItems.forEach(item => {
+      // Try to get group name from data attribute first
+      let groupName = (item.getAttribute('data-group-name') || '').toLowerCase();
+      
+      // Fallback: get text content from the span if data attribute is missing
+      if (!groupName) {
+        const textSpan = item.querySelector('span.text-truncate');
+        if (textSpan) {
+          groupName = textSpan.textContent.trim().toLowerCase();
+        }
+      }
+      
+      // Check if it matches the search term
+      const matches = !searchTerm || groupName.includes(searchTerm);
+      
+      if (matches) {
+        // Show the item - use both style and class manipulation for robustness
+        item.style.display = '';
+        item.classList.remove('d-none');
+        visibleCount++;
+      } else {
+        // Hide the item
+        item.style.display = 'none';
+        item.classList.add('d-none');
+      }
+    });
+    
+    // Show/hide empty message and list
+    if (visibleCount === 0 && searchTerm) {
+      if (emptyMsg) {
+        emptyMsg.style.display = 'block';
+        emptyMsg.classList.remove('d-none');
+      }
+      if (groupsList) {
+        groupsList.style.display = 'none';
+        groupsList.classList.add('d-none');
+      }
+    } else {
+      if (emptyMsg) {
+        emptyMsg.style.display = 'none';
+        emptyMsg.classList.add('d-none');
+      }
+      if (groupsList) {
+        groupsList.style.display = '';
+        groupsList.classList.remove('d-none');
+      }
+    }
+    
+    // Show/hide clear button
+    if (clearBtn) {
+      if (searchTerm) {
+        clearBtn.style.display = 'inline-block';
+        clearBtn.classList.remove('d-none');
+      } else {
+        clearBtn.style.display = 'none';
+        clearBtn.classList.add('d-none');
+      }
+    }
+  }
+  
+  // Set up input listener
+  searchInput.addEventListener('input', filterGroups);
+  
+  // Set up clear button
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      searchInput.value = '';
+      filterGroups();
+      searchInput.focus();
+    });
+  }
+  
+  // Re-run filter when collapse is shown (in case items weren't accessible initially)
+  if (collapseElement) {
+    collapseElement.addEventListener('shown.bs.collapse', function() {
+      // Small delay to ensure DOM is fully updated
+      setTimeout(filterGroups, 50);
+    });
+    
+    // Also run filter immediately if collapse is already shown
+    // Check if collapse is currently visible
+    if (collapseElement.classList.contains('show')) {
+      setTimeout(filterGroups, 100);
+    }
+  }
+  
+  // Initial filter run to set up initial state
+  setTimeout(filterGroups, 100);
+});
+</script>
+{% endif %}
+
+{% include 'dashboard/components/course_resources_modal.html' %}
+
+{% block extra_js %}
+<script>
+// Course Resources Modal Functionality (shared with dashboard)
+let courseResourcesCache = {};
+
+/**
+ * Open course resources modal safely
+ */
+function openCourseResourcesModal(groupLogin, groupName) {
+    // Ensure Bootstrap is loaded before opening modal
+    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        console.error('Bootstrap is not loaded. Cannot open modal.');
+        alert('Please wait for the page to finish loading.');
+        return;
+    }
+    
+    const modalElement = document.getElementById('courseResourcesModal');
+    if (!modalElement) {
+        console.error('Modal element not found');
+        return;
+    }
+    
+    // Open modal using Bootstrap's safe method
+    try {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+        // Load resources after modal is shown
+        loadCourseResources(groupLogin, groupName);
+    } catch (error) {
+        console.error('Error opening modal:', error);
+    }
+}
+
+/**
+ * Load course resources for a group and display in modal
+ */
+async function loadCourseResources(groupLogin, groupName) {
+    // Update modal title
+    const groupNameEl = document.getElementById('courseResourcesGroupName');
+    if (groupNameEl) {
+        groupNameEl.textContent = groupName || groupLogin;
+    }
+    
+    // Check cache first
+    if (courseResourcesCache[groupLogin]) {
+        renderCourseResources(courseResourcesCache[groupLogin]);
+        return;
+    }
+    
+    // Show loading state
+    const resourcesList = document.getElementById('courseResourcesList');
+    if (resourcesList) {
+        resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading resources...</span>
+                </div>
+                <p class="text-muted mt-2 mb-0">Loading resources...</p>
+            </li>
+        `;
+    }
+    
+    // Reset viewer
+    const viewer = document.getElementById('courseResourceViewer');
+    if (viewer) {
+        viewer.innerHTML = `
+            <div class="text-center text-muted p-5">
+                <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3">Select a resource to view</p>
+            </div>
+        `;
+    }
+    
+    try {
+        const response = await fetch(`/dashboard/api/course_resources/${encodeURIComponent(groupLogin)}/`);
+        const data = await response.json();
+        
+        if (data.success && data.resources) {
+            // Cache the results
+            courseResourcesCache[groupLogin] = data.resources;
+            renderCourseResources(data.resources);
+        } else {
+            showCourseResourcesError(data.error || 'Failed to load course resources');
+        }
+    } catch (error) {
+        console.error('Error loading course resources:', error);
+        showCourseResourcesError('Error loading course resources. Please try again.');
+    }
+}
+
+/**
+ * Render course resources list
+ */
+function renderCourseResources(resources) {
+    const resourcesList = document.getElementById('courseResourcesList');
+    if (!resourcesList) return;
+    
+    if (resources.length === 0) {
+        resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                <p class="text-muted mt-2 mb-0">No resources available for this course.</p>
+            </li>
+        `;
+        return;
+    }
+    
+    const html = resources.map(resource => {
+        const isMasteryGrids = resource.resource_type === 'masterygrids';
+        const iconClass = isMasteryGrids ? 'bi-grid-3x3-gap' : 
+                         resource.resource_type === 'folder' ? 'bi-folder' : 'bi-file-earmark';
+        const badgeClass = isMasteryGrids ? 'bg-primary' : 
+                          resource.resource_type === 'folder' ? 'bg-secondary' : 'bg-info';
+        
+        return `
+            <li class="list-group-item list-group-item-action" 
+                onclick="selectCourseResource(${resource.NodeID}, '${escapeHtml(resource.Title)}', '${escapeHtml(resource.show_url)}', '${resource.resource_type}')" 
+                style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <i class="bi ${iconClass} me-2"></i>
+                            <strong>${escapeHtml(resource.Title)}</strong>
+                        </div>
+                        ${resource.Description ? `<small class="text-muted d-block mt-1">${escapeHtml(resource.Description)}</small>` : ''}
+                    </div>
+                    <div class="ms-2">
+                        <span class="badge ${badgeClass}">${resource.resource_type}</span>
+                        <i class="bi bi-chevron-right ms-2 text-muted"></i>
+                    </div>
+                </div>
+            </li>
+        `;
+    }).join('');
+    
+    resourcesList.innerHTML = html;
+}
+
+/**
+ * Select and display a course resource
+ */
+function selectCourseResource(nodeId, title, showUrl, resourceType) {
+    const viewer = document.getElementById('courseResourceViewer');
+    if (!viewer) return;
+    
+    // Update active state in list
+    document.querySelectorAll('#courseResourcesList .list-group-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.target.closest('.list-group-item').classList.add('active');
+    
+    // Render resource in viewer
+    const html = `
+        <div class="card h-100 border-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi ${resourceType === 'masterygrids' ? 'bi-grid-3x3-gap' : resourceType === 'folder' ? 'bi-folder' : 'bi-file-earmark'} me-2"></i>
+                    ${escapeHtml(title)}
+                </h6>
+                <button class="btn btn-sm btn-primary" onclick="openResourceInFullscreen('${escapeHtml(showUrl)}', '${escapeHtml(title)}')">
+                    <i class="bi bi-arrows-fullscreen me-1"></i>Open Fullscreen
+                </button>
+            </div>
+            <div class="card-body p-0" style="height: calc(600px - 60px);">
+                <iframe 
+                    src="${showUrl}" 
+                    style="width: 100%; height: 100%; border: none;"
+                    allowfullscreen
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups">
+                </iframe>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <strong>Type:</strong> <span class="badge bg-info">${resourceType}</span> | 
+                    <strong>Node ID:</strong> ${nodeId}
+                </small>
+            </div>
+        </div>
+    `;
+    
+    viewer.innerHTML = html;
+}
+
+/**
+ * Open resource in fullscreen modal
+ */
+function openResourceInFullscreen(showUrl, title) {
+    // Ensure Bootstrap is loaded
+    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        console.error('Bootstrap is not loaded. Cannot open modal.');
+        // Fallback: open in new window
+        window.open(showUrl, '_blank');
+        return;
+    }
+    
+    const iframe = document.getElementById('resourceIframe');
+    const modalElement = document.getElementById('resourceIframeModal');
+    const modalLabel = document.getElementById('resourceIframeModalLabel');
+    
+    if (!modalElement) {
+        console.error('Modal element not found');
+        return;
+    }
+    
+    if (iframe) {
+        iframe.src = showUrl;
+    }
+    if (modalLabel) {
+        modalLabel.textContent = title;
+    }
+    
+    // Show fullscreen modal - use getOrCreateInstance for safety
+    try {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    } catch (error) {
+        console.error('Error opening modal:', error);
+        // Fallback: open in new window
+        window.open(showUrl, '_blank');
+    }
+}
+
+/**
+ * Show error message in resources list
+ */
+function showCourseResourcesError(message) {
+    const resourcesList = document.getElementById('courseResourcesList');
+    if (resourcesList) {
+        resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                <p class="text-danger mt-2 mb-0">${escapeHtml(message)}</p>
+            </li>
+        `;
+    }
+}
+
+/**
+ * Utility: Escape HTML
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize modal handlers when DOM and Bootstrap are ready
+(function() {
+    function initModalHandlers() {
+        // Ensure Bootstrap is loaded
+        if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+            // Retry after a short delay if Bootstrap isn't ready yet
+            setTimeout(initModalHandlers, 100);
+            return;
+        }
+        
+        const modal = document.getElementById('courseResourcesModal');
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                // Reset viewer when modal closes
+                const viewer = document.getElementById('courseResourceViewer');
+                if (viewer) {
+                    viewer.innerHTML = `
+                        <div class="text-center text-muted p-5">
+                            <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="mt-3">Select a resource to view</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+    }
+    
+    // Wait for DOM and Bootstrap to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initModalHandlers);
+    } else {
+        // DOM is already ready, but Bootstrap might not be
+        initModalHandlers();
+    }
+})();
+</script>
 {% endblock %}
