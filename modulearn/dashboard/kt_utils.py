@@ -8,8 +8,46 @@ import pymysql
 from typing import List, Dict, Optional, Any
 from django.conf import settings
 from .kt_db_connection import get_paws_db_connection
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def _get_proxied_url(url: str) -> str:
+    """
+    Convert HTTP KnowledgeTree URLs to proxied HTTPS URLs for iframe embedding.
+    
+    Uses the existing proxy system to:
+    1. Avoid mixed content errors in production (HTTPS page loading HTTP iframe)
+    2. Handle KnowledgeTree's navigation attempts more gracefully
+    
+    The proxy system in views_proxy.py handles:
+    - Converting HTTP to HTTPS via /proxy/http/<host>/<path>
+    - Rewriting URLs in HTML content to go through proxy
+    - Preserving cookies and session state
+    
+    Args:
+        url: Original HTTP URL (e.g., "http://adapt2.sis.pitt.edu/kt/content/Show?id=6389")
+    
+    Returns:
+        Proxied URL format: /proxy/http/<host>/<path>?<query>
+        Or original URL if not HTTP or not in allowed hosts
+    """
+    u = urlparse(url)
+    
+    # Only proxy HTTP URLs from allowed hosts
+    if u.scheme == "http" and u.hostname in getattr(settings, "PROXY_ALLOWED_HOSTS", set()):
+        # Use path-style proxy format: /proxy/http/<host>/<path>?<query>
+        # This matches the existing proxy system in views_proxy.py
+        path = u.path.lstrip('/')
+        base = f"/proxy/http/{u.hostname}/{path}"
+        proxied_url = f"{base}?{u.query}" if u.query else base
+        logger.debug(f"Proxying KnowledgeTree URL: {url} -> {proxied_url}")
+        return proxied_url
+    
+    # Return original URL if not HTTP or not in allowed hosts
+    logger.debug(f"Not proxying URL (not HTTP or not allowed): {url}")
+    return url
 
 
 def get_kt_user_id_by_login(kt_login: str) -> Optional[int]:
@@ -681,7 +719,10 @@ def get_course_resources(group_login: str) -> List[Dict[str, Any]]:
                 for row in rows:
                     resource = dict(row)
                     # Construct Show servlet URL for IFrame rendering
-                    resource['show_url'] = f"http://adapt2.sis.pitt.edu/kt/content/Show?id={resource['NodeID']}"
+                    # Use proxy in production (HTTPS) to avoid mixed content issues
+                    original_url = f"http://adapt2.sis.pitt.edu/kt/content/Show?id={resource['NodeID']}"
+                    resource['show_url'] = _get_proxied_url(original_url)
+                    resource['show_url_direct'] = original_url  # Keep original for fallback
                     # Determine resource type
                     url_lower = (resource.get('URL') or '').lower()
                     if 'mastery-grids' in url_lower or 'masterygrids' in url_lower:

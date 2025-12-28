@@ -63,6 +63,12 @@ def http_get_proxy(request):
     if u.query:
         target += f"?{u.query}"
     headers = {"Host": u.hostname, "User-Agent": "ModuLearnProxy/1.0"}
+    
+    # Forward cookies from the original request to KnowledgeTree
+    # This allows authenticated requests to KnowledgeTree to work through the proxy
+    cookie_header = request.META.get("HTTP_COOKIE", "")
+    if cookie_header:
+        headers["Cookie"] = cookie_header
 
     print(f"DEBUG PROXY: Making request to (IPv4): {target} Host={u.hostname}")
     try:
@@ -115,14 +121,26 @@ def http_get_proxy(request):
 
                 content_str = re.sub(r'(src|href)="([^"]+)"', rewrite_match, content_str)
                 content_str = re.sub(r"(src|href)='([^']+)'", rewrite_match, content_str)
-                content_str = re.sub(r'action="([^"]+)"', rewrite_match, content_str)
-                content_str = re.sub(r"action='([^']+)'", rewrite_match, content_str)
+                # Make action pattern consistent with src/href (include "action" as group 1)
+                content_str = re.sub(r'(action)="([^"]+)"', rewrite_match, content_str)
+                content_str = re.sub(r"(action)='([^']+)'", rewrite_match, content_str)
                 
                 content = content_str.encode('utf-8')
                 print(f"DEBUG PROXY: Rewrote HTML content: {rewrite_count} URLs changed, {original_length} -> {len(content)} bytes")
             
             resp = HttpResponse(content, content_type=ctype)
             resp["Cache-Control"] = r.headers.get("Cache-Control", "public, max-age=3600")
+            
+            # Forward Set-Cookie headers from KnowledgeTree to the browser
+            # This allows KnowledgeTree session cookies to be set for the proxy domain
+            # Note: requests library's headers is a CaseInsensitiveDict (not Django's headers)
+            # It doesn't have getlist(), so we use .get() which returns the header value
+            # If there are multiple Set-Cookie headers, requests typically only exposes one
+            # Domain restrictions may prevent some cookies from working, but this helps
+            set_cookie_header = r.headers.get("Set-Cookie")
+            if set_cookie_header:
+                resp["Set-Cookie"] = set_cookie_header
+            
             if getattr(settings, "PROXY_CORS_ORIGIN", None):
                 resp["Access-Control-Allow-Origin"] = settings.PROXY_CORS_ORIGIN
             return resp
