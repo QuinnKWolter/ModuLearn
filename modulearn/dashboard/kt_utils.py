@@ -32,6 +32,7 @@ def _get_proxied_url(url: str) -> str:
     Returns:
         Proxied URL format: /proxy/http/<host>/<path>?<query>
         Or original URL if not HTTP or not in allowed hosts
+        In production, includes /modulearn/ prefix if FORCE_SCRIPT_NAME is set
     """
     u = urlparse(url)
     
@@ -42,6 +43,17 @@ def _get_proxied_url(url: str) -> str:
         path = u.path.lstrip('/')
         base = f"/proxy/http/{u.hostname}/{path}"
         proxied_url = f"{base}?{u.query}" if u.query else base
+        
+        # In production, Django may use FORCE_SCRIPT_NAME to prefix all URLs with /modulearn/
+        # We need to include this prefix so the URL works correctly
+        script_name = getattr(settings, 'FORCE_SCRIPT_NAME', '')
+        if script_name:
+            # Ensure script_name starts with / and doesn't end with /
+            script_name = script_name.rstrip('/')
+            if not script_name.startswith('/'):
+                script_name = '/' + script_name
+            proxied_url = script_name + proxied_url
+        
         logger.debug(f"Proxying KnowledgeTree URL: {url} -> {proxied_url}")
         return proxied_url
     

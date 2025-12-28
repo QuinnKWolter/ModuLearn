@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 import requests
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, QueryDict
+from django.views.decorators.csrf import csrf_exempt
 
 def _resolve_ipv4(host: str, port: int = 80):
     # Return first IPv4 address or None
@@ -16,7 +17,19 @@ def _to_path_style(url: str) -> str:
     if u.scheme == "http" and u.hostname in getattr(settings, "PROXY_ALLOWED_HOSTS", set()):
         path = u.path.lstrip('/')
         base = f"/proxy/http/{u.hostname}/{path}"
-        return f"{base}?{u.query}" if u.query else base
+        proxied_url = f"{base}?{u.query}" if u.query else base
+        
+        # In production, Django may use FORCE_SCRIPT_NAME to prefix all URLs with /modulearn/
+        # We need to include this prefix so the URL works correctly
+        script_name = getattr(settings, 'FORCE_SCRIPT_NAME', '')
+        if script_name:
+            # Ensure script_name starts with / and doesn't end with /
+            script_name = script_name.rstrip('/')
+            if not script_name.startswith('/'):
+                script_name = '/' + script_name
+            proxied_url = script_name + proxied_url
+        
+        return proxied_url
     return url  # https or non-allowed hosts unchanged
 
 def _rewrite_url(url: str, _base_url_ignored: str) -> str:
@@ -34,6 +47,7 @@ def _rewrite_url(url: str, _base_url_ignored: str) -> str:
     # Now just convert absolute http URLs to path-style if allowed
     return _to_path_style(url)
 
+@csrf_exempt
 def http_get_proxy(request):
     print(f"DEBUG PROXY: Method: {request.method}")
     if request.method not in ("GET", "HEAD"):
@@ -148,6 +162,7 @@ def http_get_proxy(request):
         print(f"DEBUG PROXY: Request failed: {e}")
         return HttpResponseBadRequest("Upstream fetch failed")
 
+@csrf_exempt
 def http_get_proxy_path(request, rest: str):
     """
     Accepts /proxy/<scheme>/<host>/<path...>?<query>
