@@ -340,7 +340,10 @@ async function loadCourseResources(groupLogin, groupName) {
     }
     
     try {
-        const response = await fetch(`/dashboard/api/course_resources/${encodeURIComponent(groupLogin)}/`);
+        // Construct URL using Django's url tag - get base URL and replace placeholder
+        const baseUrl = "{% url 'dashboard:get_course_resources_api' group_login='GROUP_LOGIN_PLACEHOLDER' %}";
+        const courseResourcesUrl = baseUrl.replace('GROUP_LOGIN_PLACEHOLDER', encodeURIComponent(groupLogin));
+        const response = await fetch(courseResourcesUrl);
         const data = await response.json();
         
         if (data.success && data.resources) {
