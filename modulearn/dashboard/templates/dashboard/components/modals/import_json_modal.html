@@ -1,0 +1,81 @@
+<div class="modal fade" id="importJsonCourseModal" tabindex="-1" aria-labelledby="importJsonCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white border-0">
+        <h5 class="modal-title fw-semibold" id="importJsonCourseModalLabel">
+          <i class="bi bi-file-earmark-code me-2"></i>Import Course Structure from JSON
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="jsonImportError" class="alert alert-danger border-0" style="display: none;" role="alert"></div>
+        <div id="jsonImportSuccess" class="alert alert-success border-0" style="display: none;" role="alert">
+          <i class="bi bi-check-circle me-2"></i>Course imported successfully!
+        </div>
+        
+        <ul class="nav nav-tabs nav-tabs-custom mb-3" id="importJsonTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab">
+              <i class="bi bi-cloud-upload me-2"></i>Upload File
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="paste-tab" data-bs-toggle="tab" data-bs-target="#paste-pane" type="button" role="tab">
+              <i class="bi bi-clipboard me-2"></i>Paste JSON
+            </button>
+          </li>
+        </ul>
+        
+        <div class="tab-content" id="importJsonTabContent">
+          <div class="tab-pane fade show active" id="upload-pane" role="tabpanel">
+            <div class="mb-3">
+              <label for="jsonFileInput" class="form-label fw-medium">Select JSON File</label>
+              <input type="file" class="form-control" id="jsonFileInput" accept=".json,application/json">
+              <small class="form-text text-muted">
+                <i class="bi bi-info-circle me-1"></i>Select a JSON file containing the course structure
+              </small>
+            </div>
+            <div id="filePreview" class="mt-3" style="display: none;">
+              <div class="card bg-light border-0">
+                <div class="card-body p-3">
+                  <h6 class="card-title small fw-semibold mb-2">
+                    <i class="bi bi-file-earmark-code me-1"></i>File Preview
+                  </h6>
+                  <pre id="filePreviewContent" class="bg-white p-3 rounded border" style="max-height: 200px; overflow-y: auto; font-size: 0.8em; margin: 0;"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tab-pane fade" id="paste-pane" role="tabpanel">
+            <div class="mb-3">
+              <label for="jsonTextInput" class="form-label fw-medium">Paste JSON Content</label>
+              <textarea class="form-control font-monospace" id="jsonTextInput" rows="12" 
+                        placeholder='{"id": "...", "name": "...", "units": [...]}'></textarea>
+              <small class="form-text text-muted">
+                <i class="bi bi-info-circle me-1"></i>Paste the complete course JSON structure here
+              </small>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="formatJsonBtn">
+                <i class="bi bi-code-square me-1"></i>Format JSON
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="clearJsonBtn">
+                <i class="bi bi-x-circle me-1"></i>Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="importJsonSubmitBtn">
+          <i class="bi bi-upload me-1"></i>Import Course
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

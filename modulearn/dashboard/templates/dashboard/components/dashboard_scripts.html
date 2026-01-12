@@ -1,6 +1,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('fetchDataBtn').addEventListener('click', handleFetch);
+    // Check if fetchDataBtn exists before adding listener
+    const fetchDataBtn = document.getElementById('fetchDataBtn');
+    if (fetchDataBtn) {
+        fetchDataBtn.addEventListener('click', handleFetch);
+    }
     
     // View mode change listeners
     document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
@@ -15,8 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Initialize button states on page load
-    updateButtonStates();
+    // Initialize button states on page load (only if elements exist)
+    const viewModeRadios = document.querySelectorAll('input[name="viewMode"]');
+    if (viewModeRadios.length > 0) {
+        updateButtonStates();
+    }
 
     // Simple validation for required fields (Group ID and Course ID)
     const grpInput = document.getElementById('grp');
@@ -32,9 +39,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    grpInput?.addEventListener('input', window.updateFetchButtonState);
-    cidInput?.addEventListener('input', window.updateFetchButtonState);
-    window.updateFetchButtonState();
+    // Only add listeners if elements exist
+    if (grpInput) {
+        grpInput.addEventListener('input', window.updateFetchButtonState);
+    }
+    if (cidInput) {
+        cidInput.addEventListener('input', window.updateFetchButtonState);
+    }
+    if (grpInput || cidInput || fetchBtn) {
+        window.updateFetchButtonState();
+    }
     
     // Auto-fetch user's KnowledgeTree groups and Course IDs
     autoLoadUserGroups().catch(err => console.error('Error loading user groups:', err));
@@ -50,6 +64,11 @@ async function autoLoadUserGroups() {
     const grpInput = document.getElementById('grp');
     const cidInput = document.getElementById('cid');
     const fetchBtn = document.getElementById('fetchDataBtn');
+    
+    // If required elements don't exist, exit early
+    if (!grpInput || !cidInput) {
+        return;
+    }
     
     // Get groups from backend-provided data (already fetched via direct DB query)
     const groups = window.autoGroups || [];
@@ -110,12 +129,24 @@ async function autoLoadUserGroups() {
  * This replaces the manual Group ID input when groups are available.
  */
 function showGroupDropdown(groups, grpInput, cidInput) {
+    // Guard: check if required elements exist
+    if (!grpInput || !cidInput) {
+        console.warn('showGroupDropdown: Required input elements not found');
+        return;
+    }
+    
     const headerCard = document.querySelector('.card-body.text-white');
-    if (!headerCard) return;
+    if (!headerCard) {
+        console.warn('showGroupDropdown: Header card not found');
+        return;
+    }
     
     // Find the Group ID input's parent column
     const grpCol = grpInput.closest('.col-md-3');
-    if (!grpCol) return;
+    if (!grpCol) {
+        console.warn('showGroupDropdown: Group input parent column not found');
+        return;
+    }
     
     // Store the original input (we'll hide it)
     const originalInput = grpInput;
@@ -160,6 +191,11 @@ function showGroupDropdown(groups, grpInput, cidInput) {
     
     // Add change listener for group selection
     const groupSelect = dropdownContainer.querySelector('#ktGroupSelect');
+    if (!groupSelect) {
+        console.warn('showGroupDropdown: Group select element not found');
+        return;
+    }
+    
     groupSelect.addEventListener('change', async function() {
         const selectedIndex = this.value;
         if (selectedIndex !== '') {
@@ -188,20 +224,28 @@ function showGroupDropdown(groups, grpInput, cidInput) {
     
     // Add manual entry toggle
     const manualLink = dropdownContainer.querySelector('#useManualGroup');
-    manualLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        // Hide dropdown, show manual input
-        dropdownContainer.style.display = 'none';
-        originalInput.style.display = 'block';
-        if (grpLabel) grpLabel.style.display = 'block';
-        originalInput.focus();
-    });
+    if (manualLink) {
+        manualLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Hide dropdown, show manual input
+            dropdownContainer.style.display = 'none';
+            originalInput.style.display = 'block';
+            if (grpLabel) grpLabel.style.display = 'block';
+            originalInput.focus();
+        });
+    }
 }
 
 /**
  * Handle group selection - populate Group ID field and discover Course IDs on-demand.
  */
 async function selectGroup(group, grpInput, cidInput) {
+    // Guard: check if required elements exist
+    if (!group || !grpInput || !cidInput) {
+        console.warn('selectGroup: Required parameters missing');
+        return;
+    }
+    
     // Populate Group ID
     grpInput.value = group.group_login;
     
@@ -210,6 +254,11 @@ async function selectGroup(group, grpInput, cidInput) {
     
     // Show loading indicator for Course ID discovery
     const cidCol = cidInput.closest('.col-md-3');
+    if (!cidCol) {
+        console.warn('selectGroup: Course ID input parent column not found');
+        return;
+    }
+    
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'kt-course-loading mt-2';
     loadingDiv.innerHTML = '<small class="text-white-50"><i class="fas fa-spinner fa-spin me-1"></i>Discovering Course IDs...</small>';
@@ -262,6 +311,12 @@ async function selectGroup(group, grpInput, cidInput) {
  * Show a dropdown for Course ID selection when multiple Course IDs are available.
  */
 function showCourseIdDropdown(courseIds, cidInput) {
+    // Guard: check if required parameters exist
+    if (!courseIds || !cidInput) {
+        console.warn('showCourseIdDropdown: Required parameters missing');
+        return;
+    }
+    
     // Remove existing Course ID dropdown if any
     const existingDropdown = document.querySelector('.kt-course-dropdown');
     if (existingDropdown) {
@@ -270,7 +325,10 @@ function showCourseIdDropdown(courseIds, cidInput) {
     
     // Find the Course ID input's parent column
     const cidCol = cidInput.closest('.col-md-3');
-    if (!cidCol) return;
+    if (!cidCol) {
+        console.warn('showCourseIdDropdown: Course ID input parent column not found');
+        return;
+    }
     
     const originalInput = cidInput;
     
@@ -307,32 +365,36 @@ function showCourseIdDropdown(courseIds, cidInput) {
     
     // Add change listener
     const courseSelect = dropdownContainer.querySelector('#ktCourseSelect');
-    courseSelect.addEventListener('change', function() {
-        originalInput.value = this.value;
-        if (window.updateFetchButtonState) {
-            window.updateFetchButtonState();
-        }
-    });
-    
-    // Auto-select first Course ID
-    if (courseIds.length > 0) {
-        courseSelect.value = courseIds[0];
-        originalInput.value = courseIds[0];
-        if (window.updateFetchButtonState) {
-            window.updateFetchButtonState();
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function() {
+            originalInput.value = this.value;
+            if (window.updateFetchButtonState) {
+                window.updateFetchButtonState();
+            }
+        });
+        
+        // Auto-select first Course ID
+        if (courseIds.length > 0) {
+            courseSelect.value = courseIds[0];
+            originalInput.value = courseIds[0];
+            if (window.updateFetchButtonState) {
+                window.updateFetchButtonState();
+            }
         }
     }
     
     // Add manual entry toggle
     const manualLink = dropdownContainer.querySelector('#useManualCourse');
-    manualLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        // Hide dropdown, show manual input
-        dropdownContainer.style.display = 'none';
-        originalInput.style.display = 'block';
-        if (cidLabel) cidLabel.style.display = 'block';
-        originalInput.focus();
-    });
+    if (manualLink) {
+        manualLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Hide dropdown, show manual input
+            dropdownContainer.style.display = 'none';
+            originalInput.style.display = 'block';
+            if (cidLabel) cidLabel.style.display = 'block';
+            originalInput.focus();
+        });
+    }
 }
 
 let responseData = null;
@@ -359,10 +421,16 @@ function handleFetch() {
         return; // Guard: do nothing if required fields are empty
     }
     
-    btn.disabled = true;
-    btnText.textContent = 'Loading...';
-    spinner.classList.remove('d-none');
-    progressContainer.classList.remove('d-none');
+    // Guard: exit if required elements don't exist
+    if (!btn || !progressContainer || !progressBar || !progressText || !progressPercent) {
+        console.warn('Dashboard fetch elements not found');
+        return;
+    }
+    
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Loading...';
+    if (spinner) spinner.classList.remove('d-none');
+    if (progressContainer) progressContainer.classList.remove('d-none');
     progressBar.style.width = '0%';
     progressPercent.textContent = '0%';
     

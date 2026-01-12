@@ -1,0 +1,92 @@
+{% load static %}
+<!-- Modern Header Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-white p-4">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                        <i class="fas fa-chart-line text-white fs-3"></i>
+                    </div>
+                    <div>
+                        <h1 class="h2 mb-1 fw-bold">Learning Analytics Dashboard</h1>
+                        <p class="mb-0 opacity-75">Advanced mastery tracking with interactive grid visualization</p>
+                    </div>
+                </div>
+                
+                <!-- Configuration Form -->
+                <form id="dashboardForm" class="row g-3">
+                    <div class="col-md-3" style="display: none;">
+                        <label for="usr" class="form-label fw-semibold text-white">User ID</label>
+                        <input type="text" class="form-control form-control-lg" id="usr" placeholder="Enter user ID">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="grp" class="form-label fw-semibold text-white">
+                            Group ID
+                            <small class="text-white-50 d-block" style="font-size: 0.75rem; font-weight: normal;">
+                                (Auto-filled if available)
+                            </small>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="grp" 
+                               name="grp" 
+                               value="{{ preselected_group|default:'' }}" 
+                               placeholder="Enter group ID">
+                    </div>
+                    <div class="col-md-3" style="display: none;">
+                        <label for="sid" class="form-label fw-semibold text-white">Session ID</label>
+                        <input type="text" class="form-control form-control-lg" id="sid" placeholder="Enter session ID">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="cid" class="form-label fw-semibold text-white">
+                            Course ID
+                            <small class="text-white-50 d-block" style="font-size: 0.75rem; font-weight: normal;">
+                                (Auto-filled if available)
+                            </small>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="cid" 
+                               name="cid" 
+                               value="" 
+                               placeholder="Enter course ID">
+                    </div>
+                </form>
+                
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <button type="button" 
+                            class="btn btn-dark btn-lg px-5 fw-bold" 
+                            id="fetchDataBtn" 
+                            data-api-url="{% url 'dashboard:fetch_analytics_data' %}">
+                        <i class="fas fa-rocket me-2"></i>
+                        <span id="fetchBtnText">Launch Analytics</span>
+                        <div class="spinner-border spinner-border-sm ms-2 d-none" id="fetchSpinner"></div>
+                    </button>
+                    <button type="button" 
+                            class="btn btn-outline-light btn-sm" 
+                            id="dashboardInfoBtn" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#dashboardInfoModal">
+                        <i class="fas fa-info-circle me-1"></i>Click Here For Info
+                    </button>
+                </div>
+                
+                <!-- Fetch Progress Bar -->
+                <div id="fetchProgressContainer" class="mt-3 d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-white-50" id="fetchProgressText">Fetching student data...</small>
+                        <small class="text-white-50" id="fetchProgressPercent">0%</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="fetchProgressBar" 
+                             role="progressbar" 
+                             style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

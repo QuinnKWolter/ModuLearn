@@ -9,9 +9,11 @@
   
   <div class="row">
     <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="card-title mb-0">User Information</h5>
+      <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-person-circle"></i> User Information
+          </h5>
         </div>
         <div class="card-body">
           <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
@@ -112,37 +114,109 @@
   </div>
   
   <!-- Profile Edit Form -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="card-title mb-0">Edit Profile Information</h5>
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-pencil-square"></i> Edit Profile Information
+      </h5>
     </div>
     <div class="card-body">
       <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="update_profile" value="1">
         {{ profile_form|crispy }}
-        <button type="submit" class="btn btn-primary">Update Profile</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle"></i> Update Profile
+        </button>
       </form>
     </div>
   </div>
   
-  <!-- Password Change Form -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="card-title mb-0">Change Password</h5>
+  <!-- Password Change Form (only for non-KT users) -->
+  {% if not is_kt_user %}
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-success text-white">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-key"></i> Change Password
+      </h5>
     </div>
     <div class="card-body">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>Password Security</strong><br>
+        Your password must meet ModuLearn's security standards. Make sure to use a strong, unique password.
+      </div>
       <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="change_password" value="1">
         {{ password_form|crispy }}
-        <button type="submit" class="btn btn-primary">Change Password</button>
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-arrow-clockwise"></i> Change Password
+        </button>
       </form>
     </div>
   </div>
+  {% endif %}
+  
+  <!-- KnowledgeTree Password Reset (only for KT users) -->
+  {% if is_kt_user and kt_password_form %}
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-info text-white">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-key"></i> Reset Password
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>KnowledgeTree User</strong><br>
+        This will reset your password in <strong>both</strong> ModuLearn and KnowledgeTree to keep them synchronized.
+        Your password must meet ModuLearn's security standards before it can be reset.
+      </div>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="reset_kt_password" value="1">
+        {{ kt_password_form|crispy }}
+        <button type="submit" class="btn btn-warning">
+          <i class="bi bi-arrow-clockwise"></i> Reset Password
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+  
+  <!-- Course-Authoring Password Reset -->
+  {% if user.is_instructor %}
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-tools"></i> Course-Authoring Integration
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Course-Authoring Tool</strong><br>
+        If you're experiencing authentication issues with the Course-Authoring Tool, you can reset your password here.
+        After resetting, you'll need to share the new password with the course-authoring administrator to sync your account.
+      </div>
+      {% if user.course_authoring_password %}
+        <p class="small text-muted mb-3">
+          <strong>Current Password:</strong> <code class="bg-light px-2 py-1 rounded">{{ user.course_authoring_password }}</code>
+        </p>
+      {% endif %}
+      <button type="button" class="btn btn-warning" id="resetCourseAuthoringPassword">
+        <i class="bi bi-arrow-clockwise"></i> Reset Course-Authoring Password
+      </button>
+      <div id="resetPasswordResult" class="mt-3" style="display: none;"></div>
+    </div>
+  </div>
+  {% endif %}
   
   <div class="mb-4">
-    <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Logout</a>
+    <a href="{% url 'accounts:logout' %}" class="btn btn-danger">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
   </div>
 </div>
 {% endblock %}
@@ -268,6 +342,67 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script>
+// Course-Authoring Password Reset
+document.addEventListener('DOMContentLoaded', function() {
+  const resetButton = document.getElementById('resetCourseAuthoringPassword');
+  const resultDiv = document.getElementById('resetPasswordResult');
+  
+  if (resetButton) {
+    resetButton.addEventListener('click', async function() {
+      if (!confirm('Are you sure you want to reset your course-authoring password? You will need to share the new password with the administrator to sync your account.')) {
+        return;
+      }
+      
+      const originalText = resetButton.innerHTML;
+      resetButton.disabled = true;
+      resetButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Resetting...';
+      resultDiv.style.display = 'none';
+      
+      try {
+        const response = await fetch("{% url 'dashboard:reset_course_authoring_password' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          resultDiv.className = 'mt-3 alert alert-success';
+          resultDiv.innerHTML = `
+            <h6><i class="bi bi-check-circle"></i> Password Reset Successful!</h6>
+            <p><strong>Your new password is:</strong></p>
+            <p><code style="font-size: 1.1em; padding: 0.5em; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: inline-block;">${data.new_password}</code></p>
+            <p class="mb-0"><small>Please contact <strong>Mohammad Hassany (MOH70@pitt.edu)</strong> to set this password in course-authoring. Once set, you'll be able to authenticate successfully.</small></p>
+          `;
+          resultDiv.style.display = 'block';
+          
+          // Update the displayed password if it exists
+          const passwordDisplay = document.querySelector('code');
+          if (passwordDisplay && passwordDisplay.textContent.includes('{{ user.course_authoring_password }}')) {
+            // Reload page to show new password, or update via JS
+            setTimeout(() => location.reload(), 2000);
+          }
+        } else {
+          resultDiv.className = 'mt-3 alert alert-danger';
+          resultDiv.innerHTML = `<h6><i class="bi bi-exclamation-circle"></i> Error</h6><p>${data.error || 'Failed to reset password. Please try again.'}</p>`;
+          resultDiv.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Reset error:', error);
+        resultDiv.className = 'mt-3 alert alert-danger';
+        resultDiv.innerHTML = `<h6><i class="bi bi-exclamation-circle"></i> Error</h6><p>Failed to reset password: ${error.message}</p>`;
+        resultDiv.style.display = 'block';
+      } finally {
+        resetButton.disabled = false;
+        resetButton.innerHTML = originalText;
+      }
+    });
+  }
+});
+
 // Course Resources Modal Functionality (shared with dashboard)
 let courseResourcesCache = {};
 
@@ -328,16 +463,7 @@ async function loadCourseResources(groupLogin, groupName) {
         `;
     }
     
-    // Reset viewer
-    const viewer = document.getElementById('courseResourceViewer');
-    if (viewer) {
-        viewer.innerHTML = `
-            <div class="text-center text-muted p-5">
-                <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
-                <p class="mt-3">Select a resource to view</p>
-            </div>
-        `;
-    }
+    // No viewer needed - resources open in new tabs
     
     try {
         // Construct URL using Django's url tag - get base URL and replace placeholder
@@ -345,6 +471,12 @@ async function loadCourseResources(groupLogin, groupName) {
         const courseResourcesUrl = baseUrl.replace('GROUP_LOGIN_PLACEHOLDER', encodeURIComponent(groupLogin));
         const response = await fetch(courseResourcesUrl);
         const data = await response.json();
+        
+        // Check if KnowledgeTree session is required
+        // Resources will open in new tabs - if session is required, user will see login page there
+        if (data.kt_session_required && data.kt_login_url) {
+            console.log('KnowledgeTree session required - user may need to authenticate when opening resource');
+        }
         
         if (data.success && data.resources) {
             // Cache the results
@@ -383,21 +515,23 @@ function renderCourseResources(resources) {
         const badgeClass = isMasteryGrids ? 'bg-primary' : 
                           resource.resource_type === 'folder' ? 'bg-secondary' : 'bg-info';
         
+        // Use direct URL for new tabs (better for authentication) if available, otherwise use proxied URL
+        const resourceUrl = resource.show_url_direct || resource.show_url;
         return `
             <li class="list-group-item list-group-item-action" 
-                onclick="selectCourseResource(${resource.NodeID}, '${escapeHtml(resource.Title)}', '${escapeHtml(resource.show_url)}', '${resource.resource_type}')" 
+                onclick="openCourseResourceInNewTab('${escapeHtml(resourceUrl)}', '${escapeHtml(resource.Title)}')" 
                 style="cursor: pointer;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center">
                             <i class="bi ${iconClass} me-2"></i>
                             <strong>${escapeHtml(resource.Title)}</strong>
+                            <i class="bi bi-box-arrow-up-right ms-2 text-muted" style="font-size: 0.75rem;"></i>
                         </div>
                         ${resource.Description ? `<small class="text-muted d-block mt-1">${escapeHtml(resource.Description)}</small>` : ''}
                     </div>
                     <div class="ms-2">
                         <span class="badge ${badgeClass}">${resource.resource_type}</span>
-                        <i class="bi bi-chevron-right ms-2 text-muted"></i>
                     </div>
                 </div>
             </li>
@@ -408,87 +542,12 @@ function renderCourseResources(resources) {
 }
 
 /**
- * Select and display a course resource
+ * Open course resource in a new tab
  */
-function selectCourseResource(nodeId, title, showUrl, resourceType) {
-    const viewer = document.getElementById('courseResourceViewer');
-    if (!viewer) return;
-    
-    // Update active state in list
-    document.querySelectorAll('#courseResourcesList .list-group-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    event.target.closest('.list-group-item').classList.add('active');
-    
-    // Render resource in viewer
-    const html = `
-        <div class="card h-100 border-0">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="bi ${resourceType === 'masterygrids' ? 'bi-grid-3x3-gap' : resourceType === 'folder' ? 'bi-folder' : 'bi-file-earmark'} me-2"></i>
-                    ${escapeHtml(title)}
-                </h6>
-                <button class="btn btn-sm btn-primary" onclick="openResourceInFullscreen('${escapeHtml(showUrl)}', '${escapeHtml(title)}')">
-                    <i class="bi bi-arrows-fullscreen me-1"></i>Open Fullscreen
-                </button>
-            </div>
-            <div class="card-body p-0" style="height: calc(600px - 60px);">
-                <iframe 
-                    src="${showUrl}" 
-                    style="width: 100%; height: 100%; border: none;"
-                    allowfullscreen
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation-by-user-activation">
-                </iframe>
-            </div>
-            <div class="card-footer">
-                <small class="text-muted">
-                    <strong>Type:</strong> <span class="badge bg-info">${resourceType}</span> | 
-                    <strong>Node ID:</strong> ${nodeId}
-                </small>
-            </div>
-        </div>
-    `;
-    
-    viewer.innerHTML = html;
-}
-
-/**
- * Open resource in fullscreen modal
- */
-function openResourceInFullscreen(showUrl, title) {
-    // Ensure Bootstrap is loaded
-    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
-        console.error('Bootstrap is not loaded. Cannot open modal.');
-        // Fallback: open in new window
-        window.open(showUrl, '_blank');
-        return;
-    }
-    
-    const iframe = document.getElementById('resourceIframe');
-    const modalElement = document.getElementById('resourceIframeModal');
-    const modalLabel = document.getElementById('resourceIframeModalLabel');
-    
-    if (!modalElement) {
-        console.error('Modal element not found');
-        return;
-    }
-    
-    if (iframe) {
-        iframe.src = showUrl;
-    }
-    if (modalLabel) {
-        modalLabel.textContent = title;
-    }
-    
-    // Show fullscreen modal - use getOrCreateInstance for safety
-    try {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-        modal.show();
-    } catch (error) {
-        console.error('Error opening modal:', error);
-        // Fallback: open in new window
-        window.open(showUrl, '_blank');
-    }
+function openCourseResourceInNewTab(showUrl, title) {
+    // Open resource in new tab
+    // If URL is proxied, it will go through our proxy; if direct, it goes to KnowledgeTree
+    window.open(showUrl, '_blank', 'noopener,noreferrer');
 }
 
 /**
@@ -526,21 +585,7 @@ function escapeHtml(text) {
             return;
         }
         
-        const modal = document.getElementById('courseResourcesModal');
-        if (modal) {
-            modal.addEventListener('hidden.bs.modal', function() {
-                // Reset viewer when modal closes
-                const viewer = document.getElementById('courseResourceViewer');
-                if (viewer) {
-                    viewer.innerHTML = `
-                        <div class="text-center text-muted p-5">
-                            <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
-                            <p class="mt-3">Select a resource to view</p>
-                        </div>
-                    `;
-                }
-            });
-        }
+        // No viewer to reset - resources open in new tabs
     }
     
     // Wait for DOM and Bootstrap to be ready

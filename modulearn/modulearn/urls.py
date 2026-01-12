@@ -23,9 +23,12 @@ urlpatterns = [
     # Static Pages
     path('', include('main.urls', namespace='main')),
 
-    # New LTI launcher and proxy routes
-    path("lti/launch/", views_lti.launch, name="lti_launch"),
+    # Tool launch endpoint (distinct from Canvas LTI at /lti/launch/)
+    path("lti/tool-launch/", views_lti.launch, name="lti_launch"),
     path("lti/outcome/", views_lti.outcome, name="lti_outcome"),
-    path("proxy/", views_proxy.http_get_proxy, name="http_get_proxy"),  # keep query-mode for compatibility
+    path("lti/health/", views_lti.health, name="lti_health"),
+    
+    # HTTP proxy for mixed content (HTTP tools in HTTPS iframe)
+    path("proxy/", views_proxy.http_get_proxy, name="http_get_proxy"),  # query-mode for compatibility
     path("proxy/<path:rest>", views_proxy.http_get_proxy_path, name="http_get_proxy_path"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

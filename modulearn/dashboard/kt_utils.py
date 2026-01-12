@@ -5,12 +5,51 @@ Uses direct database queries for optimal performance.
 
 import logging
 import pymysql
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
 from django.conf import settings
 from .kt_db_connection import get_paws_db_connection
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def get_kt_login_url(return_url: Optional[str] = None) -> str:
+    """
+    Get the KnowledgeTree login URL, optionally with a return URL parameter.
+    
+    Args:
+        return_url: Optional URL to redirect back to after authentication
+    
+    Returns:
+        KnowledgeTree login URL
+    """
+    kt_config = getattr(settings, 'KNOWLEDGETREE', {})
+    api_url = kt_config.get('API_URL', 'http://adapt2.sis.pitt.edu')
+    login_url = f"{api_url}/kt/content/login.jsp"
+    
+    if return_url:
+        # URL-encode the return URL
+        from urllib.parse import urlencode
+        login_url += f"?{urlencode({'return': return_url})}"
+    
+    return login_url
+
+
+def has_kt_session(request) -> bool:
+    """
+    Check if the user has an active KnowledgeTree session.
+    
+    Args:
+        request: Django request object
+    
+    Returns:
+        True if user has KT session cookies, False otherwise
+    """
+    if not hasattr(request, 'session'):
+        return False
+    
+    kt_session_cookies = request.session.get('kt_session_cookies', {})
+    return bool(kt_session_cookies and kt_session_cookies.get('JSESSIONID'))
 
 
 def _get_proxied_url(url: str) -> str:
@@ -115,6 +154,173 @@ def get_kt_user_id_by_login(kt_login: str) -> Optional[int]:
     except Exception as e:
         logger.error(f"Error looking up KT UserID for login {kt_login}: {str(e)}", exc_info=True)
         return None
+
+
+def update_kt_password(kt_login: str, new_password: str) -> Tuple[bool, str]:
+    """
+    Update password in KnowledgeTree database for a user.
+    
+    Args:
+        kt_login: KnowledgeTree username/login
+        new_password: New password (plaintext, will be MD5 hashed)
+    
+    Returns:
+        (success: bool, message: str)
+    """
+    import hashlib
+    
+    if not kt_login:
+        return False, "KnowledgeTree login is required"
+    
+    if not new_password:
+        return False, "New password is required"
+    
+    try:
+        # Hash password with MD5 (no salt, as per KnowledgeTree implementation)
+        password_hash = hashlib.md5(new_password.encode('utf-8')).hexdigest()
+        
+        db_conn = get_paws_db_connection()
+        success, message = db_conn.connect()
+        
+        if not success:
+            logger.error(f"Failed to connect to PAWS database to update password: {message}")
+            return False, f"Database connection failed: {message}"
+        
+        try:
+            connection = db_conn.get_connection()
+            db_config = getattr(settings, 'PAWS_DATABASE', {})
+            kt_schema = db_config.get('KNOWLEDGETREE_SCHEMA', 'portal_test2')
+            
+            with connection.cursor() as cursor:
+                # First verify user exists and is not a group
+                check_sql = f"""
+                    SELECT UserID, Login
+                    FROM `{kt_schema}`.ent_user
+                    WHERE Login = %s AND isGroup = 0
+                    LIMIT 1
+                """
+                cursor.execute(check_sql, (kt_login,))
+                user_row = cursor.fetchone()
+                
+                if not user_row:
+                    logger.warning(f"KT password update failed: user not found or is a group: {kt_login}")
+                    return False, f"User '{kt_login}' not found in KnowledgeTree or is a group"
+                
+                # Update password
+                update_sql = f"""
+                    UPDATE `{kt_schema}`.ent_user
+                    SET Pass = MD5(%s)
+                    WHERE Login = %s AND isGroup = 0
+                """
+                cursor.execute(update_sql, (new_password, kt_login))
+                connection.commit()
+                
+                rows_affected = cursor.rowcount
+                if rows_affected == 0:
+                    logger.warning(f"KT password update: no rows affected for login {kt_login}")
+                    return False, "Password update failed: no rows affected"
+                
+                logger.info(f"Successfully updated KT password for user {kt_login}")
+                return True, "Password updated successfully in KnowledgeTree"
+                
+        finally:
+            db_conn.disconnect()
+    except Exception as e:
+        logger.error(f"Error updating KT password for login {kt_login}: {str(e)}", exc_info=True)
+        return False, f"Error updating password: {str(e)}"
+
+
+def is_user_instructor_in_aggregate(user_id: str) -> bool:
+    """
+    Check if a user_id exists in aggregate.ent_non_student table.
+    If they exist, they are an instructor in ModuLearn (regardless of user_role).
+    
+    Args:
+        user_id: KnowledgeTree user_id (Login/username string)
+        
+    Returns:
+        True if user exists in ent_non_student, False otherwise
+    """
+    if not user_id:
+        return False
+    
+    try:
+        db_conn = get_paws_db_connection()
+        success, message = db_conn.connect()
+        
+        if not success:
+            logger.error(f"Failed to connect to PAWS database: {message}")
+            return False
+        
+        try:
+            connection = db_conn.get_connection()
+            db_config = getattr(settings, 'PAWS_DATABASE', {})
+            agg_schema = db_config.get('AGGREGATE_SCHEMA', 'aggregate')
+            
+            with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                sql = f"""
+                    SELECT COUNT(*) as count
+                    FROM `{agg_schema}`.ent_non_student
+                    WHERE user_id = %s
+                    LIMIT 1
+                """
+                cursor.execute(sql, (user_id,))
+                row = cursor.fetchone()
+                
+                is_instructor = row['count'] > 0 if row else False
+                logger.debug(f"User {user_id} is_instructor check: {is_instructor}")
+                return is_instructor
+        finally:
+            db_conn.disconnect()
+    except Exception as e:
+        logger.error(f"Error checking ent_non_student for user_id {user_id}: {str(e)}", exc_info=True)
+        return False
+
+
+def get_instructor_group_ids(user_id: str) -> List[str]:
+    """
+    Get list of group_ids where the user is an instructor (from aggregate.ent_non_student).
+    
+    Args:
+        user_id: KnowledgeTree user_id (Login/username string)
+        
+    Returns:
+        List of group_id strings where user is an instructor
+    """
+    if not user_id:
+        return []
+    
+    try:
+        db_conn = get_paws_db_connection()
+        success, message = db_conn.connect()
+        
+        if not success:
+            logger.error(f"Failed to connect to PAWS database: {message}")
+            return []
+        
+        try:
+            connection = db_conn.get_connection()
+            db_config = getattr(settings, 'PAWS_DATABASE', {})
+            agg_schema = db_config.get('AGGREGATE_SCHEMA', 'aggregate')
+            
+            with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                sql = f"""
+                    SELECT DISTINCT group_id
+                    FROM `{agg_schema}`.ent_non_student
+                    WHERE user_id = %s
+                    ORDER BY group_id
+                """
+                cursor.execute(sql, (user_id,))
+                rows = cursor.fetchall()
+                
+                group_ids = [row['group_id'] for row in rows if row.get('group_id')]
+                logger.debug(f"User {user_id} is instructor for {len(group_ids)} groups: {group_ids[:5]}...")
+                return group_ids
+        finally:
+            db_conn.disconnect()
+    except Exception as e:
+        logger.error(f"Error getting instructor groups for user_id {user_id}: {str(e)}", exc_info=True)
+        return []
 
 
 def get_user_groups_from_kt_db(kt_user_id: int) -> List[Dict[str, Any]]:
@@ -290,6 +496,24 @@ def get_user_groups_with_course_ids(user) -> List[Dict[str, Any]]:
         return []
     
     logger.info(f"Found {len(kt_groups)} groups for user {user.username}")
+    
+    # Step 2.5: Filter groups based on instructor status from aggregate.ent_non_student
+    # Only show groups where user is an instructor (has entry in ent_non_student for that group_id)
+    kt_login = user.kt_login or user.username
+    instructor_group_ids = set(get_instructor_group_ids(kt_login))
+    
+    if instructor_group_ids:
+        # User is an instructor - only show groups where they're an instructor
+        filtered_groups = [
+            group for group in kt_groups 
+            if group['group_login'] in instructor_group_ids
+        ]
+        logger.info(f"User {user.username} is instructor - showing {len(filtered_groups)} instructor groups (filtered from {len(kt_groups)} total groups)")
+        kt_groups = filtered_groups
+    else:
+        # User is not an instructor - don't show any groups in instructor dashboard/profile
+        logger.info(f"User {user.username} is not an instructor - filtering out all groups")
+        kt_groups = []
     
     # Step 3: Get Course IDs from Aggregate database
     group_logins = [g['group_login'] for g in kt_groups]
@@ -501,15 +725,47 @@ def get_user_groups_with_masterygrids_nodes(user) -> List[Dict[str, Any]]:
     return groups
 
 
-def get_course_resources(group_login: str) -> List[Dict[str, Any]]:
+def get_course_id_for_group(group_login: str) -> Optional[str]:
+    """
+    Get the first course_id for a group from aggregate.ent_group.
+    
+    Args:
+        group_login: Group login string
+        
+    Returns:
+        Course ID string, or None if not found
+    """
+    if not group_login:
+        return None
+    
+    try:
+        course_ids = get_course_ids_from_aggregate_db([group_login])
+        course_id_list = course_ids.get(group_login, [])
+        return course_id_list[0] if course_id_list else None
+    except Exception as e:
+        logger.warning(f"Error getting course_id for group {group_login}: {str(e)}")
+        return None
+
+
+def get_course_resources(group_login: str, user_login: Optional[str] = None, 
+                        session_id: Optional[str] = None, course_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Get all course resources for a KnowledgeTree group.
     
     This function finds the course container node (folder child of root "Folders" node)
     and returns all resources (children of the course container).
     
+    URLs are constructed with required KnowledgeTree parameters:
+    - usr: Username/login
+    - grp: Group login
+    - sid: Session ID
+    - cid: Course ID (from aggregate database)
+    
     Args:
         group_login: Group login string (e.g., "CS0007Fall20242")
+        user_login: User login/username (for usr parameter)
+        session_id: Session ID (for sid parameter)
+        course_id: Course ID (for cid parameter). If None, will be fetched from aggregate DB.
     
     Returns:
         List of resource dictionaries with NodeID, Title, URL, show_url, resource_type, etc.
@@ -519,6 +775,30 @@ def get_course_resources(group_login: str) -> List[Dict[str, Any]]:
         return []
     
     logger.info(f"Getting course resources for group: {group_login}")
+    
+    # Get course_id if not provided
+    if not course_id:
+        course_id = get_course_id_for_group(group_login)
+        if course_id:
+            logger.debug(f"Found course_id {course_id} for group {group_login}")
+        else:
+            logger.warning(f"No course_id found for group {group_login} in aggregate database")
+    
+    # Build query parameters for KnowledgeTree URLs
+    # These parameters are required by KnowledgeTree for proper content serving
+    url_params = {}
+    if user_login:
+        url_params['usr'] = user_login
+    if group_login:
+        url_params['grp'] = group_login
+    if session_id:
+        url_params['sid'] = session_id
+    if course_id:
+        url_params['cid'] = course_id
+    
+    # Build query string (URL-encode values to handle special characters)
+    from urllib.parse import urlencode
+    query_string = urlencode(url_params) if url_params else ''
     
     try:
         db_conn = get_paws_db_connection()
@@ -727,22 +1007,56 @@ def get_course_resources(group_login: str) -> List[Dict[str, Any]]:
                     else:
                         logger.warning(f"No children found at all for container NodeID={container_node_id}")
                 
+                # Get KnowledgeTree base URL once for all resources
+                kt_config = getattr(settings, 'KNOWLEDGETREE', {})
+                kt_base = kt_config.get('API_URL', 'http://adapt2.sis.pitt.edu')
+                
                 resources = []
                 for row in rows:
                     resource = dict(row)
-                    # Construct Show servlet URL for IFrame rendering
-                    # Use proxy in production (HTTPS) to avoid mixed content issues
-                    original_url = f"http://adapt2.sis.pitt.edu/kt/content/Show?id={resource['NodeID']}"
-                    resource['show_url'] = _get_proxied_url(original_url)
-                    resource['show_url_direct'] = original_url  # Keep original for fallback
+                    
+                    # Use direct URL from ent_node.URL if available, otherwise fall back to Show servlet
+                    direct_url = resource.get('URL', '').strip() if resource.get('URL') else ''
+                    
+                    if direct_url:
+                        # We have a direct URL - use it!
+                        # Handle relative URLs by making them absolute
+                        if not direct_url.startswith(('http://', 'https://')):
+                            # Relative or absolute path - prepend KnowledgeTree base URL
+                            if not direct_url.startswith('/'):
+                                direct_url = '/' + direct_url
+                            direct_url = f"{kt_base}{direct_url}"
+                        
+                        # Append required KnowledgeTree parameters
+                        if query_string:
+                            # Check if URL already has query parameters
+                            separator = '&' if '?' in direct_url else '?'
+                            direct_url = f"{direct_url}{separator}{query_string}"
+                        
+                        # Use the direct URL (proxied if HTTP)
+                        resource['show_url'] = _get_proxied_url(direct_url)
+                        resource['show_url_direct'] = direct_url
+                        logger.debug(f"Resource {resource['NodeID']} ({resource.get('Title', 'N/A')}): Using direct URL with params: {direct_url}")
+                    else:
+                        # No direct URL - fall back to Show servlet
+                        original_url = f"{kt_base}/kt/content/Show?id={resource['NodeID']}"
+                        # Append required KnowledgeTree parameters
+                        if query_string:
+                            original_url = f"{original_url}&{query_string}"
+                        
+                        resource['show_url'] = _get_proxied_url(original_url)
+                        resource['show_url_direct'] = original_url
+                        logger.debug(f"Resource {resource['NodeID']} ({resource.get('Title', 'N/A')}): No direct URL, using Show servlet with params: {original_url}")
+                    
                     # Determine resource type
-                    url_lower = (resource.get('URL') or '').lower()
+                    url_lower = (direct_url or resource.get('URL') or '').lower()
                     if 'mastery-grids' in url_lower or 'masterygrids' in url_lower:
                         resource['resource_type'] = 'masterygrids'
                     elif resource.get('FolderFlag', 0) == 1:
                         resource['resource_type'] = 'folder'
                     else:
                         resource['resource_type'] = 'resource'
+                    
                     resources.append(resource)
                 
                 if resources:

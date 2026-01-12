@@ -276,42 +276,90 @@ def launch_iframe_module(request, instance_id, module_id):
         course_instance=course_instance
     )
     
-    # Parse the URL for LTI parameters and handle transformations first
+    # Get the module's content URL and selected protocol
     content_url = module.content_url
-    parsed_url = urlparse(content_url)
-    query_params = parse_qs(parsed_url.query)
-    
-    # Extract LTI launch parameters
-    lti_sub = None
-    if query_params.get('tool') and query_params.get('sub'):
-        lti_sub = query_params['sub'][0]
-    elif module.provider_id and content_url:
-        # Use content_url or extract sub from it
-        lti_sub = query_params.get('sub', [content_url])[0]
-    
-    # Handle CodeCheck URL transformation for splice protocol
-    if query_params.get('tool', [''])[0] == 'codecheck' and 'sub' in query_params:
-        sub_param = query_params['sub'][0]
-        content_url = f'https://codecheck.me/files/wiley/{sub_param}'
-    
-    # Now resolve protocol and proxy settings using the final content_url
     selected_protocol = module.select_launch_protocol()
     
-    # Check if proxy is needed for http:// content from known hosts
+    # Parse URL for LTI parameters
+    parsed_url = urlparse(content_url) if content_url else None
+    query_params = parse_qs(parsed_url.query) if parsed_url else {}
+    
+    # Extract tool and sub parameters from URL (common in LTI launch URLs)
+    url_tool = query_params.get('tool', [''])[0]
+    url_sub = query_params.get('sub', [''])[0]
+    
+    # Detect LTI launch URLs: URLs with ?tool=...&sub=... pattern pointing to /lti/launch
+    # These should go through our LTI consumer, not be proxied directly
+    is_lti_launch_url = (
+        parsed_url and 
+        '/lti/launch' in parsed_url.path and 
+        url_tool and url_sub
+    )
+    
+    # Detect if this is a PAWS-mediated URL (adapt2.sis.pitt.edu/lti/launch)
+    # PAWS URLs should use our paws_* tool configs which route through PAWS
+    is_paws_url = (
+        parsed_url and 
+        parsed_url.hostname and
+        parsed_url.hostname in ('adapt2.sis.pitt.edu', 'pawscomp2.sis.pitt.edu', 'columbus.exp.sis.pitt.edu') and
+        '/lti/launch' in parsed_url.path
+    )
+    
+    # If no protocol set but URL looks like LTI launch, treat as LTI
+    if selected_protocol is None and is_lti_launch_url:
+        selected_protocol = 'lti'
+        logger.info(f"Module {module.id}: Auto-detected LTI protocol from URL pattern")
+    
+    # For LTI protocol, extract the sub parameter for our LTI consumer
+    lti_sub = url_sub if url_sub else None
+    
+    # Determine the LTI tool to use:
+    # - If URL points to PAWS LTI endpoint, use paws_<toolname> to route through PAWS
+    # - Otherwise use the tool directly
+    if is_paws_url and url_tool:
+        lti_tool = f"paws_{url_tool}"
+        logger.info(f"Module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+    else:
+        lti_tool = url_tool if url_tool else module.provider_id
+    
+    # For SPLICE, PITT, or unknown protocols: use the stored content_url directly
+    # HTTP content from allowed hosts will be proxied to enable HTTPS embedding
     use_proxy = False
-    if content_url:
+    if content_url and selected_protocol in ('splice', 'pitt', None):
         parsed_final = urlparse(content_url)
         scheme = parsed_final.scheme
         hostname = parsed_final.hostname
         use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
     
     logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
-    print(f"DEBUG: Module {module.id} - Protocol: {selected_protocol}, Content URL: {content_url}")
-    print(f"DEBUG: Use proxy for HTTP content: {use_proxy}")
+    logger.debug(f"Module {module.id} - Protocol: {selected_protocol}, Content URL: {content_url}")
+    logger.debug(f"Use proxy for HTTP content: {use_proxy}, Is LTI URL: {is_lti_launch_url}")
     
-    # Generate iframe src based on protocol and proxy needs
+    # Check if tool is known to refuse iframe embedding
+    refuses_iframe = False
+    refuses_iframe_reason = ''
+    if selected_protocol == 'lti' and lti_tool:
+        from lti.config import get_tool_config
+        tool_config = get_tool_config(lti_tool)
+        if tool_config:
+            refuses_iframe = tool_config.get('refuses_iframe', False)
+            refuses_iframe_reason = tool_config.get('refuses_iframe_reason', '')
+            if refuses_iframe:
+                logger.warning(f"Module {module.id}: Tool '{lti_tool}' refuses iframe embedding: {refuses_iframe_reason}")
+    
+    # Generate iframe src based on protocol
     if selected_protocol == 'lti':
-        iframe_src = f"{reverse('lti_launch')}?tool={module.provider_id}&sub={lti_sub or content_url}&usr={request.user.id}&grp={course_instance.id if course_instance else 'default'}"
+        # Route through our LTI consumer which handles OAuth signing
+        # Include module_id so outcomes can update ModuleProgress
+        grp_id = course_instance.id if course_instance else 'default'
+        iframe_src = (
+            f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
+            f"&usr={request.user.id}&grp={grp_id}&module_id={module.id}"
+        )
+        logger.info(
+            f"LTI Launch URL generated: module={module.id}, tool={lti_tool}, "
+            f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
+        )
     elif use_proxy:
         iframe_src = to_path_style_proxy(content_url)
     else:
@@ -328,6 +376,8 @@ def launch_iframe_module(request, instance_id, module_id):
         'lti_sub': lti_sub,
         'use_proxy': use_proxy,
         'iframe_src': iframe_src,
+        'refuses_iframe': refuses_iframe,
+        'refuses_iframe_reason': refuses_iframe_reason,
     }
     
     response = render(request, 'courses/module_frame.html', context)
@@ -346,42 +396,85 @@ def preview_iframe_module(request, module_id):
     if not request.user.is_instructor:
         return HttpResponseForbidden("Preview is limited to instructors")
 
-    # Parse the URL for LTI parameters and handle transformations first
+    # Get the module's content URL and selected protocol
     content_url = module.content_url
-    parsed_url = urlparse(content_url)
-    query_params = parse_qs(parsed_url.query)
-    
-    # Extract LTI launch parameters
-    lti_sub = None
-    if query_params.get('tool') and query_params.get('sub'):
-        lti_sub = query_params['sub'][0]
-    elif module.provider_id and content_url:
-        # Use content_url or extract sub from it
-        lti_sub = query_params.get('sub', [content_url])[0]
-    
-    # Handle CodeCheck URL transformation for splice protocol
-    if query_params.get('tool', [''])[0] == 'codecheck' and 'sub' in query_params:
-        sub_param = query_params['sub'][0]
-        content_url = f'https://codecheck.me/files/wiley/{sub_param}'
-    
-    # Now resolve protocol and proxy settings using the final content_url
     selected_protocol = module.select_launch_protocol()
     
-    # Check if proxy is needed for http:// content from known hosts
+    # Parse URL for LTI parameters
+    parsed_url = urlparse(content_url) if content_url else None
+    query_params = parse_qs(parsed_url.query) if parsed_url else {}
+    
+    # Extract tool and sub parameters from URL (common in LTI launch URLs)
+    url_tool = query_params.get('tool', [''])[0]
+    url_sub = query_params.get('sub', [''])[0]
+    
+    # Detect LTI launch URLs: URLs with ?tool=...&sub=... pattern pointing to /lti/launch
+    # These should go through our LTI consumer, not be proxied directly
+    is_lti_launch_url = (
+        parsed_url and 
+        '/lti/launch' in parsed_url.path and 
+        url_tool and url_sub
+    )
+    
+    # Detect if this is a PAWS-mediated URL (adapt2.sis.pitt.edu/lti/launch)
+    is_paws_url = (
+        parsed_url and 
+        parsed_url.hostname and
+        parsed_url.hostname in ('adapt2.sis.pitt.edu', 'pawscomp2.sis.pitt.edu', 'columbus.exp.sis.pitt.edu') and
+        '/lti/launch' in parsed_url.path
+    )
+    
+    # If no protocol set but URL looks like LTI launch, treat as LTI
+    if selected_protocol is None and is_lti_launch_url:
+        selected_protocol = 'lti'
+        logger.info(f"Preview module {module.id}: Auto-detected LTI protocol from URL pattern")
+    
+    # For LTI protocol, extract the sub parameter for our LTI consumer
+    lti_sub = url_sub if url_sub else None
+    
+    # Determine the LTI tool to use:
+    # - If URL points to PAWS LTI endpoint, use paws_<toolname> to route through PAWS
+    # - Otherwise use the tool directly
+    if is_paws_url and url_tool:
+        lti_tool = f"paws_{url_tool}"
+        logger.info(f"Preview module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+    else:
+        lti_tool = url_tool if url_tool else module.provider_id
+    
+    # For SPLICE, PITT, or unknown protocols: use the stored content_url directly
+    # HTTP content from allowed hosts will be proxied to enable HTTPS embedding
     use_proxy = False
-    if content_url:
+    if content_url and selected_protocol in ('splice', 'pitt', None):
         parsed_final = urlparse(content_url)
         scheme = parsed_final.scheme
         hostname = parsed_final.hostname
         use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
     
     logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
-    print(f"DEBUG: Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
-    print(f"DEBUG: Preview use proxy for HTTP content: {use_proxy}")
+    logger.debug(f"Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
+    logger.debug(f"Preview use proxy for HTTP content: {use_proxy}, Is LTI URL: {is_lti_launch_url}")
 
-    # Generate iframe src based on protocol and proxy needs
+    # Check if tool is known to refuse iframe embedding
+    refuses_iframe = False
+    refuses_iframe_reason = ''
+    if selected_protocol == 'lti' and lti_tool:
+        from lti.config import get_tool_config
+        tool_config = get_tool_config(lti_tool)
+        if tool_config:
+            refuses_iframe = tool_config.get('refuses_iframe', False)
+            refuses_iframe_reason = tool_config.get('refuses_iframe_reason', '')
+            if refuses_iframe:
+                logger.warning(f"Preview module {module.id}: Tool '{lti_tool}' refuses iframe embedding")
+    
+    # Generate iframe src based on protocol
     if selected_protocol == 'lti':
-        iframe_src = f"{reverse('lti_launch')}?tool={module.provider_id}&sub={lti_sub or content_url}&usr={request.user.id}&grp=default"
+        # Route through our LTI consumer which handles OAuth signing
+        # Include module_id but use 'preview' grp since no course instance
+        iframe_src = (
+            f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
+            f"&usr={request.user.id}&grp=preview&module_id={module.id}"
+        )
+        logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}")
     elif use_proxy:
         iframe_src = to_path_style_proxy(content_url)
     else:
@@ -398,6 +491,8 @@ def preview_iframe_module(request, module_id):
         'lti_sub': lti_sub,
         'use_proxy': use_proxy,
         'iframe_src': iframe_src,
+        'refuses_iframe': refuses_iframe,
+        'refuses_iframe_reason': refuses_iframe_reason,
     }
 
     response = render(request, 'courses/module_frame.html', context)

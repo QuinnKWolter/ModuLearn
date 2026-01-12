@@ -46,7 +46,8 @@ class KnowledgeTreeAuthService:
         self.auth_method = self.config.get('AUTH_METHOD', 'api')
         self.auth_fallback = self.config.get('AUTH_FALLBACK', True)
         self.auth_enabled = self.config.get('AUTH_ENABLED', True)
-        self.security_check_path = self.config.get('SECURITY_CHECK_PATH', '/kt/content/j_security_check')
+        # Note: We do NOT use j_security_check - it's browser-only FORM auth
+        # We use /PortalServices/Auth exclusively for programmatic authentication
         
     def _md5_hash(self, password: str) -> str:
         """Hash password using MD5 (no salt, as per KnowledgeTree implementation)"""
@@ -70,6 +71,34 @@ class KnowledgeTreeAuthService:
         """Reset rate limit counter after successful authentication"""
         cache_key = f"kt_auth_attempts_{username.lower()}"
         cache.delete(cache_key)
+    
+    # DEPRECATED: This method attempted to use j_security_check for server-side session establishment.
+    # j_security_check is browser-only FORM auth and is NOT designed for programmatic use.
+    # It consistently fails with 408 timeouts because it's intentionally hostile to non-browser clients.
+    #
+    # CORRECT APPROACH:
+    # - Use /PortalServices/Auth for authentication (stateless, JSON-based) ✅ Already implemented
+    # - For protected resources (Show servlet), redirect users to KnowledgeTree login page
+    # - Browser authenticates via j_security_check (this is the correct way)
+    # - KnowledgeTree sets JSESSIONID cookie in browser
+    # - Proxy forwards JSESSIONID cookie to access protected resources
+    #
+    # This method is kept for reference but should NOT be called.
+    def establish_http_session(self, username: str, password: str) -> Optional[Dict[str, str]]:
+        """
+        DEPRECATED: Do not use this method.
+        
+        j_security_check is browser-only FORM authentication and is NOT designed for
+        programmatic use. It consistently fails with 408 timeouts.
+        
+        Use /PortalServices/Auth for authentication instead (already implemented in authenticate()).
+        For protected resources, redirect users to KnowledgeTree login page for browser-based authentication.
+        """
+        logger.warning(f"establish_http_session() called but is DEPRECATED")
+        logger.warning(f"j_security_check is browser-only and should not be used programmatically")
+        logger.warning(f"Use /PortalServices/Auth for authentication (already implemented)")
+        logger.warning(f"For protected resources, redirect to KnowledgeTree login page")
+        return None
     
     def authenticate_via_api(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """
@@ -108,18 +137,23 @@ class KnowledgeTreeAuthService:
                 verify=True,  # Verify SSL certificates
             )
             
-            logger.debug(f"Response status: {response.status_code}")
-            logger.debug(f"Response headers: {dict(response.headers)}")
-            
             response.raise_for_status()
+            
+            # Log response summary (detailed logging only if needed)
+            logger.info(f"KT API Response - Status: {response.status_code}, Cookies: {len(response.cookies)} found")
+            set_cookie_header = response.headers.get('Set-Cookie', '')
+            if set_cookie_header:
+                logger.info(f"KT API Response - Set-Cookie header present")
             
             # Parse JSON response
             try:
                 data = response.json()
+                logger.info(f"KT API authentication successful: user={data.get('usr', 'unknown')}, loggedin={data.get('loggedin', False)}")
             except ValueError as e:
                 # Try to parse as JavaScript object (might not be valid JSON)
                 response_text = response.text.strip()
                 logger.debug(f"Response text: {response_text[:500]}")
+                logger.info(f"KT API Response - Raw text (first 500 chars): {response_text[:500]}")
                 
                 # Sometimes the response might be JavaScript object notation, not JSON
                 # Try to extract values manually if JSON parsing fails

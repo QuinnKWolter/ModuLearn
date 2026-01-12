@@ -93,12 +93,6 @@ footer {
   color: #bbb; /* Lighter color for help text in dark mode */
 }
 
-/* Dark mode anchor styling */
-.dark-mode a {
-  color: #1e90ff; /* DodgerBlue for unvisited links */
-  text-decoration: none;
-}
-
 .dark-mode a:visited {
   color: #6495ed; /* CornflowerBlue for visited links */
 }

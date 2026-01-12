@@ -1,12 +1,153 @@
-<!doctype html>
-<html>
-  <body>
-    <form id="ltiLaunch" action="{{ action }}" method="post">
-      {% for k, v in params.items %}
-        <input type="hidden" name="{{ k|escape }}" value="{{ v|escape }}">
-      {% endfor %}
-      <noscript><button type="submit">Launch</button></noscript>
-    </form>
-    <script>document.getElementById('ltiLaunch').submit();</script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Launching Activity...</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        .launch-container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        .fallback-button {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: #fff;
+            color: #667eea;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .fallback-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        noscript {
+            display: block;
+        }
+        noscript .fallback-button {
+            display: inline-block;
+        }
+        .error-message {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="launch-container">
+        <div class="spinner" id="spinner"></div>
+        <h1>Launching Activity</h1>
+        <p id="status-text">Connecting to learning tool...</p>
+        
+        <form id="ltiLaunchForm" action="{{ action }}" method="post" target="_self">
+            {% for k, v in params.items %}
+            <input type="hidden" name="{{ k|escape }}" value="{{ v|escape }}">
+            {% endfor %}
+            
+            <noscript>
+                <p style="margin-top: 1rem;">JavaScript is disabled. Click the button below to launch the activity.</p>
+                <button type="submit" class="fallback-button">Launch Activity</button>
+            </noscript>
+        </form>
+        
+        <button type="button" class="fallback-button" id="manualLaunch" onclick="document.getElementById('ltiLaunchForm').submit()">
+            Click to Launch
+        </button>
+        
+        <div class="error-message" id="errorMessage">
+            There was a problem launching the activity. Please try again or contact support.
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var form = document.getElementById('ltiLaunchForm');
+            var spinner = document.getElementById('spinner');
+            var statusText = document.getElementById('status-text');
+            var manualButton = document.getElementById('manualLaunch');
+            var errorMessage = document.getElementById('errorMessage');
+            
+            // Try to submit the form automatically
+            function autoSubmit() {
+                try {
+                    form.submit();
+                } catch (e) {
+                    // If auto-submit fails, show manual button
+                    console.error('Auto-submit failed:', e);
+                    showManualButton();
+                }
+            }
+            
+            // Show manual launch button after timeout
+            function showManualButton() {
+                spinner.style.display = 'none';
+                statusText.textContent = 'Ready to launch';
+                manualButton.style.display = 'inline-block';
+            }
+            
+            // Show error state
+            function showError() {
+                spinner.style.display = 'none';
+                statusText.textContent = 'Launch failed';
+                errorMessage.style.display = 'block';
+                manualButton.style.display = 'inline-block';
+            }
+            
+            // Set a timeout to show manual button if form doesn't submit quickly
+            var timeout = setTimeout(function() {
+                showManualButton();
+            }, 3000);
+            
+            // Submit immediately
+            autoSubmit();
+        })();
+    </script>
+</body>
 </html>

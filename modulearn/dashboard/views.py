@@ -3,11 +3,10 @@ from courses.models import Enrollment, Course, CourseInstance
 from django.contrib.auth.decorators import login_required
 import requests
 from django.http import JsonResponse
-from courses.utils import get_course_auth_token
+from courses.utils import get_course_auth_token, reset_course_authoring_password
 import json
 from urllib.parse import urlparse
-from py_mini_racer import MiniRacer
-from .kt_utils import get_user_groups_with_course_ids, get_course_resources
+from .kt_utils import get_user_groups_with_course_ids, get_course_resources, has_kt_session, get_kt_login_url, has_kt_session, get_kt_login_url
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,6 +45,18 @@ def instructor_dashboard(request):
         'enrollments__student'
     )
     
+    # Calculate stats for each course instance
+    for instance in course_instances:
+        enrollments = instance.enrollments.all()
+        if enrollments:
+            total_progress = sum(e.course_progress.overall_progress for e in enrollments)
+            total_score = sum(e.course_progress.overall_score for e in enrollments)
+            instance.avg_progress = total_progress / len(enrollments)
+            instance.avg_score = total_score / len(enrollments)
+        else:
+            instance.avg_progress = 0
+            instance.avg_score = 0
+    
     # Get enrollments where instructor is enrolled as student
     student_enrollments = Enrollment.objects.filter(
         student=request.user
@@ -58,6 +69,18 @@ def instructor_dashboard(request):
         instance.user_enrollment = enrollment
         if instance not in course_instances:  # Avoid duplicates
             enrolled_instances.append(instance)
+    
+    # Calculate stats for enrolled instances (after they're created)
+    for instance in enrolled_instances:
+        enrollments = instance.enrollments.all()
+        if enrollments:
+            total_progress = sum(e.course_progress.overall_progress for e in enrollments)
+            total_score = sum(e.course_progress.overall_score for e in enrollments)
+            instance.avg_progress = total_progress / len(enrollments)
+            instance.avg_score = total_score / len(enrollments)
+        else:
+            instance.avg_progress = 0
+            instance.avg_score = 0
     
     # Fetch KnowledgeTree legacy groups for instructors (with MasteryGrids node IDs)
     legacy_groups = []
@@ -81,17 +104,187 @@ def instructor_dashboard(request):
 def generate_course_auth_url(request):
     """
     Generates an encrypted token for course authoring login.
+    Uses stored password from database (user.course_authoring_password).
     """
+    logger.info("=" * 80)
+    logger.info(f"generate_course_auth_url called for user: {request.user.email}")
+    logger.info(f"User ID: {request.user.id}")
+    logger.info(f"User Full Name: {request.user.full_name}")
+    logger.info(f"Stored Password (first 16 chars): {request.user.course_authoring_password[:16] if request.user.course_authoring_password else 'None'}...")
+    logger.info(f"Request Method: {request.method}")
+    logger.info(f"Request Path: {request.path}")
+    logger.info("-" * 80)
+    
     try:
-        token = get_course_auth_token(request.user)
+        # Use stored password from database
+        # If password doesn't exist, it will be generated and stored
+        token = get_course_auth_token(request.user, retry_on_mismatch=True)
+        
+        logger.info(f"Successfully generated token for user {request.user.email}")
+        logger.info("=" * 80)
         return JsonResponse({"token": token})
     except ValueError as e:
-        print(f"Error: {e}")
+        logger.error("=" * 80)
+        logger.error(f"ValueError in generate_course_auth_url: {e}")
+        logger.error(f"User: {request.user.email}")
+        logger.error("=" * 80)
         return JsonResponse({"error": str(e)}, status=401)
+    except requests.exceptions.HTTPError as e:
+        # Handle specific HTTP errors (like 422 for password mismatch)
+        error_message = str(e)
+        status_code = e.response.status_code if e.response else 500
+        
+        logger.error("=" * 80)
+        logger.error(f"HTTPError in generate_course_auth_url")
+        logger.error(f"Status Code: {status_code}")
+        logger.error(f"User: {request.user.email}")
+        
+        # Check if it's a password mismatch error
+        is_password_mismatch = (
+            status_code == 422 and 
+            ("PASSWORD_MISMATCH" in error_message or "password doesn't match" in error_message.lower() or "Invalid email or password" in error_message)
+        )
+        
+        # Extract more specific error message if available
+        if e.response:
+            try:
+                error_data = e.response.json()
+                error_message = error_data.get('message', error_message)
+                logger.error(f"Error Response (JSON): {json.dumps(error_data, indent=2)}")
+            except (ValueError, KeyError):
+                logger.error(f"Error Response (Text): {e.response.text[:500]}")
+        
+        logger.error(f"Error Message: {error_message}")
+        logger.error(f"Is Password Mismatch: {is_password_mismatch}")
+        logger.error("=" * 80)
+        
+        response_data = {
+            "error": error_message,
+            "status_code": status_code
+        }
+        
+        # Add helpful information for password mismatches
+        if is_password_mismatch:
+            response_data["password_mismatch"] = True
+            response_data["suggestion"] = (
+                "Your account exists in course-authoring with a different password. "
+                "The system has attempted to reset your password and retry. "
+                "If this error persists, you may need to contact support to sync your password in course-authoring."
+            )
+        
+        return JsonResponse(response_data, status=status_code)
     except requests.exceptions.RequestException as e:
-        return JsonResponse({"error": f"Request error: {e}"}, status=500)
+        logger.error("=" * 80)
+        logger.error(f"RequestException in generate_course_auth_url: {e}")
+        logger.error(f"User: {request.user.email}")
+        logger.error(f"Exception Type: {type(e).__name__}")
+        logger.error("=" * 80)
+        return JsonResponse({
+            "error": f"Failed to connect to course-authoring service: {str(e)}"
+        }, status=500)
     except Exception as e:
-        return JsonResponse({"error": f"An unexpected error occurred during token request: {e}"}, status=500)
+        logger.error("=" * 80)
+        logger.error(f"Unexpected error in generate_course_auth_url: {e}")
+        logger.error(f"User: {request.user.email}")
+        logger.error(f"Exception Type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error("=" * 80)
+        return JsonResponse({
+            "error": f"An unexpected error occurred: {str(e)}"
+        }, status=500)
+
+
+@login_required
+def proxy_course_authoring_x_login(request):
+    """
+    Proxies the x-login request to course-authoring to avoid CORS issues.
+    The token is sent from the frontend, and we forward it to course-authoring.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        token = data.get('token')
+        
+        if not token:
+            return JsonResponse({"error": "Token is required"}, status=400)
+        
+        logger.info("=" * 80)
+        logger.info(f"PROXY X-LOGIN REQUEST for user: {request.user.email}")
+        logger.info(f"Token (first 50 chars): {token[:50] if token else 'None'}...")
+        logger.info("-" * 80)
+        
+        # Forward the request to course-authoring
+        response = requests.post(
+            "https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login",
+            json={"token": token},
+            timeout=10,
+            allow_redirects=False
+        )
+        
+        # Log the response
+        logger.info(f"X-Login Response Status: {response.status_code}")
+        logger.info(f"X-Login Response Headers: {dict(response.headers)}")
+        
+        try:
+            response_data = response.json()
+            logger.info(f"X-Login Response Body: {json.dumps(response_data, indent=2)}")
+        except:
+            logger.info(f"X-Login Response Body (Text): {response.text[:200]}...")
+        
+        logger.info("=" * 80)
+        
+        # Forward the response to the client
+        if response.status_code == 200:
+            return JsonResponse(response.json(), status=200)
+        else:
+            # Forward error response
+            try:
+                error_data = response.json()
+                return JsonResponse(error_data, status=response.status_code)
+            except:
+                return JsonResponse(
+                    {"error": response.text or "Unknown error"},
+                    status=response.status_code
+                )
+                
+    except Exception as e:
+        logger.error(f"Error proxying x-login request: {e}", exc_info=True)
+        return JsonResponse({
+            "error": f"Failed to proxy request: {str(e)}"
+        }, status=500)
+
+
+@login_required
+def reset_course_authoring_password_view(request):
+    """
+    API endpoint to reset the course-authoring password for the current user.
+    Returns the new password that needs to be set in course-authoring.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    try:
+        new_password = reset_course_authoring_password(request.user)
+        logger.info(f"User {request.user.email} reset their course-authoring password")
+        return JsonResponse({
+            "success": True,
+            "new_password": new_password,
+            "message": (
+                f"Password reset successful. Your new password is: {new_password}\n\n"
+                f"Please contact the course-authoring administrator (Mohammad Hassany) "
+                f"to set this password for your account in course-authoring. "
+                f"Once set, you'll be able to authenticate successfully."
+            )
+        })
+    except Exception as e:
+        logger.error(f"Error resetting course-authoring password for user {request.user.email}: {e}", exc_info=True)
+        return JsonResponse({
+            "error": f"Failed to reset password: {str(e)}"
+        }, status=500)
 
 @login_required
 def legacy_dashboard(request):
@@ -164,16 +357,50 @@ def get_course_resources_api(request, group_login: str):
     
     Returns JSON with list of resources (MasteryGrids, surveys, etc.) that can be
     rendered in an IFrame using the Show servlet.
+    
+    URLs include required KnowledgeTree parameters (usr, grp, sid, cid) as per
+    KnowledgeTree content serving requirements.
+    
+    If user doesn't have a KnowledgeTree session, returns a flag indicating
+    that authentication is required (Option B: redirect to KT login).
     """
     try:
-        resources = get_course_resources(group_login)
+        # Get user login (use kt_login if available, otherwise username)
+        user_login = request.user.kt_login or request.user.username
         
-        return JsonResponse({
+        # Get session ID (Django session key)
+        session_id = request.session.session_key
+        
+        # Get course resources with required parameters
+        resources = get_course_resources(
+            group_login=group_login,
+            user_login=user_login,
+            session_id=session_id,
+            course_id=None  # Will be fetched from aggregate DB
+        )
+        
+        # Check if user has KnowledgeTree session
+        # Note: /PortalServices/Auth is stateless and does not create HTTP sessions
+        # Users need to authenticate via browser (redirect to KT login) to get JSESSIONID cookie
+        # This is the recommended approach for accessing protected resources
+        has_session = has_kt_session(request)
+        
+        response_data = {
             'success': True,
             'resources': resources,
             'group_login': group_login,
-            'count': len(resources)
-        })
+            'count': len(resources),
+            'has_kt_session': has_session,
+            'kt_session_required': not has_session,
+            'kt_login_url': get_kt_login_url() if not has_session else None
+        }
+        
+        if not has_session:
+            logger.info(f"User {request.user.username} does not have KnowledgeTree HTTP session")
+            logger.info(f"Resource access will require redirect to KnowledgeTree login (browser-based authentication)")
+            logger.info(f"This is expected - /PortalServices/Auth is stateless and does not create sessions")
+        
+        return JsonResponse(response_data)
     except Exception as e:
         logger.error(f"Error in get_course_resources_api for group {group_login}: {str(e)}", exc_info=True)
         return JsonResponse({

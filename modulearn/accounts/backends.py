@@ -46,6 +46,7 @@ class KnowledgeTreeBackend(ModelBackend):
         
         try:
             kt_service = KnowledgeTreeAuthService()
+            
             kt_user_data = kt_service.authenticate(username, password)
             
             if not kt_user_data:
@@ -56,7 +57,10 @@ class KnowledgeTreeBackend(ModelBackend):
             user = self._get_or_create_user(kt_user_data)
             
             if user:
-                logger.info(f"KnowledgeTree authentication successful for user: {username}")
+                logger.info(f"KnowledgeTree authentication successful for user: {username} (kt_user_id={user.kt_user_id})")
+                logger.info(f"Note: /PortalServices/Auth is stateless and does not create HTTP sessions")
+                logger.info(f"For accessing protected resources (Show servlet), users will be redirected to KnowledgeTree login if no session exists")
+                logger.info(f"This is the recommended approach - browser-based authentication for protected resources")
             
             return user
             
@@ -115,14 +119,19 @@ class KnowledgeTreeBackend(ModelBackend):
                 user.save()
                 return user
         
-        # Create new user - KnowledgeTree users are created as instructors
+        # Create new user - check aggregate.ent_non_student to determine if instructor
         logger.info(f"Creating new ModuLearn user from KnowledgeTree: {username}")
+        
+        # Check if user is an instructor in aggregate.ent_non_student
+        from dashboard.kt_utils import is_user_instructor_in_aggregate
+        is_instructor = is_user_instructor_in_aggregate(kt_login)
+        
         user = User.objects.create_user(
             username=username,
             email=kt_user_data.get('email', '') or f"{username}@knowledgetree.local",
             full_name=kt_user_data.get('name', '') or username,
-            is_student=False,  # KT users are instructors, not students
-            is_instructor=True,  # Legacy KT users should be instructors
+            is_instructor=is_instructor,
+            is_student=not is_instructor,  # If not instructor, they're a student
         )
         
         if kt_user_id:
@@ -131,6 +140,7 @@ class KnowledgeTreeBackend(ModelBackend):
         self._update_user_from_kt(user, kt_user_data)
         user.save()
         
+        logger.info(f"Created new ModuLearn user {username}: is_instructor={is_instructor}, is_student={not is_instructor}")
         return user
     
     def _update_user_from_kt(self, user, kt_user_data: dict):
@@ -149,4 +159,15 @@ class KnowledgeTreeBackend(ModelBackend):
         # Update kt_login if changed
         if kt_user_data.get('login'):
             user.kt_login = kt_user_data['login']
+        
+        # Update instructor/student status based on aggregate.ent_non_student
+        # Only update if user has kt_login (needed for the check)
+        if user.kt_login:
+            from dashboard.kt_utils import is_user_instructor_in_aggregate
+            is_instructor = is_user_instructor_in_aggregate(user.kt_login)
+            # Only update if status has changed
+            if user.is_instructor != is_instructor:
+                logger.info(f"Updating user {user.username} instructor status: {user.is_instructor} -> {is_instructor}")
+                user.is_instructor = is_instructor
+                user.is_student = not is_instructor
 

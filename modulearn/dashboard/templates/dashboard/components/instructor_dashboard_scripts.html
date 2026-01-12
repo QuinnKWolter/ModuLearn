@@ -1,0 +1,928 @@
+<script>
+// Utility Functions
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Course Management Functions
+function createNewSession(courseId) {
+  document.getElementById('courseId').value = courseId;
+  document.getElementById('groupName').value = '';
+  document.getElementById('groupName').classList.remove('is-valid', 'is-invalid');
+  document.getElementById('groupNameFeedback').textContent = '';
+  document.getElementById('newSessionForm').dataset.courseId = courseId;
+  new bootstrap.Modal(document.getElementById('newSessionModal')).show();
+}
+
+async function showDeleteCourseConfirmation(courseId) {
+  try {
+    const modal = new bootstrap.Modal(document.getElementById('deleteCourseModal'));
+    modal.show();
+    
+    document.getElementById('courseToDelete').textContent = 'Loading...';
+    document.getElementById('confirmDeleteButton').disabled = true;
+    
+    const response = await fetch(`/modulearn/courses/${courseId}/details/`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    
+    document.getElementById('courseToDelete').textContent = data.course.title;
+    
+    const instancesList = document.getElementById('instancesListGroup');
+    const noInstancesMessage = document.getElementById('noInstancesMessage');
+    const courseInstancesList = document.getElementById('courseInstancesList');
+    
+    instancesList.innerHTML = '';
+    
+    if (data.instances && data.instances.length > 0) {
+      courseInstancesList.style.display = 'block';
+      noInstancesMessage.style.display = 'none';
+      
+      data.instances.forEach(instance => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = `${instance.group_name} (${instance.enrollment_count} students enrolled)`;
+        instancesList.appendChild(li);
+      });
+    } else {
+      courseInstancesList.style.display = 'none';
+      noInstancesMessage.style.display = 'block';
+    }
+    
+    const confirmButton = document.getElementById('confirmDeleteButton');
+    confirmButton.disabled = false;
+    confirmButton.onclick = () => deleteCourse(courseId);
+    
+  } catch (error) {
+    console.error('Error fetching course details:', error);
+    document.getElementById('courseToDelete').textContent = 'Error loading course details';
+    document.getElementById('courseInstancesList').style.display = 'none';
+    document.getElementById('noInstancesMessage').style.display = 'block';
+    document.getElementById('noInstancesMessage').innerHTML = `
+      <div class="alert alert-danger">
+        Error: ${error.message || 'Failed to load course details'}
+      </div>
+    `;
+    document.getElementById('confirmDeleteButton').disabled = true;
+  }
+}
+
+async function deleteCourse(courseId) {
+  const confirmButton = document.getElementById('confirmDeleteButton');
+  try {
+    confirmButton.disabled = true;
+    confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+    
+    const response = await fetch(`/modulearn/courses/${courseId}/delete/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data.error || 'Failed to delete course');
+    
+    if (data.success) {
+      window.location.reload();
+    } else {
+      throw new Error(data.error || 'Failed to delete course');
+    }
+    
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    alert('Error: ' + (error.message || 'Failed to delete course'));
+    confirmButton.disabled = false;
+    confirmButton.innerHTML = '<i class="bi bi-trash me-1"></i>Delete Course';
+  }
+}
+
+// Enrollment Management
+async function loadEnrollments(courseInstanceId) {
+  const tableBody = document.getElementById('enrollmentTableBody');
+  if (!tableBody) {
+    console.error('enrollmentTableBody element not found');
+    return;
+  }
+
+  try {
+    // Use Django URL reverse - the URL will automatically include any prefix
+    const urlPattern = "{% url 'courses:get_course_enrollments' course_instance_id='COURSE_INSTANCE_ID_PLACEHOLDER' %}";
+    const url = urlPattern.replace('COURSE_INSTANCE_ID_PLACEHOLDER', courseInstanceId);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    tableBody.innerHTML = '';
+    
+    if (data.enrollments && data.enrollments.length > 0) {
+      data.enrollments.forEach(enrollment => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${enrollment.student.email}</td>
+          <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules}</td>
+          <td class="text-end">${enrollment.progress.overall_score.toFixed(2)}%</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger remove-enrollment" 
+                    data-enrollment-id="${enrollment.id}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+      attachRemoveListeners();
+    } else {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td colspan="4" class="text-center text-muted py-4">
+          <em>No students are currently enrolled in this course session</em>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    }
+  } catch (error) {
+    console.error('Error loading enrollments:', error);
+    tableBody.innerHTML = '';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td colspan="4" class="text-center text-danger py-4">
+        <em>Error loading enrollments. Please try again.</em>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  }
+}
+
+function attachRemoveListeners() {
+  document.querySelectorAll('.remove-enrollment').forEach(button => {
+    button.addEventListener('click', async function() {
+      if (!confirm('Are you sure you want to remove this student?')) return;
+
+      const enrollmentId = this.dataset.enrollmentId;
+      try {
+        // Use Django URL reverse - the URL will automatically include any prefix
+        const urlPattern = "{% url 'courses:remove_enrollment' enrollment_id=999999 %}";
+        const url = urlPattern.replace('999999', enrollmentId.toString());
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          this.closest('tr').remove();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while removing the student.');
+      }
+    });
+  });
+}
+
+// Main DOMContentLoaded Handler
+document.addEventListener('DOMContentLoaded', function() {
+  // New Session buttons
+  document.querySelectorAll('.new-session-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      createNewSession(this.dataset.courseId);
+    });
+  });
+
+  // Delete Course buttons
+  document.querySelectorAll('.delete-course-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      showDeleteCourseConfirmation(this.dataset.courseId);
+    });
+  });
+
+  // Group name validation
+  const checkGroupName = debounce(async function(groupName) {
+    const groupNameInput = document.getElementById('groupName');
+    const groupNameFeedback = document.getElementById('groupNameFeedback');
+    const submitButton = document.querySelector('#newSessionForm button[type="submit"]');
+    const courseId = document.getElementById('newSessionForm').dataset.courseId;
+    
+    if (!groupName.trim()) {
+      groupNameInput.classList.remove('is-valid', 'is-invalid');
+      groupNameFeedback.textContent = '';
+      submitButton.disabled = true;
+      return;
+    }
+    
+    try {
+      const response = await fetch(
+        "{% url 'courses:check_group_name' %}" + 
+        `?group_name=${encodeURIComponent(groupName)}` +
+        `&course_id=${encodeURIComponent(courseId)}`
+      );
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      const data = await response.json();
+      
+      if (data.available) {
+        groupNameInput.classList.remove('is-invalid');
+        groupNameInput.classList.add('is-valid');
+        groupNameFeedback.textContent = 'Session name is available';
+        groupNameFeedback.className = 'valid-feedback small';
+        submitButton.disabled = false;
+      } else {
+        groupNameInput.classList.remove('is-valid');
+        groupNameInput.classList.add('is-invalid');
+        groupNameFeedback.textContent = data.error || 'This session name already exists for this course';
+        groupNameFeedback.className = 'invalid-feedback small';
+        submitButton.disabled = true;
+      }
+    } catch (error) {
+      console.error('Error checking session name:', error);
+      groupNameInput.classList.remove('is-valid', 'is-invalid');
+      submitButton.disabled = false;
+    }
+  }, 300);
+
+  // New session form
+  const newSessionForm = document.getElementById('newSessionForm');
+  if (newSessionForm) {
+    newSessionForm.addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      const courseId = document.getElementById('courseId').value;
+      const groupName = document.getElementById('groupName').value.trim();
+      const submitButton = this.querySelector('button[type="submit"]');
+      
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+      
+      const url = "{% url 'courses:create_course_instance' 'COURSE_ID' %}".replace('COURSE_ID', courseId);
+      
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ group_name: groupName })
+      })
+      .then(async response => {
+        const data = await response.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Failed to create course session: ' + data.error);
+        }
+        return data;
+      })
+      .catch(error => {
+        console.error('Error creating course session:', error);
+        alert('An error occurred while creating the course session.');
+      })
+      .finally(() => {
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Create Session';
+      });
+    });
+  }
+
+  // Group name input validation
+  const groupNameInput = document.getElementById('groupName');
+  if (groupNameInput) {
+    groupNameInput.addEventListener('input', (e) => checkGroupName(e.target.value.trim()));
+  }
+
+  // Bulk enrollment form
+  const bulkEnrollmentForm = document.getElementById('bulkEnrollmentForm');
+  if (bulkEnrollmentForm) {
+    bulkEnrollmentForm.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      
+      const courseInstanceId = document.getElementById('currentCourseInstanceId').value;
+      const emailList = document.getElementById('emailList');
+      const emails = emailList.value.split(',').map(email => email.trim()).filter(email => email);
+      
+      if (emails.length === 0) {
+        alert('Please enter at least one email address');
+        return;
+      }
+
+      const submitButton = this.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+
+      try {
+        // Use Django URL reverse - the URL will automatically include any prefix
+        const urlPattern = "{% url 'courses:bulk_enroll_students' course_instance_id='COURSE_INSTANCE_ID_PLACEHOLDER' %}";
+        const url = urlPattern.replace('COURSE_INSTANCE_ID_PLACEHOLDER', courseInstanceId);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({ emails })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          emailList.value = '';
+          await loadEnrollments(courseInstanceId);
+          
+          let message = `Successfully enrolled ${data.success_count} students.`;
+          if (data.error_count > 0) {
+            message += '\n\nErrors:\n' + data.error_details.join('\n');
+          }
+          alert(message);
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while enrolling students.');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="bi bi-person-plus me-1"></i>Add Students';
+      }
+    });
+  }
+
+  // Manage Enrollment Modal
+  const manageEnrollmentModal = document.getElementById('manageEnrollmentModal');
+  if (manageEnrollmentModal) {
+    manageEnrollmentModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const courseInstanceId = button.getAttribute('data-course-instance-id');
+      const courseTitle = button.getAttribute('data-course-title');
+      const groupName = button.getAttribute('data-group-name');
+      
+      document.getElementById('manageEnrollmentModalLabel').textContent = 
+        `${courseTitle} - ${groupName}`;
+      document.getElementById('currentCourseInstanceId').value = courseInstanceId;
+      
+      loadEnrollments(courseInstanceId);
+    });
+
+    manageEnrollmentModal.addEventListener('hidden.bs.modal', function () {
+      window.location.reload();
+    });
+  }
+
+  // Import JSON Modal Handlers
+  const importJsonModal = document.getElementById('importJsonCourseModal');
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  const jsonTextInput = document.getElementById('jsonTextInput');
+  const importJsonSubmitBtn = document.getElementById('importJsonSubmitBtn');
+  const jsonImportError = document.getElementById('jsonImportError');
+  const jsonImportSuccess = document.getElementById('jsonImportSuccess');
+  const filePreview = document.getElementById('filePreview');
+  const filePreviewContent = document.getElementById('filePreviewContent');
+  
+  if (importJsonModal) {
+    importJsonModal.addEventListener('hidden.bs.modal', function() {
+      if (jsonFileInput) jsonFileInput.value = '';
+      if (jsonTextInput) jsonTextInput.value = '';
+      if (jsonImportError) jsonImportError.style.display = 'none';
+      if (jsonImportSuccess) jsonImportSuccess.style.display = 'none';
+      if (filePreview) filePreview.style.display = 'none';
+      if (importJsonSubmitBtn) {
+        importJsonSubmitBtn.disabled = false;
+        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload me-1"></i>Import Course';
+      }
+    });
+  }
+  
+  if (jsonFileInput) {
+    jsonFileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) {
+        if (filePreview) filePreview.style.display = 'none';
+        return;
+      }
+      
+      if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+        if (jsonImportError) {
+          jsonImportError.textContent = 'Please select a valid JSON file';
+          jsonImportError.style.display = 'block';
+        }
+        jsonFileInput.value = '';
+        if (filePreview) filePreview.style.display = 'none';
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const content = e.target.result;
+          const jsonData = JSON.parse(content);
+          if (filePreviewContent) filePreviewContent.textContent = JSON.stringify(jsonData, null, 2);
+          if (filePreview) filePreview.style.display = 'block';
+          if (jsonImportError) jsonImportError.style.display = 'none';
+        } catch (err) {
+          if (jsonImportError) {
+            jsonImportError.textContent = 'Invalid JSON file: ' + err.message;
+            jsonImportError.style.display = 'block';
+          }
+          if (filePreview) filePreview.style.display = 'none';
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+  
+  const formatJsonBtn = document.getElementById('formatJsonBtn');
+  if (formatJsonBtn) {
+    formatJsonBtn.addEventListener('click', function() {
+      const text = jsonTextInput.value.trim();
+      if (!text) return;
+      
+      try {
+        const parsed = JSON.parse(text);
+        jsonTextInput.value = JSON.stringify(parsed, null, 2);
+        if (jsonImportError) jsonImportError.style.display = 'none';
+      } catch (e) {
+        if (jsonImportError) {
+          jsonImportError.textContent = 'Invalid JSON: ' + e.message;
+          jsonImportError.style.display = 'block';
+        }
+      }
+    });
+  }
+  
+  const clearJsonBtn = document.getElementById('clearJsonBtn');
+  if (clearJsonBtn) {
+    clearJsonBtn.addEventListener('click', function() {
+      if (jsonTextInput) jsonTextInput.value = '';
+      if (jsonImportError) jsonImportError.style.display = 'none';
+    });
+  }
+  
+  if (importJsonSubmitBtn) {
+    importJsonSubmitBtn.addEventListener('click', async function() {
+      if (jsonImportError) jsonImportError.style.display = 'none';
+      if (jsonImportSuccess) jsonImportSuccess.style.display = 'none';
+      
+      let courseData = null;
+      let jsonContent = '';
+      
+      const activeTab = document.querySelector('#importJsonTabs .nav-link.active');
+      if (activeTab && activeTab.id === 'upload-tab') {
+        const file = jsonFileInput.files[0];
+        if (!file) {
+          if (jsonImportError) {
+            jsonImportError.textContent = 'Please select a JSON file';
+            jsonImportError.style.display = 'block';
+          }
+          return;
+        }
+        
+        try {
+          jsonContent = await file.text();
+          courseData = JSON.parse(jsonContent);
+        } catch (e) {
+          if (jsonImportError) {
+            jsonImportError.textContent = 'Error reading file: ' + e.message;
+            jsonImportError.style.display = 'block';
+          }
+          return;
+        }
+      } else {
+        jsonContent = jsonTextInput.value.trim();
+        if (!jsonContent) {
+          if (jsonImportError) {
+            jsonImportError.textContent = 'Please paste JSON content';
+            jsonImportError.style.display = 'block';
+          }
+          return;
+        }
+        
+        try {
+          courseData = JSON.parse(jsonContent);
+        } catch (e) {
+          if (jsonImportError) {
+            jsonImportError.textContent = 'Invalid JSON format: ' + e.message;
+            jsonImportError.style.display = 'block';
+          }
+          return;
+        }
+      }
+      
+      if (!courseData.id && !courseData.name) {
+        if (jsonImportError) {
+          jsonImportError.textContent = 'Invalid course structure: missing required fields (id or name)';
+          jsonImportError.style.display = 'block';
+        }
+        return;
+      }
+      
+      importJsonSubmitBtn.disabled = true;
+      importJsonSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing...';
+      
+      try {
+        const response = await fetch("{% url 'courses:create_course' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({
+            course_data: courseData
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          if (jsonImportSuccess) jsonImportSuccess.style.display = 'block';
+          setTimeout(function() {
+            window.location.reload();
+          }, 1000);
+        } else {
+          throw new Error(data.error || 'Failed to import course');
+        }
+      } catch (error) {
+        console.error('Error importing course:', error);
+        if (jsonImportError) {
+          jsonImportError.textContent = 'Error: ' + error.message;
+          jsonImportError.style.display = 'block';
+        }
+        importJsonSubmitBtn.disabled = false;
+        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload me-1"></i>Import Course';
+      }
+    });
+  }
+
+  // LTI URL copy buttons
+  document.querySelectorAll('.copy-lti-url').forEach(button => {
+    button.addEventListener('click', function() {
+      const courseInstanceId = this.dataset.courseInstanceId;
+      const baseUrl = window.location.origin + '/modulearn/lti/launch/';
+      const ltiUrl = `${baseUrl}?course_id=${courseInstanceId}`;
+      
+      navigator.clipboard.writeText(ltiUrl).then(() => {
+        const tooltip = new bootstrap.Tooltip(button, {
+          title: 'URL Copied!',
+          trigger: 'manual'
+        });
+        tooltip.show();
+        setTimeout(() => tooltip.dispose(), 1500);
+      }).catch(err => {
+        console.error('Failed to copy URL:', err);
+        alert('Failed to copy URL to clipboard');
+      });
+    });
+  });
+
+  // Import Course Button (Course Authoring Tool)
+  const importCourseButton = document.getElementById('importCourseButton');
+  if (importCourseButton) {
+    importCourseButton.addEventListener('click', async function() {
+      const button = this;
+      const originalText = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = 'Connecting...';
+      
+      try {
+        const response = await fetch("{% url 'dashboard:generate_course_auth_url' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok || data.error) {
+          const errorMessage = data.error || 'Failed to authenticate with course-authoring';
+          console.error('Authentication Error:', errorMessage);
+          
+          if (data.password_mismatch || errorMessage.includes('PASSWORD_MISMATCH') || errorMessage.includes("password doesn't match")) {
+            const resetConfirmed = confirm(
+              'Password Mismatch Detected\n\n' +
+              'Your account exists in course-authoring with a different password.\n\n' +
+              'Would you like to generate a new password? You\'ll need to share it with the course-authoring administrator to sync your account.\n\n' +
+              'Click OK to reset, or Cancel to try again later.'
+            );
+            
+            if (resetConfirmed) {
+              try {
+                button.innerHTML = 'Resetting password...';
+                const resetResponse = await fetch("{% url 'dashboard:reset_course_authoring_password' %}", {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                  }
+                });
+                
+                const resetData = await resetResponse.json();
+                
+                if (resetResponse.ok && resetData.success) {
+                  alert(
+                    'Password Reset Successful!\n\n' +
+                    'Your new password is:\n' + resetData.new_password + '\n\n' +
+                    'Please contact Mohammad Hassany (MOH70@pitt.edu) to set this password in course-authoring.\n\n' +
+                    'Once set, you can try connecting again.'
+                  );
+                } else {
+                  alert('Failed to reset password: ' + (resetData.error || 'Unknown error'));
+                }
+              } catch (resetError) {
+                console.error('Reset error:', resetError);
+                alert('Failed to reset password. Please try again or contact support.');
+              }
+            }
+          } else {
+            alert('Authentication Error:\n\n' + errorMessage + '\n\nPlease contact support if this issue persists.');
+          }
+          
+          button.disabled = false;
+          button.innerHTML = originalText;
+          return;
+        }
+
+        button.innerHTML = 'Logging in...';
+        
+        try {
+          const loginResponse = await fetch("https://proxy.personalized-learning.org/next.course-authoring/api/auth/x-login", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ token: data.token })
+          });
+
+          if (!loginResponse.ok) {
+            let errorMessage = 'Failed to log in with token';
+            try {
+              const loginErrorData = await loginResponse.json();
+              errorMessage = loginErrorData.message || loginErrorData.error || errorMessage;
+            } catch (e) {}
+            console.error('Login Error:', errorMessage);
+            alert('Login Error:\n\n' + errorMessage);
+            button.disabled = false;
+            button.innerHTML = originalText;
+            return;
+          }
+
+          const loginData = await loginResponse.json();
+
+          if (loginData.error) {
+            console.error('Login Error:', loginData.error);
+            alert('Login Error:\n\n' + loginData.error);
+            button.disabled = false;
+            button.innerHTML = originalText;
+            return;
+          }
+
+          console.log('Login successful, session cookie set. Redirecting to course-authoring...');
+          setTimeout(function() {
+            window.location.href = "https://proxy.personalized-learning.org/next.course-authoring/#/modulearn";
+          }, 100);
+          
+        } catch (error) {
+          if (error.message && (error.message.includes('CORS') || error.message.includes('Failed to fetch'))) {
+            console.warn('CORS error when calling x-login directly, trying proxy fallback...');
+            
+            try {
+              const proxyResponse = await fetch("{% url 'dashboard:proxy_course_authoring_x_login' %}", {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ token: data.token })
+              });
+
+              const proxyData = await proxyResponse.json();
+              
+              if (proxyResponse.ok && !proxyData.error) {
+                console.warn('Used proxy fallback - session cookie may not be set');
+                alert('Note: Session may not be fully established due to CORS restrictions.\n\nYour account has been created. Redirecting to course-authoring...');
+                window.location.href = "https://proxy.personalized-learning.org/next.course-authoring/#/modulearn";
+              } else {
+                throw new Error(proxyData.error || 'Proxy login failed');
+              }
+            } catch (proxyError) {
+              console.error('Proxy fallback also failed:', proxyError);
+              alert('Failed to establish session. Your account has been created in course-authoring.\n\nPlease try logging in directly on course-authoring, or contact support if this issue persists.');
+              button.disabled = false;
+              button.innerHTML = originalText;
+            }
+          } else {
+            console.error('Error during x-login:', error);
+            alert('An error occurred during login:\n\n' + error.message + '\n\nPlease try again or contact support.');
+            button.disabled = false;
+            button.innerHTML = originalText;
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while connecting to course-authoring:\n\n' + error.message + '\n\nPlease try again or contact support if the issue persists.');
+        button.disabled = false;
+        button.innerHTML = originalText;
+      }
+    });
+  }
+  
+  // Helper function to escape HTML (prevent XSS)
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  // Course Resources Modal Function
+  async function openCourseResourcesModal(groupLogin, groupName) {
+    const modal = new bootstrap.Modal(document.getElementById('courseResourcesModal'));
+    const modalLabel = document.getElementById('courseResourcesGroupName');
+    const resourcesList = document.getElementById('courseResourcesList');
+    
+    // Set group name in modal
+    if (modalLabel) {
+      modalLabel.textContent = groupName || groupLogin;
+    }
+    
+    // Show loading state
+    if (resourcesList) {
+      resourcesList.innerHTML = `
+        <li class="list-group-item text-center py-5">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Loading resources...</span>
+          </div>
+          <p class="text-muted mt-2 mb-0">Loading resources...</p>
+        </li>
+      `;
+    }
+    
+    // Show modal
+    modal.show();
+    
+    // Fetch resources
+    try {
+      const apiUrl = `/dashboard/api/course_resources/${encodeURIComponent(groupLogin)}/`;
+      console.log('Fetching course resources from:', apiUrl);
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      
+      console.log('Course resources API response:', data);
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load resources');
+      }
+      
+      if (!data.resources) {
+        console.warn('API response missing resources array:', data);
+        throw new Error('Invalid API response: missing resources');
+      }
+      
+      // Clear loading state
+      if (resourcesList) {
+        resourcesList.innerHTML = '';
+        
+        if (data.resources && data.resources.length > 0) {
+          console.log(`Processing ${data.resources.length} resources`);
+          data.resources.forEach((resource, index) => {
+            // Use Title field (capital T) from database, fallback to NodeID
+            const resourceTitle = resource.Title || resource.title || `Resource ${resource.NodeID || 'Unknown'}`;
+            const resourceDescription = resource.Description || resource.description || '';
+            const resourceUrl = resource.show_url || resource.show_url_direct || resource.URL || resource.url;
+            
+            console.log(`Resource ${index + 1}:`, {
+              Title: resource.Title,
+              NodeID: resource.NodeID,
+              show_url: resource.show_url,
+              URL: resource.URL,
+              resource_type: resource.resource_type
+            });
+            
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            li.style.cursor = resourceUrl ? 'pointer' : 'not-allowed';
+            
+            li.innerHTML = `
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">${escapeHtml(resourceTitle)}</h6>
+                  ${resourceDescription ? `<p class="text-muted small mb-0">${escapeHtml(resourceDescription)}</p>` : ''}
+                  ${resource.resource_type ? `<span class="badge bg-secondary badge-sm">${resource.resource_type}</span>` : ''}
+                </div>
+                ${resourceUrl ? '<i class="bi bi-box-arrow-up-right text-primary ms-2"></i>' : '<i class="bi bi-x-circle text-muted ms-2"></i>'}
+              </div>
+            `;
+            
+            // Make clickable if URL exists
+            if (resourceUrl) {
+              li.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Opening resource URL:', resourceUrl);
+                window.open(resourceUrl, '_blank', 'noopener,noreferrer');
+              });
+              li.classList.add('hover-bg-light');
+            } else {
+              li.style.opacity = '0.6';
+              console.warn(`Resource ${resourceTitle} has no URL`);
+            }
+            
+            resourcesList.appendChild(li);
+          });
+        } else {
+          resourcesList.innerHTML = `
+            <li class="list-group-item text-center py-5">
+              <i class="bi bi-folder-x text-muted" style="font-size: 2rem; opacity: 0.3;"></i>
+              <p class="text-muted mt-3 mb-0">No resources found for this course</p>
+            </li>
+          `;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading course resources:', error);
+      if (resourcesList) {
+        resourcesList.innerHTML = `
+          <li class="list-group-item text-center py-5">
+            <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+            <p class="text-danger mt-3 mb-0">Error loading resources: ${error.message}</p>
+          </li>
+        `;
+      }
+    }
+  }
+  
+  // Make function globally accessible
+  window.openCourseResourcesModal = openCourseResourcesModal;
+  
+  // Legacy courses search functionality
+  {% if legacy_groups %}
+  const legacySearchInput = document.getElementById('legacyGroupsSearch');
+  const legacyClearBtn = document.getElementById('clearLegacySearch');
+  const legacyGroupCards = document.querySelectorAll('.legacy-group-card');
+  const legacyEmptyMsg = document.getElementById('legacyGroupsEmpty');
+  const legacyContainer = document.getElementById('legacyGroupsContainer');
+  
+  if (legacySearchInput) {
+    function filterLegacyGroups() {
+      const searchTerm = legacySearchInput.value.toLowerCase().trim();
+      let visibleCount = 0;
+      
+      legacyGroupCards.forEach(card => {
+        const groupName = card.getAttribute('data-group-name') || '';
+        const groupLogin = card.getAttribute('data-group-login') || '';
+        const matches = !searchTerm || groupName.includes(searchTerm) || groupLogin.includes(searchTerm);
+        
+        if (matches) {
+          card.style.display = 'block';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      
+      if (visibleCount === 0 && searchTerm) {
+        if (legacyEmptyMsg) legacyEmptyMsg.style.display = 'block';
+        if (legacyContainer) legacyContainer.style.display = 'none';
+      } else {
+        if (legacyEmptyMsg) legacyEmptyMsg.style.display = 'none';
+        if (legacyContainer) legacyContainer.style.display = 'flex';
+      }
+      
+      if (legacyClearBtn) legacyClearBtn.style.display = searchTerm ? 'inline-block' : 'none';
+    }
+    
+    legacySearchInput.addEventListener('input', filterLegacyGroups);
+    
+    if (legacyClearBtn) {
+      legacyClearBtn.addEventListener('click', function() {
+        legacySearchInput.value = '';
+        filterLegacyGroups();
+        legacySearchInput.focus();
+      });
+    }
+  }
+  {% endif %}
+});
+</script>
+

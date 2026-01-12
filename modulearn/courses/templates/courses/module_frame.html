@@ -9,13 +9,34 @@
   <!-- content_url: {{ content_url }} -->
   <!-- use_proxy: {{ use_proxy }} -->
   
+  <!-- Fallback UI for tools that refuse iframe embedding -->
+  <div id="iframe-blocked-notice" style="{% if refuses_iframe %}display: block;{% else %}display: none;{% endif %} padding: 2rem; text-align: center; background: #f8f9fa; border-radius: 8px; margin: 1rem 0;">
+    <h3 style="color: #dc3545; margin-bottom: 1rem;">⚠️ This tool cannot be embedded</h3>
+    <p style="color: #666; margin-bottom: 1rem;">
+      {% if refuses_iframe_reason %}
+        {{ refuses_iframe_reason }}
+      {% else %}
+        The external tool has security restrictions that prevent it from loading in an iframe.
+      {% endif %}
+    </p>
+    <button id="open-in-new-window" 
+            onclick="window.open('{{ iframe_src|escapejs }}', '_blank')"
+            style="background: #007bff; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+      Open in New Window →
+    </button>
+    <p style="color: #999; font-size: 0.85rem; margin-top: 1rem;">
+      Note: Progress may not be tracked when opened in a new window.
+    </p>
+  </div>
+  
   <iframe id="content-iframe" 
-          src="{{ iframe_src }}" 
+          src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}" 
           width="100%" 
           height="800px" 
           frameborder="0" 
           allowfullscreen 
-          allow="clipboard-write *">
+          allow="clipboard-write *"
+          {% if refuses_iframe %}style="display: none;"{% endif %}>
     Your browser doesn't support iframes.
   </iframe>
 </div>
@@ -24,14 +45,62 @@
   const selectedProtocol = "{{ selected_protocol|default:'' }}";
   const contentUrl = "{{ content_url|escapejs }}";
   const useProxy = {{ use_proxy|yesno:"true,false" }};
+  const iframeSrc = "{{ iframe_src|escapejs }}";
   
   console.log("Selected module protocol:", selectedProtocol || "(none)");
   console.log("Content URL:", contentUrl);
   console.log("Use proxy:", useProxy);
-  console.log("Iframe src:", "{{ iframe_src|escapejs }}");
+  console.log("Iframe src:", iframeSrc);
   console.log("Current iframe src:", document.getElementById('content-iframe').src);
   
   const isPreview = {{ preview_mode|yesno:"true,false" }};
+  
+  // =========================================================================
+  // CSP / Iframe Load Error Detection
+  // =========================================================================
+  let iframeLoaded = false;
+  const iframe = document.getElementById('content-iframe');
+  const blockedNotice = document.getElementById('iframe-blocked-notice');
+  
+  // Mark iframe as loaded when it fires the load event
+  iframe.addEventListener('load', function() {
+    iframeLoaded = true;
+    console.log("Iframe load event fired");
+    // Also probe for SPLICE protocol
+    probeSplice();
+    setTimeout(probeSplice, 1000);
+    setTimeout(probeSplice, 3000);
+  });
+  
+  // Listen for CSP violations (browser may report these)
+  document.addEventListener('securitypolicyviolation', function(e) {
+    console.warn("CSP Violation detected:", e.violatedDirective, e.blockedURI);
+    if (e.violatedDirective.includes('frame-ancestors') || e.blockedURI.includes(iframeSrc)) {
+      showBlockedNotice("The external tool's security policy prevents embedding.");
+    }
+  });
+  
+  // Some CSP blocks don't fire events - check if iframe appears empty after a delay
+  setTimeout(function() {
+    try {
+      // Try to access iframe content - will throw if blocked or cross-origin
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      // If we can access it and it's essentially empty, might be blocked
+      if (iframeDoc && iframeDoc.body && iframeDoc.body.innerHTML.trim() === '') {
+        console.warn("Iframe appears empty - may be blocked by CSP");
+      }
+    } catch (e) {
+      // Cross-origin is expected and normal for LTI tools
+      // Only show notice if we also haven't received any postMessages
+      console.log("Iframe cross-origin (expected for external tools)");
+    }
+  }, 3000);
+  
+  function showBlockedNotice(reason) {
+    console.warn("Showing blocked notice:", reason);
+    blockedNotice.style.display = 'block';
+    iframe.style.display = 'none';
+  }
 
   // Utility: simple UUID for message IDs
   function uuid() {
@@ -63,28 +132,34 @@
     }
   }
 
-  // Fire after iframe load (and again shortly after in case of late scripts)
-  const iframe = document.getElementById('content-iframe');
-  iframe.addEventListener('load', () => {
-    probeSplice();
-    setTimeout(probeSplice, 1000);
-    setTimeout(probeSplice, 3000);
-  });
+  // SPLICE probe is now handled in the load event listener above
   
   window.addEventListener('message', function(event) {
     // Validate the origin for security
-    // Build a flexible allowlist; your origin is critical when proxying.
-    // NOTE: PAWS content (pawscomp2, adapt2, columbus) is proxied through ModuLearn,
-    // so it will appear to come from window.location.origin, not the external domain.
+    // Build a flexible allowlist for trusted content origins.
+    // NOTE: When content is proxied through ModuLearn, postMessages come from 
+    // window.location.origin. When loaded directly (HTTP in HTTP context),
+    // messages come from the external domain.
     const expectedOrigins = new Set([
-      window.location.origin,           // ModuLearn origin (includes proxied PAWS content)
-      'https://codecheck.me',          // External CodeCheck (if not proxied)
-      'https://codecheck.io',          // External CodeCheck (if not proxied)
+      window.location.origin,              // ModuLearn origin (includes proxied content)
+      'https://codecheck.me',              // External CodeCheck
+      'https://codecheck.io',              // External CodeCheck
+      'http://adapt2.sis.pitt.edu',        // PAWS content (if loaded directly)
+      'http://pawscomp2.sis.pitt.edu',     // PAWS content (if loaded directly)
+      'http://columbus.exp.sis.pitt.edu',  // PAWS content (if loaded directly)
+      'https://adapt2.sis.pitt.edu',       // PAWS content (HTTPS variant)
+      'https://pawscomp2.sis.pitt.edu',    // PAWS content (HTTPS variant)
+      'https://columbus.exp.sis.pitt.edu', // PAWS content (HTTPS variant)
+      'https://pcrs.utm.utoronto.ca/',     // PCRS content (HTTPS variant)
     ]);
-    // DEBUG: see literally everything first
-    console.log('[ALL postMessage]', event.origin, event.data);
+    
+    // Log all messages for debugging (subject filter applied below)
+    if (event.data && event.data.subject && !event.data.subject.includes('frameResize')) {
+      console.log('[postMessage]', event.origin, event.data.subject);
+    }
+    
     if (!expectedOrigins.has(event.origin)) {
-      console.warn('Unexpected message origin:', event.origin);
+      console.warn('Unexpected message origin:', event.origin, '- message ignored');
       return;
     }
 

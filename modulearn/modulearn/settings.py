@@ -350,21 +350,42 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
-            'propagate': False,  # Set to False to prevent duplicate logging
+            'propagate': False,
         },
         'courses': {
             'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,  # Set to False to prevent duplicate logging
+            'level': 'DEBUG',
+            'propagate': False,
         },
         'dashboard': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
             'propagate': False,
         },
         'modulearn.dashboard.db_queries': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        # LTI Tool Consumer logging - detailed for diagnosing issues
+        'lti': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'lti.models': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'lti.services': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'modulearn.views_lti': {
+            'handlers': ['console'],
+            'level': 'INFO',  # Shows launch/outcome flow - set to DEBUG for more detail
             'propagate': False,
         },
     },
@@ -468,7 +489,30 @@ if not DEBUG:
     FORCE_SCRIPT_NAME = '/modulearn'
 USE_X_FORWARDED_HOST = True
 
-# LTI tools: env var names for key/secret/launch base
+# =============================================================================
+# LTI TOOL CONSUMER CONFIGURATION
+# =============================================================================
+# Configuration for launching external LTI tools from ModuLearn.
+# Tool configurations are loaded from lti/config.py with credentials from env vars.
+#
+# Required environment variables per tool:
+#   {TOOL}_KEY      - OAuth consumer key
+#   {TOOL}_SECRET   - OAuth consumer secret
+#   {TOOL}_LAUNCH   - Base launch URL
+#
+# Example:
+#   CODECHECK_KEY=your_key
+#   CODECHECK_SECRET=your_secret
+#   CODECHECK_LAUNCH=https://codecheck.io/lti
+
+# UM Service URL for outcome forwarding (ADAPT2 protocol)
+UM_SERVICE_URL = os.getenv('UM_SERVICE_URL', 'http://adapt2.sis.pitt.edu/aggregate2/UserActivity')
+
+# LTI launch cache TTL (hours) - how long to remember launch context for outcomes
+LTI_CACHE_TTL_HOURS = int(os.getenv('LTI_CACHE_TTL_HOURS', '24'))
+
+# DEPRECATED: Old tool env mapping (kept for backward compatibility)
+# Use lti/config.py for new tool configurations
 LTI_TOOL_ENVS = {
     "codecheck": ("CODECHECK_KEY", "CODECHECK_SECRET", "CODECHECK_LAUNCH"),
     "codelab": ("CODELAB_KEY", "CODELAB_SECRET", "CODELAB_LAUNCH"),
@@ -478,16 +522,15 @@ LTI_TOOL_ENVS = {
     "dbqa": ("DBQA_KEY", "DBQA_SECRET", "DBQA_LAUNCH"),
     "opendsa_problems": ("OPENDSA_PROBLEMS_KEY", "OPENDSA_PROBLEMS_SECRET", "OPENDSA_PROBLEMS_LAUNCH"),
     "opendsa_slideshows": ("OPENDSA_SLIDESHOWS_KEY", "OPENDSA_SLIDESHOWS_SECRET", "OPENDSA_SLIDESHOWS_LAUNCH"),
-    # add more as needed
 }
 
-# Tool-specific URL builders (only when base URL needs transformation)
+# DEPRECATED: Old URL builder (kept for backward compatibility)
 def LTI_URL_BUILDER(tool: str, base: str, sub: str) -> str:
+    """Deprecated: Use lti.services.get_launch_url() instead."""
     if tool == "ctat":
         return f"{base.rstrip('/')}/mg_{sub}"
     if tool in ("opendsa_problems", "opendsa_slideshows"):
         return f"{base}?custom_ex_settings=%7B%7D&custom_ex_short_name={sub}"
-    # default: use base as-is; Node code often passes all context via POST body anyway
     return base
 
 # Optional: tight proxy allowlist (HTTP origins you're willing to fetch)

@@ -7,9 +7,9 @@ crispy-bootstrap5
 PyLTI1p3==2.0.0
 oauthlib
 requests
-py-mini-racer
 python-dotenv
 pymysql
 sshtunnel>=0.4.0
 paramiko>=2.7.0,<2.9.0
 cryptography>=3.4.8
+defusedxml>=0.7.1
