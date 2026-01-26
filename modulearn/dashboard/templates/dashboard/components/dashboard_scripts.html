@@ -446,16 +446,48 @@ function handleFetch() {
     
     const batchAnalyticsUrl = `{% url 'dashboard:fetch_all_students_analytics' %}?${new URLSearchParams(batchAnalyticsParams)}`;
     
+    // Clear any previous error states
+    clearFormErrors();
+    
     fetch(batchAnalyticsUrl)
-        .then(response => {
-            if (!response.ok) throw new Error(`Batch Analytics API Error: ${response.statusText}`);
+        .then(async response => {
+            const data = await response.json();
+            
+            if (!response.ok) {
+                // Extract error message from response
+                const errorMessage = data.error || `Batch Analytics API Error: ${response.statusText}`;
+                const statusCode = response.status;
+                
+                // Show form field errors based on status code
+                if (statusCode === 400) {
+                    // Bad Request - likely invalid Group ID or Course ID
+                    showFormFieldError('grp', 'Invalid Group ID or Course ID');
+                    showFormFieldError('cid', 'Invalid Group ID or Course ID');
+                } else if (statusCode === 404) {
+                    // Not Found - Group/Course combination doesn't exist
+                    showFormFieldError('grp', 'Group/Course combination not found');
+                    showFormFieldError('cid', 'Group/Course combination not found');
+                } else {
+                    // Other errors
+                    showFormFieldError('grp', errorMessage);
+                    showFormFieldError('cid', errorMessage);
+                }
+                
+                throw new Error(errorMessage);
+            }
+            
+            if (data.error) {
+                showFormFieldError('grp', data.error);
+                showFormFieldError('cid', data.error);
+                throw new Error(data.error);
+            }
+            
+            // Clear any error states on success
+            clearFormErrors();
+            
             progressBar.style.width = '50%';
             progressPercent.textContent = '50%';
             progressText.textContent = 'Processing data...';
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) throw new Error(data.error);
             
             progressBar.style.width = '90%';
             progressPercent.textContent = '90%';
@@ -1456,6 +1488,106 @@ function showError(message) {
             toastElement.remove();
         }
     }, 5000);
+}
+
+/**
+ * Show error state on a form field (red border and error message)
+ */
+function showFormFieldError(fieldId, errorMessage) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    // Add error styling to the input field
+    field.classList.add('is-invalid');
+    field.style.borderColor = '#dc3545';
+    field.style.borderWidth = '2px';
+    
+    // Also check for dropdowns (ktGroupSelect, ktCourseSelect)
+    let dropdownField = null;
+    if (fieldId === 'grp') {
+        dropdownField = document.getElementById('ktGroupSelect');
+    } else if (fieldId === 'cid') {
+        dropdownField = document.getElementById('ktCourseSelect');
+    }
+    
+    if (dropdownField) {
+        dropdownField.classList.add('is-invalid');
+        dropdownField.style.borderColor = '#dc3545';
+        dropdownField.style.borderWidth = '2px';
+    }
+    
+    // Find or create error message element
+    const fieldCol = field.closest('.col-md-3');
+    if (!fieldCol) return;
+    
+    // Remove existing error message if any
+    const existingError = fieldCol.querySelector('.field-error-message');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    // Create error message element
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'field-error-message mt-1';
+    errorDiv.innerHTML = `<small class="text-danger" style="display: block;"><i class="fas fa-exclamation-circle me-1"></i>${errorMessage}</small>`;
+    fieldCol.appendChild(errorDiv);
+    
+    // Add input/change listener to clear error when user starts typing or changes selection
+    const clearErrorOnInput = function() {
+        clearFieldError(fieldId);
+        field.removeEventListener('input', clearErrorOnInput);
+        if (dropdownField) {
+            dropdownField.removeEventListener('change', clearErrorOnInput);
+        }
+    };
+    field.addEventListener('input', clearErrorOnInput);
+    if (dropdownField) {
+        dropdownField.addEventListener('change', clearErrorOnInput);
+    }
+}
+
+/**
+ * Clear error state from a form field
+ */
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    // Remove error styling from input field
+    field.classList.remove('is-invalid');
+    field.style.borderColor = '';
+    field.style.borderWidth = '';
+    
+    // Also clear dropdown errors if they exist
+    let dropdownField = null;
+    if (fieldId === 'grp') {
+        dropdownField = document.getElementById('ktGroupSelect');
+    } else if (fieldId === 'cid') {
+        dropdownField = document.getElementById('ktCourseSelect');
+    }
+    
+    if (dropdownField) {
+        dropdownField.classList.remove('is-invalid');
+        dropdownField.style.borderColor = '';
+        dropdownField.style.borderWidth = '';
+    }
+    
+    // Remove error message
+    const fieldCol = field.closest('.col-md-3');
+    if (fieldCol) {
+        const errorMessage = fieldCol.querySelector('.field-error-message');
+        if (errorMessage) {
+            errorMessage.remove();
+        }
+    }
+}
+
+/**
+ * Clear all form field errors
+ */
+function clearFormErrors() {
+    clearFieldError('grp');
+    clearFieldError('cid');
 }
 </script>
 

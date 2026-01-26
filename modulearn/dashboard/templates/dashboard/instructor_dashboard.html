@@ -252,6 +252,19 @@
 {% block content %}
 <div class="container-fluid px-3 px-md-4 py-4">
   {% include 'dashboard/components/dashboard_header.html' %}
+  
+  <!-- Legacy Dashboard Alert -->
+  <div class="alert alert-info alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-info-circle me-2 fs-5"></i>
+    <div class="flex-grow-1">
+      <strong>Legacy Dashboard (MasteryGrids)</strong> - Access learning analytics and MasteryGrids data for KnowledgeTree courses.
+      <a href="{% url 'dashboard:legacy_dashboard' %}" class="alert-link fw-semibold ms-2">
+        Open Legacy Dashboard <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  
   {% include 'dashboard/components/courses_section.html' %}
   {% include 'dashboard/components/session_management_section.html' %}
   {% include 'dashboard/components/legacy_courses_section.html' %}
