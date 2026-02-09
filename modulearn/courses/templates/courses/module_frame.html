@@ -3,40 +3,40 @@
 {% block content %}
 <div id="module-frame-container">
   {{ state_data|json_script:"state-data" }}
-  
+
   <!-- Debug template variables -->
   <!-- selected_protocol: {{ selected_protocol }} -->
   <!-- content_url: {{ content_url }} -->
   <!-- use_proxy: {{ use_proxy }} -->
-  
+
   <!-- Fallback UI for tools that refuse iframe embedding -->
-  <div id="iframe-blocked-notice" style="{% if refuses_iframe %}display: block;{% else %}display: none;{% endif %} padding: 2rem; text-align: center; background: #f8f9fa; border-radius: 8px; margin: 1rem 0;">
-    <h3 style="color: #dc3545; margin-bottom: 1rem;">⚠️ This tool cannot be embedded</h3>
-    <p style="color: #666; margin-bottom: 1rem;">
+  <div id="iframe-blocked-notice" class="{% if not refuses_iframe %}hidden{% endif %} p-8 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4 my-4">
+    <h3 class="text-red-500 text-xl font-bold mb-4">⚠️ This tool cannot be embedded</h3>
+    <p class="text-gray-500 dark:text-gray-400 mb-4">
       {% if refuses_iframe_reason %}
         {{ refuses_iframe_reason }}
       {% else %}
         The external tool has security restrictions that prevent it from loading in an iframe.
       {% endif %}
     </p>
-    <button id="open-in-new-window" 
+    <button id="open-in-new-window"
             onclick="window.open('{{ iframe_src|escapejs }}', '_blank')"
-            style="background: #007bff; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+            class="btn btn-primary btn-lg">
       Open in New Window →
     </button>
-    <p style="color: #999; font-size: 0.85rem; margin-top: 1rem;">
+    <p class="text-gray-400 text-sm mt-4">
       Note: Progress may not be tracked when opened in a new window.
     </p>
   </div>
-  
-  <iframe id="content-iframe" 
-          src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}" 
-          width="100%" 
-          height="800px" 
-          frameborder="0" 
-          allowfullscreen 
+
+  <iframe id="content-iframe"
+          src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}"
+          width="100%"
+          height="800px"
+          frameborder="0"
+          allowfullscreen
           allow="clipboard-write *"
-          {% if refuses_iframe %}style="display: none;"{% endif %}>
+          {% if refuses_iframe %}class="hidden"{% endif %}>
     Your browser doesn't support iframes.
   </iframe>
 </div>
@@ -46,63 +46,79 @@
   const contentUrl = "{{ content_url|escapejs }}";
   const useProxy = {{ use_proxy|yesno:"true,false" }};
   const iframeSrc = "{{ iframe_src|escapejs }}";
-  
+
   console.log("Selected module protocol:", selectedProtocol || "(none)");
   console.log("Content URL:", contentUrl);
   console.log("Use proxy:", useProxy);
   console.log("Iframe src:", iframeSrc);
   console.log("Current iframe src:", document.getElementById('content-iframe').src);
-  
+
   const isPreview = {{ preview_mode|yesno:"true,false" }};
-  
-  // =========================================================================
+
   // CSP / Iframe Load Error Detection
-  // =========================================================================
   let iframeLoaded = false;
   const iframe = document.getElementById('content-iframe');
   const blockedNotice = document.getElementById('iframe-blocked-notice');
-  
-  // Mark iframe as loaded when it fires the load event
+
   iframe.addEventListener('load', function() {
     iframeLoaded = true;
-    console.log("Iframe load event fired");
-    // Also probe for SPLICE protocol
     probeSplice();
     setTimeout(probeSplice, 1000);
     setTimeout(probeSplice, 3000);
   });
-  
-  // Listen for CSP violations (browser may report these)
+
   document.addEventListener('securitypolicyviolation', function(e) {
-    console.warn("CSP Violation detected:", e.violatedDirective, e.blockedURI);
-    if (e.violatedDirective.includes('frame-ancestors') || e.blockedURI.includes(iframeSrc)) {
-      showBlockedNotice("The external tool's security policy prevents embedding.");
+    console.log('CSP Violation detected:', e);
+    // Check if this is a frame-ancestors violation (iframe blocking)
+    if (e.violatedDirective === 'frame-ancestors' || 
+        e.violatedDirective.includes('frame-ancestors') ||
+        (e.blockedURI && iframeSrc && e.blockedURI.includes(new URL(iframeSrc).hostname))) {
+      console.log('Frame-ancestors violation - showing blocked notice');
+      showBlockedNotice(
+        `This tool cannot be embedded in an iframe due to Content Security Policy restrictions. ` +
+        `The tool only allows framing from specific origins. ` +
+        `Please use the "Open in New Window" button below to access this activity.`
+      );
     }
   });
   
-  // Some CSP blocks don't fire events - check if iframe appears empty after a delay
+  // Also check for iframe load errors
+  iframe.addEventListener('error', function(e) {
+    console.log('Iframe load error:', e);
+    // Check if iframe is still empty after a delay
+    setTimeout(function() {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!iframeDoc || !iframeDoc.body || iframeDoc.body.innerHTML.trim() === '') {
+          console.log('Iframe appears empty - may be blocked by CSP');
+          showBlockedNotice(
+            `The tool failed to load. This may be due to Content Security Policy restrictions. ` +
+            `Please use the "Open in New Window" button below to access this activity.`
+          );
+        }
+      } catch (e) {
+        // Cross-origin - can't check, but if we get here and iframe is empty, it might be blocked
+        console.log('Cannot check iframe content (cross-origin)');
+      }
+    }, 2000);
+  });
+
   setTimeout(function() {
     try {
-      // Try to access iframe content - will throw if blocked or cross-origin
       const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      // If we can access it and it's essentially empty, might be blocked
       if (iframeDoc && iframeDoc.body && iframeDoc.body.innerHTML.trim() === '') {
         console.warn("Iframe appears empty - may be blocked by CSP");
       }
     } catch (e) {
-      // Cross-origin is expected and normal for LTI tools
-      // Only show notice if we also haven't received any postMessages
       console.log("Iframe cross-origin (expected for external tools)");
     }
   }, 3000);
-  
+
   function showBlockedNotice(reason) {
-    console.warn("Showing blocked notice:", reason);
-    blockedNotice.style.display = 'block';
-    iframe.style.display = 'none';
+    blockedNotice.classList.remove('hidden');
+    iframe.classList.add('hidden');
   }
 
-  // Utility: simple UUID for message IDs
   function uuid() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = (Math.random() * 16) | 0;
@@ -111,176 +127,73 @@
     });
   }
 
-  // Ping the child to see if it speaks SPLICE.
-  // Some tools only talk after the parent asks.
   function probeSplice() {
     const iframe = document.getElementById('content-iframe');
     if (!iframe || !iframe.contentWindow) return;
-    const mid = uuid();
-
-    // Try a few common subjects
     const probes = [
-      { subject: 'SPLICE.getState', message_id: mid },
-      { subject: 'SPLICE.ping',     message_id: uuid() },
-      { subject: 'SPLICE.hello',    message_id: uuid() },
+      { subject: 'SPLICE.getState', message_id: uuid() },
+      { subject: 'SPLICE.ping', message_id: uuid() },
+      { subject: 'SPLICE.hello', message_id: uuid() },
     ];
-
     for (const msg of probes) {
-      // Target '*' so we don’t block on unknown child origin.
       iframe.contentWindow.postMessage(msg, '*');
-      console.log('Sent SPLICE probe →', msg);
     }
   }
 
-  // SPLICE probe is now handled in the load event listener above
-  
   window.addEventListener('message', function(event) {
-    // Validate the origin for security
-    // Build a flexible allowlist for trusted content origins.
-    // NOTE: When content is proxied through ModuLearn, postMessages come from 
-    // window.location.origin. When loaded directly (HTTP in HTTP context),
-    // messages come from the external domain.
     const expectedOrigins = new Set([
-      window.location.origin,              // ModuLearn origin (includes proxied content)
-      'https://codecheck.me',              // External CodeCheck
-      'https://codecheck.io',              // External CodeCheck
-      'http://adapt2.sis.pitt.edu',        // PAWS content (if loaded directly)
-      'http://pawscomp2.sis.pitt.edu',     // PAWS content (if loaded directly)
-      'http://columbus.exp.sis.pitt.edu',  // PAWS content (if loaded directly)
-      'https://adapt2.sis.pitt.edu',       // PAWS content (HTTPS variant)
-      'https://pawscomp2.sis.pitt.edu',    // PAWS content (HTTPS variant)
-      'https://columbus.exp.sis.pitt.edu', // PAWS content (HTTPS variant)
-      'https://pcrs.utm.utoronto.ca/',     // PCRS content (HTTPS variant)
+      window.location.origin,
+      'https://codecheck.me', 'https://codecheck.io',
+      'http://adapt2.sis.pitt.edu', 'http://pawscomp2.sis.pitt.edu', 'http://columbus.exp.sis.pitt.edu',
+      'https://adapt2.sis.pitt.edu', 'https://pawscomp2.sis.pitt.edu', 'https://columbus.exp.sis.pitt.edu',
+      'https://pcrs.utm.utoronto.ca/',
     ]);
-    
-    // Log all messages for debugging (subject filter applied below)
-    if (event.data && event.data.subject && !event.data.subject.includes('frameResize')) {
-      console.log('[postMessage]', event.origin, event.data.subject);
-    }
-    
-    if (!expectedOrigins.has(event.origin)) {
-      console.warn('Unexpected message origin:', event.origin, '- message ignored');
-      return;
-    }
 
-    if (event.data.subject !== 'lti.frameResize') {
-      console.log("Message received from:", event.origin);
-      console.log("Message data:", event.data);
-    }
-    
-    // Handle state request
+    if (!expectedOrigins.has(event.origin)) return;
+
     if (event.data.subject === 'SPLICE.getState') {
-      // Get the stored state from the script tag
       const stateScript = document.getElementById('state-data');
       let storedState = stateScript ? JSON.parse(stateScript.textContent) : null;
-      
-      console.log("Retrieved stored state:", storedState);
-      
       if (storedState) {
-        // Parse the string into an object if it's still a string
-        if (typeof storedState === 'string') {
-          storedState = JSON.parse(storedState);
-        }
-        
-        // Create the properly structured state object
-        const stateMessage = {
+        if (typeof storedState === 'string') storedState = JSON.parse(storedState);
+        document.getElementById('content-iframe').contentWindow.postMessage({
           subject: 'SPLICE.getState.response',
           message_id: event.data.message_id,
-          state: storedState  // Just pass through the original structure
-        };
-        
-        console.log("Sending stored state:", stateMessage);
-        document.getElementById('content-iframe').contentWindow.postMessage(stateMessage, event.origin);
-      } else {
-        console.log("No stored state found");
+          state: storedState
+        }, event.origin);
       }
     }
-    
-    // Skip frame resize messages
-    if (event.data.subject === 'lti.frameResize') {
-      return;
-    }
 
-    // Handle other messages
-    console.log("LTI Response:", event.data);
+    if (event.data.subject === 'lti.frameResize') return;
 
-    // Only send progress updates for relevant messages
     if (event.data.subject === 'SPLICE.reportScoreAndState') {
-      if (isPreview) {
-        console.log('Preview mode: progress updates are not tracked.');
-        return;
-      }
-      // Parse the scoreText to determine completion
+      if (isPreview) return;
       let progress = 0;
       if (event.data.state && event.data.state.scoreText) {
         const scoreText = event.data.state.scoreText;
         if (scoreText.includes('/')) {
-          // Format: "X/Y"
           const [completed, total] = scoreText.split('/').map(num => parseInt(num));
           progress = (completed / total) * 100;
-        } else {
-          // Format: "0" or similar
-          progress = 0;
         }
       }
 
-      const requestBody = {
-        data: [{
-          activityId: '{{ module.id }}',
-          completion: event.data.score === 1.0,
-          score: event.data.score * 100, // Convert 0-1 to percentage
-          success: event.data.score >= 0.7,
-          progress: progress,
-          response: event.data.state  // Changed: Don't stringify the state again
-        }]
-      };
-
-      console.group('Update Progress Request Details');
-      console.log('Score Text:', event.data.state.scoreText);
-      console.log('Calculated Progress:', progress + '%');
-      console.log('Score:', (event.data.score * 100) + '%');
-      console.log('Complete:', event.data.score === 1.0);
-      console.log('Success:', event.data.score >= 0.7);
-      console.log('Request Body:', requestBody);
-      console.log('CSRF Token:', '{{ csrf_token }}');
-      console.groupEnd();
-
       fetch('{% url "courses:update_module_progress" module.id %}', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify(requestBody)
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+          data: [{
+            activityId: '{{ module.id }}',
+            completion: event.data.score === 1.0,
+            score: event.data.score * 100,
+            success: event.data.score >= 0.7,
+            progress: progress,
+            response: event.data.state
+          }]
+        })
       })
-      .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        return response.text();
-      })
-      .then(text => {
-        console.log('Raw response:', text);
-        try {
-          const json = JSON.parse(text);
-          console.group('Progress Update Results');
-          console.log('Module Progress:', {
-            progress: json.module_progress.progress + '%',
-            score: json.module_progress.score + '%',
-            isComplete: json.module_progress.is_complete
-          });
-          console.log('Course Progress:', {
-            overallProgress: json.course_progress.overall_progress + '%',
-            overallScore: json.course_progress.overall_score + '%',
-            modulesCompleted: `${json.course_progress.modules_completed} modules`
-          });
-          console.groupEnd();
-        } catch (e) {
-          console.error('Error parsing JSON:', e);
-        }
-      })
-      .catch(error => {
-        console.error('Error updating progress:', error);
-      });
+      .then(response => response.json())
+      .then(json => console.log('Progress updated:', json))
+      .catch(error => console.error('Error updating progress:', error));
     }
   });
 </script>

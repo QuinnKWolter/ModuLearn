@@ -261,6 +261,7 @@ def create_course(request):
 def launch_iframe_module(request, instance_id, module_id):
     module = get_object_or_404(Module, id=module_id)
     course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    course = course_instance.course  # Get course from course_instance
     
     # Check if user has access to this module
     is_instructor = course_instance.instructors.filter(id=request.user.id).exists()
@@ -278,7 +279,11 @@ def launch_iframe_module(request, instance_id, module_id):
     
     # Get the module's content URL and selected protocol
     content_url = module.content_url
+    original_content_url = content_url  # Keep original for logging
     selected_protocol = module.select_launch_protocol()
+    
+    logger.info(f"Module {module.id}: Original content_url: {original_content_url}")
+    logger.info(f"Module {module.id}: Provider ID: {module.provider_id}")
     
     # Parse URL for LTI parameters
     parsed_url = urlparse(content_url) if content_url else None
@@ -288,52 +293,134 @@ def launch_iframe_module(request, instance_id, module_id):
     url_tool = query_params.get('tool', [''])[0]
     url_sub = query_params.get('sub', [''])[0]
     
-    # Detect LTI launch URLs: URLs with ?tool=...&sub=... pattern pointing to /lti/launch
-    # These should go through our LTI consumer, not be proxied directly
-    is_lti_launch_url = (
-        parsed_url and 
-        '/lti/launch' in parsed_url.path and 
-        url_tool and url_sub
+    logger.info(f"Module {module.id}: Parsed URL - tool={url_tool}, sub={url_sub}, path={parsed_url.path if parsed_url else 'None'}")
+    
+    # SPECIAL HANDLING: CodeCheck exercises should load directly from their activity URL
+    # instead of going through LTI launch. Detect CodeCheck by provider_id or tool parameter.
+    is_codecheck = (
+        module.provider_id and module.provider_id.lower() == 'codecheck'
+    ) or (
+        url_tool and url_tool.lower() == 'codecheck'
     )
+    
+    if is_codecheck:
+        # CodeCheck: Simply construct the direct URL and load it in iframe
+        # Format: https://codecheck.io/files/wiley/{module_name}
+        module_name = url_sub if url_sub else module.title
+        if module_name:
+            content_url = f"https://codecheck.io/files/wiley/{module_name}"
+            logger.info(f"Module {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
+            # Re-parse the new URL
+            parsed_url = urlparse(content_url)
+            query_params = parse_qs(parsed_url.query) if parsed_url else {}
+            # Use direct loading (no LTI)
+            selected_protocol = 'splice'  # Use splice for direct loading with session params
+            is_lti_launch_url = False
+        else:
+            logger.warning(f"Module {module.id}: CodeCheck detected but no module name available")
+            selected_protocol = 'splice'
+            is_lti_launch_url = False
+    else:
+        # Detect LTI launch URLs: URLs with ?tool=...&sub=... pattern pointing to /lti/launch
+        # These should go through our LTI consumer, not be proxied directly
+        is_lti_launch_url = (
+            parsed_url and 
+            '/lti/launch' in parsed_url.path and 
+            url_tool and url_sub
+        )
     
     # Detect if this is a PAWS-mediated URL (adapt2.sis.pitt.edu/lti/launch)
     # PAWS URLs should use our paws_* tool configs which route through PAWS
-    is_paws_url = (
-        parsed_url and 
-        parsed_url.hostname and
-        parsed_url.hostname in ('adapt2.sis.pitt.edu', 'pawscomp2.sis.pitt.edu', 'columbus.exp.sis.pitt.edu') and
-        '/lti/launch' in parsed_url.path
-    )
+    # Skip this for CodeCheck since we're loading directly
+    is_paws_url = False
+    if not is_codecheck:
+        is_paws_url = (
+            parsed_url and 
+            parsed_url.hostname and
+            parsed_url.hostname in ('adapt2.sis.pitt.edu', 'pawscomp2.sis.pitt.edu', 'columbus.exp.sis.pitt.edu') and
+            '/lti/launch' in parsed_url.path
+        )
     
     # If no protocol set but URL looks like LTI launch, treat as LTI
-    if selected_protocol is None and is_lti_launch_url:
+    # Skip for CodeCheck since we're loading directly
+    if not is_codecheck and selected_protocol is None and is_lti_launch_url:
         selected_protocol = 'lti'
         logger.info(f"Module {module.id}: Auto-detected LTI protocol from URL pattern")
     
     # For LTI protocol, extract the sub parameter for our LTI consumer
     lti_sub = url_sub if url_sub else None
     
-    # Determine the LTI tool to use:
-    # - If URL points to PAWS LTI endpoint, use paws_<toolname> to route through PAWS
-    # - Otherwise use the tool directly
-    if is_paws_url and url_tool:
+    # Determine the LTI tool to use (not used for CodeCheck)
+    lti_tool = None
+    if not is_codecheck:
+        if is_paws_url and url_tool:
+            lti_tool = f"paws_{url_tool}"
+            logger.info(f"Module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+        else:
+            lti_tool = url_tool if url_tool else module.provider_id
+    elif is_paws_url and url_tool:
         lti_tool = f"paws_{url_tool}"
         logger.info(f"Module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
     else:
         lti_tool = url_tool if url_tool else module.provider_id
     
-    # For SPLICE, PITT, or unknown protocols: use the stored content_url directly
-    # HTTP content from allowed hosts will be proxied to enable HTTPS embedding
+    # For CodeCheck or SPLICE/PITT protocols: append session parameters directly to URL
+    # This matches the working codebase pattern: activity_url + "&grp=...&usr=...&sid=...&cid=..."
     use_proxy = False
-    if content_url and selected_protocol in ('splice', 'pitt', None):
-        parsed_final = urlparse(content_url)
+    activity_url_with_params = content_url
+    
+    if content_url and (is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url:
+        # Build session parameters matching the working codebase pattern
+        # grp: group_name (or course_instance.id as fallback)
+        grp = course_instance.group_name if course_instance and course_instance.group_name else (str(course_instance.id) if course_instance else 'default')
+        # usr: username (activities expect username, not user.id)
+        usr = request.user.username
+        # sid: Django session key
+        sid = request.session.session_key or ''
+        # cid: course.id
+        cid = str(course_instance.course.id) if course_instance and course_instance.course else ''
+        
+        # Parse the base URL and append parameters
+        parsed = urlparse(content_url)
+        existing_params = parse_qs(parsed.query)
+        
+        # Add session parameters (don't overwrite if already present)
+        if 'grp' not in existing_params:
+            existing_params['grp'] = [grp]
+        if 'usr' not in existing_params:
+            existing_params['usr'] = [usr]
+        if 'sid' not in existing_params and sid:
+            existing_params['sid'] = [sid]
+        if 'cid' not in existing_params and cid:
+            existing_params['cid'] = [cid]
+        
+        # Rebuild URL with all parameters
+        new_query = urlencode(existing_params, doseq=True)
+        activity_url_with_params = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment
+        ))
+        
+        logger.info(
+            f"Module {module.id}: Built activity URL with session params: "
+            f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
+        )
+        
+        # Check if we need to proxy HTTP content for HTTPS embedding
+        parsed_final = urlparse(activity_url_with_params)
         scheme = parsed_final.scheme
         hostname = parsed_final.hostname
         use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
     
     logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
-    logger.debug(f"Module {module.id} - Protocol: {selected_protocol}, Content URL: {content_url}")
-    logger.debug(f"Use proxy for HTTP content: {use_proxy}, Is LTI URL: {is_lti_launch_url}")
+    logger.info(f"Module {module.id} - Original content_url: {original_content_url}")
+    logger.info(f"Module {module.id} - Final content_url: {content_url}")
+    logger.info(f"Module {module.id} - Activity URL with params: {activity_url_with_params}")
+    logger.info(f"Module {module.id} - Use proxy: {use_proxy}, Is LTI URL: {is_lti_launch_url}, Is CodeCheck: {is_codecheck}")
     
     # Check if tool is known to refuse iframe embedding
     refuses_iframe = False
@@ -352,6 +439,7 @@ def launch_iframe_module(request, instance_id, module_id):
         # Route through our LTI consumer which handles OAuth signing
         # Include module_id so outcomes can update ModuleProgress
         grp_id = course_instance.id if course_instance else 'default'
+        
         iframe_src = (
             f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
             f"&usr={request.user.id}&grp={grp_id}&module_id={module.id}"
@@ -361,9 +449,13 @@ def launch_iframe_module(request, instance_id, module_id):
             f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
         )
     elif use_proxy:
-        iframe_src = to_path_style_proxy(content_url)
+        # Apply proxy to the URL with session parameters
+        iframe_src = to_path_style_proxy(activity_url_with_params)
+        logger.info(f"Module {module.id}: Applied proxy to activity URL: {iframe_src}")
     else:
-        iframe_src = content_url
+        # Use the URL with session parameters directly
+        iframe_src = activity_url_with_params
+        logger.info(f"Module {module.id}: Final iframe_src (direct): {iframe_src}")
 
     context = {
         'module': module,
@@ -408,50 +500,125 @@ def preview_iframe_module(request, module_id):
     url_tool = query_params.get('tool', [''])[0]
     url_sub = query_params.get('sub', [''])[0]
     
-    # Detect LTI launch URLs: URLs with ?tool=...&sub=... pattern pointing to /lti/launch
-    # These should go through our LTI consumer, not be proxied directly
-    is_lti_launch_url = (
-        parsed_url and 
-        '/lti/launch' in parsed_url.path and 
-        url_tool and url_sub
+    # SPECIAL HANDLING: CodeCheck exercises - load directly from activity URL
+    is_codecheck = (
+        module.provider_id and module.provider_id.lower() == 'codecheck'
+    ) or (
+        url_tool and url_tool.lower() == 'codecheck'
     )
+    
+    if is_codecheck:
+        # CodeCheck: Simply construct the direct URL and load it in iframe
+        # Format: https://codecheck.io/files/wiley/{module_name}
+        module_name = url_sub if url_sub else module.title
+        if module_name:
+            content_url = f"https://codecheck.io/files/wiley/{module_name}"
+            logger.info(f"Preview module {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
+            # Re-parse the new URL
+            parsed_url = urlparse(content_url)
+            query_params = parse_qs(parsed_url.query) if parsed_url else {}
+            # Use direct loading (no LTI)
+            selected_protocol = 'splice'  # Use splice for direct loading with session params
+            is_lti_launch_url_check = False
+        else:
+            logger.warning(f"Preview module {module.id}: CodeCheck detected but no module name available")
+            selected_protocol = 'splice'
+            is_lti_launch_url_check = False
+    
+    # Detect LTI launch URLs: URLs with ?tool=...&sub=... pattern pointing to /lti/launch
+    # Skip this check for CodeCheck since we handle it above
+    is_lti_launch_url_check = False
+    if not is_codecheck:
+        is_lti_launch_url_check = (
+            parsed_url and 
+            '/lti/launch' in parsed_url.path and 
+            url_tool and url_sub
+        )
     
     # Detect if this is a PAWS-mediated URL (adapt2.sis.pitt.edu/lti/launch)
-    is_paws_url = (
-        parsed_url and 
-        parsed_url.hostname and
-        parsed_url.hostname in ('adapt2.sis.pitt.edu', 'pawscomp2.sis.pitt.edu', 'columbus.exp.sis.pitt.edu') and
-        '/lti/launch' in parsed_url.path
-    )
+    # Skip for CodeCheck since we handle it above
+    is_paws_url = False
+    if not is_codecheck:
+        is_paws_url = (
+            parsed_url and 
+            parsed_url.hostname and
+            parsed_url.hostname in ('adapt2.sis.pitt.edu', 'pawscomp2.sis.pitt.edu', 'columbus.exp.sis.pitt.edu') and
+            '/lti/launch' in parsed_url.path
+        )
     
     # If no protocol set but URL looks like LTI launch, treat as LTI
-    if selected_protocol is None and is_lti_launch_url:
+    # (Skip for CodeCheck since we've already set it)
+    if not is_codecheck and selected_protocol is None and is_lti_launch_url_check:
         selected_protocol = 'lti'
         logger.info(f"Preview module {module.id}: Auto-detected LTI protocol from URL pattern")
     
     # For LTI protocol, extract the sub parameter for our LTI consumer
     lti_sub = url_sub if url_sub else None
     
-    # Determine the LTI tool to use:
-    # - If URL points to PAWS LTI endpoint, use paws_<toolname> to route through PAWS
-    # - Otherwise use the tool directly
-    if is_paws_url and url_tool:
-        lti_tool = f"paws_{url_tool}"
-        logger.info(f"Preview module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
-    else:
-        lti_tool = url_tool if url_tool else module.provider_id
+    # Determine the LTI tool to use (not used for CodeCheck)
+    lti_tool = None
+    if not is_codecheck:
+        if is_paws_url and url_tool:
+            lti_tool = f"paws_{url_tool}"
+            logger.info(f"Preview module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+        else:
+            lti_tool = url_tool if url_tool else module.provider_id
     
-    # For SPLICE, PITT, or unknown protocols: use the stored content_url directly
-    # HTTP content from allowed hosts will be proxied to enable HTTPS embedding
+    # For CodeCheck or SPLICE/PITT protocols: append session parameters directly to URL
+    # For preview mode, use minimal parameters since there's no course instance
     use_proxy = False
-    if content_url and selected_protocol in ('splice', 'pitt', None):
-        parsed_final = urlparse(content_url)
+    activity_url_with_params = content_url
+    
+    if content_url and (is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url_check:
+        # Build session parameters for preview (minimal since no course instance)
+        # grp: 'preview' for instructor previews
+        grp = 'preview'
+        # usr: username
+        usr = request.user.username
+        # sid: Django session key
+        sid = request.session.session_key or ''
+        # cid: course.id if available
+        cid = str(module.course.id) if module.course else ''
+        
+        # Parse the base URL and append parameters
+        parsed = urlparse(content_url)
+        existing_params = parse_qs(parsed.query)
+        
+        # Add session parameters (don't overwrite if already present)
+        if 'grp' not in existing_params:
+            existing_params['grp'] = [grp]
+        if 'usr' not in existing_params:
+            existing_params['usr'] = [usr]
+        if 'sid' not in existing_params and sid:
+            existing_params['sid'] = [sid]
+        if 'cid' not in existing_params and cid:
+            existing_params['cid'] = [cid]
+        
+        # Rebuild URL with all parameters
+        new_query = urlencode(existing_params, doseq=True)
+        activity_url_with_params = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment
+        ))
+        
+        logger.info(
+            f"Preview module {module.id}: Built activity URL with session params: "
+            f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
+        )
+        
+        # Check if we need to proxy HTTP content for HTTPS embedding
+        parsed_final = urlparse(activity_url_with_params)
         scheme = parsed_final.scheme
         hostname = parsed_final.hostname
         use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
     
     logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
     logger.debug(f"Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
+    logger.debug(f"Preview activity URL with params: {activity_url_with_params}")
     logger.debug(f"Preview use proxy for HTTP content: {use_proxy}, Is LTI URL: {is_lti_launch_url}")
 
     # Check if tool is known to refuse iframe embedding
@@ -470,15 +637,19 @@ def preview_iframe_module(request, module_id):
     if selected_protocol == 'lti':
         # Route through our LTI consumer which handles OAuth signing
         # Include module_id but use 'preview' grp since no course instance
+        
         iframe_src = (
             f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
             f"&usr={request.user.id}&grp=preview&module_id={module.id}"
         )
-        logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}")
+        logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}, sub={lti_sub}")
     elif use_proxy:
-        iframe_src = to_path_style_proxy(content_url)
+        # Apply proxy to the URL with session parameters
+        iframe_src = to_path_style_proxy(activity_url_with_params)
+        logger.debug(f"Applied proxy to preview activity URL: {iframe_src}")
     else:
-        iframe_src = content_url
+        # Use the URL with session parameters directly
+        iframe_src = activity_url_with_params
 
     context = {
         'module': module,

@@ -5,266 +5,53 @@
 
 {% block extra_css %}
 <style>
-  /* Modern Dashboard Styles */
-  .dashboard-header {
-    padding-top: 1rem;
-  }
-
   .course-card, .course-instance-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    background: #fff;
   }
-
   .course-card:hover, .course-instance-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
   }
-
-  .empty-state {
-    background: #f8f9fa;
-    border-radius: 12px;
-  }
-
-  .accordion-item {
-    background: #fff;
-    border: 1px solid #e9ecef !important;
-  }
-
-  .accordion-button {
-    background: transparent;
-    border: none;
-  }
-
-  .accordion-button:not(.collapsed) {
-    background: #f8f9fa;
-    color: inherit;
-  }
-
-  .accordion-button:focus {
-    box-shadow: none;
-    border-color: transparent;
-  }
-
-  /* Dark mode accordion styling */
-  .dark-mode .accordion-item {
-    background: #2d3748;
-    border-color: #4a5568 !important;
-  }
-
-  .dark-mode .accordion-item.border {
-    border-color: #4a5568 !important;
-  }
-
-  .dark-mode .accordion-button {
-    color: #e2e8f0;
-  }
-
-  .dark-mode .accordion-button:not(.collapsed) {
-    background: #374151;
-    color: #e2e8f0;
-  }
-
-  .dark-mode .accordion-body {
-    background: #2d3748;
-    color: #e2e8f0;
-  }
-
-  .table {
-    margin-bottom: 0;
-  }
-
-  .table thead th {
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #6c757d;
-    padding: 0.75rem 1rem;
-  }
-
-  .table tbody td {
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-  }
-
-  .nav-tabs-custom .nav-link {
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: #6c757d;
-    padding: 0.75rem 1rem;
-  }
-
-  .nav-tabs-custom .nav-link:hover {
-    border-bottom-color: #dee2e6;
-    color: #495057;
-  }
-
-  .nav-tabs-custom .nav-link.active {
-    border-bottom-color: #0d6efd;
-    color: #0d6efd;
-    background: transparent;
-  }
-
-  .legacy-groups-container {
-    scrollbar-width: thin;
-    scrollbar-color: #dee2e6 transparent;
-  }
-
-  .legacy-groups-container::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .legacy-groups-container::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .legacy-groups-container::-webkit-scrollbar-thumb {
-    background-color: #dee2e6;
-    border-radius: 3px;
-  }
-
-  .legacy-groups-container::-webkit-scrollbar-thumb:hover {
-    background-color: #adb5bd;
-  }
-
-  /* Dark mode support */
-  .dark-mode .course-card,
-  .dark-mode .course-instance-card {
-    background: #2d3748;
-    border-color: #4a5568 !important;
-  }
-
-  .dark-mode .empty-state {
-    background: #2d3748;
-  }
-
-  .dark-mode .table thead th {
-    color: #9ca3af;
-  }
-
-  /* Session Management Styles */
-  .session-icon {
-    flex-shrink: 0;
-  }
-
   .stat-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    background: #f8f9fa;
   }
-
-  /* Custom stat card background that adapts to dark mode */
-  .stat-card-bg {
-    background: #f8f9fa;
-  }
-
-  .dark-mode .stat-card-bg {
-    background: #374151;
-  }
-
   .stat-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
-
-  .student-avatar {
-    flex-shrink: 0;
+  .legacy-groups-container {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
   }
-
-  .accordion-button:not(.collapsed) .session-icon {
-    background-color: rgba(13, 110, 253, 0.2) !important;
-  }
-
-  /* Dark mode for stat cards */
-  .dark-mode .stat-card {
-    background: #374151 !important;
-    color: #e2e8f0 !important;
-  }
-
-  .dark-mode .stat-card .text-muted {
-    color: #9ca3af !important;
-  }
-
-  .dark-mode .stat-card .h5,
-  .dark-mode .stat-card h5,
-  .dark-mode .stat-card .fw-bold,
-  .dark-mode .stat-card .fw-semibold,
-  .dark-mode .stat-card small.fw-semibold {
-    color: #e2e8f0 !important;
-  }
-
-  .dark-mode .stat-card .text-primary,
-  .dark-mode .stat-card .text-success,
-  .dark-mode .stat-card .text-warning,
-  .dark-mode .stat-card .text-info {
-    opacity: 0.9;
-  }
-
-  .dark-mode .stat-card i.text-primary,
-  .dark-mode .stat-card i.text-success,
-  .dark-mode .stat-card i.text-warning,
-  .dark-mode .stat-card i.text-info {
-    opacity: 1;
-  }
-
-  .dark-mode .table-light {
-    background: #374151 !important;
-  }
-
-  /* Dark mode for search input in legacy courses */
-  .dark-mode .input-group-text {
-    background-color: #4a5568;
-    border-color: #718096;
-    color: #e2e8f0;
-  }
-
-  .dark-mode .input-group .form-control {
-    background-color: #4a5568;
-    border-color: #718096;
-    color: #e2e8f0;
-  }
-
-  .dark-mode .input-group .form-control:focus {
-    background-color: #4a5568;
-    border-color: #0d6efd;
-    color: #e2e8f0;
-  }
+  .legacy-groups-container::-webkit-scrollbar { width: 6px; }
+  .legacy-groups-container::-webkit-scrollbar-track { background: transparent; }
+  .legacy-groups-container::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
+  .legacy-groups-container::-webkit-scrollbar-thumb:hover { background-color: #9ca3af; }
 
   @media (max-width: 768px) {
-    .dashboard-header h1 {
-      font-size: 1.5rem;
-    }
-    
-    .course-card, .course-instance-card {
-      margin-bottom: 1rem;
-    }
-
-    .stat-card {
-      padding: 0.75rem !important;
-    }
-
-    .stat-card .fs-5 {
-      font-size: 1rem !important;
-    }
+    .stat-card { padding: 0.75rem !important; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-3 px-md-4 py-4">
+<div class="py-6">
   {% include 'dashboard/components/dashboard_header.html' %}
-  
+
   <!-- Legacy Dashboard Alert -->
-  <div class="alert alert-info alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
-    <i class="bi bi-info-circle me-2 fs-5"></i>
-    <div class="flex-grow-1">
-      <strong>Legacy Dashboard (MasteryGrids)</strong> - Access learning analytics and MasteryGrids data for KnowledgeTree courses.
-      <a href="{% url 'dashboard:legacy_dashboard' %}" class="alert-link fw-semibold ms-2">
-        Open Legacy Dashboard <i class="bi bi-arrow-right ms-1"></i>
-      </a>
+  <div class="alert alert-info flex items-center justify-between mb-6" role="alert">
+    <div class="flex items-center gap-2 flex-1">
+      <i class="bi bi-info-circle text-lg"></i>
+      <div>
+        <strong>Legacy Dashboard (MasteryGrids)</strong> — Access learning analytics and MasteryGrids data for KnowledgeTree courses.
+        <a href="{% url 'dashboard:legacy_dashboard' %}" class="alert-link font-semibold ml-2">
+          Open Legacy Dashboard <i class="bi bi-arrow-right ml-1"></i>
+        </a>
+      </div>
     </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <button type="button" onclick="this.parentElement.remove()" class="ml-4 opacity-70 hover:opacity-100 text-lg leading-none">&times;</button>
   </div>
-  
+
   {% include 'dashboard/components/courses_section.html' %}
   {% include 'dashboard/components/session_management_section.html' %}
   {% include 'dashboard/components/legacy_courses_section.html' %}

@@ -1,33 +1,34 @@
 <!-- Course Resources Modal -->
-<div class="modal fade" id="courseResourcesModal" tabindex="-1" aria-labelledby="courseResourcesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="courseResourcesModalLabel">
-                    <i class="bi bi-folder me-2"></i>Course Resources
-                    <small class="text-muted ms-2" id="courseResourcesGroupName"></small>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="p-3 border-bottom bg-light">
-                    <h6 class="mb-0">Click a resource to open it in a new tab</h6>
-                </div>
-                <div style="max-height: 500px; overflow-y: auto;">
-                    <ul class="list-group list-group-flush" id="courseResourcesList">
-                        <li class="list-group-item text-center py-5">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                <span class="visually-hidden">Loading resources...</span>
-                            </div>
-                            <p class="text-muted mt-2 mb-0">Loading resources...</p>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
+<div id="courseResourcesModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+  <div class="modal-backdrop-close absolute inset-0"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h5 class="text-lg font-semibold flex items-center gap-2">
+        <i class="bi bi-folder"></i>Course Resources
+        <small class="text-gray-400 dark:text-gray-500 text-sm ml-2" id="courseResourcesGroupName"></small>
+      </h5>
+      <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
     </div>
+    <!-- Body -->
+    <div class="flex-1 overflow-hidden flex flex-col">
+      <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        <h6 class="text-sm font-medium text-gray-600 dark:text-gray-300">Click a resource to open it in a new tab</h6>
+      </div>
+      <div class="overflow-y-auto max-h-[500px]">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700" id="courseResourcesList">
+          <li class="text-center py-10 px-4">
+            <div class="spinner-border text-blue-600" role="status">
+              <span class="sr-only">Loading resources...</span>
+            </div>
+            <p class="text-gray-400 mt-3 text-sm">Loading resources...</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div class="flex justify-end px-6 py-3 border-t border-gray-200 dark:border-gray-700">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    </div>
+  </div>
 </div>
-

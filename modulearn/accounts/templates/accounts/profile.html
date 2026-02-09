@@ -1,155 +1,151 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{% load tailwind_filters %}
 
 {% block title %}Profile - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="mt-4">Your Profile</h1>
-  
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-header bg-primary text-white">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-person-circle"></i> User Information
-          </h5>
-        </div>
-        <div class="card-body">
-          <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
-          {% if user.email %}
-            <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+<div class="py-8">
+  <h1 class="text-3xl font-bold mb-6">Your Profile</h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- User Information Card -->
+    <div class="card overflow-hidden">
+      <div class="bg-blue-600 dark:bg-blue-700 text-white px-6 py-3">
+        <h5 class="font-semibold flex items-center gap-2 m-0">
+          <i class="bi bi-person-circle"></i> User Information
+        </h5>
+      </div>
+      <div class="p-6 space-y-2">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        {% if user.email %}
+          <p><strong>Email:</strong> {{ user.email }}</p>
+        {% endif %}
+        {% if user.full_name %}
+          <p><strong>Full Name:</strong> {{ user.full_name }}</p>
+        {% endif %}
+        <p><strong>Role:</strong>
+          {% if user.is_instructor and user.is_student %}
+            Instructor &amp; Student
+          {% elif user.is_instructor %}
+            Instructor
+          {% elif user.is_student %}
+            Student
+          {% else %}
+            None
           {% endif %}
-          {% if user.full_name %}
-            <p class="card-text"><strong>Full Name:</strong> {{ user.full_name }}</p>
+        </p>
+        {% if user.kt_login or user.kt_user_id %}
+          <hr class="border-gray-200 dark:border-gray-700 my-3">
+          <h6 class="text-sm font-semibold text-gray-500 dark:text-gray-400">KnowledgeTree Integration</h6>
+          {% if user.kt_login %}
+            <p class="text-sm text-gray-500 dark:text-gray-400"><strong>KT Login:</strong> {{ user.kt_login }}</p>
           {% endif %}
-          <p class="card-text"><strong>Role:</strong> 
-            {% if user.is_instructor and user.is_student %}
-              Instructor & Student
-            {% elif user.is_instructor %}
-              Instructor
-            {% elif user.is_student %}
-              Student
-            {% else %}
-              None
-            {% endif %}
-          </p>
-          {% if user.kt_login or user.kt_user_id %}
-            <hr>
-            <h6 class="text-muted">KnowledgeTree Integration</h6>
-            {% if user.kt_login %}
-              <p class="card-text"><small class="text-muted"><strong>KT Login:</strong> {{ user.kt_login }}</small></p>
-            {% endif %}
-            {% if user.kt_user_id %}
-              <p class="card-text"><small class="text-muted"><strong>KT User ID:</strong> {{ user.kt_user_id }}</small></p>
-            {% endif %}
-            {% if user.kt_groups %}
-              <div class="mt-2">
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#ktGroupsCollapse" aria-expanded="false" aria-controls="ktGroupsCollapse">
-                  <i class="bi bi-chevron-down"></i> View KT Groups ({{ user.kt_groups|length }})
-                </button>
-                <div class="collapse mt-2" id="ktGroupsCollapse">
-                  <div class="card card-body p-2">
-                    <!-- Search/Filter Box -->
-                    <div class="mb-2">
-                      <div class="input-group input-group-sm">
-                        <input type="text" class="form-control" id="ktGroupsSearch" placeholder="Search groups...">
-                        <button class="btn btn-outline-secondary" type="button" id="clearKtGroupsSearch" style="display: none;">
-                          <i class="bi bi-x-circle"></i>
-                        </button>
-                      </div>
-                    </div>
-                    <div style="max-height: 300px; overflow-y: auto;">
-                      <ul class="list-group list-group-flush mb-0" id="ktGroupsList">
-                        {% if legacy_groups %}
-                          {% for group in legacy_groups %}
-                            <li class="list-group-item p-2 d-flex justify-content-between align-items-center kt-group-item" data-group-name="{{ group.group_name|lower }}">
-                              <span class="text-truncate flex-grow-1">{{ group.group_name }}</span>
-                              <div class="btn-group ms-2" role="group">
-                                <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group.group_login }}" class="btn btn-sm btn-primary" title="View Legacy Dashboard">
-                                  <i class="bi bi-arrow-right-circle"></i> Dashboard
-                                </a>
-                                {% if group.course_ids %}
-                                  {# Unified Course Resources button - opens modal with all resources #}
-                                  <button type="button" 
-                                          class="btn btn-sm btn-outline-primary" 
-                                          data-group-login="{{ group.group_login }}"
-                                          data-group-name="{{ group.group_name }}"
-                                          onclick="openCourseResourcesModal('{{ group.group_login }}', '{{ group.group_name|escapejs }}')"
-                                          title="View all course resources">
-                                    <i class="bi bi-folder"></i>
-                                  </button>
-                                {% endif %}
-                              </div>
-                            </li>
-                          {% endfor %}
-                        {% else %}
-                          {% for group in user.kt_groups %}
-                            <li class="list-group-item p-2 d-flex justify-content-between align-items-center kt-group-item" data-group-name="{{ group|lower }}">
-                              <span class="text-truncate flex-grow-1">{{ group }}</span>
-                              <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group }}" class="btn btn-sm btn-primary ms-2" title="View Legacy Dashboard">
-                                <i class="bi bi-arrow-right-circle"></i> View
+          {% if user.kt_user_id %}
+            <p class="text-sm text-gray-500 dark:text-gray-400"><strong>KT User ID:</strong> {{ user.kt_user_id }}</p>
+          {% endif %}
+          {% if user.kt_groups %}
+            <div class="mt-3">
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#ktGroupsCollapse" aria-expanded="false" aria-controls="ktGroupsCollapse">
+                <i class="bi bi-chevron-down accordion-arrow"></i> View KT Groups ({{ user.kt_groups|length }})
+              </button>
+              <div class="hidden mt-3" id="ktGroupsCollapse">
+                <div class="card p-3">
+                  <!-- Search/Filter Box -->
+                  <div class="mb-3 flex gap-2">
+                    <input type="text" class="form-control" id="ktGroupsSearch" placeholder="Search groups...">
+                    <button class="btn btn-sm btn-outline-secondary hidden" type="button" id="clearKtGroupsSearch">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  </div>
+                  <div class="max-h-72 overflow-y-auto">
+                    <ul class="divide-y divide-gray-100 dark:divide-gray-700" id="ktGroupsList">
+                      {% if legacy_groups %}
+                        {% for group in legacy_groups %}
+                          <li class="py-2 px-1 flex justify-between items-center kt-group-item" data-group-name="{{ group.group_name|lower }}">
+                            <span class="truncate flex-1 text-sm">{{ group.group_name }}</span>
+                            <div class="flex gap-1 ml-2 shrink-0">
+                              <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group.group_login }}" class="btn btn-sm btn-primary" title="View Legacy Dashboard">
+                                <i class="bi bi-arrow-right-circle"></i> Dashboard
                               </a>
-                            </li>
-                          {% endfor %}
-                        {% endif %}
-                      </ul>
-                      <div id="ktGroupsEmpty" class="text-muted text-center p-2" style="display: none;">
-                        <i class="bi bi-search me-1"></i>No groups match your search.
-                      </div>
+                              {% if group.course_ids %}
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        data-group-login="{{ group.group_login }}"
+                                        data-group-name="{{ group.group_name }}"
+                                        onclick="openCourseResourcesModal('{{ group.group_login }}', '{{ group.group_name|escapejs }}')"
+                                        title="View all course resources">
+                                  <i class="bi bi-folder"></i>
+                                </button>
+                              {% endif %}
+                            </div>
+                          </li>
+                        {% endfor %}
+                      {% else %}
+                        {% for group in user.kt_groups %}
+                          <li class="py-2 px-1 flex justify-between items-center kt-group-item" data-group-name="{{ group|lower }}">
+                            <span class="truncate flex-1 text-sm">{{ group }}</span>
+                            <a href="{% url 'dashboard:legacy_dashboard' %}?grp={{ group }}" class="btn btn-sm btn-primary ml-2" title="View Legacy Dashboard">
+                              <i class="bi bi-arrow-right-circle"></i> View
+                            </a>
+                          </li>
+                        {% endfor %}
+                      {% endif %}
+                    </ul>
+                    <div id="ktGroupsEmpty" class="hidden text-center py-4 text-gray-400 text-sm">
+                      <i class="bi bi-search mr-1"></i>No groups match your search.
                     </div>
                   </div>
                 </div>
               </div>
-            {% endif %}
+            </div>
           {% endif %}
-          {% if user.lti_data %}
-            <hr>
-            <h6 class="text-muted">LTI Information</h6>
-            <p class="card-text"><small class="text-muted"><strong>LTI Data:</strong> {{ user.lti_data }}</small></p>
-          {% endif %}
-        </div>
+        {% endif %}
+        {% if user.lti_data %}
+          <hr class="border-gray-200 dark:border-gray-700 my-3">
+          <h6 class="text-sm font-semibold text-gray-500 dark:text-gray-400">LTI Information</h6>
+          <p class="text-sm text-gray-500 dark:text-gray-400"><strong>LTI Data:</strong> {{ user.lti_data }}</p>
+        {% endif %}
       </div>
     </div>
   </div>
-  
+
   <!-- Profile Edit Form -->
-  <div class="card mb-4 border-0 shadow-sm">
-    <div class="card-header bg-secondary text-white">
-      <h5 class="card-title mb-0">
+  <div class="card overflow-hidden mb-6">
+    <div class="bg-gray-600 dark:bg-gray-700 text-white px-6 py-3">
+      <h5 class="font-semibold flex items-center gap-2 m-0">
         <i class="bi bi-pencil-square"></i> Edit Profile Information
       </h5>
     </div>
-    <div class="card-body">
+    <div class="p-6">
       <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="update_profile" value="1">
-        {{ profile_form|crispy }}
+        {% include 'includes/tailwind_form.html' with form=profile_form %}
         <button type="submit" class="btn btn-primary">
           <i class="bi bi-check-circle"></i> Update Profile
         </button>
       </form>
     </div>
   </div>
-  
+
   <!-- Password Change Form (only for non-KT users) -->
   {% if not is_kt_user %}
-  <div class="card mb-4 border-0 shadow-sm">
-    <div class="card-header bg-success text-white">
-      <h5 class="card-title mb-0">
+  <div class="card overflow-hidden mb-6">
+    <div class="bg-green-600 dark:bg-green-700 text-white px-6 py-3">
+      <h5 class="font-semibold flex items-center gap-2 m-0">
         <i class="bi bi-key"></i> Change Password
       </h5>
     </div>
-    <div class="card-body">
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i>
+    <div class="p-6">
+      <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle mr-1"></i>
         <strong>Password Security</strong><br>
         Your password must meet ModuLearn's security standards. Make sure to use a strong, unique password.
       </div>
       <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="change_password" value="1">
-        {{ password_form|crispy }}
+        {% include 'includes/tailwind_form.html' with form=password_form %}
         <button type="submit" class="btn btn-success">
           <i class="bi bi-arrow-clockwise"></i> Change Password
         </button>
@@ -157,18 +153,18 @@
     </div>
   </div>
   {% endif %}
-  
+
   <!-- KnowledgeTree Password Reset (only for KT users) -->
   {% if is_kt_user and kt_password_form %}
-  <div class="card mb-4 border-0 shadow-sm">
-    <div class="card-header bg-info text-white">
-      <h5 class="card-title mb-0">
+  <div class="card overflow-hidden mb-6">
+    <div class="bg-cyan-500 dark:bg-cyan-600 text-white px-6 py-3">
+      <h5 class="font-semibold flex items-center gap-2 m-0">
         <i class="bi bi-key"></i> Reset Password
       </h5>
     </div>
-    <div class="card-body">
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i>
+    <div class="p-6">
+      <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle mr-1"></i>
         <strong>KnowledgeTree User</strong><br>
         This will reset your password in <strong>both</strong> ModuLearn and KnowledgeTree to keep them synchronized.
         Your password must meet ModuLearn's security standards before it can be reset.
@@ -176,7 +172,7 @@
       <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="reset_kt_password" value="1">
-        {{ kt_password_form|crispy }}
+        {% include 'includes/tailwind_form.html' with form=kt_password_form %}
         <button type="submit" class="btn btn-warning">
           <i class="bi bi-arrow-clockwise"></i> Reset Password
         </button>
@@ -184,39 +180,43 @@
     </div>
   </div>
   {% endif %}
-  
+
   <!-- Course-Authoring Password Reset -->
   {% if user.is_instructor %}
-  <div class="card mb-4 border-0 shadow-sm">
-    <div class="card-header bg-warning text-dark">
-      <h5 class="card-title mb-0">
+  <div class="card overflow-hidden mb-6">
+    <div class="bg-yellow-500 dark:bg-yellow-600 text-gray-900 px-6 py-3">
+      <h5 class="font-semibold flex items-center gap-2 m-0">
         <i class="bi bi-tools"></i> Course-Authoring Integration
       </h5>
     </div>
-    <div class="card-body">
-      <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle"></i>
+    <div class="p-6">
+      <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-triangle mr-1"></i>
         <strong>Course-Authoring Tool</strong><br>
         If you're experiencing authentication issues with the Course-Authoring Tool, you can reset your password here.
         After resetting, you'll need to share the new password with the course-authoring administrator to sync your account.
       </div>
       {% if user.course_authoring_password %}
-        <p class="small text-muted mb-3">
-          <strong>Current Password:</strong> <code class="bg-light px-2 py-1 rounded">{{ user.course_authoring_password }}</code>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          <strong>Current Password:</strong>
+          <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm">{{ user.course_authoring_password }}</code>
         </p>
       {% endif %}
       <button type="button" class="btn btn-warning" id="resetCourseAuthoringPassword">
         <i class="bi bi-arrow-clockwise"></i> Reset Course-Authoring Password
       </button>
-      <div id="resetPasswordResult" class="mt-3" style="display: none;"></div>
+      <div id="resetPasswordResult" class="mt-3 hidden"></div>
     </div>
   </div>
   {% endif %}
-  
+
   <div class="mb-4">
-    <a href="{% url 'accounts:logout' %}" class="btn btn-danger">
+    <a href="{% url 'accounts:logout' %}" class="btn btn-danger" onclick="event.preventDefault(); document.getElementById('logout-form-profile').submit();">
       <i class="bi bi-box-arrow-right"></i> Logout
     </a>
+    <form id="logout-form-profile" action="{% url 'accounts:logout' %}" method="post" class="hidden">
+      {% csrf_token %}
+    </form>
   </div>
 </div>
 {% endblock %}
@@ -229,87 +229,52 @@ document.addEventListener('DOMContentLoaded', function() {
   const emptyMsg = document.getElementById('ktGroupsEmpty');
   const groupsList = document.getElementById('ktGroupsList');
   const collapseElement = document.getElementById('ktGroupsCollapse');
-  
+
   if (!searchInput) return;
-  
+
   function filterGroups() {
     const searchTerm = searchInput.value.toLowerCase().trim();
     let visibleCount = 0;
-    
-    // Re-query items each time to ensure we have the latest DOM state
-    // Query from within the collapse element to ensure we get all items
+
     const container = collapseElement || document;
     const currentGroupItems = container.querySelectorAll('.kt-group-item');
-    
-    if (currentGroupItems.length === 0) {
-      console.warn('No .kt-group-item elements found');
-      return;
-    }
-    
+
+    if (currentGroupItems.length === 0) return;
+
     currentGroupItems.forEach(item => {
-      // Try to get group name from data attribute first
       let groupName = (item.getAttribute('data-group-name') || '').toLowerCase();
-      
-      // Fallback: get text content from the span if data attribute is missing
       if (!groupName) {
-        const textSpan = item.querySelector('span.text-truncate');
-        if (textSpan) {
-          groupName = textSpan.textContent.trim().toLowerCase();
-        }
+        const textSpan = item.querySelector('span.truncate');
+        if (textSpan) groupName = textSpan.textContent.trim().toLowerCase();
       }
-      
-      // Check if it matches the search term
+
       const matches = !searchTerm || groupName.includes(searchTerm);
-      
       if (matches) {
-        // Show the item - use both style and class manipulation for robustness
         item.style.display = '';
-        item.classList.remove('d-none');
+        item.classList.remove('hidden');
         visibleCount++;
       } else {
-        // Hide the item
         item.style.display = 'none';
-        item.classList.add('d-none');
+        item.classList.add('hidden');
       }
     });
-    
-    // Show/hide empty message and list
+
     if (visibleCount === 0 && searchTerm) {
-      if (emptyMsg) {
-        emptyMsg.style.display = 'block';
-        emptyMsg.classList.remove('d-none');
-      }
-      if (groupsList) {
-        groupsList.style.display = 'none';
-        groupsList.classList.add('d-none');
-      }
+      if (emptyMsg) { emptyMsg.style.display = 'block'; emptyMsg.classList.remove('hidden'); }
+      if (groupsList) { groupsList.style.display = 'none'; groupsList.classList.add('hidden'); }
     } else {
-      if (emptyMsg) {
-        emptyMsg.style.display = 'none';
-        emptyMsg.classList.add('d-none');
-      }
-      if (groupsList) {
-        groupsList.style.display = '';
-        groupsList.classList.remove('d-none');
-      }
+      if (emptyMsg) { emptyMsg.style.display = 'none'; emptyMsg.classList.add('hidden'); }
+      if (groupsList) { groupsList.style.display = ''; groupsList.classList.remove('hidden'); }
     }
-    
-    // Show/hide clear button
+
     if (clearBtn) {
-      if (searchTerm) {
-        clearBtn.style.display = 'inline-block';
-        clearBtn.classList.remove('d-none');
-      } else {
-        clearBtn.style.display = 'none';
-        clearBtn.classList.add('d-none');
-      }
+      if (searchTerm) { clearBtn.style.display = 'inline-flex'; clearBtn.classList.remove('hidden'); }
+      else { clearBtn.style.display = 'none'; clearBtn.classList.add('hidden'); }
     }
   }
-  
-  // Set up input listener
+
   searchInput.addEventListener('input', filterGroups);
-  
-  // Set up clear button
+
   if (clearBtn) {
     clearBtn.addEventListener('click', function() {
       searchInput.value = '';
@@ -317,22 +282,16 @@ document.addEventListener('DOMContentLoaded', function() {
       searchInput.focus();
     });
   }
-  
-  // Re-run filter when collapse is shown (in case items weren't accessible initially)
+
   if (collapseElement) {
     collapseElement.addEventListener('shown.bs.collapse', function() {
-      // Small delay to ensure DOM is fully updated
       setTimeout(filterGroups, 50);
     });
-    
-    // Also run filter immediately if collapse is already shown
-    // Check if collapse is currently visible
     if (collapseElement.classList.contains('show')) {
       setTimeout(filterGroups, 100);
     }
   }
-  
-  // Initial filter run to set up initial state
+
   setTimeout(filterGroups, 100);
 });
 </script>
@@ -346,18 +305,19 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
   const resetButton = document.getElementById('resetCourseAuthoringPassword');
   const resultDiv = document.getElementById('resetPasswordResult');
-  
+
   if (resetButton) {
     resetButton.addEventListener('click', async function() {
       if (!confirm('Are you sure you want to reset your course-authoring password? You will need to share the new password with the administrator to sync your account.')) {
         return;
       }
-      
+
       const originalText = resetButton.innerHTML;
       resetButton.disabled = true;
-      resetButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Resetting...';
+      resetButton.innerHTML = '<span class="spinner-border mr-2"></span>Resetting...';
       resultDiv.style.display = 'none';
-      
+      resultDiv.classList.add('hidden');
+
       try {
         const response = await fetch("{% url 'dashboard:reset_course_authoring_password' %}", {
           method: 'POST',
@@ -366,35 +326,32 @@ document.addEventListener('DOMContentLoaded', function() {
             'X-CSRFToken': '{{ csrf_token }}'
           }
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
           resultDiv.className = 'mt-3 alert alert-success';
           resultDiv.innerHTML = `
-            <h6><i class="bi bi-check-circle"></i> Password Reset Successful!</h6>
+            <h6 class="font-semibold"><i class="bi bi-check-circle mr-1"></i> Password Reset Successful!</h6>
             <p><strong>Your new password is:</strong></p>
-            <p><code style="font-size: 1.1em; padding: 0.5em; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: inline-block;">${data.new_password}</code></p>
-            <p class="mb-0"><small>Please contact <strong>Mohammad Hassany (MOH70@pitt.edu)</strong> to set this password in course-authoring. Once set, you'll be able to authenticate successfully.</small></p>
+            <p><code class="text-base px-3 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded inline-block">${data.new_password}</code></p>
+            <p class="mb-0 text-sm">Please contact <strong>Mohammad Hassany (MOH70@pitt.edu)</strong> to set this password in course-authoring. Once set, you'll be able to authenticate successfully.</p>
           `;
           resultDiv.style.display = 'block';
-          
-          // Update the displayed password if it exists
-          const passwordDisplay = document.querySelector('code');
-          if (passwordDisplay && passwordDisplay.textContent.includes('{{ user.course_authoring_password }}')) {
-            // Reload page to show new password, or update via JS
-            setTimeout(() => location.reload(), 2000);
-          }
+          resultDiv.classList.remove('hidden');
+          setTimeout(() => location.reload(), 2000);
         } else {
           resultDiv.className = 'mt-3 alert alert-danger';
-          resultDiv.innerHTML = `<h6><i class="bi bi-exclamation-circle"></i> Error</h6><p>${data.error || 'Failed to reset password. Please try again.'}</p>`;
+          resultDiv.innerHTML = `<h6 class="font-semibold"><i class="bi bi-exclamation-circle mr-1"></i> Error</h6><p>${data.error || 'Failed to reset password. Please try again.'}</p>`;
           resultDiv.style.display = 'block';
+          resultDiv.classList.remove('hidden');
         }
       } catch (error) {
         console.error('Reset error:', error);
         resultDiv.className = 'mt-3 alert alert-danger';
-        resultDiv.innerHTML = `<h6><i class="bi bi-exclamation-circle"></i> Error</h6><p>Failed to reset password: ${error.message}</p>`;
+        resultDiv.innerHTML = `<h6 class="font-semibold"><i class="bi bi-exclamation-circle mr-1"></i> Error</h6><p>Failed to reset password: ${error.message}</p>`;
         resultDiv.style.display = 'block';
+        resultDiv.classList.remove('hidden');
       } finally {
         resetButton.disabled = false;
         resetButton.innerHTML = originalText;
@@ -406,80 +363,52 @@ document.addEventListener('DOMContentLoaded', function() {
 // Course Resources Modal Functionality (shared with dashboard)
 let courseResourcesCache = {};
 
-/**
- * Open course resources modal safely
- */
 function openCourseResourcesModal(groupLogin, groupName) {
-    // Ensure Bootstrap is loaded before opening modal
     if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
-        console.error('Bootstrap is not loaded. Cannot open modal.');
         alert('Please wait for the page to finish loading.');
         return;
     }
-    
+
     const modalElement = document.getElementById('courseResourcesModal');
-    if (!modalElement) {
-        console.error('Modal element not found');
-        return;
-    }
-    
-    // Open modal using Bootstrap's safe method
+    if (!modalElement) return;
+
     try {
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
-        // Load resources after modal is shown
         loadCourseResources(groupLogin, groupName);
     } catch (error) {
         console.error('Error opening modal:', error);
     }
 }
 
-/**
- * Load course resources for a group and display in modal
- */
 async function loadCourseResources(groupLogin, groupName) {
-    // Update modal title
     const groupNameEl = document.getElementById('courseResourcesGroupName');
-    if (groupNameEl) {
-        groupNameEl.textContent = groupName || groupLogin;
-    }
-    
-    // Check cache first
+    if (groupNameEl) groupNameEl.textContent = groupName || groupLogin;
+
     if (courseResourcesCache[groupLogin]) {
         renderCourseResources(courseResourcesCache[groupLogin]);
         return;
     }
-    
-    // Show loading state
+
     const resourcesList = document.getElementById('courseResourcesList');
     if (resourcesList) {
         resourcesList.innerHTML = `
-            <li class="list-group-item text-center py-5">
-                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                    <span class="visually-hidden">Loading resources...</span>
+            <li class="text-center py-10 px-4">
+                <div class="spinner-border text-blue-600" role="status">
+                    <span class="sr-only">Loading resources...</span>
                 </div>
-                <p class="text-muted mt-2 mb-0">Loading resources...</p>
+                <p class="text-gray-400 mt-3 text-sm">Loading resources...</p>
             </li>
         `;
     }
-    
-    // No viewer needed - resources open in new tabs
-    
+
     try {
-        // Construct URL using Django's url tag - get base URL and replace placeholder
         const baseUrl = "{% url 'dashboard:get_course_resources_api' group_login='GROUP_LOGIN_PLACEHOLDER' %}";
         const courseResourcesUrl = baseUrl.replace('GROUP_LOGIN_PLACEHOLDER', encodeURIComponent(groupLogin));
         const response = await fetch(courseResourcesUrl);
         const data = await response.json();
-        
-        // Check if KnowledgeTree session is required
-        // Resources will open in new tabs - if session is required, user will see login page there
-        if (data.kt_session_required && data.kt_login_url) {
-            console.log('KnowledgeTree session required - user may need to authenticate when opening resource');
-        }
-        
+
         if (data.success && data.resources) {
-            // Cache the results
             courseResourcesCache[groupLogin] = data.resources;
             renderCourseResources(data.resources);
         } else {
@@ -491,110 +420,72 @@ async function loadCourseResources(groupLogin, groupName) {
     }
 }
 
-/**
- * Render course resources list
- */
 function renderCourseResources(resources) {
     const resourcesList = document.getElementById('courseResourcesList');
     if (!resourcesList) return;
-    
+
     if (resources.length === 0) {
         resourcesList.innerHTML = `
-            <li class="list-group-item text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
-                <p class="text-muted mt-2 mb-0">No resources available for this course.</p>
+            <li class="text-center py-10 px-4">
+                <i class="bi bi-inbox text-3xl text-gray-300"></i>
+                <p class="text-gray-400 mt-3 text-sm">No resources available for this course.</p>
             </li>
         `;
         return;
     }
-    
+
     const html = resources.map(resource => {
         const isMasteryGrids = resource.resource_type === 'masterygrids';
-        const iconClass = isMasteryGrids ? 'bi-grid-3x3-gap' : 
+        const iconClass = isMasteryGrids ? 'bi-grid-3x3-gap' :
                          resource.resource_type === 'folder' ? 'bi-folder' : 'bi-file-earmark';
-        const badgeClass = isMasteryGrids ? 'bg-primary' : 
-                          resource.resource_type === 'folder' ? 'bg-secondary' : 'bg-info';
-        
-        // Use direct URL for new tabs (better for authentication) if available, otherwise use proxied URL
+        const badgeColor = isMasteryGrids ? 'badge-primary' :
+                          resource.resource_type === 'folder' ? 'badge-secondary' : 'badge-info';
+
         const resourceUrl = resource.show_url_direct || resource.show_url;
         return `
-            <li class="list-group-item list-group-item-action" 
-                onclick="openCourseResourceInNewTab('${escapeHtml(resourceUrl)}', '${escapeHtml(resource.Title)}')" 
-                style="cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center">
-                            <i class="bi ${iconClass} me-2"></i>
-                            <strong>${escapeHtml(resource.Title)}</strong>
-                            <i class="bi bi-box-arrow-up-right ms-2 text-muted" style="font-size: 0.75rem;"></i>
+            <li class="list-group-item list-group-item-action"
+                onclick="openCourseResourceInNewTab('${escapeHtml(resourceUrl)}', '${escapeHtml(resource.Title)}')">
+                <div class="flex justify-between items-center">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <i class="bi ${iconClass}"></i>
+                            <strong class="truncate">${escapeHtml(resource.Title)}</strong>
+                            <i class="bi bi-box-arrow-up-right text-gray-400 text-xs"></i>
                         </div>
-                        ${resource.Description ? `<small class="text-muted d-block mt-1">${escapeHtml(resource.Description)}</small>` : ''}
+                        ${resource.Description ? `<small class="text-gray-400 block mt-1 truncate">${escapeHtml(resource.Description)}</small>` : ''}
                     </div>
-                    <div class="ms-2">
-                        <span class="badge ${badgeClass}">${resource.resource_type}</span>
+                    <div class="ml-3 shrink-0">
+                        <span class="badge ${badgeColor}">${resource.resource_type}</span>
                     </div>
                 </div>
             </li>
         `;
     }).join('');
-    
+
     resourcesList.innerHTML = html;
 }
 
-/**
- * Open course resource in a new tab
- */
 function openCourseResourceInNewTab(showUrl, title) {
-    // Open resource in new tab
-    // If URL is proxied, it will go through our proxy; if direct, it goes to KnowledgeTree
     window.open(showUrl, '_blank', 'noopener,noreferrer');
 }
 
-/**
- * Show error message in resources list
- */
 function showCourseResourcesError(message) {
     const resourcesList = document.getElementById('courseResourcesList');
     if (resourcesList) {
         resourcesList.innerHTML = `
-            <li class="list-group-item text-center py-5">
-                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
-                <p class="text-danger mt-2 mb-0">${escapeHtml(message)}</p>
+            <li class="text-center py-10 px-4">
+                <i class="bi bi-exclamation-triangle text-yellow-500 text-3xl"></i>
+                <p class="text-red-500 mt-3 text-sm">${escapeHtml(message)}</p>
             </li>
         `;
     }
 }
 
-/**
- * Utility: Escape HTML
- */
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
-
-// Initialize modal handlers when DOM and Bootstrap are ready
-(function() {
-    function initModalHandlers() {
-        // Ensure Bootstrap is loaded
-        if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
-            // Retry after a short delay if Bootstrap isn't ready yet
-            setTimeout(initModalHandlers, 100);
-            return;
-        }
-        
-        // No viewer to reset - resources open in new tabs
-    }
-    
-    // Wait for DOM and Bootstrap to be ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initModalHandlers);
-    } else {
-        // DOM is already ready, but Bootstrap might not be
-        initModalHandlers();
-    }
-})();
 </script>
 {% endblock %}

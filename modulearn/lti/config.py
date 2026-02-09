@@ -143,6 +143,7 @@ def get_tool_configs() -> dict:
             'lti_body_overrides': {
                 # CodeCheck uses defaults - no overrides needed
             },
+            # Note: CodeCheck is now loaded directly via iframe, not through LTI
         },
         
         'codeworkout': {

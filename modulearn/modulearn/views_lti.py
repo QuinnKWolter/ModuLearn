@@ -306,9 +306,20 @@ def launch(request):
             }
             response = render(request, 'lti/auto_submit.html', context)
     elif is_paws_proxy:
-        # PAWS proxy tools use GET redirect (PAWS handles the POST to the tool)
-        logger.info(f"[LTI Launch] PAWS proxy tool - redirecting to PAWS")
-        response = redirect(launch_url)
+        # PAWS proxy tools: Use GET redirect with query params
+        # The launch_url from build_paws_launch_params already has all query params
+        # PAWS LTI consumer expects GET requests with query parameters
+        logger.info(f"[LTI Launch] PAWS proxy tool - redirecting to PAWS with query params")
+        logger.info(f"[LTI Launch] PAWS launch URL: {launch_url}")
+        # For HTTP PAWS tools in HTTPS context, we need to proxy
+        if parsed.scheme == 'http' and request.is_secure():
+            # Proxy the HTTP URL using the path-style proxy
+            from modulearn.views_proxy import _to_path_style
+            proxy_url = _to_path_style(launch_url)
+            response = redirect(proxy_url)
+        else:
+            # Direct redirect for HTTPS or same-scheme
+            response = redirect(launch_url)
     else:
         # Direct LTI tools use form POST with OAuth-signed params
         context = {

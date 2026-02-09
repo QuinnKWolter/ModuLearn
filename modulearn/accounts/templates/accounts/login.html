@@ -1,24 +1,27 @@
 {% extends 'base.html' %}
 
-{% load crispy_forms_tags %}
-
 {% block title %}Login - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="mt-4">Login</h1>
-  {% if form.errors %}
-    <div class="alert alert-danger" role="alert">
-      Please correct the errors below.
+<div class="max-w-md mx-auto py-10">
+  <div class="card p-8">
+    <div class="text-center mb-6">
+      <i class="bi bi-box-arrow-in-right text-blue-600 dark:text-blue-400 text-4xl"></i>
+      <h1 class="text-2xl font-bold mt-3">Login</h1>
     </div>
-  {% endif %}
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit" class="btn btn-primary">Login</button>
-  </form>
-  <p class="mt-2">
-    Don't have an account? <a href="{% url 'accounts:signup' %}">Sign up here</a>.
-  </p>
+    {% if form.errors %}
+      <div class="alert alert-danger mb-4" role="alert">
+        Please correct the errors below.
+      </div>
+    {% endif %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include 'includes/tailwind_form.html' with form=form %}
+      <button type="submit" class="btn btn-primary w-full">Login</button>
+    </form>
+    <p class="mt-4 text-sm text-center text-gray-500 dark:text-gray-400">
+      Don't have an account? <a href="{% url 'accounts:signup' %}" class="text-blue-600 dark:text-blue-400 hover:underline">Sign up here</a>.
+    </p>
+  </div>
 </div>
 {% endblock %}

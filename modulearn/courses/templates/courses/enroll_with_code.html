@@ -3,19 +3,24 @@
 {% block title %}Enroll with Code - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1>Enroll with Code</h1>
-  <form method="post">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label for="email" class="form-label">Email address</label>
-      <input type="email" class="form-control" id="email" name="email" required>
+<div class="max-w-md mx-auto py-10">
+  <div class="card p-8">
+    <div class="text-center mb-6">
+      <i class="bi bi-ticket-perforated text-blue-600 dark:text-blue-400 text-4xl"></i>
+      <h1 class="text-2xl font-bold mt-3">Enroll with Code</h1>
     </div>
-    <div class="mb-3">
-      <label for="code" class="form-label">Enrollment Code</label>
-      <input type="text" class="form-control" id="code" name="code" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Enroll</button>
-  </form>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-4">
+        <label for="email" class="form-label">Email address <span class="text-red-500">*</span></label>
+        <input type="email" class="form-control" id="email" name="email" required>
+      </div>
+      <div class="mb-4">
+        <label for="code" class="form-label">Enrollment Code <span class="text-red-500">*</span></label>
+        <input type="text" class="form-control" id="code" name="code" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-full">Enroll</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

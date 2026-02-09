@@ -228,20 +228,37 @@ def http_get_proxy(request, _redirect_depth=0):
 
     print(f"DEBUG PROXY: Making {request.method} request to (IPv4): {target} Host={u.hostname}")
     try:
-        # Handle POST requests with form data
+        # Handle POST requests
         if request.method == "POST":
-            # Get form data from request body
-            data = request.POST.dict() if hasattr(request, 'POST') else {}
-            # Also check for raw body data (for application/x-www-form-urlencoded)
-            if not data and request.body:
-                from urllib.parse import parse_qs
-                data = {k: v[0] if len(v) == 1 else v for k, v in parse_qs(request.body.decode('utf-8')).items()}
+            # Check Content-Type to determine how to forward the body
+            content_type = request.META.get('CONTENT_TYPE', request.META.get('HTTP_CONTENT_TYPE', ''))
             
-            print(f"DEBUG PROXY: POST data: {data}")
-            # Use longer timeout for authentication endpoints (j_security_check)
-            timeout = 30 if 'j_security_check' in target else 8
-            with requests.post(target, headers=headers, data=data, stream=True, timeout=timeout, allow_redirects=False) as r:
-                return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
+            # For JSON requests, forward the raw body
+            if 'application/json' in content_type.lower():
+                # Forward JSON body as-is
+                json_data = request.body
+                headers['Content-Type'] = 'application/json'
+                print(f"DEBUG PROXY: POST JSON body (length: {len(json_data)} bytes)")
+                timeout = 30 if 'j_security_check' in target else 8
+                with requests.post(target, headers=headers, data=json_data, stream=True, timeout=timeout, allow_redirects=False) as r:
+                    return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
+            else:
+                # For form data, parse as form-encoded
+                data = request.POST.dict() if hasattr(request, 'POST') else {}
+                # Also check for raw body data (for application/x-www-form-urlencoded)
+                if not data and request.body:
+                    from urllib.parse import parse_qs
+                    data = {k: v[0] if len(v) == 1 else v for k, v in parse_qs(request.body.decode('utf-8')).items()}
+                
+                # Preserve Content-Type if present
+                if content_type:
+                    headers['Content-Type'] = content_type
+                
+                print(f"DEBUG PROXY: POST form data: {data}")
+                # Use longer timeout for authentication endpoints (j_security_check)
+                timeout = 30 if 'j_security_check' in target else 8
+                with requests.post(target, headers=headers, data=data, stream=True, timeout=timeout, allow_redirects=False) as r:
+                    return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
         else:
             # GET or HEAD request
             with requests.get(target, headers=headers, stream=True, timeout=8, allow_redirects=False) as r:
@@ -493,6 +510,126 @@ def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5
     if getattr(settings, "PROXY_CORS_ORIGIN", None):
         resp["Access-Control-Allow-Origin"] = settings.PROXY_CORS_ORIGIN
     return resp
+
+@csrf_exempt
+def forward_to_adapt2(request, rest: str):
+    """
+    Forward requests to pawscomp2.sis.pitt.edu for external activity API calls.
+    
+    Activities loaded in iframes make relative requests (e.g., /pcex/api/track/activity)
+    that expect to be on pawscomp2.sis.pitt.edu. This endpoint catches those and forwards them.
+    
+    The route is `pcex/<path:rest>`, so `rest` is the path after `/pcex/`.
+    We need to prepend `pcex/` when forwarding to pawscomp2.
+    
+    Example: /pcex/api/track/activity -> rest="api/track/activity" -> http://pawscomp2.sis.pitt.edu/pcex/api/track/activity
+    
+    POST requests with JSON bodies are forwarded with the original Content-Type and body.
+    """
+    target_host = 'pawscomp2.sis.pitt.edu'
+    
+    if target_host not in getattr(settings, 'PROXY_ALLOWED_HOSTS', set()):
+        logger.warning(f"{target_host} not in PROXY_ALLOWED_HOSTS - cannot forward pcex requests")
+        return HttpResponseForbidden(f"Proxy forwarding not configured for {target_host}")
+    
+    # Prepend 'pcex/' to the rest path since the route captures everything after /pcex/
+    full_path = f"pcex/{rest}"
+    
+    logger.info(f"[PCEX Forward] Forwarding {request.method} /{full_path} -> {target_host}/{full_path}")
+    
+    # Build target URL
+    query_string = request.META.get('QUERY_STRING', '')
+    target_url = f"http://{target_host}/{full_path}"
+    if query_string:
+        target_url += f"?{query_string}"
+    
+    # For POST requests, we need to create a modified request with the proxy path in PATH_INFO
+    if request.method == "POST":
+        # Create a modified request that http_get_proxy can handle
+        class ProxyRequest:
+            def __init__(self, original_request, proxy_path):
+                self.method = original_request.method
+                self.GET = QueryDict()  # Empty for POST
+                self.POST = original_request.POST
+                self.body = original_request.body
+                self.META = original_request.META.copy()
+                self.META['PATH_INFO'] = proxy_path
+                # Preserve Content-Type (important for JSON requests)
+                if 'Content-Type' in original_request.META:
+                    self.META['CONTENT_TYPE'] = original_request.META['Content-Type']
+                elif 'HTTP_CONTENT_TYPE' in original_request.META:
+                    self.META['CONTENT_TYPE'] = original_request.META['HTTP_CONTENT_TYPE']
+                self._redirect_depth = getattr(original_request, '_redirect_depth', 0)
+        
+        script_name = getattr(settings, 'FORCE_SCRIPT_NAME', '')
+        proxy_path = f"/proxy/http/{target_host}/{full_path}"
+        if script_name:
+            proxy_path = script_name.rstrip('/') + proxy_path
+        
+        proxy_request = ProxyRequest(request, proxy_path)
+        return http_get_proxy(proxy_request, _redirect_depth=0)
+    else:
+        # For GET/HEAD, use http_get_proxy_path which handles query params
+        return http_get_proxy_path(request, f"http/{target_host}/{full_path}")
+
+
+def forward_cbum(request, rest: str):
+    """
+    Forward requests to pawscomp2.sis.pitt.edu for CBUM (User Model) API calls.
+    
+    Activities loaded in iframes make relative requests (e.g., /cbum/um?app=46&act=...)
+    that expect to be on pawscomp2.sis.pitt.edu. This endpoint catches those and forwards them.
+    
+    The route is `cbum/<path:rest>`, so `rest` is the path after `/cbum/`.
+    We need to prepend `cbum/` when forwarding to pawscomp2.
+    
+    Example: /cbum/um?app=46&act=py_bmi_calculator1 -> rest="um" -> http://pawscomp2.sis.pitt.edu/cbum/um?app=46&act=py_bmi_calculator1
+    """
+    target_host = 'pawscomp2.sis.pitt.edu'
+    
+    if target_host not in getattr(settings, 'PROXY_ALLOWED_HOSTS', set()):
+        logger.warning(f"{target_host} not in PROXY_ALLOWED_HOSTS - cannot forward cbum requests")
+        return HttpResponseForbidden(f"Proxy forwarding not configured for {target_host}")
+    
+    # Prepend 'cbum/' to the rest path since the route captures everything after /cbum/
+    full_path = f"cbum/{rest}"
+    
+    logger.info(f"[CBUM Forward] Forwarding {request.method} /{full_path} -> {target_host}/{full_path}")
+    
+    # Build target URL
+    query_string = request.META.get('QUERY_STRING', '')
+    target_url = f"http://{target_host}/{full_path}"
+    if query_string:
+        target_url += f"?{query_string}"
+    
+    # For POST requests, we need to create a modified request with the proxy path in PATH_INFO
+    if request.method == "POST":
+        # Create a modified request that http_get_proxy can handle
+        class ProxyRequest:
+            def __init__(self, original_request, proxy_path):
+                self.method = original_request.method
+                self.GET = QueryDict()  # Empty for POST
+                self.POST = original_request.POST
+                self.body = original_request.body
+                self.META = original_request.META.copy()
+                self.META['PATH_INFO'] = proxy_path
+                # Preserve Content-Type (important for JSON requests)
+                if 'Content-Type' in original_request.META:
+                    self.META['CONTENT_TYPE'] = original_request.META['Content-Type']
+                elif 'HTTP_CONTENT_TYPE' in original_request.META:
+                    self.META['CONTENT_TYPE'] = original_request.META['HTTP_CONTENT_TYPE']
+                self._redirect_depth = getattr(original_request, '_redirect_depth', 0)
+        
+        script_name = getattr(settings, 'FORCE_SCRIPT_NAME', '')
+        proxy_path = f"/proxy/http/{target_host}/{full_path}"
+        if script_name:
+            proxy_path = script_name.rstrip('/') + proxy_path
+        
+        proxy_request = ProxyRequest(request, proxy_path)
+        return http_get_proxy(proxy_request, _redirect_depth=0)
+    else:
+        # For GET/HEAD, use http_get_proxy_path which handles query params
+        return http_get_proxy_path(request, f"http/{target_host}/{full_path}")
 
 @csrf_exempt
 def http_get_proxy_path(request, rest: str):

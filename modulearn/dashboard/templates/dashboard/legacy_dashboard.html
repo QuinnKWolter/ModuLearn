@@ -4,12 +4,12 @@
 {% block title %}Learning Analytics Dashboard - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2 py-md-4">
+<div class="py-4">
 
     {% include 'dashboard/components/legacy_dashboard_header.html' %}
 
     <!-- Dashboard Content Area (Hidden until data is loaded) -->
-    <div id="dashboardContent" class="d-none">
+    <div id="dashboardContent" class="hidden">
         {% include 'dashboard/components/dashboard_kpi_cards.html' %}
         {% include 'dashboard/components/dashboard_mastery_grid.html' %}
     </div>
@@ -34,4 +34,3 @@
 </script>
 {% include 'dashboard/components/dashboard_scripts.html' %}
 {% endblock %}
-

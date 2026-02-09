@@ -3,9 +3,12 @@
 {% block title %}Server Error - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="mt-4 text-danger">500 - Server Error</h1>
-  <p>An unexpected error has occurred. Please try again later.</p>
-  <a href="{% url 'main:home' %}" class="btn btn-primary">Return Home</a>
+<div class="max-w-4xl mx-auto py-16 text-center">
+  <h1 class="text-6xl font-extrabold text-red-500 mb-4">500</h1>
+  <h2 class="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Server Error</h2>
+  <p class="text-gray-500 dark:text-gray-400 mb-8">An unexpected error has occurred. Please try again later.</p>
+  <a href="{% url 'main:home' %}" class="btn btn-primary">
+    <i class="bi bi-house mr-1"></i>Return Home
+  </a>
 </div>
 {% endblock %}

@@ -8,6 +8,84 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def _ensure_kt_user_exists(user, password: str):
+    """
+    Ensure user exists in KnowledgeTree database. If not, create them.
+    
+    This is called after successful Django authentication (sign in/sign up)
+    to automatically create a corresponding KnowledgeTree user entry.
+    
+    Args:
+        user: Django User object
+        password: Plaintext password (for creating KT user with same password)
+    """
+    logger.info(f"[KT User Creation] Checking KnowledgeTree user for '{user.username}'")
+    
+    # Skip if user already has KnowledgeTree credentials
+    if user.kt_user_id or user.kt_login:
+        logger.info(f"[KT User Creation] User {user.username} already has KnowledgeTree credentials (kt_user_id={user.kt_user_id}, kt_login={user.kt_login}) - skipping creation")
+        return
+    
+    # Check if KnowledgeTree auth is enabled
+    kt_config = getattr(settings, 'KNOWLEDGETREE', {})
+    if not kt_config.get('AUTH_ENABLED', True):
+        logger.warning("[KT User Creation] KnowledgeTree authentication disabled - skipping user creation")
+        return
+    
+    try:
+        from .knowledgetree_auth import KnowledgeTreeAuthService
+        
+        kt_service = KnowledgeTreeAuthService()
+        
+        # Check if PAWS database is configured
+        db_config = getattr(settings, 'PAWS_DATABASE', {})
+        if not db_config or not db_config.get('HOST'):
+            logger.warning("[KT User Creation] PAWS database not configured - cannot check/create user")
+            return
+        
+        logger.info(f"[KT User Creation] KnowledgeTree database configured - checking if user '{user.username}' exists")
+        
+        # Check if user exists in KnowledgeTree database (without password verification)
+        kt_user_data = kt_service.check_user_exists_in_database(user.username)
+        
+        if kt_user_data:
+            # User exists in KnowledgeTree - link the accounts
+            logger.info(f"[KT User Creation] User '{user.username}' found in KnowledgeTree (UserID: {kt_user_data.get('user_id')})")
+            user.kt_user_id = kt_user_data.get('user_id')
+            user.kt_login = kt_user_data.get('login', user.username)
+            user.save()
+            logger.info(f"[KT User Creation] Linked Django user '{user.username}' to KnowledgeTree account")
+        else:
+            # User doesn't exist in KnowledgeTree - create them
+            logger.info(f"[KT User Creation] User '{user.username}' not found in KnowledgeTree - creating new entry")
+            logger.info(f"[KT User Creation] Creating user with email='{user.email or ''}', full_name='{user.full_name or user.username}'")
+            
+            if not password:
+                logger.error(f"[KT User Creation] Cannot create KnowledgeTree user for '{user.username}': password is empty")
+                return
+            
+            kt_user_data = kt_service.create_user_in_database(
+                username=user.username,
+                password=password,
+                email=user.email or '',
+                full_name=user.full_name or user.username
+            )
+            
+            if kt_user_data:
+                # Link the accounts
+                user.kt_user_id = kt_user_data.get('user_id')
+                user.kt_login = kt_user_data.get('login', user.username)
+                user.save()
+                logger.info(f"[KT User Creation] Successfully created KnowledgeTree user '{user.username}' (UserID: {kt_user_data.get('user_id')}) and linked to Django account")
+            else:
+                logger.error(f"[KT User Creation] Failed to create KnowledgeTree user for '{user.username}' - create_user_in_database returned None")
+                
+    except Exception as e:
+        logger.error(f"[KT User Creation] Error ensuring KnowledgeTree user exists for '{user.username}': {str(e)}", exc_info=True)
+        # Don't fail authentication if KT user creation fails
+
+
 def signup(request):
     """
     Handles user signup.
@@ -20,8 +98,16 @@ def signup(request):
             user.is_instructor = form.cleaned_data.get('is_instructor', False)
             user.is_student = form.cleaned_data.get('is_student', True)
             user.save()
+            
+            # Get password from form before saving (form.save() may clear it)
+            password = form.cleaned_data.get('password1')
+            
             # Specify the backend when logging in (required when multiple backends are configured)
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            
+            # Check if user exists in KnowledgeTree, create if not
+            _ensure_kt_user_exists(user, password)
+            
             messages.success(request, 'Registration successful.')
             return redirect('dashboard:student_dashboard' if user.is_student else 'dashboard:instructor_dashboard')
     else:
@@ -40,7 +126,12 @@ def login_view(request):
         
         if form.is_valid():
             # Standard Django authentication succeeded
-            login(request, form.get_user())
+            user = form.get_user()
+            login(request, user)
+            
+            # Check if user exists in KnowledgeTree, create if not
+            _ensure_kt_user_exists(user, password)
+            
             messages.success(request, 'Successfully signed in.')
             return redirect('main:home')
         else:
@@ -59,6 +150,10 @@ def login_view(request):
                     
                     if user is not None:
                         login(request, user)
+                        
+                        # User authenticated via KnowledgeTree, so they definitely exist there
+                        # No need to create them
+                        
                         messages.success(request, 'Successfully signed in with your KnowledgeTree account.')
                         return redirect('main:home')
                     else:

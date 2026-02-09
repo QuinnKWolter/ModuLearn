@@ -1,318 +1,69 @@
-/* Base layout and dark mode transition */
+/* ============================================================
+   ModuLearn – Custom styles (Tailwind companion)
+   Most styling is handled by Tailwind utility classes in templates.
+   This file holds supplementary / hard-to-express-in-utility rules.
+   ============================================================ */
+
+/* Smooth colour transitions for theme switch */
 body {
-  display: flex;
-  flex-direction: column;
-  min-height: 80vh;
   transition: background-color 0.3s, color 0.3s;
-  margin-top: 70px;
 }
 
-main {
-  flex: 1;
-}
-
-footer {
-  background-color: #007bff;
-  color: #fff;
-  transition: background-color 0.3s, color 0.3s;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  z-index: 1000;
-}
-
-.footer-spacer {
-  height: 60px;
-}
-
-/* Nav link hover effect */
-.nav-link {
-  color: #fff;
-  position: relative;
-  display: inline-block;
-  text-decoration: none;
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  display: block;
-  margin-top: 5px;
-  right: 50%;
-  background: #fff;
-  transition: width 0.3s ease, right 0.3s ease;
-}
-
-.nav-link:hover::after {
-  width: 100%;
-  right: 0;
-}
-
+/* Breadcrumb links */
 .breadcrumb-item a {
-    text-decoration: none;
-}
-
-/* Dark mode styling */
-.dark-mode body {
-  background-color: #333;
-  color: #fff;
-}
-
-.dark-mode footer {
-  background-color: #222 !important;
-  color: #fff;
-}
-
-.dark-mode .navbar {
-  background-color: #222 !important;
-}
-
-.dark-mode .card {
-  background-color: #444;
-  color: #fff;
-}
-
-.dark-mode .list-group-item {
-  background-color: #444;
-  color: #fff;
-}
-
-.dark-mode .breadcrumb-item {
-  color: #fff;
-}
-
-/* Dark mode nav-link hover effect */
-.dark-mode .nav-link::after {
-  background: #fff;
-}
-
-/* Dark mode help text styling */
-.dark-mode .form-text, .dark-mode .help-text {
-  color: #bbb; /* Lighter color for help text in dark mode */
-}
-
-.dark-mode a:visited {
-  color: #6495ed; /* CornflowerBlue for visited links */
-}
-
-.dark-mode a:hover:not(.nav-link):not(.btn) {
-  color: #00bfff; /* DeepSkyBlue for hovered links */
-}
-
-.dark-mode a:active {
-  color: #4682b4; /* SteelBlue for active links */
-}
-
-/* Dark mode modal styling */
-.dark-mode .modal-content {
-  background-color: #444;
-  color: #fff;
-}
-
-.dark-mode .modal-header, .dark-mode .modal-footer {
-  border-color: #555;
-}
-
-.dark-mode .btn-close {
-  filter: invert(1);
-}
-
-.btn {
-  /* color: #fff !important; */
   text-decoration: none;
-  border: none; /* Remove outline style */
 }
 
-/* Dark mode accordion styling */
-.dark-mode .accordion-button {
-  background-color: #444;
-  color: #fff;
+/* Modal overlay / backdrop helper
+   Used together with bootstrap-compat.js */
+.modal-overlay {
+  /* base hidden state is controlled by .hidden / .flex classes */
+  transition: opacity 0.15s ease;
 }
 
-.dark-mode .accordion-button:not(.collapsed) {
-  background-color: #555;
-}
-
-.dark-mode .accordion-body {
-  background-color: #333;
-  color: #fff;
-}
-
-/* Dark mode table styling */
-.dark-mode .table {
-  background-color: #444;
-  color: #fff;
-}
-
-.dark-mode .table thead {
-  background-color: #555;
-  color: #fff;
-}
-
-.dark-mode .table-hover tbody tr:hover {
-  background-color: #555;
-}
-
-/* Light mode text-muted */
-.text-muted {
-    color: #6c757d !important;  /* Bootstrap's default text-muted color */
-}
-
-/* Dark mode text-muted */
-.dark-mode .text-muted {
-    color: #9ca3af !important;  /* Lighter gray for better visibility in dark mode */
-}
-
-.btn-link {
-  color: #555 !important;
-}
-
-.dark-mode .btn-link {
-  color: #bbb !important;
-}
-
-/* Legacy Dashboard Styles */
-.cursor-pointer {
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-/* Custom progress bar styling */
-.progress {
-    background-color: #e9ecef;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    border-radius: 10px;
-    transition: width 0.6s ease;
-}
-
-/* Card hover effects */
-.card {
-    transition: all 0.3s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-}
-
+/* Table vertical-align helper */
 .table td {
-    vertical-align: middle;
-    border-top: none;
+  vertical-align: middle;
 }
 
-/* Button group styling */
+/* Button-group rounding */
+.btn-group {
+  display: inline-flex;
+}
 .btn-group .btn {
-    border-radius: 0.375rem;
+  border-radius: 0;
 }
-
 .btn-group .btn:first-child {
-    border-top-left-radius: 0.375rem;
-    border-bottom-left-radius: 0.375rem;
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
 }
-
 .btn-group .btn:last-child {
-    border-top-right-radius: 0.375rem;
-    border-bottom-right-radius: 0.375rem;
-}
-
-/* Modal styling */
-.modal-content {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-}
-
-.modal-header {
-    border-bottom: 1px solid #e9ecef;
-    border-radius: 15px 15px 0 0;
-}
-
-/* Alert styling */
-.alert {
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-/* Form control styling */
-.form-control, .form-select {
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    transition: all 0.2s ease;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-/* Badge styling */
-.badge {
-    font-weight: 500;
-    padding: 0.5em 0.75em;
-}
-
-/* Spinner styling */
-.spinner-border {
-    width: 1rem;
-    height: 1rem;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .table-responsive {
-        font-size: 0.875rem;
-    }
-    
-    .btn-group {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .btn-group .btn {
-        border-radius: 0.375rem !important;
-        margin-bottom: 0.25rem;
-    }
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-group .btn {
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.25rem;
+  }
 }
 
-/* Dark mode dashboard support */
-.dark-mode .card {
-    background-color: #2d3748;
-    color: #e2e8f0;
+/* Accordion rotate arrow */
+.accordion-arrow {
+  transition: transform 0.25s ease;
+}
+.accordion-arrow.rotated,
+[aria-expanded="true"] .accordion-arrow {
+  transform: rotate(180deg);
 }
 
-.dark-mode .table {
-    color: #e2e8f0;
-}
-
-.dark-mode .table-light {
-    background-color: #4a5568;
-}
-
-.dark-mode .form-control,
-.dark-mode .form-select {
-    background-color: #4a5568;
-    border-color: #718096;
-    color: #e2e8f0;
-}
-
-.dark-mode .modal-content {
-    background-color: #2d3748;
-    color: #e2e8f0;
-}
-
-.dark-mode .modal-header {
-    border-bottom-color: #4a5568;
-}
-
-.table {
-  --bs-table-bg: transparent;
-  --bs-table-accent-bg: transparent;
-  --bs-table-color: inherit;
+/* Legacy mastery-grid cell sizing (set via JS) */
+.mastery-cell {
+  transition: all 0.2s ease-in-out;
 }

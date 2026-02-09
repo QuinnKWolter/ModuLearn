@@ -1,22 +1,22 @@
 {% if course_instances or enrolled_instances %}
-<section class="session-management-section mb-5">
-  <div class="card border-0 shadow-sm">
-    <div class="card-header bg-transparent border-0 pb-3">
-      <div class="d-flex justify-content-between align-items-center">
+<section class="mb-8">
+  <div class="card overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center">
         <div>
-          <h2 class="h5 fw-semibold mb-1">Course Instances</h2>
-          <p class="text-muted small mb-0">Manage your active course sessions</p>
+          <h2 class="text-lg font-semibold mb-0.5">Course Instances</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Manage your active course sessions</p>
         </div>
         {% with course_count=course_instances.count enrolled_count=enrolled_instances|length %}
         {% with total_sessions=course_count|add:enrolled_count %}
-        <span class="badge bg-primary">{{ total_sessions }} active session{{ total_sessions|pluralize }}</span>
+        <span class="badge badge-primary">{{ total_sessions }} active session{{ total_sessions|pluralize }}</span>
         {% endwith %}
         {% endwith %}
       </div>
     </div>
-    <div class="card-body">
+    <div class="p-6">
       {% if course_instances or enrolled_instances %}
-      <div class="accordion accordion-flush" id="courseAccordion">
+      <div class="space-y-3" id="courseAccordion">
         {% for course_instance in course_instances %}
         {% include 'dashboard/components/session_accordion_item.html' with course_instance=course_instance %}
         {% endfor %}
@@ -25,9 +25,9 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="text-center py-5">
-        <i class="bi bi-calendar-x text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
-        <p class="text-muted mt-3 mb-0">No course sessions to manage</p>
+      <div class="text-center py-12">
+        <i class="bi bi-calendar-x text-gray-300 dark:text-gray-600 text-5xl"></i>
+        <p class="text-gray-400 mt-3">No course sessions to manage</p>
       </div>
       {% endif %}
     </div>

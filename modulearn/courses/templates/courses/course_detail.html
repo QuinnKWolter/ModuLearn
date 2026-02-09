@@ -4,55 +4,53 @@
 {% block title %}{{ course.title }} - ModuLearn{% endblock %}
 
 {% block breadcrumbs %}
-<li class="breadcrumb-item"><a href="{% url 'main:home' %}">Home</a></li>
-<li class="breadcrumb-item"><a href="{% url 'courses:course_list' %}">Courses</a></li>
-<li class="breadcrumb-item active" aria-current="page">{{ course.title }}</li>
+<li><a href="{% url 'main:home' %}" class="text-blue-600 dark:text-blue-400 hover:underline">Home</a></li>
+<li class="text-gray-400 mx-1">/</li>
+<li><a href="{% url 'courses:course_list' %}" class="text-blue-600 dark:text-blue-400 hover:underline">Courses</a></li>
+<li class="text-gray-400 mx-1">/</li>
+<li class="text-gray-600 dark:text-gray-400" aria-current="page">{{ course.title }}</li>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
-  <div class="text-center mb-4">
-    <h1 class="display-4">{{ course.title }}</h1>
-    <p class="fs-3">Session: {{ current_instance.group_name|default:"Default Group" }}</p>
-    <p class="lead">{{ course.description }}</p>
+<div class="py-8">
+  <div class="text-center mb-6">
+    <h1 class="text-3xl sm:text-4xl font-extrabold mb-2">{{ course.title }}</h1>
+    <p class="text-xl text-gray-500 dark:text-gray-400">Session: {{ current_instance.group_name|default:"Default Group" }}</p>
+    <p class="text-lg text-gray-600 dark:text-gray-300 mt-2">{{ course.description }}</p>
 
     {% if is_enrolled and course_progress %}
       <!-- Course Progress Overview -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="row align-items-center">
-            <div class="col-md-6">
-              <h5 class="mb-3">Overall Progress</h5>
-              <div class="progress mb-2" style="height: 25px; position: relative;">
-                <div class="progress-bar bg-success" 
-                     role="progressbar" 
-                     style="width: {{ course_progress.overall_progress|floatformat:2 }}%"
-                     aria-valuenow="{{ course_progress.overall_progress|floatformat:2 }}"
-                     aria-valuemin="0" 
-                     aria-valuemax="100">
-                </div>
-                <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
-                  <span style="color: #000; font-weight: 500;">
-                    {{ course_progress.overall_progress|floatformat:2 }}% Complete
-                  </span>
-                </div>
+      <div class="card p-6 mt-6 text-left">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h5 class="font-semibold mb-3">Overall Progress</h5>
+            <div class="progress h-6 relative">
+              <div class="progress-bar bg-green-500"
+                   role="progressbar"
+                   style="width: {{ course_progress.overall_progress|floatformat:2 }}%"
+                   aria-valuenow="{{ course_progress.overall_progress|floatformat:2 }}"
+                   aria-valuemin="0"
+                   aria-valuemax="100">
+              </div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-sm font-medium text-gray-800 dark:text-gray-200 drop-shadow">
+                  {{ course_progress.overall_progress|floatformat:2 }}% Complete
+                </span>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="row text-center">
-                <div class="col-6">
-                  <h6>Overall Score</h6>
-                  <span class="h4 {% if course_progress.overall_score >= 0.7 %}text-success
-                               {% elif course_progress.overall_score >= 0.4 %}text-warning
-                               {% else %}text-danger{% endif %}">
-                    {{ course_progress.overall_score|floatformat:2 }}%
-                  </span>
-                </div>
-                <div class="col-6">
-                  <h6>Modules Completed</h6>
-                  <span class="h4">{{ course_progress.modules_completed }}/{{ course.total_modules }}</span>
-                </div>
-              </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <h6 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">Overall Score</h6>
+              <span class="text-2xl font-bold {% if course_progress.overall_score >= 0.7 %}text-green-600
+                           {% elif course_progress.overall_score >= 0.4 %}text-yellow-500
+                           {% else %}text-red-500{% endif %}">
+                {{ course_progress.overall_score|floatformat:2 }}%
+              </span>
+            </div>
+            <div>
+              <h6 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">Modules Completed</h6>
+              <span class="text-2xl font-bold">{{ course_progress.modules_completed }}/{{ course.total_modules }}</span>
             </div>
           </div>
         </div>
@@ -61,91 +59,88 @@
   </div>
 
   {% if is_instructor or is_enrolled %}
-    <h2 class="mt-5">Units</h2>
-    
+    <h2 class="text-2xl font-bold mt-8 mb-4">Units</h2>
+
     {% if units %}
-      <div class="mt-3">
+      <div class="space-y-6">
         {% for unit in units %}
-          <div class="card mb-4">
-            <div class="card-body">
-              <h3 class="card-title">{{ unit.title }}</h3>
-              <p class="card-text">{{ unit.description }}</p>
-              <ul class="list-unstyled">
-                {% for module in unit.modules.all %}
-                  <li class="mb-2 d-flex justify-content-between align-items-center">
-                    <div>
-                      {% with module_progress=module_progress_data|get_item:module.id %}
-                        {% if is_enrolled and module_progress %}
-                          {% if module_progress.is_complete %}
-                            <i class="fa-solid fa-square-check text-success me-2"></i>
-                          {% else %}
-                            <i class="fa-regular fa-square text-muted me-2"></i>
-                          {% endif %}
+          <div class="card p-6">
+            <h3 class="text-xl font-semibold mb-2">{{ unit.title }}</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">{{ unit.description }}</p>
+            <ul class="space-y-2">
+              {% for module in unit.modules.all %}
+                <li class="flex justify-between items-center py-1">
+                  <div class="flex items-center gap-2">
+                    {% with module_progress=module_progress_data|get_item:module.id %}
+                      {% if is_enrolled and module_progress %}
+                        {% if module_progress.is_complete %}
+                          <i class="fa-solid fa-square-check text-green-500"></i>
                         {% else %}
-                          <i class="fa-regular fa-square text-muted me-2"></i>
+                          <i class="fa-regular fa-square text-gray-400"></i>
                         {% endif %}
-                        <a href="{% url 'courses:module_detail' current_instance.id unit.id module.id %}" 
-                           class="text-decoration-none {% if is_enrolled and module_progress.is_complete %}text-success{% endif %}">
-                          {{ module.title }}
-                        </a>
-                        {% if is_enrolled and module_progress %}
-                          {% if module_progress.score is not None %}
-                            <span class="badge {% if module_progress.score >= 70 %}bg-success
-                                          {% elif module_progress.score >= 40 %}bg-warning
-                                          {% else %}bg-danger{% endif %} me-2">
-                              {{ module_progress.score|floatformat:0 }}%
-                            </span>
-                          {% endif %}
+                      {% else %}
+                        <i class="fa-regular fa-square text-gray-400"></i>
+                      {% endif %}
+                      <a href="{% url 'courses:module_detail' current_instance.id unit.id module.id %}"
+                         class="hover:underline {% if is_enrolled and module_progress.is_complete %}text-green-600 dark:text-green-400{% else %}text-blue-600 dark:text-blue-400{% endif %}">
+                        {{ module.title }}
+                      </a>
+                      {% if is_enrolled and module_progress %}
+                        {% if module_progress.score is not None %}
+                          <span class="badge {% if module_progress.score >= 70 %}badge-success
+                                        {% elif module_progress.score >= 40 %}badge-warning
+                                        {% else %}badge-danger{% endif %}">
+                            {{ module_progress.score|floatformat:0 }}%
+                          </span>
                         {% endif %}
-                      {% endwith %}
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
+                      {% endif %}
+                    {% endwith %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
           </div>
         {% endfor %}
       </div>
     {% else %}
-      <p class="text-muted">No units are available for this course yet.</p>
+      <p class="text-gray-500 dark:text-gray-400">No units are available for this course yet.</p>
     {% endif %}
   {% elif not is_enrolled and user.is_authenticated and user.is_student %}
-    <div class="text-center mb-5">
+    <div class="text-center mb-8">
       <form method="post">
         {% csrf_token %}
-        <button type="submit" class="btn btn-lg btn-success shadow-sm">Enroll in Course</button>
+        <button type="submit" class="btn btn-success btn-lg shadow">Enroll in Course</button>
       </form>
     </div>
   {% else %}
-    <p class="text-muted">You must be logged in as a student to enroll in this course.</p>
+    <p class="text-gray-500 dark:text-gray-400">You must be logged in as a student to enroll in this course.</p>
   {% endif %}
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="enrollmentModal" tabindex="-1" aria-labelledby="enrollmentModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="enrollmentModalLabel">Create Enrollment Code</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="createEnrollmentCodeForm">
-          <div class="mb-3">
-            <label for="enrollmentName" class="form-label">Name</label>
-            <input type="text" class="form-control" id="enrollmentName" required>
-          </div>
-          <div class="mb-3">
-            <label for="enrollmentEmail" class="form-label">Email</label>
-            <input type="email" class="form-control" id="enrollmentEmail" required>
-          </div>
-          <div class="mb-3">
-            <label for="enrollmentCode" class="form-label">Code</label>
-            <input type="text" class="form-control" id="enrollmentCode" required>
-          </div>
-          <button type="submit" class="btn btn-primary">Create Code</button>
-        </form>
-      </div>
+<!-- Enrollment Code Modal -->
+<div id="enrollmentModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+  <div class="modal-backdrop-close absolute inset-0"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h5 class="text-lg font-semibold" id="enrollmentModalLabel">Create Enrollment Code</h5>
+      <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+    </div>
+    <div class="p-6">
+      <form id="createEnrollmentCodeForm">
+        <div class="mb-4">
+          <label for="enrollmentName" class="form-label">Name</label>
+          <input type="text" class="form-control" id="enrollmentName" required>
+        </div>
+        <div class="mb-4">
+          <label for="enrollmentEmail" class="form-label">Email</label>
+          <input type="email" class="form-control" id="enrollmentEmail" required>
+        </div>
+        <div class="mb-4">
+          <label for="enrollmentCode" class="form-label">Code</label>
+          <input type="text" class="form-control" id="enrollmentCode" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Create Code</button>
+      </form>
     </div>
   </div>
 </div>
@@ -171,45 +166,33 @@
         if (data.success) {
             let message;
             switch (data.status) {
-                case 'new_user':
-                    message = 'New user created and enrolled successfully.';
-                    break;
-                case 'existing_user':
-                    message = 'Existing user enrolled successfully.';
-                    break;
-                default:
-                    message = 'Enrollment code created successfully.';
+                case 'new_user': message = 'New user created and enrolled successfully.'; break;
+                case 'existing_user': message = 'Existing user enrolled successfully.'; break;
+                default: message = 'Enrollment code created successfully.';
             }
-            
-            // Add new row to enrollment table
-            const table = document.querySelector('#studentList table tbody');
-            const newRow = table.insertRow();
-            newRow.innerHTML = `
-                <td>${name}</td>
-                <td>${email}</td>
-                <td>0/{{ course.total_modules }}</td>
-                <td>0.00%</td>
-                <td>${code}</td>
-            `;
-            
-            // Clear form and show success message
+
+            const table = document.querySelector('#enrollmentTableBody');
+            if (table) {
+              const newRow = table.insertRow();
+              newRow.innerHTML = `
+                  <td class="px-4 py-3">${email}</td>
+                  <td class="px-4 py-3">0/{{ course.total_modules }}</td>
+                  <td class="px-4 py-3">0.00%</td>
+                  <td class="px-4 py-3">-</td>
+              `;
+            }
+
             event.target.reset();
             alert(message);
-            
-            // Close modal if it exists
+
             const modal = bootstrap.Modal.getInstance(document.getElementById('enrollmentModal'));
             if (modal) modal.hide();
-            
+
         } else {
             switch (data.status) {
-                case 'already_enrolled':
-                    alert('This user is already enrolled in the course.');
-                    break;
-                case 'code_exists':
-                    alert(`An enrollment code already exists for this email. Existing code: ${data.existing_code}`);
-                    break;
-                default:
-                    alert('Error: ' + data.error);
+                case 'already_enrolled': alert('This user is already enrolled in the course.'); break;
+                case 'code_exists': alert(`An enrollment code already exists for this email. Existing code: ${data.existing_code}`); break;
+                default: alert('Error: ' + data.error);
             }
         }
     })
@@ -222,22 +205,21 @@
 
 {% if is_instructor %}
   <!-- Instructor Management Panel -->
-  <div class="card mt-4 mb-4">
-    <div class="card-header bg-primary text-white">
-      <h3 class="card-title mb-0">Instructor Management Panel</h3>
+  <div class="card overflow-hidden mt-6 mb-6">
+    <div class="bg-blue-600 dark:bg-blue-700 text-white px-6 py-3">
+      <h3 class="text-lg font-semibold m-0">Instructor Management Panel</h3>
     </div>
-    <div class="card-body">
-      <div class="d-flex justify-content-between mb-4">
+    <div class="p-6">
+      <div class="flex flex-wrap justify-between gap-3 mb-6">
         <!-- LTI URL Copy Button -->
-               <button class="btn btn-secondary copy-lti-url" 
+        <button class="btn btn-secondary copy-lti-url"
                 data-course-instance-id="{{ current_instance.id }}"
-                data-bs-toggle="tooltip" 
                 title="Copy LTI Launch URL">
           <i class="bi bi-link-45deg"></i> Copy LTI URL
         </button>
-        
+
         <!-- Delete Course Instance Button -->
-        <button class="btn btn-danger delete-course-btn" 
+        <button class="btn btn-danger delete-course-btn"
                 data-course-instance-id="{{ current_instance.id }}"
                 data-course-title="{{ course.title }}"
                 data-group-name="{{ current_instance.group_name }}">
@@ -246,24 +228,22 @@
       </div>
 
       <!-- Student Management Section -->
-      <h4 class="mt-4 mb-3">Student Management</h4>
-      
+      <h4 class="text-lg font-semibold mt-6 mb-3">Student Management</h4>
+
       <!-- Bulk Enrollment Form -->
-      <div class="mb-4">
-        <h5>Add Students</h5>
-        <form id="bulkEnrollmentForm" class="mb-3">
-          <div class="form-group">
-            <textarea class="form-control" id="emailList" 
-                      rows="3" placeholder="email1@example.com, email2@example.com"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary mt-2">
+      <div class="mb-6">
+        <h5 class="font-medium mb-2">Add Students</h5>
+        <form id="bulkEnrollmentForm">
+          <textarea class="form-control mb-2" id="emailList"
+                    rows="3" placeholder="email1@example.com, email2@example.com"></textarea>
+          <button type="submit" class="btn btn-primary">
             <i class="bi bi-person-plus"></i> Add Students
           </button>
         </form>
       </div>
 
       <!-- Student List -->
-      <div class="table-responsive">
+      <div class="overflow-x-auto">
         <table class="table table-hover">
           <thead>
             <tr>
@@ -280,7 +260,7 @@
                 <td>{{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}</td>
                 <td>{{ enrollment.course_progress.overall_score|floatformat:2 }}%</td>
                 <td>
-                  <button class="btn btn-sm btn-danger remove-enrollment" 
+                  <button class="btn btn-sm btn-danger remove-enrollment"
                           data-enrollment-id="{{ enrollment.id }}">
                     <i class="bi bi-trash"></i>
                   </button>
@@ -288,7 +268,7 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="4" class="text-center text-muted">
+                <td colspan="4" class="text-center text-gray-400 py-4">
                   <em>No students enrolled yet</em>
                 </td>
               </tr>
@@ -300,63 +280,51 @@
   </div>
 
   <!-- Delete Course Instance Modal -->
-  <div class="modal fade" id="deleteCourseModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Confirm Delete Course Session</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  <div id="deleteCourseModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h5 class="text-lg font-semibold">Confirm Delete Course Session</h5>
+        <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="p-6">
+        <div class="alert alert-danger">
+          <p>Are you sure you want to delete this course session?</p>
+          <p class="mb-0 font-bold">This action cannot be undone!</p>
         </div>
-        <div class="modal-body">
-          <div class="alert alert-danger">
-            <p>Are you sure you want to delete this course session?</p>
-            <p class="mb-0"><strong>This action cannot be undone!</strong></p>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-danger" id="confirmDeleteButton">Delete</button>
-        </div>
+      </div>
+      <div class="flex justify-end gap-2 px-6 py-3 border-t border-gray-200 dark:border-gray-700">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteButton">Delete</button>
       </div>
     </div>
   </div>
 
-  <!-- Add this at the bottom of your template -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Bulk enrollment form handler
+      // Bulk enrollment
       const bulkEnrollmentForm = document.getElementById('bulkEnrollmentForm');
       if (bulkEnrollmentForm) {
         bulkEnrollmentForm.addEventListener('submit', async function(event) {
           event.preventDefault();
           const emailList = document.getElementById('emailList');
           const emails = emailList.value.split(',').map(email => email.trim()).filter(email => email);
-          
-          if (emails.length === 0) {
-            alert('Please enter at least one email address');
-            return;
-          }
+
+          if (emails.length === 0) { alert('Please enter at least one email address'); return; }
 
           const submitButton = this.querySelector('button[type="submit"]');
           submitButton.disabled = true;
-          submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+          submitButton.innerHTML = '<span class="spinner-border mr-1"></span> Adding...';
 
           try {
             const response = await fetch(`/modulearn/courses/{{ current_instance.id }}/bulk-enroll/`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-              },
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
               body: JSON.stringify({ emails })
             });
-
             const data = await response.json();
-            if (data.success) {
-              window.location.reload();
-            } else {
-              alert('Error: ' + data.error);
-            }
+            if (data.success) { window.location.reload(); }
+            else { alert('Error: ' + data.error); }
           } catch (error) {
             console.error('Error:', error);
             alert('An error occurred while enrolling students.');
@@ -367,20 +335,17 @@
         });
       }
 
-      // LTI URL copy button handler
+      // LTI URL copy
       document.querySelectorAll('.copy-lti-url').forEach(button => {
         button.addEventListener('click', function() {
           const courseInstanceId = this.dataset.courseInstanceId;
           const baseUrl = window.location.origin + '/modulearn/lti/launch/';
           const ltiUrl = `${baseUrl}?course_id=${courseInstanceId}`;
-          
+
           navigator.clipboard.writeText(ltiUrl).then(() => {
-            const tooltip = new bootstrap.Tooltip(button, {
-              title: 'URL Copied!',
-              trigger: 'manual'
-            });
-            tooltip.show();
-            setTimeout(() => tooltip.dispose(), 1500);
+            const original = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check"></i> Copied!';
+            setTimeout(() => { button.innerHTML = original; }, 1500);
           }).catch(err => {
             console.error('Failed to copy URL:', err);
             alert('Failed to copy URL to clipboard');
@@ -388,25 +353,21 @@
         });
       });
 
-      // Delete course instance handler
+      // Delete course instance
       const deleteBtn = document.querySelector('.delete-course-btn');
       if (deleteBtn) {
         deleteBtn.addEventListener('click', function() {
           const modal = new bootstrap.Modal(document.getElementById('deleteCourseModal'));
           modal.show();
-          
+
           document.getElementById('confirmDeleteButton').onclick = async function() {
             try {
               const response = await fetch(`/modulearn/courses/instance/{{ current_instance.id }}/delete/`, {
                 method: 'POST',
-                headers: {
-                  'X-CSRFToken': '{{ csrf_token }}'
-                }
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
               });
-              
-              if (response.ok) {
-                window.location.href = "{% url 'courses:course_list' %}";
-              } else {
+              if (response.ok) { window.location.href = "{% url 'courses:course_list' %}"; }
+              else {
                 const data = await response.json();
                 alert('Error: ' + (data.error || 'Failed to delete course session'));
               }

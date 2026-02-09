@@ -105,7 +105,7 @@ async function deleteCourse(courseId) {
     console.error('Error deleting course:', error);
     alert('Error: ' + (error.message || 'Failed to delete course'));
     confirmButton.disabled = false;
-    confirmButton.innerHTML = '<i class="bi bi-trash me-1"></i>Delete Course';
+        confirmButton.innerHTML = '<i class="bi bi-trash mr-1"></i>Delete Course';
   }
 }
 
@@ -136,8 +136,8 @@ async function loadEnrollments(courseInstanceId) {
         row.innerHTML = `
           <td>${enrollment.student.email}</td>
           <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules}</td>
-          <td class="text-end">${enrollment.progress.overall_score.toFixed(2)}%</td>
-          <td class="text-end">
+          <td class="text-right">${enrollment.progress.overall_score.toFixed(2)}%</td>
+          <td class="text-right">
             <button class="btn btn-sm btn-outline-danger remove-enrollment" 
                     data-enrollment-id="${enrollment.id}">
               <i class="bi bi-trash"></i>
@@ -150,7 +150,7 @@ async function loadEnrollments(courseInstanceId) {
     } else {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td colspan="4" class="text-center text-muted py-4">
+        <td colspan="4" class="text-center text-gray-500 py-4">
           <em>No students are currently enrolled in this course session</em>
         </td>
       `;
@@ -161,9 +161,9 @@ async function loadEnrollments(courseInstanceId) {
     tableBody.innerHTML = '';
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td colspan="4" class="text-center text-danger py-4">
+        <td colspan="4" class="text-center text-red-500 py-4">
         <em>Error loading enrollments. Please try again.</em>
-      </td>
+        </td>
     `;
     tableBody.appendChild(row);
   }
@@ -246,13 +246,13 @@ document.addEventListener('DOMContentLoaded', function() {
         groupNameInput.classList.remove('is-invalid');
         groupNameInput.classList.add('is-valid');
         groupNameFeedback.textContent = 'Session name is available';
-        groupNameFeedback.className = 'valid-feedback small';
+        groupNameFeedback.className = 'valid-feedback text-sm';
         submitButton.disabled = false;
       } else {
         groupNameInput.classList.remove('is-valid');
         groupNameInput.classList.add('is-invalid');
         groupNameFeedback.textContent = data.error || 'This session name already exists for this course';
-        groupNameFeedback.className = 'invalid-feedback small';
+        groupNameFeedback.className = 'invalid-feedback text-sm';
         submitButton.disabled = true;
       }
     } catch (error) {
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('An error occurred while enrolling students.');
       } finally {
         submitButton.disabled = false;
-        submitButton.innerHTML = '<i class="bi bi-person-plus me-1"></i>Add Students';
+        submitButton.innerHTML = '<i class="bi bi-person-plus mr-1"></i>Add Students';
       }
     });
   }
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (filePreview) filePreview.style.display = 'none';
       if (importJsonSubmitBtn) {
         importJsonSubmitBtn.disabled = false;
-        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload me-1"></i>Import Course';
+        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload mr-1"></i>Import Course';
       }
     });
   }
@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
           jsonImportError.style.display = 'block';
         }
         importJsonSubmitBtn.disabled = false;
-        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload me-1"></i>Import Course';
+        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload mr-1"></i>Import Course';
       }
     });
   }
@@ -771,10 +771,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (resourcesList) {
       resourcesList.innerHTML = `
         <li class="list-group-item text-center py-5">
-          <div class="spinner-border spinner-border-sm text-primary" role="status">
-            <span class="visually-hidden">Loading resources...</span>
+          <div class="spinner-border spinner-border-sm text-blue-600" role="status">
+            <span class="sr-only">Loading resources...</span>
           </div>
-          <p class="text-muted mt-2 mb-0">Loading resources...</p>
+          <p class="text-gray-500 mt-2 mb-0">Loading resources...</p>
         </li>
       `;
     }
@@ -825,13 +825,13 @@ document.addEventListener('DOMContentLoaded', function() {
             li.style.cursor = resourceUrl ? 'pointer' : 'not-allowed';
             
             li.innerHTML = `
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="flex-grow-1">
-                  <h6 class="mb-1">${escapeHtml(resourceTitle)}</h6>
-                  ${resourceDescription ? `<p class="text-muted small mb-0">${escapeHtml(resourceDescription)}</p>` : ''}
-                  ${resource.resource_type ? `<span class="badge bg-secondary badge-sm">${resource.resource_type}</span>` : ''}
+              <div class="flex justify-between items-center">
+                <div class="flex-1">
+                  <h6 class="mb-1 font-semibold">${escapeHtml(resourceTitle)}</h6>
+                  ${resourceDescription ? `<p class="text-gray-500 text-sm mb-0">${escapeHtml(resourceDescription)}</p>` : ''}
+                  ${resource.resource_type ? `<span class="badge badge-secondary">${resource.resource_type}</span>` : ''}
                 </div>
-                ${resourceUrl ? '<i class="bi bi-box-arrow-up-right text-primary ms-2"></i>' : '<i class="bi bi-x-circle text-muted ms-2"></i>'}
+                ${resourceUrl ? '<i class="bi bi-box-arrow-up-right text-blue-600 ml-2"></i>' : '<i class="bi bi-x-circle text-gray-400 ml-2"></i>'}
               </div>
             `;
             
@@ -842,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Opening resource URL:', resourceUrl);
                 window.open(resourceUrl, '_blank', 'noopener,noreferrer');
               });
-              li.classList.add('hover-bg-light');
+              li.classList.add('list-group-item-action');
             } else {
               li.style.opacity = '0.6';
               console.warn(`Resource ${resourceTitle} has no URL`);
@@ -853,8 +853,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
           resourcesList.innerHTML = `
             <li class="list-group-item text-center py-5">
-              <i class="bi bi-folder-x text-muted" style="font-size: 2rem; opacity: 0.3;"></i>
-              <p class="text-muted mt-3 mb-0">No resources found for this course</p>
+              <i class="bi bi-folder-x text-gray-400" style="font-size: 2rem; opacity: 0.3;"></i>
+              <p class="text-gray-500 mt-3 mb-0">No resources found for this course</p>
             </li>
           `;
         }
@@ -864,8 +864,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (resourcesList) {
         resourcesList.innerHTML = `
           <li class="list-group-item text-center py-5">
-            <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
-            <p class="text-danger mt-3 mb-0">Error loading resources: ${error.message}</p>
+            <i class="bi bi-exclamation-triangle text-red-500" style="font-size: 2rem;"></i>
+            <p class="text-red-500 mt-3 mb-0">Error loading resources: ${error.message}</p>
           </li>
         `;
       }

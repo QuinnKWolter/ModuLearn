@@ -2,8 +2,6 @@ Django
 djangorestframework
 django-cors-headers
 django-oauth-toolkit
-django-crispy-forms
-crispy-bootstrap5
 PyLTI1p3==2.0.0
 oauthlib
 requests

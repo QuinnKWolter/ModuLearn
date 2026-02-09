@@ -216,48 +216,48 @@ class KnowledgeTreeAuthService:
     def authenticate_via_database(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """
         Authenticate user via direct database access to KnowledgeTree.
+        Uses SSH tunneling if configured (for development).
         
         Returns user data dict if successful, None if failed.
         """
         if not self.auth_enabled:
             return None
-            
-        db_config = self.config.get('DATABASE')
-        if not db_config:
-            logger.warning("KT database configuration not available")
-            return None
         
         try:
-            import pymysql
+            from dashboard.kt_db_connection import get_paws_db_connection
+            from django.conf import settings
             
             password_hash = self._md5_hash(password)
             
-            connection = pymysql.connect(
-                host=db_config.get('HOST'),
-                port=db_config.get('PORT', 3306),
-                user=db_config.get('USER'),
-                password=db_config.get('PASSWORD'),
-                database=db_config.get('NAME'),
-                charset='utf8mb4',
-                cursorclass=pymysql.cursors.DictCursor,
-                connect_timeout=5,
-                read_timeout=5,
-            )
+            # Get database connection (handles SSH tunneling if needed)
+            db_conn = get_paws_db_connection()
+            success, message = db_conn.connect()
+            
+            if not success:
+                logger.error(f"Failed to connect to PAWS database for authentication: {message}")
+                return None
             
             try:
+                connection = db_conn.get_connection()
+                db_config = getattr(settings, 'PAWS_DATABASE', {})
+                kt_schema = db_config.get('KNOWLEDGETREE_SCHEMA', 'portal_test2')
+                
                 with connection.cursor() as cursor:
                     # Query user with isGroup = 0 to ensure we're authenticating actual users
-                    sql = """
+                    sql = f"""
                         SELECT UserID, Login, Name, Pass, email
-                        FROM ent_user
+                        FROM `{kt_schema}`.ent_user
                         WHERE Login = %s AND isGroup = 0
                     """
                     cursor.execute(sql, (username,))
                     user_row = cursor.fetchone()
                     
                     if not user_row:
-                        logger.warning(f"KT DB authentication failed: user not found: {username}")
+                        logger.warning(f"KT DB authentication failed: user not found in KnowledgeTree: {username}")
+                        logger.info(f"User '{username}' does not exist in KnowledgeTree database (ent_user table)")
                         return None
+                    
+                    logger.info(f"User '{username}' found in KnowledgeTree database (UserID: {user_row['UserID']})")
                     
                     stored_hash = user_row['Pass']
                     if stored_hash and stored_hash.lower() == password_hash.lower():
@@ -266,10 +266,10 @@ class KnowledgeTreeAuthService:
                         # Get user groups
                         groups = []
                         try:
-                            groups_sql = """
+                            groups_sql = f"""
                                 SELECT u.Name
-                                FROM rel_user_user ruu
-                                LEFT JOIN ent_user u ON u.UserID = ruu.ParentUserID
+                                FROM `{kt_schema}`.rel_user_user ruu
+                                LEFT JOIN `{kt_schema}`.ent_user u ON u.UserID = ruu.ParentUserID
                                 WHERE ruu.ChildUserID = %s
                             """
                             cursor.execute(groups_sql, (user_row['UserID'],))
@@ -290,13 +290,13 @@ class KnowledgeTreeAuthService:
                         return None
                         
             finally:
-                connection.close()
+                db_conn.disconnect()
                 
-        except ImportError:
-            logger.error("pymysql not installed. Cannot use database authentication.")
+        except ImportError as e:
+            logger.error(f"Failed to import database connection utilities: {str(e)}")
             return None
         except Exception as e:
-            logger.error(f"KT DB authentication error for user: {username}: {str(e)}")
+            logger.error(f"KT DB authentication error for user: {username}: {str(e)}", exc_info=True)
             return None
     
     def authenticate(self, username: str, password: str) -> Optional[Dict[str, Any]]:
@@ -345,4 +345,178 @@ class KnowledgeTreeAuthService:
         
         # Authentication failed
         return None
+    
+    def check_user_exists_in_database(self, username: str) -> Optional[Dict[str, Any]]:
+        """
+        Check if a user exists in KnowledgeTree database (without password verification).
+        Uses SSH tunneling if configured (for development).
+        
+        Returns user data dict if found, None if not found.
+        """
+        if not self.auth_enabled:
+            return None
+        
+        try:
+            from dashboard.kt_db_connection import get_paws_db_connection
+            from django.conf import settings
+            
+            # Get database connection (handles SSH tunneling if needed)
+            db_conn = get_paws_db_connection()
+            success, message = db_conn.connect()
+            
+            if not success:
+                logger.debug(f"Failed to connect to PAWS database to check user existence: {message}")
+                return None
+            
+            try:
+                connection = db_conn.get_connection()
+                db_config = getattr(settings, 'PAWS_DATABASE', {})
+                kt_schema = db_config.get('KNOWLEDGETREE_SCHEMA', 'portal_test2')
+                
+                with connection.cursor() as cursor:
+                    sql = f"""
+                        SELECT UserID, Login, Name, email
+                        FROM `{kt_schema}`.ent_user
+                        WHERE Login = %s AND isGroup = 0
+                    """
+                    cursor.execute(sql, (username,))
+                    user_row = cursor.fetchone()
+                    
+                    if user_row:
+                        return {
+                            'user_id': user_row['UserID'],
+                            'name': user_row['Name'] or '',
+                            'email': user_row.get('email', '') or '',
+                            'login': user_row['Login'],
+                        }
+                    return None
+                    
+            finally:
+                db_conn.disconnect()
+                
+        except ImportError as e:
+            logger.debug(f"Failed to import database connection utilities: {str(e)}")
+            return None
+        except Exception as e:
+            logger.debug(f"Error checking if KT user exists '{username}': {str(e)}")
+            return None
+    
+    def create_user_in_database(self, username: str, password: str, email: str = '', full_name: str = '') -> Optional[Dict[str, Any]]:
+        """
+        Create a new user in KnowledgeTree database (ent_user table).
+        Uses SSH tunneling if configured (for development).
+        
+        This is called when a user successfully authenticates with Django but doesn't exist in KnowledgeTree.
+        
+        Args:
+            username: Username/login for the new user
+            password: Plaintext password (will be MD5 hashed)
+            email: Email address (optional)
+            full_name: Full name (optional, defaults to username)
+        
+        Returns:
+            User data dict with user_id if successful, None if failed.
+        """
+        logger.info(f"[KT User Creation] Attempting to create KnowledgeTree user '{username}'")
+        
+        if not self.auth_enabled:
+            logger.warning("[KT User Creation] KnowledgeTree authentication not enabled")
+            return None
+        
+        try:
+            from dashboard.kt_db_connection import get_paws_db_connection
+            from django.conf import settings
+            import pymysql
+            
+            # Get database connection (handles SSH tunneling if needed)
+            db_conn = get_paws_db_connection()
+            success, message = db_conn.connect()
+            
+            if not success:
+                logger.error(f"[KT User Creation] Failed to connect to PAWS database: {message}")
+                return None
+            
+            try:
+                connection = db_conn.get_connection()
+                db_config = getattr(settings, 'PAWS_DATABASE', {})
+                kt_schema = db_config.get('KNOWLEDGETREE_SCHEMA', 'portal_test2')
+                
+                with connection.cursor() as cursor:
+                    # First check if user already exists
+                    check_sql = f"""
+                        SELECT UserID, Login
+                        FROM `{kt_schema}`.ent_user
+                        WHERE Login = %s AND isGroup = 0
+                    """
+                    cursor.execute(check_sql, (username,))
+                    existing_user = cursor.fetchone()
+                    
+                    if existing_user:
+                        logger.info(f"[KT User Creation] User '{username}' already exists in KnowledgeTree (UserID: {existing_user['UserID']})")
+                        return {
+                            'user_id': existing_user['UserID'],
+                            'name': full_name or username,
+                            'email': email or '',
+                            'groups': [],
+                            'login': username,
+                        }
+                    
+                    # Insert new user
+                    # UserID is auto-increment, so we don't specify it
+                    # Based on example row: URI='', Login=username, Name=full_name, Pass=MD5(password),
+                    # IsGroup='0', Sync='1', EMail=email, Organization='', City='', Country='', How='',
+                    # IsInstructor='0', passActivatedByEmail='', keyActivatedByEmail=''
+                    insert_sql = f"""
+                        INSERT INTO `{kt_schema}`.ent_user 
+                        (URI, Login, Name, Pass, IsGroup, Sync, EMail, Organization, City, Country, How, IsInstructor, passActivatedByEmail, keyActivatedByEmail)
+                        VALUES (%s, %s, %s, MD5(%s), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    
+                    values = (
+                        '',  # URI
+                        username,  # Login
+                        full_name or username,  # Name
+                        password,  # Pass (will be MD5 hashed by SQL)
+                        '0',  # IsGroup
+                        '1',  # Sync
+                        email or '',  # EMail
+                        '',  # Organization
+                        '',  # City
+                        '',  # Country
+                        'ModuLearn',  # How
+                        '0',  # IsInstructor (default to student)
+                        '',  # passActivatedByEmail
+                        '',  # keyActivatedByEmail
+                    )
+                    
+                    logger.info(f"[KT User Creation] Executing INSERT for user '{username}'")
+                    cursor.execute(insert_sql, values)
+                    connection.commit()
+                    
+                    # Get the auto-generated UserID
+                    new_user_id = cursor.lastrowid
+                    
+                    logger.info(f"[KT User Creation] Successfully created KnowledgeTree user '{username}' with UserID: {new_user_id}")
+                    
+                    return {
+                        'user_id': new_user_id,
+                        'name': full_name or username,
+                        'email': email or '',
+                        'groups': [],
+                        'login': username,
+                    }
+                    
+            except pymysql.Error as e:
+                connection.rollback()
+                logger.error(f"[KT User Creation] Database error creating KT user '{username}': {str(e)}", exc_info=True)
+                return None
+            finally:
+                db_conn.disconnect()
+                
+        except ImportError as e:
+            logger.error(f"[KT User Creation] Failed to import database connection utilities: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"[KT User Creation] Error creating KT user '{username}': {str(e)}", exc_info=True)
+            return None
 

@@ -109,9 +109,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Third-party apps
-    'crispy_forms',
-    'crispy_bootstrap5',
     # Your apps
     'modulearn',
     'accounts',
@@ -434,10 +431,6 @@ CSRF_COOKIE_SECURE = True        # Required when SameSite is None
 # Allow CSRF cookies in cross-site requests (if needed)
 CSRF_COOKIE_SAMESITE = None
 CSRF_COOKIE_SECURE = True
-
-# Crispy Forms Configuration
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Configuration for acting as an LTI tool consumer
 LTI_CONSUMER_CONFIG = {

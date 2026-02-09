@@ -3,48 +3,38 @@
 {% block title %}Creating Course - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <!-- Loading State -->
-            <div id="loadingState" class="card border-0 shadow-sm">
-                <div class="card-body text-center p-5">
-                    <div class="spinner-border text-primary mb-4" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h1 class="h3 mb-4">Creating Your Course</h1>
-                    <p class="lead mb-4">Please wait while we set up your course environment...</p>
-                    <div class="progress mb-4" style="height: 10px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
-                    </div>
-                </div>
-            </div>
+<div class="py-12 max-w-2xl mx-auto">
+    <!-- Loading State -->
+    <div id="loadingState" class="card p-10 text-center">
+        <div class="inline-block w-12 h-12 border-4 border-blue-600 border-r-transparent rounded-full animate-spin mb-6"></div>
+        <h1 class="text-xl font-bold mb-4">Creating Your Course</h1>
+        <p class="text-lg text-gray-500 dark:text-gray-400 mb-6">Please wait while we set up your course environment...</p>
+        <div class="progress h-2.5 mb-4">
+            <div class="progress-bar bg-blue-600 animate-pulse" role="progressbar" style="width: 100%"></div>
+        </div>
+    </div>
 
-            <!-- Error State -->
-            <div id="errorState" class="card border-0 shadow-sm d-none">
-                <div class="card-body text-center p-5">
-                    <i class="bi bi-exclamation-triangle-fill text-danger display-1 mb-4"></i>
-                    <h1 class="h3 mb-4">Error Creating Course</h1>
-                    <div class="alert alert-danger mb-4">
-                        <p id="errorMessage" class="mb-0"></p>
-                    </div>
-                    <div class="d-grid gap-3">
-                        <button onclick="window.location.reload()" class="btn btn-primary">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Try Again
-                        </button>
-                        <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-primary">
-                            <i class="bi bi-house me-2"></i>Return to Dashboard
-                        </a>
-                    </div>
-                    <hr class="my-4">
-                    <div class="text-muted">
-                        <p class="mb-2">Having trouble? Contact the developer:</p>
-                        <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-link">
-                            <i class="bi bi-envelope me-2"></i>QuinnKWolter@pitt.edu
-                        </a>
-                    </div>
-                </div>
-            </div>
+    <!-- Error State -->
+    <div id="errorState" class="card p-10 text-center hidden">
+        <i class="bi bi-exclamation-triangle-fill text-red-500 text-6xl mb-6"></i>
+        <h1 class="text-xl font-bold mb-4">Error Creating Course</h1>
+        <div class="alert alert-danger mb-6">
+            <p id="errorMessage" class="mb-0"></p>
+        </div>
+        <div class="flex flex-col gap-3">
+            <button onclick="window.location.reload()" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise mr-2"></i>Try Again
+            </button>
+            <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-primary">
+                <i class="bi bi-house mr-2"></i>Return to Dashboard
+            </a>
+        </div>
+        <hr class="my-6 border-gray-200 dark:border-gray-700">
+        <div class="text-gray-400">
+            <p class="mb-2">Having trouble? Contact the developer:</p>
+            <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-link">
+                <i class="bi bi-envelope mr-2"></i>QuinnKWolter@pitt.edu
+            </a>
         </div>
     </div>
 </div>
@@ -55,25 +45,18 @@
         const errorState = document.getElementById('errorState');
         const errorMessage = document.getElementById('errorMessage');
 
-        console.log("Starting course creation process for courseId:", courseId);
         try {
-            // Fetch course details from the external API
-            console.log("Fetching course details from external API");
             const response = await fetch(`https://proxy.personalized-learning.org/next.course-authoring/api/courses/${courseId}/export`, {
                 method: 'GET',
                 credentials: 'include'
             });
 
-            console.log("Received response from external API with status:", response.status);
             if (!response.ok) {
                 throw new Error(`Failed to fetch course details: ${response.statusText}`);
             }
 
             const courseData = await response.json();
-            console.log('Course Data:', courseData);
 
-            // Send the course data to the course creation endpoint
-            console.log("Sending course data to backend /courses/create/");
             const backendResponse = await fetch('/modulearn/courses/create/', {
                 method: 'POST',
                 headers: {
@@ -82,16 +65,13 @@
                 body: JSON.stringify({ course_data: courseData })
             });
 
-            console.log("Received response from backend with status:", backendResponse.status);
             if (!backendResponse.ok) {
                 throw new Error(`Failed to send course data to backend: ${backendResponse.statusText}`);
             }
 
             const result = await backendResponse.json();
-            console.log('Backend Response:', result);
 
             if (result.success) {
-                console.log("Redirecting to /modulearn/dashboard/instructor/");
                 window.location.href = '/modulearn/dashboard/instructor/';
             } else {
                 throw new Error(result.error || 'Unknown error occurred');
@@ -99,26 +79,21 @@
 
         } catch (error) {
             console.error('Error during course creation process:', error);
-            loadingState.classList.add('d-none');
-            errorState.classList.remove('d-none');
+            loadingState.classList.add('hidden');
+            errorState.classList.remove('hidden');
             errorMessage.textContent = error.message || 'An unexpected error occurred while creating your course.';
         }
     }
 
-    // Get course ID from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const courseId = urlParams.get('course_id');
-    
+
     if (courseId) {
         createCourse(courseId);
     } else {
-        const loadingState = document.getElementById('loadingState');
-        const errorState = document.getElementById('errorState');
-        const errorMessage = document.getElementById('errorMessage');
-        
-        loadingState.classList.add('d-none');
-        errorState.classList.remove('d-none');
-        errorMessage.textContent = 'No course ID provided in URL parameters.';
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('errorState').classList.remove('hidden');
+        document.getElementById('errorMessage').textContent = 'No course ID provided in URL parameters.';
     }
 </script>
 {% endblock %}

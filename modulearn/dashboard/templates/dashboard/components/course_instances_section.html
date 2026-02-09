@@ -1,33 +1,32 @@
-<section class="course-instances-section mb-5">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="h4 fw-semibold mb-0">Active Course Sessions</h2>
+<section class="mb-8">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-semibold">Active Course Sessions</h2>
     {% if course_instances or enrolled_instances %}
     {% with course_count=course_instances.count enrolled_count=enrolled_instances|length %}
     {% with total_sessions=course_count|add:enrolled_count %}
-    <span class="badge bg-primary">{{ total_sessions }} active session{{ total_sessions|pluralize }}</span>
+    <span class="badge badge-primary">{{ total_sessions }} active session{{ total_sessions|pluralize }}</span>
     {% endwith %}
     {% endwith %}
     {% endif %}
   </div>
-  
+
   {% if course_instances or enrolled_instances %}
-  <div class="row g-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for course_instance in course_instances %}
-    <div class="col-12 col-md-6 col-lg-4">
+    <div>
       {% include 'dashboard/components/course_instance_card.html' with course_instance=course_instance %}
     </div>
     {% endfor %}
     {% for course_instance in enrolled_instances %}
-    <div class="col-12 col-md-6 col-lg-4">
+    <div>
       {% include 'dashboard/components/course_instance_card.html' with course_instance=course_instance enrolled=True %}
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state text-center py-4">
-    <i class="bi bi-calendar3 text-muted" style="font-size: 2.5rem; opacity: 0.3;"></i>
-    <p class="text-muted mt-3 mb-0">No active course sessions</p>
+  <div class="bg-gray-50 dark:bg-gray-800 rounded-xl text-center py-8">
+    <i class="bi bi-calendar3 text-gray-300 dark:text-gray-600 text-4xl"></i>
+    <p class="text-gray-400 mt-3">No active course sessions</p>
   </div>
   {% endif %}
 </section>
-

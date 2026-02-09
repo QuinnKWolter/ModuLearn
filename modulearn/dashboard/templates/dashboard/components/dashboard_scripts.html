@@ -135,14 +135,14 @@ function showGroupDropdown(groups, grpInput, cidInput) {
         return;
     }
     
-    const headerCard = document.querySelector('.card-body.text-white');
+    const headerCard = document.querySelector('.text-white');
     if (!headerCard) {
         console.warn('showGroupDropdown: Header card not found');
         return;
     }
     
-    // Find the Group ID input's parent column
-    const grpCol = grpInput.closest('.col-md-3');
+    // Find the Group ID input's parent div
+    const grpCol = grpInput.closest('div');
     if (!grpCol) {
         console.warn('showGroupDropdown: Group input parent column not found');
         return;
@@ -155,9 +155,9 @@ function showGroupDropdown(groups, grpInput, cidInput) {
     const dropdownContainer = document.createElement('div');
     dropdownContainer.className = 'kt-group-dropdown';
     dropdownContainer.innerHTML = `
-        <label for="ktGroupSelect" class="form-label fw-semibold text-white">
+        <label for="ktGroupSelect" class="block font-semibold text-white text-sm mb-1">
             Group ID
-            <small class="text-white-50 d-block" style="font-size: 0.75rem; font-weight: normal;">
+            <small class="text-white/50 block text-xs font-normal">
                 (Select from your courses)
             </small>
         </label>
@@ -171,8 +171,8 @@ function showGroupDropdown(groups, grpInput, cidInput) {
                 </option>`
             ).join('')}
         </select>
-        <small class="text-white-50 d-block mt-1">
-            <a href="#" id="useManualGroup" class="text-white-50" style="text-decoration: underline;">
+        <small class="text-white/50 block mt-1">
+            <a href="#" id="useManualGroup" class="text-white/50" style="text-decoration: underline;">
                 Or enter manually
             </a>
         </small>
@@ -253,7 +253,7 @@ async function selectGroup(group, grpInput, cidInput) {
     cidInput.value = '';
     
     // Show loading indicator for Course ID discovery
-    const cidCol = cidInput.closest('.col-md-3');
+    const cidCol = cidInput.closest('div');
     if (!cidCol) {
         console.warn('selectGroup: Course ID input parent column not found');
         return;
@@ -261,7 +261,7 @@ async function selectGroup(group, grpInput, cidInput) {
     
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'kt-course-loading mt-2';
-    loadingDiv.innerHTML = '<small class="text-white-50"><i class="fas fa-spinner fa-spin me-1"></i>Discovering Course IDs...</small>';
+    loadingDiv.innerHTML = '<small class="text-white/50"><i class="fas fa-spinner fa-spin mr-1"></i>Discovering Course IDs...</small>';
     cidCol.appendChild(loadingDiv);
     
     // Discover Course IDs on-demand for this specific group
@@ -285,7 +285,7 @@ async function selectGroup(group, grpInput, cidInput) {
             // Show helpful message
             const noCourseMsg = document.createElement('div');
             noCourseMsg.className = 'kt-no-course-ids mt-2';
-            noCourseMsg.innerHTML = '<small class="text-white-50"><i class="fas fa-info-circle me-1"></i>No Course IDs found. Please enter manually.</small>';
+            noCourseMsg.innerHTML = '<small class="text-white/50"><i class="fas fa-info-circle mr-1"></i>No Course IDs found. Please enter manually.</small>';
             cidCol.appendChild(noCourseMsg);
         }
     } catch (error) {
@@ -295,7 +295,7 @@ async function selectGroup(group, grpInput, cidInput) {
         // Show error message
         const errorMsg = document.createElement('div');
         errorMsg.className = 'kt-course-error mt-2';
-        errorMsg.innerHTML = '<small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Could not discover Course IDs. Please enter manually.</small>';
+        errorMsg.innerHTML = '<small class="text-yellow-500"><i class="fas fa-exclamation-triangle mr-1"></i>Could not discover Course IDs. Please enter manually.</small>';
         cidCol.appendChild(errorMsg);
         
         console.error('Error discovering Course IDs:', error);
@@ -323,8 +323,8 @@ function showCourseIdDropdown(courseIds, cidInput) {
         existingDropdown.remove();
     }
     
-    // Find the Course ID input's parent column
-    const cidCol = cidInput.closest('.col-md-3');
+    // Find the Course ID input's parent div
+    const cidCol = cidInput.closest('div');
     if (!cidCol) {
         console.warn('showCourseIdDropdown: Course ID input parent column not found');
         return;
@@ -336,9 +336,9 @@ function showCourseIdDropdown(courseIds, cidInput) {
     const dropdownContainer = document.createElement('div');
     dropdownContainer.className = 'kt-course-dropdown';
     dropdownContainer.innerHTML = `
-        <label for="ktCourseSelect" class="form-label fw-semibold text-white">
+        <label for="ktCourseSelect" class="block font-semibold text-white text-sm mb-1">
             Course ID
-            <small class="text-white-50 d-block" style="font-size: 0.75rem; font-weight: normal;">
+            <small class="text-white/50 block text-xs font-normal">
                 (Select course)
             </small>
         </label>
@@ -348,8 +348,8 @@ function showCourseIdDropdown(courseIds, cidInput) {
                 `<option value="${cid}">Course ${cid}</option>`
             ).join('')}
         </select>
-        <small class="text-white-50 d-block mt-1">
-            <a href="#" id="useManualCourse" class="text-white-50" style="text-decoration: underline;">
+        <small class="text-white/50 block mt-1">
+            <a href="#" id="useManualCourse" class="text-white/50" style="text-decoration: underline;">
                 Or enter manually
             </a>
         </small>
@@ -429,8 +429,8 @@ function handleFetch() {
     
     if (btn) btn.disabled = true;
     if (btnText) btnText.textContent = 'Loading...';
-    if (spinner) spinner.classList.remove('d-none');
-    if (progressContainer) progressContainer.classList.remove('d-none');
+    if (spinner) spinner.classList.remove('hidden');
+    if (progressContainer) progressContainer.classList.remove('hidden');
     progressBar.style.width = '0%';
     progressPercent.textContent = '0%';
     
@@ -502,9 +502,9 @@ function handleFetch() {
                 
                 // Hide progress bar and show dashboard
             setTimeout(() => {
-                progressContainer.classList.add('d-none');
+                progressContainer.classList.add('hidden');
                 const dashboardContent = document.getElementById('dashboardContent');
-                dashboardContent.classList.remove('d-none');
+                dashboardContent.classList.remove('hidden');
                 dashboardContent.classList.add('fade-in');
                 renderDashboard();
             }, 300);
@@ -512,12 +512,12 @@ function handleFetch() {
         .catch(error => {
             console.error('Fetch error:', error);
             showError(`Failed to load data: ${error.message}`);
-            progressContainer.classList.add('d-none');
+            progressContainer.classList.add('hidden');
         })
         .finally(() => {
             btn.disabled = false;
             btnText.textContent = 'Launch Analytics';
-            spinner.classList.add('d-none');
+            spinner.classList.add('hidden');
         });
 }
 
@@ -659,7 +659,7 @@ function updateGrid() {
     updateViewHeader();
     
     // Get the content containers
-    const masteryGrid = document.getElementById('masteryGrid').closest('.table-responsive');
+    const masteryGrid = document.getElementById('masteryGrid').closest('.overflow-x-auto');
     const perStudentContent = document.getElementById('perStudentContent');
     
     if (currentViewMode === 'perStudent') {
@@ -687,26 +687,26 @@ function updateViewHeader() {
         case 'myProgress':
             titleElement.textContent = 'My Progress';
             descriptionElement.textContent = 'Your individual progress across all topics';
-            if (classAvgHelp) classAvgHelp.classList.add('d-none');
-            if (perStudentHelp) perStudentHelp.classList.add('d-none');
+            if (classAvgHelp) classAvgHelp.classList.add('hidden');
+            if (perStudentHelp) perStudentHelp.classList.add('hidden');
             break;
         case 'comparative':
             titleElement.textContent = 'Comparative View';
             descriptionElement.textContent = 'Your progress compared to class average';
-            if (classAvgHelp) classAvgHelp.classList.add('d-none');
-            if (perStudentHelp) perStudentHelp.classList.add('d-none');
+            if (classAvgHelp) classAvgHelp.classList.add('hidden');
+            if (perStudentHelp) perStudentHelp.classList.add('hidden');
             break;
         case 'classAverage':
             titleElement.textContent = 'Class Average';
             descriptionElement.textContent = 'Average class progress across all topics';
-            if (classAvgHelp) classAvgHelp.classList.remove('d-none');
-            if (perStudentHelp) perStudentHelp.classList.add('d-none');
+            if (classAvgHelp) classAvgHelp.classList.remove('hidden');
+            if (perStudentHelp) perStudentHelp.classList.add('hidden');
             break;
         case 'perStudent':
             titleElement.textContent = 'Student Progress Overview';
             descriptionElement.textContent = 'Individual student progress tracking';
-            if (classAvgHelp) classAvgHelp.classList.add('d-none');
-            if (perStudentHelp) perStudentHelp.classList.remove('d-none');
+            if (classAvgHelp) classAvgHelp.classList.add('hidden');
+            if (perStudentHelp) perStudentHelp.classList.remove('hidden');
             break;
     }
 }
@@ -721,12 +721,12 @@ function updateMasteryGrid() {
     // Add resource headers
     responseData.resources.forEach(resource => {
         const th = document.createElement('th');
-        th.className = 'border-0 fw-bold text-center py-3';
+        th.className = 'border-0 font-bold text-center py-3';
         th.style.minWidth = '120px';
         th.innerHTML = `
-            <div class="d-flex flex-column align-items-center">
-                <i class="fas fa-tasks text-primary mb-1"></i>
-                <span class="small text-break">${resource.name}</span>
+            <div class="flex flex-col items-center">
+                <i class="fas fa-tasks text-blue-600 mb-1"></i>
+                <span class="text-sm break-words">${resource.name}</span>
             </div>
         `;
         gridHeaders.appendChild(th);
@@ -765,18 +765,18 @@ function updateMasteryGrid() {
         const topicCell = document.createElement('td');
         topicCell.className = 'border-0 py-2';
         topicCell.innerHTML = `
-            <div class="d-flex align-items-center">
-                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
-                    <span class="text-white fw-bold small">${topic.order}</span>
+            <div class="flex items-center">
+                <div class="bg-blue-600 rounded-full flex items-center justify-center mr-3" style="width: 32px; height: 32px;">
+                    <span class="text-white font-bold text-sm">${topic.order}</span>
                 </div>
-                <div class="flex-grow-1">
-                    <div class="fw-bold mb-1">${topic.name}</div>
+                <div class="flex-1">
+                    <div class="font-bold mb-1">${topic.name}</div>
                     <div class="progress" style="height: 6px; background-color: rgba(0,0,0,0.1);">
                         <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(progressBarStyle).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                     </div>
                 </div>
-                <div class="ms-3">
-                    <span class="badge fw-bold" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}; min-width: 50px; text-align: center;">${progressPercent}%</span>
+                <div class="ml-3">
+                    <span class="badge font-bold" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}; min-width: 50px; text-align: center;">${progressPercent}%</span>
                 </div>
             </div>
         `;
@@ -807,27 +807,24 @@ function updateMasteryGrid() {
             }
             
             cell.innerHTML = `
-                <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-6" style="color: ${textColor};">${displayValue}</div>
+                <div class="flex flex-col items-center">
+                    <div class="font-bold text-base" style="color: ${textColor};">${displayValue}</div>
                 </div>
             `;
             
             // Add hover event listeners for gentle highlight effect
             cell.addEventListener('mouseenter', function() {
-                // Apply gentle background highlight to all cells
                 this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
-                // Keep original text color but make it slightly darker for contrast
                 if (textColor !== 'inherit') {
-                    this.querySelector('.fw-bold').style.color = textColor;
+                    this.querySelector('.font-bold').style.color = textColor;
                 } else {
-                    this.querySelector('.fw-bold').style.color = '#6c757d';
+                    this.querySelector('.font-bold').style.color = '#6c757d';
                 }
             });
             
             cell.addEventListener('mouseleave', function() {
-                // Restore original state for all cells
                 this.style.backgroundColor = 'transparent';
-                this.querySelector('.fw-bold').style.color = textColor;
+                this.querySelector('.font-bold').style.color = textColor;
             });
             
             row.appendChild(cell);
@@ -841,7 +838,6 @@ function updatePerStudentView() {
     const tableBody = document.getElementById('studentTableBody');
     tableBody.innerHTML = '';
     
-    // Log before filtering
     // Show ALL learners (including those with isHidden: true) - no filtering
     const sortedLearners = responseData.learners;
     
@@ -873,31 +869,31 @@ function updatePerStudentView() {
         
         row.innerHTML = `
             <td class="border-0 py-1 text-center">
-                <div class="d-flex align-items-center justify-content-center">
-                    <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                <div class="flex items-center justify-center">
+                    <div class="bg-cyan-500 rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
                         <i class="fas fa-user text-white" style="font-size: 0.7rem;"></i>
                     </div>
-                    <div class="fw-bold" style="font-size: 0.9rem;">${learner.id}</div>
+                    <div class="font-bold" style="font-size: 0.9rem;">${learner.id}</div>
                 </div>
             </td>
             <td class="border-0 py-1 text-center">
-                <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-6 mb-1">${progressPercent}%</div>
+                <div class="flex flex-col items-center">
+                    <div class="font-bold text-base mb-1">${progressPercent}%</div>
                     <div class="progress" style="width: 80px; height: 4px; border-radius: 2px;">
                         <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
                     </div>
                 </div>
             </td>
             <td class="border-0 py-1 text-center">
-                <div class="d-flex flex-column align-items-center">
-                    <div class="fw-bold fs-6 mb-1">${topicsCompleted}/${totalTopics}</div>
-                    <div class="text-muted" style="font-size: 0.7rem;">Topics</div>
+                <div class="flex flex-col items-center">
+                    <div class="font-bold text-base mb-1">${topicsCompleted}/${totalTopics}</div>
+                    <div class="text-gray-500" style="font-size: 0.7rem;">Topics</div>
                 </div>
             </td>
             <td class="border-0 py-1 text-center">
-                <div class="d-flex flex-column align-items-center">
-                    <i class="fas fa-chart-line text-primary mb-1" style="font-size: 1rem;"></i>
-                    <div class="text-muted" style="font-size: 0.7rem;">Analytics</div>
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-chart-line text-blue-600 mb-1" style="font-size: 1rem;"></i>
+                    <div class="text-gray-500" style="font-size: 0.7rem;">Analytics</div>
                 </div>
             </td>
         `;
@@ -989,18 +985,16 @@ function getTextColor(value) {
         const savedTheme = localStorage.getItem('theme');
         const isDarkMode = savedTheme ? savedTheme === 'dark' : userPrefersDark;
         if (value === 0) {
-            return '#6c757d'; // Bootstrap secondary color for neutral
+            return '#6c757d'; // Secondary color for neutral
         } else if (value > 0) {
             // Positive difference (ahead of class) - use green
             const intensity = Math.min(Math.abs(value), 1); // Cap at 1        
             if (isDarkMode) {
-                // Green shade, with white base, for dark mode
                 const r = Math.round(40 + (255 - 40) * (1 - intensity));
                 const g = Math.round(167 + (255 - 167) * (1 - intensity));
                 const b = Math.round(69 + (255 - 69) * (1 - intensity));
                 return `rgb(${r}, ${g}, ${b})`;
             } else {
-                // Green shade, with black base, for light mode
                 const r = Math.round(40 * intensity);
                 const g = Math.round(167 * intensity);
                 const b = Math.round(69 * intensity);
@@ -1010,13 +1004,11 @@ function getTextColor(value) {
             // Negative difference (behind class) - use red
             const intensity = Math.min(Math.abs(value), 1); // Cap at 1
             if (isDarkMode) {
-                // Red shade, with white base, for dark mode
                 const r = Math.round(220 + (255 - 220) * (1 - intensity));
                 const g = Math.round(53 + (255 - 53) * (1 - intensity));
                 const b = Math.round(69 + (255 - 69) * (1 - intensity));
                 return `rgb(${r}, ${g}, ${b})`;
             } else {
-                // Red shade, with black base, for light mode
                 const r = Math.round(220 * intensity);
                 const g = Math.round(53 * intensity);
                 const b = Math.round(69 * intensity);
@@ -1030,13 +1022,12 @@ function getTextColor(value) {
     
     // Return secondary color for 0%
     if (percent === 0) {
-        return '#6c757d'; // Bootstrap secondary color
+        return '#6c757d'; // Secondary color
     }
     
     if (percent <= 50) {
-        // Linear interpolation from Bootstrap danger to warning
+        // Linear interpolation from danger to warning
         const ratio = percent / 50;
-        // Bootstrap danger: #dc3545 (220, 53, 69) to warning: #ffc107 (255, 193, 7)
         const r = Math.round(220 + (255 - 220) * ratio);
         const g = Math.round(53 + (193 - 53) * ratio);
         const b = Math.round(69 + (7 - 69) * ratio);
@@ -1045,7 +1036,6 @@ function getTextColor(value) {
     } else {
         // Linear interpolation from warning to success
         const ratio = (percent - 50) / 50;
-        // Warning: #ffc107 (255, 193, 7) to success: #28a745 (40, 167, 69)
         const r = Math.round(255 + (40 - 255) * ratio);
         const g = Math.round(193 + (167 - 193) * ratio);
         const b = Math.round(7 + (69 - 7) * ratio);
@@ -1055,7 +1045,6 @@ function getTextColor(value) {
 }
 
 function getCellStyle(value) {
-    // Keep this function for backward compatibility but return neutral styles
     return {
         backgroundColor: 'transparent',
         borderColor: '#dee2e6',
@@ -1064,14 +1053,12 @@ function getCellStyle(value) {
 }
 
 function getProgressBarStyle(percent) {
-    // Use the same three-point gradient logic for progress bars
     const value = percent / 100;
     const color = getTextColor(value);
     
-    // For 0%, use default Bootstrap styling
     if (percent === 0) {
         return {
-            backgroundColor: '#6c757d' // Bootstrap secondary color
+            backgroundColor: '#6c757d'
         };
     }
     
@@ -1085,22 +1072,11 @@ function getBadgeStyle(percent) {
     if (currentViewMode === 'comparative') {
         const value = percent / 100;
         if (value === 0) {
-            return {
-                backgroundColor: '#6c757d', // Bootstrap secondary color
-                color: '#ffffff'
-            };
+            return { backgroundColor: '#6c757d', color: '#ffffff' };
         } else if (value > 0) {
-            // Positive difference - green badge
-            return {
-                backgroundColor: '#28a745', // Bootstrap success color
-                color: '#ffffff'
-            };
+            return { backgroundColor: '#16a34a', color: '#ffffff' };
         } else {
-            // Negative difference - red badge
-            return {
-                backgroundColor: '#dc3545', // Bootstrap danger color
-                color: '#ffffff'
-            };
+            return { backgroundColor: '#dc2626', color: '#ffffff' };
         }
     }
     
@@ -1108,127 +1084,116 @@ function getBadgeStyle(percent) {
     const value = percent / 100;
     const color = getTextColor(value);
     
-    // For 0%, use default Bootstrap styling
     if (percent === 0) {
-        return {
-            backgroundColor: '#6c757d', // Bootstrap secondary color
-            color: '#ffffff'
-        };
+        return { backgroundColor: '#6c757d', color: '#ffffff' };
     }
     
-    return {
-        backgroundColor: color,
-        color: '#ffffff'
-    };
+    return { backgroundColor: color, color: '#ffffff' };
 }
 
 function showStudentDetails(learnerId) {
     const learner = responseData.learners.find(l => l.id === learnerId);
     if (!learner) return;
 
-    // Create a modern modal for student details
+    // Create modal with Tailwind classes
     const modalHtml = `
-        <div class="modal fade" id="studentModal" tabindex="-1">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="fas fa-user-graduate me-2"></i>
-                            Student Details: ${learner.id}
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <div class="row g-4">
-                            ${responseData.topics.sort((a,b) => a.order - b.order).map((topic, index) => {
-                                const topicData = learner.state.topics[topic.id];
-                                const progress = (topicData?.overall?.p || 
-                                               topicData?.values?.['Coding Problems']?.p || 
-                                               topicData?.p || 
-                                               0) * 100;
-                                const progressPercent = Math.max(0, Math.min(100, Math.round(progress)));
-                                
-                                return `
-                                    <div class="col-md-6">
-                                        <div class="card border-0 shadow-sm h-100">
-                                            <div class="card-body">
-                                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                                    <h6 class="card-title mb-0 fw-bold">${topic.name}</h6>
-                                                    <span class="badge" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}">${progressPercent}%</span>
-                                                </div>
-                                                <div class="progress mb-3" style="height: 8px;">
-                                                    <div class="progress-bar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
-                                                </div>
-                                                <div class="row g-2">
-                                                    ${responseData.resources.map((resource, rIdx) => {
-                                                        const resourceProgress = (topicData?.values?.[resource.id]?.p || 0) * 100;
-                                                        const resourcePercent = Math.round(resourceProgress);
-                                                        const actList = (responseData.topics.find(t => t.id === topic.id)?.activities?.[resource.id]) || [];
-                                                        const collapseId = `topic-${topic.id}-res-${resource.id}-${rIdx}`.replace(/[^a-zA-Z0-9_-]/g, '_');
-                                                        const activitiesRows = actList.map(activity => {
-                                                            const aProg = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values?.p || 0;
-                                                            const aPerf = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values?.k;
-                                                            const aPct = Math.round(aProg * 100);
-                                                            const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
-                                                            const linkHtml = activity.url ? `<a href="${activity.url}" target="_blank" rel="noopener">Open</a>` : '-';
-                                                        return `
-                                                                <tr>
-                                                                    <td class="text-break">${activity.name || activity.id}</td>
-                                                                    <td class="text-center">
-                            <div class="progress" style="width: 100px; height: 14px; margin: 0 auto;">
-                                                                            <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td class="text-center fw-semibold">${aPct}%</td>
-                                                                    <td class="text-center">
-                                                                        ${status === 'Completed' ? '<span class="badge bg-success">Completed</span>' : status === 'In Progress' ? '<span class="badge bg-secondary">In Progress</span>' : '<span class="badge bg-light text-dark">Not Started</span>'}
-                                                                    </td>
-                                                                    
-                                                                    
-                                                                </tr>`;
-                                                        }).join('');
-                                                        return `
-                                                            <div class="col-12">
-                                                                <div class="d-flex justify-content-between align-items-center">
-                                                                    <div class="d-flex align-items-center gap-2">
-                                                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-                                                                            <i class="fas fa-chevron-down"></i>
-                                                                        </button>
-                                                                    <small class="text-muted">${resource.name}</small>
+        <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="studentModal" aria-hidden="true">
+            <div class="modal-backdrop-close absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+                    <h5 class="text-lg font-bold">
+                        <i class="fas fa-user-graduate mr-2"></i>
+                        Student Details: ${learner.id}
+                    </h5>
+                    <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${responseData.topics.sort((a,b) => a.order - b.order).map((topic, index) => {
+                            const topicData = learner.state.topics[topic.id];
+                            const progress = (topicData?.overall?.p || 
+                                           topicData?.values?.['Coding Problems']?.p || 
+                                           topicData?.p || 
+                                           0) * 100;
+                            const progressPercent = Math.max(0, Math.min(100, Math.round(progress)));
+                            
+                            return `
+                                <div>
+                                    <div class="card h-full">
+                                        <div class="p-4">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h6 class="mb-0 font-bold">${topic.name}</h6>
+                                                <span class="badge" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}">${progressPercent}%</span>
+                                            </div>
+                                            <div class="progress mb-3" style="height: 8px;">
+                                                <div class="progress-bar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                ${responseData.resources.map((resource, rIdx) => {
+                                                    const resourceProgress = (topicData?.values?.[resource.id]?.p || 0) * 100;
+                                                    const resourcePercent = Math.round(resourceProgress);
+                                                    const actList = (responseData.topics.find(t => t.id === topic.id)?.activities?.[resource.id]) || [];
+                                                    const collapseId = `topic-${topic.id}-res-${resource.id}-${rIdx}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+                                                    const activitiesRows = actList.map(activity => {
+                                                        const aProg = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values?.p || 0;
+                                                        const aPerf = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values?.k;
+                                                        const aPct = Math.round(aProg * 100);
+                                                        const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
+                                                    return `
+                                                            <tr>
+                                                                <td class="break-words">${activity.name || activity.id}</td>
+                                                                <td class="text-center">
+                                                                    <div class="progress" style="width: 100px; height: 14px; margin: 0 auto;">
+                                                                        <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
                                                                     </div>
-                                                                    <small class="fw-semibold">${resourcePercent}%</small>
+                                                                </td>
+                                                                <td class="text-center font-semibold">${aPct}%</td>
+                                                                <td class="text-center">
+                                                                    ${status === 'Completed' ? '<span class="badge badge-success">Completed</span>' : status === 'In Progress' ? '<span class="badge badge-secondary">In Progress</span>' : '<span class="badge badge-light">Not Started</span>'}
+                                                                </td>
+                                                            </tr>`;
+                                                    }).join('');
+                                                    return `
+                                                        <div>
+                                                            <div class="flex justify-between items-center">
+                                                                <div class="flex items-center gap-2">
+                                                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                                                                        <i class="fas fa-chevron-down"></i>
+                                                                    </button>
+                                                                    <small class="text-gray-500">${resource.name}</small>
                                                                 </div>
-                                                                <div class="progress mt-1" style="height: 4px;">
-                                                                    <div class="progress-bar" style="width: ${resourcePercent}%; ${Object.entries(getProgressBarStyle(resourcePercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
-                                                                </div>
-                                                                <div class="collapse mt-2" id="${collapseId}">
-                                                                    ${actList.length ? `
-                                                                    <div class="table-responsive">
-                                                                        <table class="table table-sm align-middle mb-0">
-                                                                            <thead>
-                                                                                <tr>
-                                                                                    <th>Activity</th>
-                                                                                    <th class="text-center">Progress</th>
-                                                                                    <th class="text-center">%</th>
-                                                                                    <th class="text-center">Status</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                ${activitiesRows}
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>` : '<div class="text-muted">No activities listed for this resource.</div>'}
-                                                                </div>
+                                                                <small class="font-semibold">${resourcePercent}%</small>
                                                             </div>
-                                                        `;
-                                                    }).join('')}
-                                                </div>
+                                                            <div class="progress mt-1" style="height: 4px;">
+                                                                <div class="progress-bar" style="width: ${resourcePercent}%; ${Object.entries(getProgressBarStyle(resourcePercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                                                            </div>
+                                                            <div class="hidden mt-2" id="${collapseId}">
+                                                                ${actList.length ? `
+                                                                <div class="overflow-x-auto">
+                                                                    <table class="table table-sm mb-0">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Activity</th>
+                                                                                <th class="text-center">Progress</th>
+                                                                                <th class="text-center">%</th>
+                                                                                <th class="text-center">Status</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            ${activitiesRows}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>` : '<div class="text-gray-500">No activities listed for this resource.</div>'}
+                                                            </div>
+                                                        </div>
+                                                    `;
+                                                }).join('')}
                                             </div>
                                         </div>
                                     </div>
-                                `;
-                            }).join('')}
-                        </div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             </div>
@@ -1281,167 +1246,153 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
     const topicDef = responseData.topics.find(t => t.id === topicId);
     const activitiesList = topicDef?.activities?.[resourceId] || [];
 
-    // Create comprehensive modal
+    // Create modal with Tailwind classes
     const modalHtml = `
-        <div class="modal fade" id="cellModal" tabindex="-1">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="fas fa-chart-bar me-2"></i>
-                            ${topicName} → ${resourceName}
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <!-- Overview Cards -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body text-center">
-                                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                            <i class="fas fa-percentage text-white"></i>
-                                        </div>
-                                        <h6 class="fw-bold mb-1">Class Average</h6>
-                                        <div class="h4 fw-bold text-primary">${classProgressPercent}%</div>
-                                    </div>
+        <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="cellModal" aria-hidden="true">
+            <div class="modal-backdrop-close absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+                    <h5 class="text-lg font-bold">
+                        <i class="fas fa-chart-bar mr-2"></i>
+                        ${topicName} → ${resourceName}
+                    </h5>
+                    <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Overview Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-blue-600 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-percentage text-white"></i>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body text-center">
-                                        <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                            <i class="fas fa-check-circle text-white"></i>
-                                        </div>
-                                        <h6 class="fw-bold mb-1">Completed</h6>
-                                        <div class="h4 fw-bold text-success">${studentsCompleted}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body text-center">
-                                        <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                            <i class="fas fa-exclamation-triangle text-white"></i>
-                                        </div>
-                                        <h6 class="fw-bold mb-1">Struggling</h6>
-                                        <div class="h4 fw-bold text-warning">${studentsStruggling}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body text-center">
-                                        <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 40px; height: 40px;">
-                                            <i class="fas fa-users text-white"></i>
-                                        </div>
-                                        <h6 class="fw-bold mb-1">Above Average</h6>
-                                        <div class="h4 fw-bold text-info">${studentsAboveAverage}</div>
-                                    </div>
-                                </div>
+                                <h6 class="font-bold mb-1">Class Average</h6>
+                                <div class="text-2xl font-bold text-blue-600">${classProgressPercent}%</div>
                             </div>
                         </div>
-                        
-                        <!-- Student Progress Breakdown (with expandable activity rows) -->
-                        <div class="row">
-                            <div class="col-12">
-                                <h6 class="fw-bold mb-3">
-                                    <i class="fas fa-list me-2"></i>Student Progress Breakdown
-                                </h6>
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th class="fw-bold">Student</th>
-                                                <th class="fw-bold text-center">Progress</th>
-                                                <th class="fw-bold text-center">Status</th>
-                                                <th class="fw-bold text-center">vs Class Avg</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${(() => {
-                                                const learnerById = Object.fromEntries(responseData.learners.map(l => [l.id, l]));
-                                                return studentData.map((student, idx) => {
-                                                    const safeId = String(student.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + idx;
-                                                    const learner = learnerById[student.id];
-                                                    const activityRows = activitiesList.map(activity => {
-                                                        const aProg = learner?.state?.activities?.[topicId]?.[resourceId]?.[activity.id]?.values?.p || 0;
-                                                        const aPerf = learner?.state?.activities?.[topicId]?.[resourceId]?.[activity.id]?.values?.k;
-                                                        const aPct = Math.round(aProg * 100);
-                                                        const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
-                                                        const linkHtml = activity.url ? `<a href="${activity.url}" target="_blank" rel="noopener">Open</a>` : '-';
-                                                        return `
-                                                            <tr>
-                                                                <td class="text-break">${activity.name || activity.id}</td>
-                                                                <td class="text-center">
-                                                                    <div class="progress" style="width: 100px; height: 14px;">
-                                                                        <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-center fw-semibold">${aPct}%</td>
-                                                                <td class="text-center">
-                                                                    ${status === 'Completed' ? '<span class="badge bg-success">Completed</span>' : status === 'In Progress' ? '<span class="badge bg-secondary">In Progress</span>' : '<span class="badge bg-light text-dark">Not Started</span>'}
-                                                                </td>
-                                                                    
-                                                                    
-                                                            </tr>`;
-                                                    }).join('');
-                                                    return `
-                                                        <tr class="${student.isStruggling ? 'table-warning' : student.isAboveAverage ? 'table-success' : ''}">
-                                                            <td class="fw-bold">
-                                                                <button class="btn btn-sm btn-outline-secondary me-2" type="button" data-bs-toggle="collapse" data-bs-target="#act-${safeId}" aria-expanded="false" aria-controls="act-${safeId}">
-                                                                    <i class="fas fa-chevron-down"></i>
-                                                                </button>
-                                                                ${student.id}
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <div class="d-flex align-items-center justify-content-center">
-                                                                    <div class="progress me-2" style="width: 100px; height: 20px;">
-                                                                        <div class="progress-bar" style="width: ${student.progressPercent}%; background-color: ${getTextColor(student.progress)};"></div>
-                                                                    </div>
-                                                                    <span class="fw-bold">${student.progressPercent}%</span>
-                                                                </div>
-                                                            </td>
-                                                            <td class="text-center">
-                                                                ${student.progressPercent >= 90 ? '<span class="badge bg-success">Completed</span>' : 
-                                                                  student.isStruggling ? '<span class="badge bg-warning">Struggling</span>' : 
-                                                                  '<span class="badge bg-secondary">In Progress</span>'}
-                                                            </td>
-                                                            <td class="text-center">
-                                                                ${student.isAboveAverage ? 
-                                                                    `<span class="text-success fw-bold">+${student.progressPercent - classProgressPercent}%</span>` :
-                                                                    student.progress > 0 ? 
-                                                                        `<span class="text-danger fw-bold">${student.progressPercent - classProgressPercent}%</span>` :
-                                                                        '<span class="text-muted">-</span>'
-                                                                }
-                                                            </td>
-                                                        </tr>
-                                                        <tr class="collapse bg-light" id="act-${safeId}">
-                                                            <td colspan="4">
-                                                                ${activitiesList.length ? `
-                                                                <div class="table-responsive">
-                                                                    <table class="table table-sm align-middle mb-0">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th>Activity</th>
-                                                                                <th class="text-center">Progress</th>
-                                                                                <th class="text-center">%</th>
-                                                                                <th class="text-center">Status</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            ${activityRows}
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>` : '<div class="text-muted">No activities listed for this resource.</div>'}
-                                                            </td>
-                                                        </tr>`;
-                                                }).join('');
-                                            })()}
-                                        </tbody>
-                                    </table>
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-green-600 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-check-circle text-white"></i>
                                 </div>
+                                <h6 class="font-bold mb-1">Completed</h6>
+                                <div class="text-2xl font-bold text-green-600">${studentsCompleted}</div>
                             </div>
+                        </div>
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-yellow-500 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-exclamation-triangle text-white"></i>
+                                </div>
+                                <h6 class="font-bold mb-1">Struggling</h6>
+                                <div class="text-2xl font-bold text-yellow-500">${studentsStruggling}</div>
+                            </div>
+                        </div>
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-cyan-500 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-users text-white"></i>
+                                </div>
+                                <h6 class="font-bold mb-1">Above Average</h6>
+                                <div class="text-2xl font-bold text-cyan-500">${studentsAboveAverage}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Student Progress Breakdown (with expandable activity rows) -->
+                    <div>
+                        <h6 class="font-bold mb-3">
+                            <i class="fas fa-list mr-2"></i>Student Progress Breakdown
+                        </h6>
+                        <div class="overflow-x-auto">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th class="font-bold">Student</th>
+                                        <th class="font-bold text-center">Progress</th>
+                                        <th class="font-bold text-center">Status</th>
+                                        <th class="font-bold text-center">vs Class Avg</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(() => {
+                                        const learnerById = Object.fromEntries(responseData.learners.map(l => [l.id, l]));
+                                        return studentData.map((student, idx) => {
+                                            const safeId = String(student.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + idx;
+                                            const learner = learnerById[student.id];
+                                            const activityRows = activitiesList.map(activity => {
+                                                const aProg = learner?.state?.activities?.[topicId]?.[resourceId]?.[activity.id]?.values?.p || 0;
+                                                const aPerf = learner?.state?.activities?.[topicId]?.[resourceId]?.[activity.id]?.values?.k;
+                                                const aPct = Math.round(aProg * 100);
+                                                const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
+                                                return `
+                                                    <tr>
+                                                        <td class="break-words">${activity.name || activity.id}</td>
+                                                        <td class="text-center">
+                                                            <div class="progress" style="width: 100px; height: 14px;">
+                                                                <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center font-semibold">${aPct}%</td>
+                                                        <td class="text-center">
+                                                            ${status === 'Completed' ? '<span class="badge badge-success">Completed</span>' : status === 'In Progress' ? '<span class="badge badge-secondary">In Progress</span>' : '<span class="badge badge-light">Not Started</span>'}
+                                                        </td>
+                                                    </tr>`;
+                                            }).join('');
+                                            return `
+                                                <tr class="${student.isStruggling ? 'table-warning-row' : student.isAboveAverage ? 'table-success-row' : ''}">
+                                                    <td class="font-bold">
+                                                        <button class="btn btn-sm btn-outline-secondary mr-2" type="button" data-bs-toggle="collapse" data-bs-target="#act-${safeId}" aria-expanded="false" aria-controls="act-${safeId}">
+                                                            <i class="fas fa-chevron-down"></i>
+                                                        </button>
+                                                        ${student.id}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="flex items-center justify-center">
+                                                            <div class="progress mr-2" style="width: 100px; height: 20px;">
+                                                                <div class="progress-bar" style="width: ${student.progressPercent}%; background-color: ${getTextColor(student.progress)};"></div>
+                                                            </div>
+                                                            <span class="font-bold">${student.progressPercent}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        ${student.progressPercent >= 90 ? '<span class="badge badge-success">Completed</span>' : 
+                                                          student.isStruggling ? '<span class="badge badge-warning">Struggling</span>' : 
+                                                          '<span class="badge badge-secondary">In Progress</span>'}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        ${student.isAboveAverage ? 
+                                                            `<span class="text-green-600 font-bold">+${student.progressPercent - classProgressPercent}%</span>` :
+                                                            student.progress > 0 ? 
+                                                                `<span class="text-red-500 font-bold">${student.progressPercent - classProgressPercent}%</span>` :
+                                                                '<span class="text-gray-500">-</span>'
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                <tr class="hidden bg-gray-100 dark:bg-gray-700" id="act-${safeId}">
+                                                    <td colspan="4">
+                                                        ${activitiesList.length ? `
+                                                        <div class="overflow-x-auto">
+                                                            <table class="table table-sm mb-0">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Activity</th>
+                                                                        <th class="text-center">Progress</th>
+                                                                        <th class="text-center">%</th>
+                                                                        <th class="text-center">Status</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ${activityRows}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>` : '<div class="text-gray-500">No activities listed for this resource.</div>'}
+                                                    </td>
+                                                </tr>`;
+                                        }).join('');
+                                    })()}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1465,27 +1416,23 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
 
 function showError(message) {
     // Create a modern toast notification
-    const toastHtml = `
-        <div class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
+    const toastDiv = document.createElement('div');
+    toastDiv.className = 'fixed top-4 right-4 z-[9999] bg-red-600 text-white rounded-lg shadow-lg px-4 py-3 flex items-center max-w-md';
+    toastDiv.setAttribute('role', 'alert');
+    toastDiv.innerHTML = `
+        <div class="flex-1 text-sm">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            ${message}
         </div>
+        <button class="ml-3 text-white/80 hover:text-white text-lg leading-none" onclick="this.parentElement.remove()">&times;</button>
     `;
     
-    document.body.insertAdjacentHTML('beforeend', toastHtml);
-    const toast = new bootstrap.Toast(document.querySelector('.toast'));
-    toast.show();
+    document.body.appendChild(toastDiv);
     
-    // Remove toast after it's hidden
+    // Remove toast after 5 seconds
     setTimeout(() => {
-        const toastElement = document.querySelector('.toast');
-        if (toastElement) {
-            toastElement.remove();
+        if (toastDiv.parentNode) {
+            toastDiv.remove();
         }
     }, 5000);
 }
@@ -1517,7 +1464,7 @@ function showFormFieldError(fieldId, errorMessage) {
     }
     
     // Find or create error message element
-    const fieldCol = field.closest('.col-md-3');
+    const fieldCol = field.closest('div');
     if (!fieldCol) return;
     
     // Remove existing error message if any
@@ -1529,7 +1476,7 @@ function showFormFieldError(fieldId, errorMessage) {
     // Create error message element
     const errorDiv = document.createElement('div');
     errorDiv.className = 'field-error-message mt-1';
-    errorDiv.innerHTML = `<small class="text-danger" style="display: block;"><i class="fas fa-exclamation-circle me-1"></i>${errorMessage}</small>`;
+    errorDiv.innerHTML = `<small class="text-red-500" style="display: block;"><i class="fas fa-exclamation-circle mr-1"></i>${errorMessage}</small>`;
     fieldCol.appendChild(errorDiv);
     
     // Add input/change listener to clear error when user starts typing or changes selection
@@ -1573,7 +1520,7 @@ function clearFieldError(fieldId) {
     }
     
     // Remove error message
-    const fieldCol = field.closest('.col-md-3');
+    const fieldCol = field.closest('div');
     if (fieldCol) {
         const errorMessage = fieldCol.querySelector('.field-error-message');
         if (errorMessage) {
@@ -1590,4 +1537,3 @@ function clearFormErrors() {
     clearFieldError('cid');
 }
 </script>
-

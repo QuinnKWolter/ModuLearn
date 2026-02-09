@@ -1,40 +1,35 @@
 {% if courses %}
-<section class="courses-section mb-5">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="h4 fw-semibold mb-0">Course Structures</h2>
-    <span class="badge bg-secondary">{{ courses|length }} course{{ courses|length|pluralize }}</span>
+<section class="mb-8">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-semibold">Course Structures</h2>
+    <span class="badge badge-secondary">{{ courses|length }} course{{ courses|length|pluralize }}</span>
   </div>
-  <div class="row g-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for course in courses %}
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="course-card card border-0 h-100">
-        <div class="card-body d-flex flex-column p-4">
-          <h5 class="card-title fw-semibold mb-2">{{ course.title }}</h5>
-          <p class="card-text text-muted small flex-grow-1 mb-3">{{ course.description|truncatewords:25|default:"No description" }}</p>
-          <div class="d-flex gap-2 mt-auto">
-            <button class="btn btn-sm btn-outline-success flex-fill new-session-btn" data-course-id="{{ course.id }}">
-              <i class="bi bi-plus-circle me-1"></i>New Session
-            </button>
-            <button class="btn btn-sm btn-outline-danger delete-course-btn" data-course-id="{{ course.id }}">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </div>
+    <div class="course-card card flex flex-col p-5 h-full">
+      <h5 class="font-semibold mb-2">{{ course.title }}</h5>
+      <p class="text-sm text-gray-500 dark:text-gray-400 flex-1 mb-3">{{ course.description|truncatewords:25|default:"No description" }}</p>
+      <div class="flex gap-2 mt-auto">
+        <button class="btn btn-sm btn-outline-success flex-1 new-session-btn" data-course-id="{{ course.id }}">
+          <i class="bi bi-plus-circle mr-1"></i>New Session
+        </button>
+        <button class="btn btn-sm btn-outline-danger delete-course-btn" data-course-id="{{ course.id }}">
+          <i class="bi bi-trash"></i>
+        </button>
       </div>
     </div>
     {% endfor %}
   </div>
 </section>
 {% else %}
-<section class="courses-section mb-5">
-  <div class="empty-state text-center py-5">
-    <i class="bi bi-book text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
-    <h3 class="h5 text-muted mt-3 mb-2">No courses yet</h3>
-    <p class="text-muted mb-4">Get started by importing a course structure</p>
+<section class="mb-8">
+  <div class="bg-gray-50 dark:bg-gray-800 rounded-xl text-center py-12">
+    <i class="bi bi-book text-gray-300 dark:text-gray-600 text-5xl"></i>
+    <h3 class="text-lg text-gray-500 dark:text-gray-400 mt-3 mb-2">No courses yet</h3>
+    <p class="text-gray-400 dark:text-gray-500 mb-4">Get started by importing a course structure</p>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importJsonCourseModal">
-      <i class="bi bi-file-earmark-code me-2"></i>Import Your First Course
+      <i class="bi bi-file-earmark-code mr-2"></i>Import Your First Course
     </button>
   </div>
 </section>
 {% endif %}
-

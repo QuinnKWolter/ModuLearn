@@ -1,19 +1,22 @@
 {% extends 'base.html' %}
 
-{% load crispy_forms_tags %}
-
 {% block title %}Sign Up - ModuLearn{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="mt-4">Create an Account</h1>
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit" class="btn btn-primary">Sign Up</button>
-  </form>
-  <p class="mt-2">
-    Already have an account? <a href="{% url 'accounts:login' %}">Login here</a>.
-  </p>
+<div class="max-w-md mx-auto py-10">
+  <div class="card p-8">
+    <div class="text-center mb-6">
+      <i class="bi bi-person-plus text-blue-600 dark:text-blue-400 text-4xl"></i>
+      <h1 class="text-2xl font-bold mt-3">Create an Account</h1>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include 'includes/tailwind_form.html' with form=form %}
+      <button type="submit" class="btn btn-primary w-full">Sign Up</button>
+    </form>
+    <p class="mt-4 text-sm text-center text-gray-500 dark:text-gray-400">
+      Already have an account? <a href="{% url 'accounts:login' %}" class="text-blue-600 dark:text-blue-400 hover:underline">Login here</a>.
+    </p>
+  </div>
 </div>
 {% endblock %}
