@@ -172,7 +172,8 @@ def process_launch_data(request, launch_data):
     user.save(update_fields=['is_instructor', 'is_student'])
 
     # Log the user in before trying to access enrollments
-    login(request, user)
+    # Use ModelBackend since LTI users are created directly, not authenticated through a backend
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
     # Store LTI session data
     request.session['lti_launch_data'] = launch_data
@@ -225,8 +226,7 @@ def process_launch_data(request, launch_data):
             logger.error(f"Course instance {instance_id} not found")
     
     # If no instance_id or course not found, continue with normal launch flow
-    # Log the user in
-    login(request, user)
+    # User is already logged in above, no need to log in again
     logger.info(f"Successfully logged in user: {user.email} (Canvas ID: {user_id})")
 
     # Redirect to home page

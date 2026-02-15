@@ -45,7 +45,7 @@ class PasswordChangeFormCustom(PasswordChangeForm):
     old_password = forms.CharField(
         label="Current password",
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'autofocus': True, 'class': 'form-control'}),
+        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'class': 'form-control'}),
     )
     new_password1 = forms.CharField(
         label="New password",
@@ -63,7 +63,7 @@ class KnowledgeTreePasswordResetForm(forms.Form):
     """Form for resetting password in both ModuLearn and KnowledgeTree."""
     new_password1 = forms.CharField(
         label="New password",
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'class': 'form-control', 'autofocus': True}),
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'class': 'form-control'}),
         strip=False,
         help_text=password_validation.password_validators_help_text_html(),
     )

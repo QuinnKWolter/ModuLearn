@@ -181,35 +181,6 @@
   </div>
   {% endif %}
 
-  <!-- Course-Authoring Password Reset -->
-  {% if user.is_instructor %}
-  <div class="card overflow-hidden mb-6">
-    <div class="bg-yellow-500 dark:bg-yellow-600 text-gray-900 px-6 py-3">
-      <h5 class="font-semibold flex items-center gap-2 m-0">
-        <i class="bi bi-tools"></i> Course-Authoring Integration
-      </h5>
-    </div>
-    <div class="p-6">
-      <div class="alert alert-warning mb-4">
-        <i class="bi bi-exclamation-triangle mr-1"></i>
-        <strong>Course-Authoring Tool</strong><br>
-        If you're experiencing authentication issues with the Course-Authoring Tool, you can reset your password here.
-        After resetting, you'll need to share the new password with the course-authoring administrator to sync your account.
-      </div>
-      {% if user.course_authoring_password %}
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          <strong>Current Password:</strong>
-          <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm">{{ user.course_authoring_password }}</code>
-        </p>
-      {% endif %}
-      <button type="button" class="btn btn-warning" id="resetCourseAuthoringPassword">
-        <i class="bi bi-arrow-clockwise"></i> Reset Course-Authoring Password
-      </button>
-      <div id="resetPasswordResult" class="mt-3 hidden"></div>
-    </div>
-  </div>
-  {% endif %}
-
   <div class="mb-4">
     <a href="{% url 'accounts:logout' %}" class="btn btn-danger" onclick="event.preventDefault(); document.getElementById('logout-form-profile').submit();">
       <i class="bi bi-box-arrow-right"></i> Logout
@@ -301,65 +272,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script>
-// Course-Authoring Password Reset
-document.addEventListener('DOMContentLoaded', function() {
-  const resetButton = document.getElementById('resetCourseAuthoringPassword');
-  const resultDiv = document.getElementById('resetPasswordResult');
-
-  if (resetButton) {
-    resetButton.addEventListener('click', async function() {
-      if (!confirm('Are you sure you want to reset your course-authoring password? You will need to share the new password with the administrator to sync your account.')) {
-        return;
-      }
-
-      const originalText = resetButton.innerHTML;
-      resetButton.disabled = true;
-      resetButton.innerHTML = '<span class="spinner-border mr-2"></span>Resetting...';
-      resultDiv.style.display = 'none';
-      resultDiv.classList.add('hidden');
-
-      try {
-        const response = await fetch("{% url 'dashboard:reset_course_authoring_password' %}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-          }
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          resultDiv.className = 'mt-3 alert alert-success';
-          resultDiv.innerHTML = `
-            <h6 class="font-semibold"><i class="bi bi-check-circle mr-1"></i> Password Reset Successful!</h6>
-            <p><strong>Your new password is:</strong></p>
-            <p><code class="text-base px-3 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded inline-block">${data.new_password}</code></p>
-            <p class="mb-0 text-sm">Please contact <strong>Mohammad Hassany (MOH70@pitt.edu)</strong> to set this password in course-authoring. Once set, you'll be able to authenticate successfully.</p>
-          `;
-          resultDiv.style.display = 'block';
-          resultDiv.classList.remove('hidden');
-          setTimeout(() => location.reload(), 2000);
-        } else {
-          resultDiv.className = 'mt-3 alert alert-danger';
-          resultDiv.innerHTML = `<h6 class="font-semibold"><i class="bi bi-exclamation-circle mr-1"></i> Error</h6><p>${data.error || 'Failed to reset password. Please try again.'}</p>`;
-          resultDiv.style.display = 'block';
-          resultDiv.classList.remove('hidden');
-        }
-      } catch (error) {
-        console.error('Reset error:', error);
-        resultDiv.className = 'mt-3 alert alert-danger';
-        resultDiv.innerHTML = `<h6 class="font-semibold"><i class="bi bi-exclamation-circle mr-1"></i> Error</h6><p>Failed to reset password: ${error.message}</p>`;
-        resultDiv.style.display = 'block';
-        resultDiv.classList.remove('hidden');
-      } finally {
-        resetButton.disabled = false;
-        resetButton.innerHTML = originalText;
-      }
-    });
-  }
-});
-
 // Course Resources Modal Functionality (shared with dashboard)
 let courseResourcesCache = {};
 
