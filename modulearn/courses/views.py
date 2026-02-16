@@ -303,6 +303,81 @@ def launch_iframe_module(request, instance_id, module_id):
         url_tool and url_tool.lower() == 'codecheck'
     )
     
+    # SPECIAL HANDLING: JSVEE URL transformation
+    # Transform JSVEE URLs from: /pitt/jsvee/jsvee-python/ae?example-id=ae_adl_variables
+    # To: /html/jsvee/jsvee-python/ae_adl_variables
+    # Also handles: /acos/pitt/jsvee/jsvee-python/ae?example-id=...
+    if content_url and '/jsvee/jsvee-python/ae?' in content_url and 'example-id=' in content_url:
+        parsed = urlparse(content_url)
+        query_params = parse_qs(parsed.query)
+        example_id = query_params.get('example-id', [None])[0]
+        if example_id:
+            # Build new path: replace .../jsvee/jsvee-python/ae?example-id=... with /html/jsvee/jsvee-python/...
+            # Handle both /pitt/jsvee/... and /acos/pitt/jsvee/... patterns
+            new_path = f"/html/jsvee/jsvee-python/{example_id}"
+            content_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                new_path,
+                parsed.params,
+                '',  # Remove query string
+                parsed.fragment
+            ))
+            logger.info(f"Module {module.id}: Transformed JSVEE URL from {parsed.path}?{parsed.query} to: {content_url}")
+    
+    # SPECIAL HANDLING: Parson's Problems URL transformation
+    # Transform from: http://adapt2.sis.pitt.edu/acos/pitt/jsparsons/jsparsons-python/ps?example-id=ps_python_for_odd_or_even
+    # To: https://acos.cs.vt.edu/html/jsparsons/jsparsons-python/ps_python_for_odd_or_even
+    if content_url and '/jsparsons/jsparsons-python/ps?' in content_url and 'example-id=' in content_url:
+        parsed = urlparse(content_url)
+        query_params = parse_qs(parsed.query)
+        example_id = query_params.get('example-id', [None])[0]
+        if example_id:
+            # Build new URL: change to https://acos.cs.vt.edu/html/jsparsons/jsparsons-python/{example_id}
+            new_path = f"/html/jsparsons/jsparsons-python/{example_id}"
+            content_url = urlunparse((
+                'https',  # Always use https
+                'acos.cs.vt.edu',  # Always use acos.cs.vt.edu
+                new_path,
+                '',  # No params
+                '',  # Remove query string
+                ''   # No fragment
+            ))
+            logger.info(f"Module {module.id}: Transformed Parson's Problems URL from {parsed.geturl()} to: {content_url}")
+    
+    # SPECIAL HANDLING: WebEx exercises URL transformation
+    # Transform from: http://adapt2.sis.pitt.edu/web_ex_NV0FGdaHzy/Dissection2?act=pyt4.7&svc=progvis&sid=demo
+    # To: http://adapt2.sis.pitt.edu/web_ex_NV0FGdaHzy/Dissection2?act=pyt4.1&svc=progvis
+    # Also handles URLs with additional parameters (grp, usr, sid, cid) - removes them
+    if content_url and '/web_ex_' in content_url:
+        parsed = urlparse(content_url)
+        query_params = parse_qs(parsed.query)
+        
+        # Check if this is a WebEx exercise (has act and svc parameters)
+        if 'act' in query_params and 'svc' in query_params:
+            # Change act parameter: pyt4.7 -> pyt4.1 (or keep other act values as-is if not pyt4.7)
+            act_value = query_params.get('act', [''])[0]
+            if act_value.startswith('pyt4.'):
+                # Change to pyt4.1
+                query_params['act'] = ['pyt4.1']
+            # Keep only act and svc parameters, remove all others (grp, usr, sid, cid, etc.)
+            new_query_params = {
+                'act': query_params['act'],
+                'svc': query_params['svc']
+            }
+            
+            # Rebuild URL with only act and svc parameters
+            new_query = urlencode(new_query_params, doseq=True)
+            content_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                new_query,
+                parsed.fragment
+            ))
+            logger.info(f"Module {module.id}: Transformed WebEx URL from {parsed.geturl()} to: {content_url}")
+    
     if is_codecheck:
         # CodeCheck: Simply construct the direct URL and load it in iframe
         # Format: https://codecheck.io/files/wiley/{module_name}
@@ -366,10 +441,14 @@ def launch_iframe_module(request, instance_id, module_id):
     
     # For CodeCheck or SPLICE/PITT protocols: append session parameters directly to URL
     # This matches the working codebase pattern: activity_url + "&grp=...&usr=...&sid=...&cid=..."
+    # EXCEPT for WebEx exercises - they should NOT have session parameters added
     use_proxy = False
     activity_url_with_params = content_url
     
-    if content_url and (is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url:
+    # Check if this is a WebEx exercise (should not have session parameters)
+    is_webex = content_url and '/web_ex_' in content_url
+    
+    if content_url and (is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url and not is_webex:
         # Build session parameters matching the working codebase pattern
         # grp: group_name (or course_instance.id as fallback)
         grp = course_instance.group_name if course_instance and course_instance.group_name else (str(course_instance.id) if course_instance else 'default')

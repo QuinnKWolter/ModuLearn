@@ -1,4 +1,5 @@
 {% extends 'content_base.html' %}
+{% load static %}
 
 {% block content %}
 <div id="module-frame-container">
@@ -46,12 +47,9 @@
   const contentUrl = "{{ content_url|escapejs }}";
   const useProxy = {{ use_proxy|yesno:"true,false" }};
   const iframeSrc = "{{ iframe_src|escapejs }}";
+  const moduleId = {{ module.id }};
 
-  console.log("Selected module protocol:", selectedProtocol || "(none)");
-  console.log("Content URL:", contentUrl);
-  console.log("Use proxy:", useProxy);
-  console.log("Iframe src:", iframeSrc);
-  console.log("Current iframe src:", document.getElementById('content-iframe').src);
+
 
   const isPreview = {{ preview_mode|yesno:"true,false" }};
 
@@ -68,12 +66,10 @@
   });
 
   document.addEventListener('securitypolicyviolation', function(e) {
-    console.log('CSP Violation detected:', e);
     // Check if this is a frame-ancestors violation (iframe blocking)
     if (e.violatedDirective === 'frame-ancestors' || 
         e.violatedDirective.includes('frame-ancestors') ||
         (e.blockedURI && iframeSrc && e.blockedURI.includes(new URL(iframeSrc).hostname))) {
-      console.log('Frame-ancestors violation - showing blocked notice');
       showBlockedNotice(
         `This tool cannot be embedded in an iframe due to Content Security Policy restrictions. ` +
         `The tool only allows framing from specific origins. ` +
@@ -82,37 +78,22 @@
     }
   });
   
-  // Also check for iframe load errors
+  // Check for iframe load errors
   iframe.addEventListener('error', function(e) {
-    console.log('Iframe load error:', e);
-    // Check if iframe is still empty after a delay
     setTimeout(function() {
       try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc || !iframeDoc.body || iframeDoc.body.innerHTML.trim() === '') {
-          console.log('Iframe appears empty - may be blocked by CSP');
           showBlockedNotice(
             `The tool failed to load. This may be due to Content Security Policy restrictions. ` +
             `Please use the "Open in New Window" button below to access this activity.`
           );
         }
       } catch (e) {
-        // Cross-origin - can't check, but if we get here and iframe is empty, it might be blocked
-        console.log('Cannot check iframe content (cross-origin)');
+        // Cross-origin - can't check
       }
     }, 2000);
   });
-
-  setTimeout(function() {
-    try {
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      if (iframeDoc && iframeDoc.body && iframeDoc.body.innerHTML.trim() === '') {
-        console.warn("Iframe appears empty - may be blocked by CSP");
-      }
-    } catch (e) {
-      console.log("Iframe cross-origin (expected for external tools)");
-    }
-  }, 3000);
 
   function showBlockedNotice(reason) {
     blockedNotice.classList.remove('hidden');
@@ -129,7 +110,9 @@
 
   function probeSplice() {
     const iframe = document.getElementById('content-iframe');
-    if (!iframe || !iframe.contentWindow) return;
+    if (!iframe || !iframe.contentWindow) {
+      return;
+    }
     const probes = [
       { subject: 'SPLICE.getState', message_id: uuid() },
       { subject: 'SPLICE.ping', message_id: uuid() },
@@ -141,59 +124,94 @@
   }
 
   window.addEventListener('message', function(event) {
+    // Parse message data - handle both object and string formats
+    let messageData = event.data;
+    if (typeof messageData === 'string') {
+      try {
+        messageData = JSON.parse(messageData);
+      } catch (e) {
+        // Not JSON, keep as string
+      }
+    }
+    
+    const data = messageData;
+
     const expectedOrigins = new Set([
       window.location.origin,
       'https://codecheck.me', 'https://codecheck.io',
       'http://adapt2.sis.pitt.edu', 'http://pawscomp2.sis.pitt.edu', 'http://columbus.exp.sis.pitt.edu',
       'https://adapt2.sis.pitt.edu', 'https://pawscomp2.sis.pitt.edu', 'https://columbus.exp.sis.pitt.edu',
       'https://pcrs.utm.utoronto.ca/',
+      'https://acos.cs.vt.edu',
     ]);
 
-    if (!expectedOrigins.has(event.origin)) return;
+    const isExpectedOrigin = expectedOrigins.has(event.origin);
+    if (!isExpectedOrigin) {
+      return;
+    }
 
-    if (event.data.subject === 'SPLICE.getState') {
+    // Handle SPLICE.getState request
+    if (data && typeof data === 'object' && data.subject === 'SPLICE.getState') {
       const stateScript = document.getElementById('state-data');
       let storedState = stateScript ? JSON.parse(stateScript.textContent) : null;
       if (storedState) {
         if (typeof storedState === 'string') storedState = JSON.parse(storedState);
-        document.getElementById('content-iframe').contentWindow.postMessage({
+        const response = {
           subject: 'SPLICE.getState.response',
-          message_id: event.data.message_id,
+          message_id: data.message_id,
           state: storedState
-        }, event.origin);
+        };
+        document.getElementById('content-iframe').contentWindow.postMessage(response, event.origin);
       }
+      return;
     }
 
-    if (event.data.subject === 'lti.frameResize') return;
+    // Handle LTI frame resize
+    if (data && typeof data === 'object' && data.subject === 'lti.frameResize') {
+      return;
+    }
 
-    if (event.data.subject === 'SPLICE.reportScoreAndState') {
-      if (isPreview) return;
+    // Handle SPLICE.reportScoreAndState
+    if (data && typeof data === 'object' && data.subject === 'SPLICE.reportScoreAndState') {
+      if (isPreview) {
+        return;
+      }
+
       let progress = 0;
-      if (event.data.state && event.data.state.scoreText) {
-        const scoreText = event.data.state.scoreText;
+      if (data.state && data.state.scoreText) {
+        const scoreText = data.state.scoreText;
         if (scoreText.includes('/')) {
           const [completed, total] = scoreText.split('/').map(num => parseInt(num));
           progress = (completed / total) * 100;
         }
       }
 
+      const progressData = {
+        data: [{
+          activityId: '{{ module.id }}',
+          completion: data.score === 1.0,
+          score: (data.score || 0) * 100,
+          success: (data.score || 0) >= 0.7,
+          progress: progress,
+          response: data.state
+        }]
+      };
+
       fetch('{% url "courses:update_module_progress" module.id %}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-        body: JSON.stringify({
-          data: [{
-            activityId: '{{ module.id }}',
-            completion: event.data.score === 1.0,
-            score: event.data.score * 100,
-            success: event.data.score >= 0.7,
-            progress: progress,
-            response: event.data.state
-          }]
-        })
+        body: JSON.stringify(progressData)
       })
       .then(response => response.json())
-      .then(json => console.log('Progress updated:', json))
-      .catch(error => console.error('Error updating progress:', error));
+      .catch(error => {
+        console.error('Error updating progress:', error);
+      });
+      return;
+    }
+
+    // Handle SPLICE.sendEvent (event logging only, no progress update)
+    if (data && typeof data === 'object' && data.subject === 'SPLICE.sendEvent') {
+      return;
     }
   });
 </script>
