@@ -240,15 +240,28 @@ class ModuleProgress(models.Model):
             if 'score' in activity_data:
                 self.score = float(activity_data['score'])
                 print(f"Updated score: {self.score}")
-            if 'progress' in activity_data:
-                self.progress = float(activity_data['progress']) / 100.0
-                print(f"Updated progress: {self.progress}")
-            if 'success' in activity_data:
-                self.success = bool(activity_data['success'])
-                print(f"Updated success: {self.success}")
+            
+            # Handle completion first - if completed, progress should be 1.0
             if 'completion' in activity_data:
                 self.is_complete = bool(activity_data['completion'])
                 print(f"Updated completion: {self.is_complete}")
+                # If module is completed, set progress to 1.0 regardless of progress field
+                if self.is_complete:
+                    self.progress = 1.0
+                    print(f"Set progress to 1.0 because module is complete")
+                elif 'progress' in activity_data:
+                    # Only use progress field if not completed
+                    self.progress = float(activity_data['progress']) / 100.0
+                    print(f"Updated progress: {self.progress}")
+            elif 'progress' in activity_data:
+                # If no completion field, use progress field
+                self.progress = float(activity_data['progress']) / 100.0
+                print(f"Updated progress: {self.progress}")
+            
+            if 'success' in activity_data:
+                self.success = bool(activity_data['success'])
+                print(f"Updated success: {self.success}")
+            
             if 'response' in activity_data:
                 self.state_data = activity_data['response']
             
