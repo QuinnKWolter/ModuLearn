@@ -14,19 +14,21 @@
   <div class="mb-3">
     <div class="flex justify-between items-center mb-1">
       <span class="text-xs text-gray-500 dark:text-gray-400">Progress</span>
-      <span class="text-xs font-semibold">{{ course_instance.user_enrollment.course_progress.overall_progress|floatformat:0 }}%</span>
+      <span class="text-xs font-semibold">{{ course_instance.user_enrollment.course_progress.overall_progress|default:0|floatformat:0 }}%</span>
     </div>
     <div class="progress h-1.5">
+      {% with progress_pct=course_instance.user_enrollment.course_progress.overall_progress|default:0 %}
       <div class="progress-bar bg-green-500"
            role="progressbar"
-           style="width: {{ course_instance.user_enrollment.course_progress.overall_progress|floatformat:0 }}%"
-           aria-valuenow="{{ course_instance.user_enrollment.course_progress.overall_progress|floatformat:0 }}"
+           style="width: {{ progress_pct|floatformat:0 }}%; min-width: 0%; display: block;"
+           aria-valuenow="{{ progress_pct|floatformat:0 }}"
            aria-valuemin="0"
            aria-valuemax="100">
       </div>
+      {% endwith %}
     </div>
     <div class="flex justify-between mt-1">
-      <span class="text-xs text-gray-500 dark:text-gray-400">Score: {{ course_instance.user_enrollment.course_progress.overall_score|floatformat:1 }}%</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400">Score: {{ course_instance.user_enrollment.course_progress.overall_score|default:0|floatformat:1 }}%</span>
     </div>
   </div>
   {% endif %}

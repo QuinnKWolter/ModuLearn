@@ -218,7 +218,7 @@ class ModuleProgress(models.Model):
         if self.progress >= 1.0:
             print("Module is completed, updating course progress")
             course_progress = self.enrollment.course_progress
-            course_progress.recalculate_progress()
+            course_progress.update_progress()
             # Submit updated grade to Canvas
             course_progress.submit_grade_to_canvas()
 
