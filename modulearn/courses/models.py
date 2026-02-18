@@ -391,23 +391,48 @@ class CourseProgress(models.Model):
     def update_progress(self):
         """Calculate overall course progress based on module progress"""
         print("\nUpdating CourseProgress...")
-        module_progress = ModuleProgress.objects.filter(enrollment=self.enrollment)
-        total_modules = Module.objects.filter(
+        # Get all modules for this course
+        all_modules = Module.objects.filter(
             unit__course=self.enrollment.course_instance.course
-        ).count()
+        )
+        total_modules = all_modules.count()
+        
+        # Get all ModuleProgress records for this enrollment
+        module_progress_qs = ModuleProgress.objects.filter(enrollment=self.enrollment)
+        
+        # Create a dictionary mapping module_id to progress for quick lookup
+        progress_dict = {mp.module_id: mp for mp in module_progress_qs}
         
         if total_modules > 0:
-            completed = module_progress.filter(is_complete=True).count()
+            # Sum progress from all modules (0.0 for modules without progress records)
+            total_progress = 0.0
+            total_score = 0.0
+            completed = 0
+            
+            for module in all_modules:
+                mp = progress_dict.get(module.id)
+                if mp:
+                    module_prog = getattr(mp, 'progress', 0.0) or 0.0
+                    module_score = getattr(mp, 'score', 0.0) or 0.0
+                    total_progress += module_prog
+                    total_score += module_score
+                    if getattr(mp, 'is_complete', False):
+                        completed += 1
+                # If no ModuleProgress record exists, it contributes 0.0 to the sum
+            
+            print(f"Total modules: {total_modules}")
             print(f"Completed modules: {completed}")
-            total_progress = sum(getattr(mp, 'progress', 0) or 0 for mp in module_progress)
-            print(f"Total progress: {total_progress}")
-            total_score = sum(getattr(mp, 'score', 0) or 0 for mp in module_progress)
-            print(f"Total score: {total_score}")
+            print(f"Total progress sum: {total_progress}")
+            print(f"Total score sum: {total_score}")
             
             self.modules_completed = completed
             self.total_modules = total_modules
-            self.overall_progress = (total_progress / total_modules) * 100 if total_modules > 0 else 0
-            self.overall_score = (total_score / total_modules) if total_modules > 0 else 0
+            # Calculate average progress: sum of all module progress (0-1 each) / total_modules, then * 100 for percentage
+            self.overall_progress = (total_progress / total_modules) * 100 if total_modules > 0 else 0.0
+            # Calculate average score: sum of all module scores / total_modules
+            self.overall_score = (total_score / total_modules) if total_modules > 0 else 0.0
+            print(f"Calculated overall_progress: {self.overall_progress}%")
+            print(f"Calculated overall_score: {self.overall_score}%")
             self.save()
             
             # Submit grade to Canvas
