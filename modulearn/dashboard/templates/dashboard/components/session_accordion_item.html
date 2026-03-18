@@ -138,15 +138,17 @@
                   <td>
                     <div class="flex items-center gap-2">
                       <div class="progress flex-1 h-1.5" style="min-width: 60px;">
+                        {% with progress_pct=enrollment.course_progress.overall_progress|default:0 %}
                         <div class="progress-bar bg-green-500"
                              role="progressbar"
-                             style="width: {{ enrollment.course_progress.overall_progress|floatformat:0 }}%"
-                             aria-valuenow="{{ enrollment.course_progress.overall_progress|floatformat:0 }}"
+                             style="width: {{ progress_pct|floatformat:0 }}%; min-width: 0%; display: block;"
+                             aria-valuenow="{{ progress_pct|floatformat:0 }}"
                              aria-valuemin="0"
                              aria-valuemax="100">
                         </div>
+                        {% endwith %}
                       </div>
-                      <span class="text-xs font-semibold whitespace-nowrap">{{ enrollment.course_progress.overall_progress|floatformat:0 }}%</span>
+                      <span class="text-xs font-semibold whitespace-nowrap">{{ enrollment.course_progress.overall_progress|default:0|floatformat:0 }}%</span>
                     </div>
                   </td>
                   <td class="text-center">

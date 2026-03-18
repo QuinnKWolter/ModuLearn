@@ -21,17 +21,19 @@
           <!-- Progress Bar -->
           <div class="mb-3">
             <div class="progress h-2.5">
+              {% with progress_pct=enrollment.course_progress.overall_progress|default:0 %}
               <div class="progress-bar bg-green-500"
                    role="progressbar"
-                   style="width: {{ enrollment.course_progress.overall_progress|floatformat:0 }}%"
-                   aria-valuenow="{{ enrollment.course_progress.overall_progress|floatformat:0 }}"
+                   style="width: {{ progress_pct|floatformat:0 }}%; min-width: 0%; display: block;"
+                   aria-valuenow="{{ progress_pct|floatformat:0 }}"
                    aria-valuemin="0"
                    aria-valuemax="100">
               </div>
+              {% endwith %}
             </div>
             <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-              <span>Progress: {{ enrollment.course_progress.overall_progress|floatformat:1 }}%</span>
-              <span>Score: {{ enrollment.course_progress.overall_score|floatformat:1 }}%</span>
+              <span>Progress: {{ enrollment.course_progress.overall_progress|default:0|floatformat:1 }}%</span>
+              <span>Score: {{ enrollment.course_progress.overall_score|default:0|floatformat:1 }}%</span>
             </div>
           </div>
 
