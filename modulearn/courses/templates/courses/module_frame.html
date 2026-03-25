@@ -45,13 +45,13 @@
 <script>
   const selectedProtocol = "{{ selected_protocol|default:'' }}";
   const contentUrl = "{{ content_url|escapejs }}";
-  const useProxy = {{ use_proxy|yesno:"true,false" }};
+  const useProxy = ("{{ use_proxy|yesno:'true,false' }}" === "true");
   const iframeSrc = "{{ iframe_src|escapejs }}";
-  const moduleId = {{ module.id }};
+  const moduleId = Number("{{ module.id }}");
 
 
 
-  const isPreview = {{ preview_mode|yesno:"true,false" }};
+  const isPreview = ("{{ preview_mode|yesno:'true,false' }}" === "true");
 
   // CSP / Iframe Load Error Detection
   let iframeLoaded = false;
@@ -139,7 +139,6 @@
     const expectedOrigins = new Set([
       window.location.origin,
       'https://codecheck.me', 'https://codecheck.io',
-      'http://adapt2.sis.pitt.edu', 'http://pawscomp2.sis.pitt.edu', 'http://columbus.exp.sis.pitt.edu',
       'https://adapt2.sis.pitt.edu', 'https://pawscomp2.sis.pitt.edu', 'https://columbus.exp.sis.pitt.edu',
       'https://pcrs.utm.utoronto.ca/',
       'https://acos.cs.vt.edu',

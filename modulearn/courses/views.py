@@ -37,6 +37,21 @@ User = get_user_model()
 # Configure logging
 logger = logging.getLogger(__name__)
 
+def force_https_url(url: str) -> str:
+    """
+    Convert http:// URLs to https://.
+    This intentionally avoids the internal /proxy/ rewriting for module iframes.
+    """
+    if not url:
+        return url
+    try:
+        u = urlparse(url)
+        if u.scheme == 'http':
+            return urlunparse(('https', u.netloc, u.path, u.params, u.query, u.fragment))
+        return url
+    except Exception:
+        return url
+
 def to_path_style_proxy(url: str) -> str:
     """Convert URL to path-style proxy format for iframe src."""
     from urllib.parse import urlparse
@@ -489,11 +504,8 @@ def launch_iframe_module(request, instance_id, module_id):
             f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
         )
         
-        # Check if we need to proxy HTTP content for HTTPS embedding
-        parsed_final = urlparse(activity_url_with_params)
-        scheme = parsed_final.scheme
-        hostname = parsed_final.hostname
-        use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
+        # Force HTTPS for iframe embedding (no proxy rewriting)
+        activity_url_with_params = force_https_url(activity_url_with_params)
     
     logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
     logger.info(f"Module {module.id} - Original content_url: {original_content_url}")
@@ -527,14 +539,10 @@ def launch_iframe_module(request, instance_id, module_id):
             f"LTI Launch URL generated: module={module.id}, tool={lti_tool}, "
             f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
         )
-    elif use_proxy:
-        # Apply proxy to the URL with session parameters
-        iframe_src = to_path_style_proxy(activity_url_with_params)
-        logger.info(f"Module {module.id}: Applied proxy to activity URL: {iframe_src}")
     else:
-        # Use the URL with session parameters directly
-        iframe_src = activity_url_with_params
-        logger.info(f"Module {module.id}: Final iframe_src (direct): {iframe_src}")
+        # Use the URL with session parameters directly, forcing HTTPS if needed
+        iframe_src = force_https_url(activity_url_with_params)
+        logger.info(f"Module {module.id}: Final iframe_src (direct, https): {iframe_src}")
 
     context = {
         'module': module,
@@ -689,11 +697,8 @@ def preview_iframe_module(request, module_id):
             f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
         )
         
-        # Check if we need to proxy HTTP content for HTTPS embedding
-        parsed_final = urlparse(activity_url_with_params)
-        scheme = parsed_final.scheme
-        hostname = parsed_final.hostname
-        use_proxy = scheme == 'http' and hostname in getattr(settings, 'PROXY_ALLOWED_HOSTS', [])
+        # Force HTTPS for iframe embedding (no proxy rewriting)
+        activity_url_with_params = force_https_url(activity_url_with_params)
     
     logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
     logger.debug(f"Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
@@ -722,13 +727,9 @@ def preview_iframe_module(request, module_id):
             f"&usr={request.user.id}&grp=preview&module_id={module.id}"
         )
         logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}, sub={lti_sub}")
-    elif use_proxy:
-        # Apply proxy to the URL with session parameters
-        iframe_src = to_path_style_proxy(activity_url_with_params)
-        logger.debug(f"Applied proxy to preview activity URL: {iframe_src}")
     else:
-        # Use the URL with session parameters directly
-        iframe_src = activity_url_with_params
+        # Use the URL with session parameters directly, forcing HTTPS if needed
+        iframe_src = force_https_url(activity_url_with_params)
 
     context = {
         'module': module,
