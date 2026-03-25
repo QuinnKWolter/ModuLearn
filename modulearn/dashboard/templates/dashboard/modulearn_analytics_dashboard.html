@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ModuLearn Analytics Dashboard - ModuLearn{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  {% include 'dashboard/components/modulearn_dashboard_header.html' %}
+
+  <div id="dashboardContent" class="hidden">
+    {% include 'dashboard/components/dashboard_kpi_cards.html' %}
+    {% include 'dashboard/components/dashboard_mastery_grid.html' %}
+  </div>
+
+  {% include 'dashboard/components/dashboard_modals.html' %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include 'dashboard/components/dashboard_styles.html' %}
+{% endblock %}
+
+{% block extra_js %}
+{{ course_instances|json_script:"modulearn-course-instances-data" }}
+<script>
+  const instancesEl = document.getElementById('modulearn-course-instances-data');
+  window.modulearnCourseInstances = instancesEl ? JSON.parse(instancesEl.textContent) : [];
+  window.preselectedInstanceId = "{{ preselected_instance_id|escapejs }}";
+</script>
+{% include 'dashboard/components/analytics_renderer.html' %}
+{% include 'dashboard/components/modulearn_dashboard_fetcher.html' %}
+{% endblock %}
+

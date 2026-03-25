@@ -82,7 +82,7 @@
                 data-group-name="{{ course_instance.group_name }}">
           <i class="bi bi-people mr-1"></i>Manage Enrollment
         </button>
-        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-sm btn-outline-info">
+        <a href="{% url 'dashboard:modulearn_analytics_dashboard' %}?instance_id={{ course_instance.id }}" class="btn btn-sm btn-outline-info">
           <i class="bi bi-graph-up mr-1"></i>Analytics
         </a>
       </div>

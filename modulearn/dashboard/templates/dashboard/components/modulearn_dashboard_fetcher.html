@@ -1,0 +1,94 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const select = document.getElementById('modulearnInstanceSelect');
+  const btn = document.getElementById('modulearnFetchBtn');
+  const btnText = document.getElementById('modulearnFetchBtnText');
+  const spinner = document.getElementById('modulearnFetchSpinner');
+  const progressContainer = document.getElementById('modulearnFetchProgressContainer');
+  const progressBar = document.getElementById('modulearnFetchProgressBar');
+  const progressText = document.getElementById('modulearnFetchProgressText');
+  const progressPercent = document.getElementById('modulearnFetchProgressPercent');
+
+  if (!select || !btn) return;
+
+  // Populate instance dropdown from backend JSON
+  const instances = window.modulearnCourseInstances || [];
+  instances.forEach(inst => {
+    const opt = document.createElement('option');
+    opt.value = inst.id;
+    opt.textContent = inst.label;
+    select.appendChild(opt);
+  });
+
+  if (window.preselectedInstanceId) {
+    select.value = window.preselectedInstanceId;
+  }
+
+  btn.disabled = !select.value;
+  select.addEventListener('change', () => {
+    btn.disabled = !select.value;
+  });
+
+  btn.addEventListener('click', async () => {
+    const instanceId = (select.value || '').trim();
+    if (!instanceId) return;
+
+    const apiUrl = btn.dataset.apiUrl;
+    if (!apiUrl) return;
+
+    btn.disabled = true;
+    if (btnText) btnText.textContent = 'Loading...';
+    if (spinner) spinner.classList.remove('hidden');
+    if (progressContainer) progressContainer.classList.remove('hidden');
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressPercent) progressPercent.textContent = '0%';
+    if (progressText) progressText.textContent = 'Fetching analytics...';
+
+    try {
+      if (progressBar) progressBar.style.width = '15%';
+      if (progressPercent) progressPercent.textContent = '15%';
+      const url = `${apiUrl}?${new URLSearchParams({ instance_id: instanceId })}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || `Request failed: ${res.status}`);
+      }
+
+      if (progressBar) progressBar.style.width = '85%';
+      if (progressPercent) progressPercent.textContent = '85%';
+      if (progressText) progressText.textContent = 'Rendering dashboard...';
+
+      window.responseData = data;
+      responseData = data; // from analytics_renderer.html
+
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressPercent) progressPercent.textContent = '100%';
+      if (progressText) progressText.textContent = 'Complete!';
+
+      setTimeout(() => {
+        if (progressContainer) progressContainer.classList.add('hidden');
+        const dashboardContent = document.getElementById('dashboardContent');
+        if (dashboardContent) {
+          dashboardContent.classList.remove('hidden');
+          dashboardContent.classList.add('fade-in');
+        }
+        renderDashboard();
+      }, 200);
+    } catch (e) {
+      console.error(e);
+      showError(`Failed to load ModuLearn analytics: ${e.message || e}`);
+      if (progressContainer) progressContainer.classList.add('hidden');
+    } finally {
+      btn.disabled = !select.value;
+      if (btnText) btnText.textContent = 'Load Analytics';
+      if (spinner) spinner.classList.add('hidden');
+    }
+  });
+
+  // Auto-load if preselected
+  if (select.value) {
+    btn.click();
+  }
+});
+</script>
+

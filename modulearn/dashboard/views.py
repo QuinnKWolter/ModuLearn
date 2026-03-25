@@ -100,6 +100,240 @@ def instructor_dashboard(request):
         'legacy_groups': legacy_groups
     })
 
+
+@login_required
+def modulearn_analytics_dashboard(request):
+    """
+    ModuLearn-native analytics dashboard (non-legacy).
+    Reuses the legacy dashboard KPI/grid templates, but sources data from ORM models.
+    """
+    if not request.user.is_instructor:
+        return redirect('dashboard:student_dashboard')
+
+    preselected_instance_id = (request.GET.get('instance_id') or '').strip()
+
+    instances_qs = CourseInstance.objects.filter(
+        instructors=request.user
+    ).select_related('course').order_by('-created_at')
+
+    # Provide lightweight JSON for dropdown (avoid serializing full model)
+    course_instances = [{
+        'id': str(ci.id),
+        'label': f"{ci.course.title if ci.course else 'Untitled Course'} — {ci.group_name or 'Session'}",
+    } for ci in instances_qs]
+
+    return render(request, 'dashboard/modulearn_analytics_dashboard.html', {
+        'course_instances': course_instances,
+        'preselected_instance_id': preselected_instance_id,
+    })
+
+
+@login_required
+def fetch_modulearn_instance_analytics(request):
+    """
+    API endpoint: return a legacy-shaped analytics response for a ModuLearn CourseInstance.
+    Query param: ?instance_id=<CourseInstance.id>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    instance_id = (request.GET.get('instance_id') or '').strip()
+    if not instance_id:
+        return JsonResponse({'error': 'instance_id is required'}, status=400)
+
+    if not request.user.is_instructor:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    try:
+        from courses.models import Unit, Module, ModuleProgress
+
+        course_instance = CourseInstance.objects.select_related('course').get(id=instance_id)
+        if not course_instance.instructors.filter(id=request.user.id).exists():
+            return JsonResponse({'error': 'Not found'}, status=404)
+
+        # Include all enrollments for the instance (some may be inactive, but analytics should not silently drop them)
+        enrollments = Enrollment.objects.filter(
+            course_instance=course_instance,
+        ).select_related('student')
+
+        course = course_instance.course
+        units = list(Unit.objects.filter(course=course).order_by('id'))
+        modules = list(Module.objects.filter(unit__in=units).select_related('unit').order_by('id'))
+
+        def _module_type_key(m):
+            # Best-effort bucketing for "module type" columns.
+            # Prefer platform_name (human-facing), then provider_id, otherwise a fallback.
+            key = (getattr(m, 'platform_name', '') or '').strip()
+            if key:
+                return key
+            key = (getattr(m, 'provider_id', '') or '').strip()
+            if key:
+                return key
+            # Try JSON content_data if present
+            try:
+                cd = getattr(m, 'content_data', None) or {}
+                if isinstance(cd, dict):
+                    t = (cd.get('type') or cd.get('module_type') or cd.get('kind') or '').strip()
+                    if t:
+                        return t
+            except Exception:
+                pass
+            return 'Modules'
+
+        # Determine module types (these become "resource columns")
+        type_keys = []
+        for m in modules:
+            k = _module_type_key(m)
+            if k not in type_keys:
+                type_keys.append(k)
+
+        resources = [
+            {'id': f"type::{k}", 'name': k}
+            for k in type_keys
+        ]
+
+        # Precompute modules per unit and per type for efficient aggregation
+        modules_by_unit = {}
+        modules_by_unit_and_type = {}
+        for m in modules:
+            modules_by_unit.setdefault(m.unit_id, []).append(m)
+            k = _module_type_key(m)
+            modules_by_unit_and_type.setdefault((m.unit_id, k), []).append(m)
+
+        topics = [{
+            'id': str(u.id),
+            'name': u.title,
+            'order': idx + 1,
+            'activities': {
+                # Keyed by resource id (type::<key>)
+                **{
+                    f"type::{k}": [
+                        {'id': str(m.id), 'name': m.title, 'url': m.content_url or ''}
+                        for m in modules_by_unit_and_type.get((u.id, k), [])
+                    ]
+                    for k in type_keys
+                }
+            }
+        } for idx, u in enumerate(units)]
+
+        enrollment_ids = [e.id for e in enrollments]
+        module_ids = [m.id for m in modules]
+
+        progress_qs = ModuleProgress.objects.filter(
+            enrollment_id__in=enrollment_ids,
+            module_id__in=module_ids,
+        ).values('enrollment_id', 'module_id', 'progress', 'score')
+
+        progress_by_enrollment = {}
+        for row in progress_qs:
+            progress_by_enrollment.setdefault(row['enrollment_id'], {})[row['module_id']] = row
+
+        learners = []
+        for e in enrollments:
+            per_topic = {}
+            per_activities = {}
+            module_progress_map = progress_by_enrollment.get(e.id, {})
+
+            for u in units:
+                topic_values = {}
+                all_ps = []
+
+                for k in type_keys:
+                    type_modules = modules_by_unit_and_type.get((u.id, k), [])
+                    if type_modules:
+                        ps = []
+                        for m in type_modules:
+                            mp = module_progress_map.get(m.id)
+                            ps.append(float(mp.get('progress') or 0.0) if mp else 0.0)
+                        avg_p = sum(ps) / len(ps)
+                        all_ps.extend(ps)
+                    else:
+                        avg_p = 0.0
+
+                    topic_values[f"type::{k}"] = {'k': 0.0, 'p': avg_p}
+
+                overall_p = (sum(all_ps) / len(all_ps)) if all_ps else 0.0
+
+                per_topic[str(u.id)] = {
+                    'values': topic_values,
+                    'overall': {'k': 0.0, 'p': overall_p}
+                }
+
+                per_activities[str(u.id)] = {}
+                for k in type_keys:
+                    res_id = f"type::{k}"
+                    per_activities[str(u.id)][res_id] = {}
+                    for m in modules_by_unit_and_type.get((u.id, k), []):
+                        mp = module_progress_map.get(m.id) or {}
+                        p = float(mp.get('progress') or 0.0) if mp else 0.0
+                        score = mp.get('score')
+                        kk = (float(score) / 100.0) if score is not None else 0.0
+                        per_activities[str(u.id)][res_id][str(m.id)] = {
+                            'id': str(m.id),
+                            'name': m.title,
+                            'url': m.content_url or '',
+                            'values': {'k': kk, 'p': p}
+                        }
+
+            learners.append({
+                'id': e.student.username,
+                'name': getattr(e.student, 'full_name', '') or e.student.username,
+                'email': getattr(e.student, 'email', '') or '',
+                'isHidden': False,
+                'state': {
+                    'topics': per_topic,
+                    'activities': per_activities,
+                }
+            })
+
+        # Class average
+        class_avg_topics = {}
+        for u in units:
+            values = {}
+            overall_vals = []
+            for r in resources:
+                rid = r['id']
+                if learners:
+                    vals = [l['state']['topics'][str(u.id)]['values'].get(rid, {}).get('p', 0.0) for l in learners]
+                    avg_p = sum(vals) / len(vals)
+                else:
+                    avg_p = 0.0
+                values[rid] = {'k': 0.0, 'p': avg_p}
+                overall_vals.append(avg_p)
+
+            overall_p = (sum(overall_vals) / len(overall_vals)) if overall_vals else 0.0
+            class_avg_topics[str(u.id)] = {
+                'values': values,
+                'overall': {'k': 0.0, 'p': overall_p},
+            }
+
+        response_data = {
+            'learners': learners,
+            'topics': topics,
+            'resources': resources,
+            'groups': [{
+                'name': 'Class Average',
+                'state': {'topics': class_avg_topics}
+            }],
+            'context': {
+                'group': {
+                    'name': f"{course.title if course else 'Course'} — {course_instance.group_name or 'Session'}"
+                },
+                'learnerId': None,
+                'course_instance_id': str(course_instance.id),
+                'course_id': str(course.id) if course else None,
+                'course_name': course.title if course else '',
+                'domain': 'modulearn',
+            }
+        }
+
+        return JsonResponse(response_data)
+    except CourseInstance.DoesNotExist:
+        return JsonResponse({'error': 'CourseInstance not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error building ModuLearn analytics: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
 @login_required
 def generate_course_auth_url(request):
     """

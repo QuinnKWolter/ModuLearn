@@ -1,0 +1,54 @@
+{% load static %}
+<div class="mb-6">
+  <div class="rounded-xl shadow-lg overflow-hidden" style="background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);">
+    <div class="text-white p-6">
+      <div class="flex items-center mb-6">
+        <div class="bg-white/20 rounded-full p-3 mr-3">
+          <i class="text-gray-900 fas fa-chart-line text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl mb-1 font-bold">ModuLearn Analytics Dashboard</h1>
+          <p class="mb-0 opacity-75">Track student progress across your ModuLearn course sessions</p>
+        </div>
+      </div>
+
+      <form id="modulearnDashboardForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <label for="modulearnInstanceSelect" class="block font-semibold text-white text-sm mb-1">
+            Course Session
+            <small class="text-white/50 block text-xs font-normal">
+              (Select a ModuLearn course instance)
+            </small>
+          </label>
+          <select class="form-select form-select-lg" id="modulearnInstanceSelect">
+            <option value="">-- Select a course session --</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button type="button"
+                  class="btn btn-dark btn-lg px-8 font-bold w-full"
+                  id="modulearnFetchBtn"
+                  data-api-url="{% url 'dashboard:fetch_modulearn_instance_analytics' %}">
+            <i class="fas fa-rocket mr-2"></i>
+            <span id="modulearnFetchBtnText">Load Analytics</span>
+            <span class="spinner-border spinner-border-sm ml-2 hidden" id="modulearnFetchSpinner"></span>
+          </button>
+        </div>
+      </form>
+
+      <div id="modulearnFetchProgressContainer" class="mt-4 hidden">
+        <div class="flex justify-between items-center mb-2">
+          <small class="text-white/50" id="modulearnFetchProgressText">Loading...</small>
+          <small class="text-white/50" id="modulearnFetchProgressPercent">0%</small>
+        </div>
+        <div class="progress" style="height: 8px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated"
+               id="modulearnFetchProgressBar"
+               role="progressbar"
+               style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

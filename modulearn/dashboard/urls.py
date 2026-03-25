@@ -8,6 +8,7 @@ urlpatterns = [
     path('student/', views.student_dashboard, name='student_dashboard'),
     path('instructor/', views.instructor_dashboard, name='instructor_dashboard'),
     path('legacy/', views.legacy_dashboard, name='legacy_dashboard'),
+    path('modulearn-analytics/', views.modulearn_analytics_dashboard, name='modulearn_analytics_dashboard'),
     path("api/generate_course_auth_url/", generate_course_auth_url, name="generate_course_auth_url"),
     path("api/proxy_x_login/", proxy_course_authoring_x_login, name="proxy_course_authoring_x_login"),
     path("api/reset_course_authoring_password/", reset_course_authoring_password_view, name="reset_course_authoring_password"),
@@ -16,4 +17,5 @@ urlpatterns = [
     path("api/fetch_class_list/", views.fetch_class_list, name="fetch_class_list"),
     path("api/discover_course_ids/", views.discover_course_ids, name="discover_course_ids"),
     path("api/course_resources/<str:group_login>/", views.get_course_resources_api, name="get_course_resources_api"),
+    path("api/fetch_modulearn_instance_analytics/", views.fetch_modulearn_instance_analytics, name="fetch_modulearn_instance_analytics"),
 ]

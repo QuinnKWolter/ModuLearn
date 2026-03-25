@@ -216,10 +216,18 @@ def process_launch_data(request, launch_data):
                     defaults={'active': True}
                 )
                 
-                if created or enrollment:
-                    course_progress = CourseProgress.objects.get(enrollment=enrollment)
-                    course_progress.lis_result_sourcedid = launch_data.get('lis_result_sourcedid')
-                    course_progress.save()
+                # Get or create CourseProgress (signal should create it, but handle race condition)
+                course_progress, _ = CourseProgress.objects.get_or_create(
+                    enrollment=enrollment
+                )
+                # Save LTI credentials for grade passback
+                lis_result_sourcedid = launch_data.get('lis_result_sourcedid')
+                if lis_result_sourcedid:
+                    course_progress.lis_result_sourcedid = lis_result_sourcedid
+                    course_progress.save(update_fields=['lis_result_sourcedid'])
+                    logger.info(f"Saved lis_result_sourcedid for enrollment {enrollment.id}: {lis_result_sourcedid[:20]}...")
+                else:
+                    logger.warning(f"No lis_result_sourcedid in launch data for enrollment {enrollment.id}")
             
             return redirect('courses:course_detail', instance_id=course_instance.id)
         except CourseInstance.DoesNotExist:

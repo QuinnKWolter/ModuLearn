@@ -1,0 +1,530 @@
+<script>
+// Shared analytics grid renderer.
+// Expects `window.responseData` (legacy-shaped analytics response) to be populated.
+
+let responseData = null;
+let currentViewMode = 'classAverage';
+
+function updateButtonStates() {
+  document.querySelectorAll('input[name="viewMode"]').forEach(r => {
+    r.checked = (r.value === currentViewMode);
+  });
+}
+
+function renderDashboard() {
+  if (!responseData) return;
+  populateKPIs();
+  updateGrid();
+}
+
+function populateKPIs() {
+  const classAvgData = responseData.groups?.find(g => g.name === 'Class Average');
+  if (!classAvgData) return;
+
+  const courseTitleEl = document.getElementById('courseTitle');
+  if (courseTitleEl) {
+    courseTitleEl.textContent = responseData.context?.group?.name || 'Course Analytics';
+  }
+
+  const learners = responseData.learners || [];
+  const studentsEl = document.getElementById('studentsEnrolled');
+  if (studentsEl) studentsEl.textContent = learners.length;
+
+  // Overall Progress: average across all topic/resource cells in the class-average state
+  let totalPossible = 0;
+  let totalActual = 0;
+  (responseData.topics || []).forEach(topic => {
+    const topicData = classAvgData.state?.topics?.[topic.id];
+    if (!topicData?.values) return;
+    const vals = Object.values(topicData.values);
+    totalPossible += vals.length;
+    vals.forEach(v => {
+      totalActual += (v?.p || 0);
+    });
+  });
+  const overallPct = totalPossible > 0 ? Math.round((totalActual / totalPossible) * 100) : 0;
+  const overallEl = document.getElementById('overallProgress');
+  if (overallEl) overallEl.textContent = `${overallPct}%`;
+
+  // Engagement Score: percent of resources with any activity (>0 progress)
+  let totalResources = 0;
+  let engagedResources = 0;
+  (responseData.topics || []).forEach(topic => {
+    const topicData = classAvgData.state?.topics?.[topic.id];
+    if (!topicData?.values) return;
+    Object.values(topicData.values).forEach(v => {
+      totalResources++;
+      if ((v?.p || 0) > 0) engagedResources++;
+    });
+  });
+  const engagementPct = totalResources > 0 ? Math.round((engagedResources / totalResources) * 100) : 0;
+  const engagementEl = document.getElementById('engagementScore');
+  if (engagementEl) engagementEl.textContent = `${engagementPct}%`;
+
+  // Struggling Students: behind in >30% of active resources (where class avg > 0)
+  let needingHelp = 0;
+  learners.forEach(learner => {
+    const learnerTopics = learner?.state?.topics || {};
+    let struggling = 0;
+    let active = 0;
+    (responseData.topics || []).forEach(topic => {
+      const learnerTopic = learnerTopics?.[topic.id];
+      const classTopic = classAvgData.state?.topics?.[topic.id];
+      const classValues = classTopic?.values || {};
+      Object.keys(classValues).forEach(resourceId => {
+        const classP = classValues?.[resourceId]?.p || 0;
+        if (classP <= 0) return;
+        active++;
+        const learnerP = learnerTopic?.values?.[resourceId]?.p || 0;
+        if (learnerP < (classP * 0.5)) struggling++;
+      });
+    });
+    if (active > 0 && (struggling / active) > 0.3) needingHelp++;
+  });
+  const strugglingEl = document.getElementById('studentsNeedingHelp');
+  if (strugglingEl) strugglingEl.textContent = needingHelp;
+}
+
+function updateGrid() {
+  if (!responseData) return;
+  updateButtonStates();
+  updateViewHeader();
+
+  const masteryGridWrapper = document.getElementById('masteryGrid')?.closest('.overflow-x-auto');
+  const perStudentContent = document.getElementById('perStudentContent');
+  if (!masteryGridWrapper || !perStudentContent) return;
+
+  if (currentViewMode === 'perStudent') {
+    masteryGridWrapper.style.display = 'none';
+    perStudentContent.style.display = 'block';
+    updatePerStudentView();
+  } else {
+    masteryGridWrapper.style.display = 'block';
+    perStudentContent.style.display = 'none';
+    updateMasteryGrid();
+  }
+}
+
+function updateViewHeader() {
+  const titleElement = document.getElementById('viewTitle');
+  const descriptionElement = document.getElementById('viewDescription');
+  const classAvgHelp = document.getElementById('classAverageHelpBtn');
+  const perStudentHelp = document.getElementById('perStudentHelpBtn');
+  if (!titleElement || !descriptionElement) return;
+
+  switch (currentViewMode) {
+    case 'classAverage':
+      titleElement.textContent = 'Class Average';
+      descriptionElement.textContent = 'Average class progress across all topics';
+      if (classAvgHelp) classAvgHelp.classList.remove('hidden');
+      if (perStudentHelp) perStudentHelp.classList.add('hidden');
+      break;
+    case 'perStudent':
+      titleElement.textContent = 'Student Progress Overview';
+      descriptionElement.textContent = 'Individual student progress tracking';
+      if (classAvgHelp) classAvgHelp.classList.add('hidden');
+      if (perStudentHelp) perStudentHelp.classList.remove('hidden');
+      break;
+    default:
+      titleElement.textContent = 'Class Average';
+      descriptionElement.textContent = 'Average class progress across all topics';
+      if (classAvgHelp) classAvgHelp.classList.remove('hidden');
+      if (perStudentHelp) perStudentHelp.classList.add('hidden');
+  }
+}
+
+function updateMasteryGrid() {
+  const gridHeaders = document.getElementById('gridHeaders');
+  const gridBody = document.getElementById('gridBody');
+  if (!gridHeaders || !gridBody) return;
+
+  while (gridHeaders.children.length > 1) {
+    gridHeaders.removeChild(gridHeaders.lastChild);
+  }
+
+  (responseData.resources || []).forEach((resource, idx) => {
+    const th = document.createElement('th');
+    th.className = 'border-0 font-bold text-center py-3';
+    th.style.minWidth = '120px';
+    th.innerHTML = `
+      <div class="flex flex-col items-center">
+        <i class="fas fa-tasks text-blue-600 mb-1"></i>
+        <span class="text-xs text-gray-500 dark:text-gray-400">#${idx + 1}</span>
+        <span class="text-sm break-words">${resource.name}</span>
+      </div>
+    `;
+    gridHeaders.appendChild(th);
+  });
+
+  gridBody.innerHTML = '';
+  const classAvg = responseData.groups?.find(g => g.name === 'Class Average');
+  if (!classAvg) return;
+
+  const sortedTopics = (responseData.topics || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  sortedTopics.forEach(topic => {
+    const row = document.createElement('tr');
+
+    const topicProgress = getTopicProgress(classAvg, topic.id);
+    const progressPercent = Math.round(topicProgress * 100);
+    const topicCell = document.createElement('td');
+    topicCell.className = 'border-0 py-2';
+    topicCell.innerHTML = `
+      <div class="flex items-center">
+        <div class="bg-blue-600 rounded-full flex items-center justify-center mr-3" style="width: 32px; height: 32px;">
+          <span class="text-white font-bold text-sm">${topic.order ?? ''}</span>
+        </div>
+        <div class="flex-1">
+          <div class="font-bold mb-1">${topic.name}</div>
+          <div class="progress" style="height: 6px; background-color: rgba(0,0,0,0.1);">
+            <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; background-color: ${getTextColor(topicProgress)};"></div>
+          </div>
+        </div>
+        <div class="ml-3">
+          <span class="badge font-bold" style="${Object.entries(getBadgeStyle(progressPercent)).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}; min-width: 50px; text-align: center;">${progressPercent}%</span>
+        </div>
+      </div>
+    `;
+    row.appendChild(topicCell);
+
+    (responseData.resources || []).forEach(resource => {
+      const cell = document.createElement('td');
+      const value = getCellValue(classAvg, topic.id, resource.id);
+      const textColor = getTextColor(value);
+      cell.className = 'text-center border-0 py-2 progress-cell cursor-pointer';
+      cell.style.cursor = 'pointer';
+      cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resource.name);
+      cell.innerHTML = `
+        <div class="flex flex-col items-center">
+          <div class="font-bold text-base" style="color: ${textColor};">${Math.round(value * 100)}%</div>
+        </div>
+      `;
+      cell.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+      });
+      cell.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = 'transparent';
+      });
+      row.appendChild(cell);
+    });
+
+    gridBody.appendChild(row);
+  });
+}
+
+function updatePerStudentView() {
+  const tableBody = document.getElementById('studentTableBody');
+  if (!tableBody) return;
+  tableBody.innerHTML = '';
+
+  const learners = responseData.learners || [];
+  const topics = responseData.topics || [];
+
+  learners.forEach(learner => {
+    const topicProgresses = topics.map(topic => learner?.state?.topics?.[topic.id]?.overall?.p || 0);
+    const overall = topicProgresses.reduce((acc, v) => acc + v, 0) / (topicProgresses.length || 1);
+    const progressPercent = Math.max(0, Math.min(100, Math.round(overall * 100)));
+    const topicsCompleted = topicProgresses.filter(p => p >= 0.9).length;
+
+    const row = document.createElement('tr');
+    row.style.cursor = 'pointer';
+    row.onclick = () => showStudentDetails(learner.id);
+    row.innerHTML = `
+      <td class="border-0 py-1 text-center">
+        <div class="flex items-center justify-center">
+          <div class="bg-cyan-500 rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
+            <i class="fas fa-user text-white" style="font-size: 0.7rem;"></i>
+          </div>
+          <div class="font-bold" style="font-size: 0.9rem;">${learner.id}</div>
+        </div>
+      </td>
+      <td class="border-0 py-1 text-center">
+        <div class="flex flex-col items-center">
+          <div class="font-bold text-base mb-1">${progressPercent}%</div>
+          <div class="progress" style="width: 80px; height: 4px; border-radius: 2px;">
+            <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; background-color: ${getTextColor(overall)};"></div>
+          </div>
+        </div>
+      </td>
+      <td class="border-0 py-1 text-center">
+        <div class="flex flex-col items-center">
+          <div class="font-bold text-base mb-1">${topicsCompleted}/${topics.length}</div>
+          <div class="text-gray-500" style="font-size: 0.7rem;">Topics</div>
+        </div>
+      </td>
+      <td class="border-0 py-1 text-center">
+        <div class="flex flex-col items-center">
+          <i class="fas fa-chart-line text-blue-600 mb-1" style="font-size: 1rem;"></i>
+          <div class="text-gray-500" style="font-size: 0.7rem;">Analytics</div>
+        </div>
+      </td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
+
+function getTopicProgress(data, topicId) {
+  const t = data?.state?.topics?.[topicId];
+  if (!t) return 0;
+  if (t.overall?.p !== undefined) return t.overall.p || 0;
+  const vals = Object.values(t.values || {});
+  if (!vals.length) return 0;
+  return vals.reduce((sum, v) => sum + (v?.p || 0), 0) / vals.length;
+}
+
+function getCellValue(data, topicId, resourceId) {
+  return data?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+}
+
+function getTextColor(value) {
+  const percent = Math.round((value || 0) * 100);
+  if (percent === 0) return '#6c757d';
+  if (percent <= 50) {
+    const ratio = percent / 50;
+    const r = Math.round(220 + (255 - 220) * ratio);
+    const g = Math.round(53 + (193 - 53) * ratio);
+    const b = Math.round(69 + (7 - 69) * ratio);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  const ratio = (percent - 50) / 50;
+  const r = Math.round(255 + (40 - 255) * ratio);
+  const g = Math.round(193 + (167 - 193) * ratio);
+  const b = Math.round(7 + (69 - 7) * ratio);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function getBadgeStyle(percent) {
+  if (percent === 0) return { backgroundColor: '#6c757d', color: '#ffffff' };
+  const value = percent / 100;
+  const color = getTextColor(value);
+  return { backgroundColor: color, color: '#ffffff' };
+}
+
+function showError(message) {
+  const toastDiv = document.createElement('div');
+  toastDiv.className = 'fixed top-4 right-4 z-[9999] bg-red-600 text-white rounded-lg shadow-lg px-4 py-3 flex items-center max-w-md';
+  toastDiv.setAttribute('role', 'alert');
+  toastDiv.innerHTML = `
+    <div class="flex-1 text-sm">
+      <i class="fas fa-exclamation-triangle mr-2"></i>
+      ${message}
+    </div>
+    <button class="ml-3 text-white/80 hover:text-white text-lg leading-none" onclick="this.parentElement.remove()">&times;</button>
+  `;
+  document.body.appendChild(toastDiv);
+  setTimeout(() => {
+    if (toastDiv.parentNode) toastDiv.remove();
+  }, 5000);
+}
+
+function showStudentDetails(learnerId) {
+  const learner = responseData.learners?.find(l => l.id === learnerId);
+  if (!learner) return;
+
+  const modalHtml = `
+    <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="studentModal" aria-hidden="true">
+      <div class="modal-backdrop-close absolute inset-0"></div>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+          <h5 class="text-lg font-bold">
+            <i class="fas fa-user-graduate mr-2"></i>
+            Student Details: ${learner.id}
+          </h5>
+          <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Click a cell in the grid to compare this student’s activity progress to peers for that Unit × Module Type.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const existingModal = document.getElementById('studentModal');
+  if (existingModal) existingModal.remove();
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+  modal.show();
+}
+
+function handleCellClick(topicId, resourceId, topicName, resourceName) {
+  const classAvg = responseData.groups?.find(g => g.name === 'Class Average');
+  if (!classAvg) return;
+
+  // Build per-student progress for this cell
+  const classP = classAvg?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+  const students = (responseData.learners || []).map(l => {
+    const p = l?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+    return { id: l.id, name: l.name, p, pct: Math.round(p * 100) };
+  }).sort((a, b) => b.p - a.p);
+
+  // Activity definitions for this topic/resource
+  const topicDef = (responseData.topics || []).find(t => t.id === topicId);
+  const activitiesDef = topicDef?.activities?.[resourceId] || [];
+
+  // Precompute class average per activity (progress p)
+  const classAvgByActivity = {};
+  activitiesDef.forEach(a => {
+    const vals = (responseData.learners || []).map(l => (
+      l?.state?.activities?.[topicId]?.[resourceId]?.[a.id]?.values?.p || 0
+    ));
+    classAvgByActivity[a.id] = vals.length ? (vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+  });
+
+  const safeId = (s) => String(s).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const modalId = `cellModal_${safeId(topicId)}_${safeId(resourceId)}`;
+
+  const modalHtml = `
+    <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="${modalId}" aria-hidden="true">
+      <div class="modal-backdrop-close absolute inset-0"></div>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+          <h5 class="text-lg font-bold">
+            <i class="fas fa-chart-bar mr-2"></i>
+            ${topicName} → ${resourceName}
+          </h5>
+          <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="card h-full"><div class="p-4 text-center">
+              <h6 class="font-bold mb-1">Class Average</h6>
+              <div class="text-3xl font-bold text-blue-600">${Math.round(classP * 100)}%</div>
+            </div></div>
+            <div class="card h-full"><div class="p-4 text-center">
+              <h6 class="font-bold mb-1">Students</h6>
+              <div class="text-3xl font-bold text-blue-600">${students.length}</div>
+            </div></div>
+            <div class="card h-full"><div class="p-4 text-center">
+              <h6 class="font-bold mb-1">Activities</h6>
+              <div class="text-3xl font-bold text-blue-600">${activitiesDef.length}</div>
+            </div></div>
+          </div>
+
+          <div class="card">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <h6 class="font-bold mb-0">Compare a student vs peers</h6>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-0">Select a student to see per-activity progress vs class average.</p>
+                </div>
+                <div class="md:w-80">
+                  <select class="form-select" id="${modalId}_studentSelect">
+                    <option value="">-- Select student --</option>
+                    ${students.map(s => `<option value="${String(s.id).replace(/"/g, '&quot;')}">${s.id} (${s.pct}%)</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              ${activitiesDef.length ? `
+                <div class="overflow-x-auto">
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr>
+                        <th>Activity</th>
+                        <th class="text-center">Selected Student</th>
+                        <th class="text-center">Class Avg</th>
+                        <th class="text-center">Delta</th>
+                      </tr>
+                    </thead>
+                    <tbody id="${modalId}_activityBody">
+                      <tr><td colspan="4" class="text-center text-gray-500 py-4"><em>Select a student to view activity comparisons.</em></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              ` : `<div class="text-gray-500 dark:text-gray-400"><em>No activities defined for this cell.</em></div>`}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h6 class="font-bold mb-0">Peer progress (this cell)</h6>
+            </div>
+            <div class="p-4">
+              <div class="overflow-x-auto">
+                <table class="table table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th class="text-center">Progress</th>
+                      <th class="text-center">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${students.map(s => `
+                      <tr>
+                        <td class="font-semibold">${s.id}</td>
+                        <td class="text-center">
+                          <div class="progress" style="width: 140px; height: 14px; margin: 0 auto;">
+                            <div class="progress-bar" style="width: ${s.pct}%; background-color: ${getTextColor(s.p)};"></div>
+                          </div>
+                        </td>
+                        <td class="text-center font-semibold">${s.pct}%</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  const select = document.getElementById(`${modalId}_studentSelect`);
+  const body = document.getElementById(`${modalId}_activityBody`);
+  if (select && body) {
+    select.addEventListener('change', () => {
+      const learnerId = select.value;
+      const learner = (responseData.learners || []).find(l => String(l.id) === String(learnerId));
+      if (!learner) {
+        body.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-4"><em>Select a student to view activity comparisons.</em></td></tr>`;
+        return;
+      }
+
+      body.innerHTML = activitiesDef.map(a => {
+        const p = learner?.state?.activities?.[topicId]?.[resourceId]?.[a.id]?.values?.p || 0;
+        const avg = classAvgByActivity[a.id] || 0;
+        const delta = p - avg;
+        const deltaPct = Math.round(delta * 100);
+        const deltaStr = deltaPct > 0 ? `+${deltaPct}%` : `${deltaPct}%`;
+        const deltaColor = deltaPct > 0 ? 'text-green-600' : (deltaPct < 0 ? 'text-red-500' : 'text-gray-500');
+        return `
+          <tr>
+            <td class="break-words">${a.name || a.id}</td>
+            <td class="text-center font-semibold">${Math.round(p * 100)}%</td>
+            <td class="text-center text-gray-500">${Math.round(avg * 100)}%</td>
+            <td class="text-center font-bold ${deltaColor}">${deltaStr}</td>
+          </tr>
+        `;
+      }).join('');
+    });
+  }
+
+  const modal = new bootstrap.Modal(document.getElementById(modalId));
+  modal.show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      currentViewMode = this.value;
+      updateGrid();
+      document.querySelectorAll('input[name="viewMode"]').forEach(r => {
+        r.checked = (r.value === currentViewMode);
+      });
+    });
+  });
+
+  const viewModeRadios = document.querySelectorAll('input[name="viewMode"]');
+  if (viewModeRadios.length > 0) {
+    updateButtonStates();
+  }
+});
+</script>
