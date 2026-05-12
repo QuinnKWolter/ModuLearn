@@ -1,0 +1,46 @@
+<div class="course-instance-card card flex flex-col p-5 h-full">
+  <div class="mb-3">
+    <h5 class="font-semibold mb-1">{{ course_instance.course.title }}</h5>
+    {% if course_instance.group_name %}
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      <i class="bi bi-tag mr-1"></i>{{ course_instance.group_name }}
+    </p>
+    {% endif %}
+  </div>
+
+  <p class="text-sm text-gray-500 dark:text-gray-400 flex-1 mb-3">{{ course_instance.course.description|truncatewords:20|default:"No description" }}</p>
+
+  {% if course_instance.user_enrollment %}
+  <div class="mb-3">
+    <div class="flex justify-between items-center mb-1">
+      <span class="text-xs text-gray-500 dark:text-gray-400">Progress</span>
+      <span class="text-xs font-semibold">{{ course_instance.user_enrollment.course_progress.overall_progress|default:0|floatformat:0 }}%</span>
+    </div>
+    <div class="progress h-1.5">
+      {% with progress_pct=course_instance.user_enrollment.course_progress.overall_progress|default:0 %}
+      <div class="progress-bar bg-green-500"
+           role="progressbar"
+           style="width: {{ progress_pct|floatformat:0 }}%; min-width: 0%; display: block;"
+           aria-valuenow="{{ progress_pct|floatformat:0 }}"
+           aria-valuemin="0"
+           aria-valuemax="100">
+      </div>
+      {% endwith %}
+    </div>
+    <div class="flex justify-between mt-1">
+      <span class="text-xs text-gray-500 dark:text-gray-400">Score: {{ course_instance.user_enrollment.course_progress.overall_score|default:0|floatformat:1 }}%</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-2 mt-auto">
+    <a href="{% url 'courses:course_detail' instance_id=course_instance.id %}" class="btn btn-primary btn-sm w-full">
+      <i class="bi bi-arrow-right-circle mr-1"></i>View Course
+    </a>
+    {% if not enrolled %}
+    <a href="{% url 'courses:course_configuration' instance_id=course_instance.id %}" class="btn btn-outline-primary btn-sm w-full">
+      <i class="bi bi-sliders mr-1"></i>Configure
+    </a>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ module.title }} - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'courses:course_detail' course_instance.id %}">{{ course_instance.course.title }}</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">{{ module.title }}</li>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow=module.get_module_type_display title=module.title description=module.description %}
+
+  <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+    <section class="card p-6">
+      {% if resource_kind == 'file' %}
+        {% if module.content_file %}
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <div class="stat-kicker">Uploaded Resource</div>
+              <div class="text-lg font-bold mt-1">{{ module.content_file.name }}</div>
+            </div>
+            <a href="{{ module.content_file.url }}" class="btn btn-primary" target="_blank" rel="noopener">Open File</a>
+          </div>
+          {% if module.content_file.url|lower|slice:'-4:' == '.pdf' %}
+            <iframe src="{{ module.content_file.url }}" class="w-full min-h-[75vh] rounded-lg bg-white" title="{{ module.title }}"></iframe>
+          {% else %}
+            <div class="shell-surface p-4 rounded-2xl">
+              <img src="{{ module.content_file.url }}" alt="{{ module.title }}" class="max-w-full rounded-lg mx-auto">
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="empty-state">No file has been uploaded for this module yet.</div>
+        {% endif %}
+      {% else %}
+        <div class="flex flex-col items-start gap-4">
+          <div class="shell-surface p-5 rounded-2xl w-full">
+            <div class="stat-kicker">External Resource</div>
+            <div class="text-lg font-bold mt-2 break-all">{{ module.content_url }}</div>
+          </div>
+          {% if module.content_url %}
+            <a href="{{ module.content_url }}" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+              Open External Resource
+            </a>
+          {% else %}
+            <div class="empty-state w-full">No link has been configured for this module yet.</div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </section>
+
+    <aside class="card p-6">
+      <div class="stat-kicker">Access</div>
+      <div class="text-2xl font-bold mt-2">{{ progress.progress|default:0|floatformat:0 }}%</div>
+      <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Opening this resource is recorded in the course access log.</p>
+      <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary mt-5 w-full">Back To Course</a>
+    </aside>
+  </div>
+{% endblock %}

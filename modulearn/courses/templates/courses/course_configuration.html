@@ -1,0 +1,540 @@
+{% extends 'base.html' %}
+
+{% block title %}Configure {{ course.title }} - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}">Instructor Dashboard</a></li>
+  <li>/</li>
+  <li><a href="{% url 'courses:course_detail' course_instance.id %}">{{ course.title }}</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Configure</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .config-shell {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .config-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  }
+
+  .config-unit-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .config-unit {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.92);
+    overflow: hidden;
+  }
+
+  .dark .config-unit {
+    border-color: rgba(71, 85, 105, 0.68);
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  .config-unit-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .config-unit-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .config-chevron {
+    width: 1.8rem;
+    height: 1.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.45rem;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+    transition: transform 0.16s ease;
+  }
+
+  details[open] .config-chevron {
+    transform: rotate(90deg);
+  }
+
+  .config-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  .config-chip,
+  .config-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.74rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .config-chip {
+    color: #334155;
+    background: #e2e8f0;
+  }
+
+  .config-chip.is-visible {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .config-chip.is-hidden {
+    color: #991b1b;
+    background: #fee2e2;
+  }
+
+  .config-chip.is-locked {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .config-chip.is-open {
+    color: #075985;
+    background: #e0f2fe;
+  }
+
+  .config-unit-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    padding: 1rem;
+  }
+
+  .config-panel {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 0.75rem;
+    background: rgba(248, 250, 252, 0.8);
+    padding: 1rem;
+  }
+
+  .dark .config-panel {
+    border-color: rgba(71, 85, 105, 0.62);
+    background: rgba(30, 41, 59, 0.46);
+  }
+
+  .config-fields {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .config-inline-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 5rem minmax(0, 1fr);
+  }
+
+  .config-rule-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .config-module-list {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .config-module-row {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.76);
+  }
+
+  .dark .config-module-row {
+    border-color: rgba(71, 85, 105, 0.58);
+    background: rgba(15, 23, 42, 0.36);
+  }
+
+  .config-toggle {
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+
+  .dark .config-toggle {
+    color: #e2e8f0;
+    background: rgba(51, 65, 85, 0.75);
+  }
+
+  .config-toggle input {
+    accent-color: #2563eb;
+  }
+
+  .builder-question {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: #f8fafc;
+  }
+
+  .dark .builder-question {
+    background: rgba(15, 23, 42, 0.55);
+    border-color: rgba(71, 85, 105, 0.7);
+  }
+
+  .sticky-side {
+    position: sticky;
+    top: 1rem;
+  }
+
+  @media (max-width: 940px) {
+    .sticky-side {
+      position: static;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .config-unit-summary,
+    .config-module-row,
+    .config-inline-grid,
+    .config-rule-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .config-chip-row {
+      justify-content: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Instructor Controls' title='Configure Course Structure' description='Tune visibility, locks, unlock rules, and custom resources for this course instance.' %}
+
+  <div class="grid gap-8 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.72fr)]">
+    <section class="card p-6 config-shell">
+      <div class="config-toolbar">
+        <div>
+          <div class="stat-kicker">Visibility & Locking</div>
+          <h2 class="text-2xl font-bold mt-1">{{ course.title }}</h2>
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-300">{{ course_instance.group_name|default:"Course session" }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">View Course</a>
+          <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+        </div>
+      </div>
+
+      <form method="post" class="config-unit-list">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_structure">
+
+        {% for group in unit_groups %}
+          <details class="config-unit" {% if forloop.first %}open{% endif %}>
+            <summary class="config-unit-summary">
+              <span class="config-chevron" aria-hidden="true">
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+              </span>
+              <span class="min-w-0">
+                <span class="flex flex-wrap items-center gap-2">
+                  <span class="stat-kicker">Unit {{ forloop.counter }}</span>
+                  <span class="config-chip">{{ group.modules|length }} module{{ group.modules|length|pluralize }}</span>
+                </span>
+                <span class="block truncate text-lg font-bold">{{ group.unit.title }}</span>
+                {% if group.unit.description %}
+                  <span class="block truncate text-sm text-slate-500 dark:text-slate-300">{{ group.unit.description }}</span>
+                {% endif %}
+              </span>
+              <span class="config-chip-row">
+                {% if group.unit.is_visible %}
+                  <span class="config-chip is-visible"><i class="fa-solid fa-eye"></i> Visible</span>
+                {% else %}
+                  <span class="config-chip is-hidden"><i class="fa-solid fa-eye-slash"></i> Hidden</span>
+                {% endif %}
+                {% if group.unit.is_locked %}
+                  <span class="config-chip is-locked"><i class="fa-solid fa-lock"></i> Locked</span>
+                {% else %}
+                  <span class="config-chip is-open"><i class="fa-solid fa-unlock"></i> Open</span>
+                {% endif %}
+              </span>
+            </summary>
+
+            <div class="config-unit-body">
+              <div class="config-panel config-fields">
+                <div class="config-inline-grid">
+                  <div>
+                    <label class="stat-kicker" for="unit_{{ group.unit.id }}_order">Order</label>
+                    <input id="unit_{{ group.unit.id }}_order" name="unit_{{ group.unit.id }}_order" type="number" value="{{ group.unit.order }}" class="form-control mt-1">
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="stat-kicker" for="unit_{{ group.unit.id }}_title">Unit Details</label>
+                    <input id="unit_{{ group.unit.id }}_title" name="unit_{{ group.unit.id }}_title" value="{{ group.unit.title }}" class="form-control font-semibold">
+                    <textarea name="unit_{{ group.unit.id }}_description" rows="2" class="form-control" placeholder="Unit description">{{ group.unit.description }}</textarea>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <label class="config-toggle"><input type="checkbox" name="unit_{{ group.unit.id }}_visible" {% if group.unit.is_visible %}checked{% endif %}> Visible to students</label>
+                  <label class="config-toggle"><input type="checkbox" name="unit_{{ group.unit.id }}_locked" {% if group.unit.is_locked %}checked{% endif %}> Locked until condition is met</label>
+                </div>
+
+                <div>
+                  <div class="stat-kicker mb-2">Unit Unlock Rule</div>
+                  <div class="config-rule-grid">
+                    <select name="unit_{{ group.unit.id }}_rule_type" class="form-control">
+                      <option value="none" {% if group.unit.unlock_rule_type == 'none' %}selected{% endif %}>No unlock condition</option>
+                      <option value="previous_unit_accessed" {% if group.unit.unlock_rule_type == 'previous_unit_accessed' %}selected{% endif %}>After previous unit accessed</option>
+                      <option value="previous_unit_completed" {% if group.unit.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>After previous unit completed</option>
+                      <option value="module_accessed" {% if group.unit.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected module accessed</option>
+                      <option value="module_completed" {% if group.unit.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected module completed</option>
+                    </select>
+                    <select name="unit_{{ group.unit.id }}_rule_target" class="form-control">
+                      <option value="">Select module if needed</option>
+                      {% for target_group in unit_groups %}
+                        {% for target in target_group.modules %}
+                          <option value="{{ target.id }}" {% if group.unit.unlock_rule_target == target.id %}selected{% endif %}>{{ target_group.unit.title }} - {{ target.title }}</option>
+                        {% endfor %}
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="config-module-list">
+                {% for module in group.modules %}
+                  <article class="config-module-row">
+                    <div>
+                      <label class="stat-kicker" for="module_{{ module.id }}_order">Order</label>
+                      <input id="module_{{ module.id }}_order" name="module_{{ module.id }}_order" type="number" value="{{ module.order }}" class="form-control mt-1">
+                    </div>
+                    <div class="config-fields">
+                      <div class="grid gap-2">
+                        <label class="stat-kicker" for="module_{{ module.id }}_title">Module</label>
+                        <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+                          <input id="module_{{ module.id }}_title" name="module_{{ module.id }}_title" value="{{ module.title }}" class="form-control font-semibold">
+                          <span class="badge badge-info self-center justify-self-start">{{ module.get_module_type_display }}</span>
+                        </div>
+                        <textarea name="module_{{ module.id }}_description" rows="2" class="form-control" placeholder="Module description">{{ module.description }}</textarea>
+                      </div>
+                      <div class="config-rule-grid">
+                        <select name="module_{{ module.id }}_rule_type" class="form-control" aria-label="Module unlock rule">
+                          <option value="none" {% if module.unlock_rule_type == 'none' %}selected{% endif %}>No unlock condition</option>
+                          <option value="previous_unit_accessed" {% if module.unlock_rule_type == 'previous_unit_accessed' %}selected{% endif %}>After previous unit accessed</option>
+                          <option value="previous_unit_completed" {% if module.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>After previous unit completed</option>
+                          <option value="module_accessed" {% if module.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected module accessed</option>
+                          <option value="module_completed" {% if module.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected module completed</option>
+                        </select>
+                        <select name="module_{{ module.id }}_rule_target" class="form-control" aria-label="Module unlock target">
+                          <option value="">Select module if needed</option>
+                          {% for target_group in unit_groups %}
+                            {% for target in target_group.modules %}
+                              <option value="{{ target.id }}" {% if module.unlock_rule_target == target.id %}selected{% endif %}>{{ target_group.unit.title }} - {{ target.title }}</option>
+                            {% endfor %}
+                          {% endfor %}
+                        </select>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-end">
+                      <label class="config-toggle"><input type="checkbox" name="module_{{ module.id }}_visible" {% if module.is_visible %}checked{% endif %}> Visible</label>
+                      <label class="config-toggle"><input type="checkbox" name="module_{{ module.id }}_locked" {% if module.is_locked %}checked{% endif %}> Locked</label>
+                    </div>
+                  </article>
+                {% empty %}
+                  <div class="empty-state">No modules have been added to this unit yet.</div>
+                {% endfor %}
+              </div>
+            </div>
+          </details>
+        {% empty %}
+          <div class="empty-state">No units exist for this course yet.</div>
+        {% endfor %}
+
+        <div class="flex justify-end pt-2">
+          <button type="submit" class="btn btn-primary">Save Structure Controls</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="card p-6 sticky-side">
+      <div class="stat-kicker">Add Manual Module</div>
+      <h2 class="text-2xl font-bold mt-1">New Resource</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Create a link, upload a file, or build a lightweight form directly into the course sequence.</p>
+
+      <form method="post" enctype="multipart/form-data" id="customModuleForm" class="mt-5 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_module">
+        <input type="hidden" name="questions_json" id="questionsJson" value="[]">
+
+        <div>
+          <label class="stat-kicker">Unit</label>
+          <select name="unit_id" required class="form-control mt-1">
+            {% for group in unit_groups %}
+              <option value="{{ group.unit.id }}">{{ group.unit.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+          <div>
+            <label class="stat-kicker">Module Type</label>
+            <select name="module_type" id="moduleTypeSelect" required class="form-control mt-1">
+              {% for value,label in module_types %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="stat-kicker">Order</label>
+            <input name="order" type="number" class="form-control mt-1" placeholder="Append">
+          </div>
+        </div>
+        <div>
+          <label class="stat-kicker">Title</label>
+          <input name="title" required class="form-control mt-1" placeholder="Reflection prompt, PDF guide, outside reading...">
+        </div>
+        <div>
+          <label class="stat-kicker">Description</label>
+          <textarea name="description" rows="3" class="form-control mt-1" placeholder="What should students know before opening this?"></textarea>
+        </div>
+
+        <div data-type-panel="external_link">
+          <label class="stat-kicker">External URL</label>
+          <input name="content_url" type="url" class="form-control mt-1" placeholder="https://...">
+        </div>
+
+        <div data-type-panel="file" hidden>
+          <label class="stat-kicker">Upload Image or PDF</label>
+          <input name="content_file" type="file" accept="image/*,application/pdf" class="form-control mt-1">
+        </div>
+
+        <div data-type-panel="form" hidden class="space-y-4">
+          <div>
+            <label class="stat-kicker">Instructions</label>
+            <textarea name="form_instructions" rows="3" class="form-control mt-1" placeholder="Optional instructions shown above the questions."></textarea>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+            <label class="config-toggle justify-center"><input type="checkbox" name="allow_resubmission"> Allow resubmission</label>
+            <input name="submit_button_label" class="form-control" placeholder="Submit button label">
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="stat-kicker">Questions</div>
+              <p class="text-sm text-slate-500 dark:text-slate-300 mt-1">Likert, radio, checkbox, and free response are supported.</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="addQuestionButton">Add Question</button>
+          </div>
+          <div id="questionBuilder" class="space-y-3"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full">Add Module</button>
+      </form>
+    </aside>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const typeSelect = document.getElementById('moduleTypeSelect');
+    const panels = Array.from(document.querySelectorAll('[data-type-panel]'));
+    const builder = document.getElementById('questionBuilder');
+    const questionsJson = document.getElementById('questionsJson');
+    const addButton = document.getElementById('addQuestionButton');
+    const form = document.getElementById('customModuleForm');
+
+    function syncPanels() {
+      const value = typeSelect.value;
+      panels.forEach(panel => {
+        panel.hidden = panel.dataset.typePanel !== value;
+      });
+      if (value === 'form' && builder.children.length === 0) {
+        addQuestion();
+      }
+    }
+
+    function addQuestion() {
+      const index = builder.children.length + 1;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'builder-question space-y-3';
+      wrapper.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <strong>Question ${index}</strong>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-remove-question>Remove</button>
+        </div>
+        <textarea class="form-control" data-question-prompt rows="2" placeholder="Question prompt"></textarea>
+        <input class="form-control" data-question-help placeholder="Optional helper text">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+          <select class="form-control" data-question-type>
+            {% for value,label in question_types %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          <label class="config-toggle justify-center"><input type="checkbox" data-question-required checked> Required</label>
+        </div>
+        <textarea class="form-control" data-question-options rows="3" placeholder="Choices, one per line"></textarea>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-1" data-likert-labels hidden>
+          <input class="form-control" data-likert-min placeholder="Low label" value="Strongly disagree">
+          <input class="form-control" data-likert-max placeholder="High label" value="Strongly agree">
+        </div>
+      `;
+      builder.appendChild(wrapper);
+      updateQuestionControls(wrapper);
+    }
+
+    function updateQuestionControls(wrapper) {
+      const type = wrapper.querySelector('[data-question-type]').value;
+      const options = wrapper.querySelector('[data-question-options]');
+      const likert = wrapper.querySelector('[data-likert-labels]');
+      options.hidden = !['single_choice', 'multiple_choice'].includes(type);
+      likert.hidden = type !== 'likert';
+    }
+
+    function serializeQuestions() {
+      const questions = Array.from(builder.children).map(wrapper => ({
+        prompt: wrapper.querySelector('[data-question-prompt]').value,
+        help_text: wrapper.querySelector('[data-question-help]').value,
+        question_type: wrapper.querySelector('[data-question-type]').value,
+        required: wrapper.querySelector('[data-question-required]').checked,
+        options: wrapper.querySelector('[data-question-options]').value.split('\n').map(item => item.trim()).filter(Boolean),
+        likert_min_label: wrapper.querySelector('[data-likert-min]').value,
+        likert_max_label: wrapper.querySelector('[data-likert-max]').value,
+      })).filter(question => question.prompt.trim());
+      questionsJson.value = JSON.stringify(questions);
+    }
+
+    typeSelect.addEventListener('change', syncPanels);
+    addButton.addEventListener('click', addQuestion);
+    builder.addEventListener('change', event => {
+      const wrapper = event.target.closest('.builder-question');
+      if (wrapper) updateQuestionControls(wrapper);
+    });
+    builder.addEventListener('click', event => {
+      if (event.target.matches('[data-remove-question]')) {
+        event.target.closest('.builder-question').remove();
+      }
+    });
+    form.addEventListener('submit', serializeQuestions);
+    syncPanels();
+  })();
+</script>
+{% endblock %}

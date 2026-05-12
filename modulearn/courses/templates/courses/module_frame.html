@@ -1,0 +1,61 @@
+{% extends 'content_base.html' %}
+{% load static %}
+
+{% block content %}
+  <div id="module-frame-container" class="flex-1 p-4 md:p-6">
+    {{ state_data|json_script:"state-data" }}
+    <input id="module-frame-csrf" type="hidden" value="{{ csrf_token }}">
+
+    {% if not preview_mode and course_instance %}
+      <div class="max-w-7xl mx-auto mb-4 flex items-center justify-between gap-3">
+        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          Back To Course
+        </a>
+        <div class="text-sm text-slate-600 dark:text-slate-300">
+          <span class="font-semibold text-slate-900 dark:text-slate-100">{{ module.title }}</span>
+          <span class="mx-2 text-slate-400 dark:text-slate-500">/</span>
+          {{ course_instance.course.title }}
+        </div>
+      </div>
+    {% endif %}
+
+    <div id="iframe-blocked-notice" class="{% if not refuses_iframe %}hidden{% endif %} card p-8 text-center max-w-2xl mx-auto mt-8">
+      <h3 class="text-2xl font-bold text-red-500">This tool cannot be embedded here</h3>
+      <p class="text-slate-600 dark:text-slate-300 mt-3">
+        {% if refuses_iframe_reason %}
+          {{ refuses_iframe_reason }}
+        {% else %}
+          The external tool has security restrictions that prevent iframe embedding.
+        {% endif %}
+      </p>
+      <button id="open-in-new-window" onclick="window.open('{{ iframe_src|escapejs }}', '_blank')" class="btn btn-primary btn-lg mt-5">
+        Open In A New Window
+      </button>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-4">Progress passback may be limited when the tool opens outside the embedded frame.</p>
+    </div>
+
+    <div class="card overflow-hidden">
+      <iframe id="content-iframe"
+              src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}"
+              class="w-full min-h-[80vh] bg-white"
+              frameborder="0"
+              allowfullscreen
+              allow="clipboard-write *"
+              {% if refuses_iframe %}style="display:none"{% endif %}>
+        Your browser doesn't support iframes.
+      </iframe>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    window.moduleFrameConfig = {
+      moduleId: Number("{{ module.id }}"),
+      previewMode: "{{ preview_mode|yesno:'true,false' }}" === "true",
+      progressUrl: "{% if not preview_mode %}{% url 'courses:update_module_progress' module.id %}{% endif %}",
+    };
+  </script>
+  <script src="{% static 'js/courses/module-frame.js' %}"></script>
+{% endblock %}

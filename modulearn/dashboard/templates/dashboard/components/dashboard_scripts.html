@@ -1,0 +1,2141 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if fetchDataBtn exists before adding listener
+    const fetchDataBtn = document.getElementById('fetchDataBtn');
+    if (fetchDataBtn) {
+        fetchDataBtn.addEventListener('click', handleFetch);
+    }
+    
+    // View mode change listeners
+    document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentViewMode = this.value;
+            updateGrid();
+            
+            // Update all radio buttons to reflect the current selection
+            document.querySelectorAll('input[name="viewMode"]').forEach(r => {
+                r.checked = (r.value === currentViewMode);
+            });
+        });
+    });
+    
+    // Initialize button states on page load (only if elements exist)
+    const viewModeRadios = document.querySelectorAll('input[name="viewMode"]');
+    if (viewModeRadios.length > 0) {
+        updateButtonStates();
+    }
+
+    const showAllToggle = document.getElementById('showAllBreakdownsToggle');
+    if (showAllToggle) {
+        showAllToggle.addEventListener('change', function() {
+            showAllBreakdowns = this.checked;
+            updateBreakdownToggleState();
+        });
+    }
+
+    const studentFilterInput = document.getElementById('studentFilterInput');
+    if (studentFilterInput) {
+        studentFilterInput.addEventListener('input', function() {
+            studentTableFilter = this.value || '';
+            if (currentViewMode === 'perStudent' && responseData) {
+                updatePerStudentView();
+            }
+        });
+    }
+
+    document.addEventListener('click', function(event) {
+        const sortButton = event.target.closest('[data-student-sort]');
+        if (!sortButton) return;
+        const key = sortButton.getAttribute('data-student-sort');
+        if (!key) return;
+
+        if (studentTableSort.key === key) {
+            studentTableSort.direction = studentTableSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            studentTableSort = { key, direction: key === 'student' ? 'asc' : 'desc' };
+        }
+
+        if (currentViewMode === 'perStudent' && responseData) {
+            updatePerStudentView();
+        }
+    });
+
+    // Simple validation for required fields (Group ID and Course ID)
+    const grpInput = document.getElementById('grp');
+    const cidInput = document.getElementById('cid');
+    const fetchBtn = document.getElementById('fetchDataBtn');
+
+    // Make updateFetchButtonState globally accessible
+    window.updateFetchButtonState = function() {
+        const hasGrp = (grpInput?.value || '').trim().length > 0;
+        const hasCid = (cidInput?.value || '').trim().length > 0;
+        if (fetchBtn) {
+            fetchBtn.disabled = !(hasGrp && hasCid);
+        }
+    };
+
+    // Only add listeners if elements exist
+    if (grpInput) {
+        grpInput.addEventListener('input', window.updateFetchButtonState);
+        grpInput.addEventListener('input', () => syncLegacyDashboardUrl(grpInput.value, cidInput?.value || ''));
+    }
+    if (cidInput) {
+        cidInput.addEventListener('input', window.updateFetchButtonState);
+        cidInput.addEventListener('input', () => syncLegacyDashboardUrl(grpInput?.value || '', cidInput.value));
+    }
+    if (grpInput || cidInput || fetchBtn) {
+        window.updateFetchButtonState();
+    }
+    
+    // Auto-fetch user's KnowledgeTree groups and Course IDs
+    autoLoadUserGroups().catch(err => console.error('Error loading user groups:', err));
+});
+
+function syncLegacyDashboardUrl(groupLogin, courseId) {
+    const nextUrl = new URL(window.location.href);
+    const normalizedGroup = (groupLogin || '').trim();
+    const normalizedCourse = (courseId || '').trim();
+
+    if (normalizedGroup) {
+        nextUrl.searchParams.set('grp', normalizedGroup);
+    } else {
+        nextUrl.searchParams.delete('grp');
+    }
+
+    if (normalizedCourse) {
+        nextUrl.searchParams.set('cid', normalizedCourse);
+    } else {
+        nextUrl.searchParams.delete('cid');
+    }
+
+    window.history.replaceState({}, '', nextUrl);
+}
+
+async function resolveAutoGroups() {
+    if (Array.isArray(window.autoGroups) && window.autoGroups.length > 0) {
+        return window.autoGroups;
+    }
+
+    if (!window.legacyGroupsApiUrl) {
+        return [];
+    }
+
+    console.info('[ModuLearn Legacy] Loading legacy groups', {
+        endpoint: window.legacyGroupsApiUrl,
+    });
+
+    const response = await fetch(window.legacyGroupsApiUrl, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await response.json().catch(() => ({}));
+
+    console.info('[ModuLearn Legacy] Legacy groups response', {
+        endpoint: window.legacyGroupsApiUrl,
+        status: response.status,
+        data,
+    });
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.error || `Failed to load legacy groups (${response.status})`);
+    }
+
+    window.autoGroups = Array.isArray(data.groups) ? data.groups : [];
+    return window.autoGroups;
+}
+
+/**
+ * Automatically load user's KnowledgeTree groups and Course IDs.
+ * Uses groups data provided by backend (from direct database query).
+ * If successful, show dropdown for group selection.
+ * If preselected_group is provided (from URL parameter), auto-populate and fetch.
+ */
+async function autoLoadUserGroups() {
+    const grpInput = document.getElementById('grp');
+    const cidInput = document.getElementById('cid');
+    const fetchBtn = document.getElementById('fetchDataBtn');
+    
+    // If required elements don't exist, exit early
+    if (!grpInput || !cidInput) {
+        return;
+    }
+    
+    const preselectedGroup = window.preselectedGroup || '';
+    const preselectedCourse = window.preselectedCourse || '';
+
+    if (preselectedGroup || preselectedCourse) {
+        grpInput.value = preselectedGroup;
+        cidInput.value = preselectedCourse;
+        syncLegacyDashboardUrl(preselectedGroup, preselectedCourse);
+        window.updateFetchButtonState();
+    }
+
+    let groups = [];
+    try {
+        groups = await resolveAutoGroups();
+    } catch (error) {
+        console.error('Error loading legacy groups:', error);
+        groups = [];
+    }
+    
+    if (groups && groups.length > 0) {
+        showGroupDropdown(groups, grpInput, cidInput);
+        
+        if (preselectedGroup) {
+            setTimeout(() => {
+                const selectedGroup = groups.find(g => g.group_login === preselectedGroup);
+                if (selectedGroup) {
+                    const groupSelect = document.getElementById('ktGroupSelect');
+                    if (groupSelect) {
+                        const groupIndex = groups.findIndex(g => g.group_login === preselectedGroup);
+                        if (groupIndex !== -1) {
+                            groupSelect.value = groupIndex.toString();
+                            selectGroup(selectedGroup, grpInput, cidInput, {
+                                preferredCourseId: preselectedCourse,
+                                autoFetch: true,
+                            }).catch(err => console.error('Error preselecting legacy group:', err));
+                        }
+                    } else {
+                        grpInput.value = preselectedGroup;
+                        cidInput.value = preselectedCourse;
+                        syncLegacyDashboardUrl(preselectedGroup, preselectedCourse);
+                        window.updateFetchButtonState();
+                        if (fetchBtn && !fetchBtn.disabled && preselectedCourse) {
+                            handleFetch();
+                        }
+                    }
+                } else {
+                    grpInput.value = preselectedGroup;
+                    cidInput.value = preselectedCourse;
+                    syncLegacyDashboardUrl(preselectedGroup, preselectedCourse);
+                    window.updateFetchButtonState();
+                    if (fetchBtn && !fetchBtn.disabled && preselectedCourse) {
+                        handleFetch();
+                    }
+                }
+            }, 200);
+        }
+    } else if (preselectedGroup) {
+        grpInput.value = preselectedGroup;
+        cidInput.value = preselectedCourse;
+        syncLegacyDashboardUrl(preselectedGroup, preselectedCourse);
+        window.updateFetchButtonState();
+        if (fetchBtn && !fetchBtn.disabled && preselectedCourse) {
+            handleFetch();
+        }
+    }
+}
+
+/**
+ * Show a dropdown selector for KnowledgeTree groups.
+ * This replaces the manual Group ID input when groups are available.
+ */
+function showGroupDropdown(groups, grpInput, cidInput) {
+    // Guard: check if required elements exist
+    if (!grpInput || !cidInput) {
+        console.warn('showGroupDropdown: Required input elements not found');
+        return;
+    }
+
+    // Find the Group ID input's parent div
+    const grpCol = grpInput.closest('div');
+    if (!grpCol) {
+        console.warn('showGroupDropdown: Group input parent column not found');
+        return;
+    }
+    
+    // Store the original input (we'll hide it)
+    const originalInput = grpInput;
+    
+    // Create dropdown container
+    const dropdownContainer = document.createElement('div');
+    dropdownContainer.className = 'kt-group-dropdown';
+    dropdownContainer.innerHTML = `
+        <label for="ktGroupSelect" class="block font-semibold text-white text-sm mb-1">
+            Group ID
+            <small class="text-white/50 block text-xs font-normal">
+                (Choose a linked KnowledgeTree group, or switch to manual entry)
+            </small>
+        </label>
+        <select class="form-select form-select-lg" id="ktGroupSelect">
+            <option value="">-- Select a Group ID --</option>
+            ${groups.map((group, index) => 
+                `<option value="${index}" 
+                    data-group-login="${group.group_login}" 
+                    data-group-name="${group.group_name}">
+                    ${group.group_name}${group.group_login ? ` (${group.group_login})` : ''}
+                </option>`
+            ).join('')}
+        </select>
+        <small class="text-white/50 block mt-1">
+            <a href="#" id="useManualGroup" class="text-white/70 hover:text-white" style="text-decoration: underline;">
+                Enter IDs manually
+            </a>
+        </small>
+    `;
+    
+    // Replace the Group ID input with dropdown
+    const grpLabel = grpCol.querySelector('label[for="grp"]');
+    let manualToggle = grpCol.querySelector('.kt-group-manual-toggle');
+    if (!manualToggle) {
+        manualToggle = document.createElement('small');
+        manualToggle.className = 'kt-group-manual-toggle text-white/50 mt-2 hidden';
+        manualToggle.innerHTML = `
+            <a href="#" id="useGroupDropdown" class="text-white/70 hover:text-white" style="text-decoration: underline;">
+                Use linked course list
+            </a>
+        `;
+        originalInput.insertAdjacentElement('afterend', manualToggle);
+    }
+
+    if (grpLabel) {
+        grpLabel.style.display = 'none';
+    }
+    originalInput.style.display = 'none';
+    grpCol.insertBefore(dropdownContainer, originalInput);
+    
+    // Store groups data globally for access
+    window.ktGroupsData = groups;
+    
+    // Add change listener for group selection
+    const groupSelect = dropdownContainer.querySelector('#ktGroupSelect');
+    if (!groupSelect) {
+        console.warn('showGroupDropdown: Group select element not found');
+        return;
+    }
+    
+    groupSelect.addEventListener('change', async function() {
+        const selectedIndex = this.value;
+        if (selectedIndex !== '') {
+            const selectedGroup = groups[parseInt(selectedIndex)];
+            originalInput.value = selectedGroup.group_login || '';
+            syncLegacyDashboardUrl(originalInput.value, cidInput.value);
+            await selectGroup(selectedGroup, originalInput, cidInput, { autoFetch: true });
+        } else {
+            // Clear fields if "Select" option chosen
+            originalInput.value = '';
+            cidInput.value = '';
+            syncLegacyDashboardUrl('', '');
+            resetCourseIdPresentation(cidInput);
+            if (window.updateFetchButtonState) {
+                window.updateFetchButtonState();
+            }
+        }
+    });
+    
+    // Add manual entry toggle
+    const manualLink = dropdownContainer.querySelector('#useManualGroup');
+    if (manualLink) {
+        manualLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            dropdownContainer.style.display = 'none';
+            originalInput.style.display = 'block';
+            if (grpLabel) grpLabel.style.display = 'block';
+            manualToggle.classList.remove('hidden');
+            showManualCourseInput(cidInput);
+            originalInput.focus();
+        });
+    }
+
+    const dropdownLink = manualToggle.querySelector('#useGroupDropdown');
+    if (dropdownLink) {
+        dropdownLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            manualToggle.classList.add('hidden');
+            if (grpLabel) grpLabel.style.display = 'none';
+            originalInput.style.display = 'none';
+            dropdownContainer.style.display = 'block';
+        });
+    }
+}
+
+/**
+ * Handle group selection - populate Group ID field and discover Course IDs on-demand.
+ */
+async function selectGroup(group, grpInput, cidInput, options = {}) {
+    // Guard: check if required elements exist
+    if (!group || !grpInput || !cidInput) {
+        console.warn('selectGroup: Required parameters missing');
+        return;
+    }
+
+    const preferredCourseId = String(options.preferredCourseId || '').trim();
+    const autoFetch = Boolean(options.autoFetch);
+
+    // Populate Group ID
+    grpInput.value = group.group_login;
+    syncLegacyDashboardUrl(grpInput.value, cidInput.value);
+
+    resetCourseIdPresentation(cidInput);
+    cidInput.value = '';
+
+    const cidCol = cidInput.closest('div');
+    if (!cidCol) {
+        console.warn('selectGroup: Course ID input parent column not found');
+        return;
+    }
+
+    let courseIds = Array.isArray(group.course_ids)
+        ? group.course_ids.map(courseId => String(courseId)).filter(Boolean)
+        : [];
+
+    if (!courseIds.length) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'kt-course-loading mt-2';
+        loadingDiv.innerHTML = '<small class="text-white/50"><span class="spinner-border spinner-border-sm loading-spin mr-1" aria-hidden="true"></span>Discovering Course IDs...</small>';
+        cidCol.appendChild(loadingDiv);
+
+        try {
+            const endpoint = `{% url "dashboard:discover_course_ids" %}?grp=${encodeURIComponent(group.group_login)}`;
+            console.info('[ModuLearn Legacy] Discovering Course IDs', {
+                groupLogin: group.group_login,
+                endpoint,
+            });
+
+            const response = await fetch(endpoint);
+            const data = await response.json();
+
+            loadingDiv.remove();
+
+            console.info('[ModuLearn Legacy] Course ID discovery response', {
+                groupLogin: group.group_login,
+                endpoint,
+                status: response.status,
+                data,
+            });
+
+            if (data.success && data.course_ids && data.course_ids.length > 0) {
+                courseIds = data.course_ids.map(courseId => String(courseId)).filter(Boolean);
+                group.course_ids = courseIds;
+            }
+        } catch (error) {
+            loadingDiv.remove();
+
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'kt-course-error mt-2';
+            errorMsg.innerHTML = '<small class="text-yellow-500"><i class="fas fa-exclamation-triangle mr-1"></i>Could not discover Course IDs. Please enter manually.</small>';
+            cidCol.appendChild(errorMsg);
+
+            console.error('Error discovering Course IDs:', error);
+        }
+    }
+
+    if (courseIds.length > 0) {
+        const selectedCourseId = courseIds.includes(preferredCourseId) ? preferredCourseId : courseIds[0];
+        cidInput.value = selectedCourseId;
+        syncLegacyDashboardUrl(grpInput.value, cidInput.value);
+
+        if (courseIds.length > 1) {
+            showCourseIdDropdown(courseIds, cidInput, { selectedCourseId });
+        }
+    } else {
+        const noCourseMsg = document.createElement('div');
+        noCourseMsg.className = 'kt-no-course-ids mt-2';
+        noCourseMsg.innerHTML = '<small class="text-white/50"><i class="fas fa-info-circle mr-1"></i>No Course IDs found. Please enter manually.</small>';
+        cidCol.appendChild(noCourseMsg);
+    }
+
+    if (window.updateFetchButtonState) {
+        window.updateFetchButtonState();
+    }
+
+    if (autoFetch && grpInput.value && cidInput.value) {
+        handleFetch();
+    }
+}
+
+/**
+ * Show a dropdown for Course ID selection when multiple Course IDs are available.
+ */
+function showCourseIdDropdown(courseIds, cidInput, options = {}) {
+    // Guard: check if required parameters exist
+    if (!courseIds || !cidInput) {
+        console.warn('showCourseIdDropdown: Required parameters missing');
+        return;
+    }
+    
+    // Remove existing Course ID dropdown if any
+    const existingDropdown = document.querySelector('.kt-course-dropdown');
+    if (existingDropdown) {
+        existingDropdown.remove();
+    }
+    
+    // Find the Course ID input's parent div
+    const cidCol = cidInput.closest('div');
+    if (!cidCol) {
+        console.warn('showCourseIdDropdown: Course ID input parent column not found');
+        return;
+    }
+    
+    const originalInput = cidInput;
+    const selectedCourseId = String(options.selectedCourseId || courseIds[0] || '');
+    
+    // Create dropdown
+    const dropdownContainer = document.createElement('div');
+    dropdownContainer.className = 'kt-course-dropdown';
+    dropdownContainer.innerHTML = `
+        <label for="ktCourseSelect" class="block font-semibold text-white text-sm mb-1">
+            Course ID
+            <small class="text-white/50 block text-xs font-normal">
+                (Select course)
+            </small>
+        </label>
+        <select class="form-select form-select-lg" id="ktCourseSelect">
+            <option value="">-- Select course --</option>
+            ${courseIds.map(cid => 
+                `<option value="${cid}">Course ${cid}</option>`
+            ).join('')}
+        </select>
+        <small class="text-white/50 block mt-1">
+            <a href="#" id="useManualCourse" class="text-white/70 hover:text-white" style="text-decoration: underline;">
+                Enter manually
+            </a>
+        </small>
+    `;
+    
+    // Replace the Course ID input with dropdown
+    const cidLabel = cidCol.querySelector('label[for="cid"]');
+    let manualToggle = cidCol.querySelector('.kt-course-manual-toggle');
+    if (!manualToggle) {
+        manualToggle = document.createElement('small');
+        manualToggle.className = 'kt-course-manual-toggle text-white/50 mt-2 hidden';
+        manualToggle.innerHTML = `
+            <a href="#" id="useCourseDropdown" class="text-white/70 hover:text-white" style="text-decoration: underline;">
+                Use discovered course IDs
+            </a>
+        `;
+        originalInput.insertAdjacentElement('afterend', manualToggle);
+    }
+
+    if (cidLabel) {
+        cidLabel.style.display = 'none';
+    }
+    originalInput.style.display = 'none';
+    cidCol.insertBefore(dropdownContainer, originalInput);
+    
+    // Add change listener
+    const courseSelect = dropdownContainer.querySelector('#ktCourseSelect');
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function() {
+            originalInput.value = this.value;
+            syncLegacyDashboardUrl(document.getElementById('grp')?.value || '', originalInput.value);
+            if (window.updateFetchButtonState) {
+                window.updateFetchButtonState();
+            }
+        });
+        
+        if (courseIds.length > 0) {
+            courseSelect.value = selectedCourseId;
+            originalInput.value = selectedCourseId;
+            syncLegacyDashboardUrl(document.getElementById('grp')?.value || '', originalInput.value);
+            if (window.updateFetchButtonState) {
+                window.updateFetchButtonState();
+            }
+        }
+    }
+    
+    // Add manual entry toggle
+    const manualLink = dropdownContainer.querySelector('#useManualCourse');
+    if (manualLink) {
+        manualLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            dropdownContainer.style.display = 'none';
+            originalInput.style.display = 'block';
+            if (cidLabel) cidLabel.style.display = 'block';
+            manualToggle.classList.remove('hidden');
+            originalInput.focus();
+        });
+    }
+
+    const dropdownLink = manualToggle.querySelector('#useCourseDropdown');
+    if (dropdownLink) {
+        dropdownLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            manualToggle.classList.add('hidden');
+            if (cidLabel) cidLabel.style.display = 'none';
+            originalInput.style.display = 'none';
+            dropdownContainer.style.display = 'block';
+        });
+    }
+}
+
+function resetCourseIdPresentation(cidInput) {
+    if (!cidInput) {
+        return;
+    }
+
+    const cidCol = cidInput.closest('div');
+    const cidLabel = cidCol ? cidCol.querySelector('label[for="cid"]') : null;
+    const courseDropdown = document.querySelector('.kt-course-dropdown');
+    const courseLoading = document.querySelector('.kt-course-loading');
+    const courseError = document.querySelector('.kt-course-error');
+    const noCourseMsg = document.querySelector('.kt-no-course-ids');
+    const manualToggle = cidCol ? cidCol.querySelector('.kt-course-manual-toggle') : null;
+
+    if (courseDropdown) courseDropdown.remove();
+    if (courseLoading) courseLoading.remove();
+    if (courseError) courseError.remove();
+    if (noCourseMsg) noCourseMsg.remove();
+    if (manualToggle) manualToggle.classList.add('hidden');
+    if (cidLabel) cidLabel.style.display = 'block';
+    cidInput.style.display = 'block';
+}
+
+function showManualCourseInput(cidInput) {
+    resetCourseIdPresentation(cidInput);
+}
+
+let responseData = null;
+let currentViewMode = 'classAverage';
+let studentTableSort = { key: 'progress', direction: 'desc' };
+let studentTableFilter = '';
+let showAllBreakdowns = false;
+
+function updateButtonStates() {
+    // Update all radio buttons to reflect the current selection
+    document.querySelectorAll('input[name="viewMode"]').forEach(r => {
+        r.checked = (r.value === currentViewMode);
+    });
+}
+
+function handleFetch() {
+    const btn = document.getElementById('fetchDataBtn');
+    const btnText = document.getElementById('fetchBtnText');
+    const spinner = document.getElementById('fetchSpinner');
+    const progressContainer = document.getElementById('fetchProgressContainer');
+    const progressBar = document.getElementById('fetchProgressBar');
+    const progressText = document.getElementById('fetchProgressText');
+    const progressPercent = document.getElementById('fetchProgressPercent');
+    const grpVal = (document.getElementById('grp')?.value || '').trim();
+    const cidVal = (document.getElementById('cid')?.value || '').trim();
+    if (!grpVal || !cidVal) {
+        return; // Guard: do nothing if required fields are empty
+    }
+    
+    // Guard: exit if required elements don't exist
+    if (!btn || !progressContainer || !progressBar || !progressText || !progressPercent) {
+        console.warn('Dashboard fetch elements not found');
+        return;
+    }
+    
+    if (btn) btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    if (btnText) btnText.textContent = 'Loading...';
+    if (spinner) {
+        spinner.classList.remove('hidden');
+        spinner.style.display = 'inline-block';
+    }
+    if (progressContainer) progressContainer.classList.remove('hidden');
+    progressBar.style.width = '0%';
+    progressPercent.textContent = '0%';
+    
+    // Use batch endpoint to fetch all students at once
+    progressText.textContent = 'Connecting to database...';
+    progressBar.style.width = '10%';
+    progressPercent.textContent = '10%';
+    
+    const batchAnalyticsParams = {
+        grp: document.getElementById('grp').value,
+        cid: document.getElementById('cid').value
+    };
+    
+    const batchAnalyticsUrl = `{% url 'dashboard:fetch_all_students_analytics' %}?${new URLSearchParams(batchAnalyticsParams)}`;
+    syncLegacyDashboardUrl(batchAnalyticsParams.grp, batchAnalyticsParams.cid);
+    console.info('[ModuLearn Legacy] Launching analytics', {
+        groupLogin: batchAnalyticsParams.grp,
+        courseId: batchAnalyticsParams.cid,
+        endpoint: batchAnalyticsUrl,
+    });
+    
+    // Clear any previous error states
+    clearFormErrors();
+    
+    fetch(batchAnalyticsUrl)
+        .then(async response => {
+            const data = await response.json();
+            console.info('[ModuLearn Legacy] Analytics response', {
+                groupLogin: batchAnalyticsParams.grp,
+                courseId: batchAnalyticsParams.cid,
+                endpoint: batchAnalyticsUrl,
+                status: response.status,
+                data,
+            });
+            
+            if (!response.ok) {
+                // Extract error message from response
+                const errorMessage = data.error || `Batch Analytics API Error: ${response.statusText}`;
+                const statusCode = response.status;
+                
+                // Show form field errors based on status code
+                if (statusCode === 400) {
+                    // Bad Request - likely invalid Group ID or Course ID
+                    showFormFieldError('grp', 'Invalid Group ID or Course ID');
+                    showFormFieldError('cid', 'Invalid Group ID or Course ID');
+                } else if (statusCode === 404) {
+                    // Not Found - Group/Course combination doesn't exist
+                    showFormFieldError('grp', 'Group/Course combination not found');
+                    showFormFieldError('cid', 'Group/Course combination not found');
+                } else {
+                    // Other errors
+                    showFormFieldError('grp', errorMessage);
+                    showFormFieldError('cid', errorMessage);
+                }
+                
+                throw new Error(errorMessage);
+            }
+            
+            if (data.error) {
+                showFormFieldError('grp', data.error);
+                showFormFieldError('cid', data.error);
+                throw new Error(data.error);
+            }
+            
+            // Clear any error states on success
+            clearFormErrors();
+            
+            progressBar.style.width = '50%';
+            progressPercent.textContent = '50%';
+            progressText.textContent = 'Processing data...';
+            
+            progressBar.style.width = '90%';
+            progressPercent.textContent = '90%';
+            progressText.textContent = 'Building dashboard...';
+            
+            // The batch endpoint returns the complete response structure
+            responseData = data;
+            
+            progressBar.style.width = '100%';
+            progressPercent.textContent = '100%';
+            progressText.textContent = 'Complete!';
+                
+                // Hide progress bar and show dashboard
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                const dashboardContent = document.getElementById('dashboardContent');
+                dashboardContent.classList.remove('hidden');
+                dashboardContent.classList.add('fade-in');
+                renderDashboard();
+            }, 300);
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showError(`Failed to load data: ${error.message}`);
+            progressContainer.classList.add('hidden');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.removeAttribute('aria-busy');
+            btnText.textContent = 'Launch Analytics';
+            if (spinner) {
+                spinner.classList.add('hidden');
+                spinner.style.display = 'none';
+            }
+        });
+}
+
+function mapLearnerIds(analyticsData, classListData) {
+    // Step 1: Sort analytics learners by their integer ID (lowest to highest)
+    const sortedAnalyticsLearners = analyticsData.learners.sort((a, b) => {
+        const aId = parseInt(a.id);
+        const bId = parseInt(b.id);
+        return aId - bId;
+    });
+    
+    // Step 2: Create mapping from sorted position to real learner ID
+    const learnerIdMap = classListData.learners.map(learner => learner.learnerId);
+    
+    // Step 3: Update the sorted learners with real IDs
+    sortedAnalyticsLearners.forEach((learner, index) => {
+        if (index < learnerIdMap.length) {
+            learner.id = learnerIdMap[index];
+        }
+    });
+    
+    // Step 4: Replace the original learners array with the sorted and mapped one
+    analyticsData.learners = sortedAnalyticsLearners;
+    
+    return analyticsData;
+}
+
+function renderDashboard() {
+    if (!responseData) return;
+    
+    populateKPIs();
+    updateGrid();
+}
+
+function clampPercent(value) {
+    return Math.max(0, Math.min(100, Math.round((value || 0) * 100)));
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getClassAverageData() {
+    return responseData?.groups?.find(g => g.name === 'Class Average') || null;
+}
+
+function getLearnerTopicResourceProgress(learner, topicId, resourceId) {
+    return learner?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+}
+
+function getLearnerTopicOverallProgress(learner, topicId) {
+    const topicData = learner?.state?.topics?.[topicId];
+    if (!topicData) return 0;
+    if (topicData.overall?.p !== undefined) return topicData.overall.p || 0;
+    const values = Object.values(topicData.values || {});
+    return values.length ? values.reduce((sum, item) => sum + (item?.p || 0), 0) / values.length : 0;
+}
+
+function getActivityValues(learner, topicId, resourceId, activityId) {
+    return learner?.state?.activities?.[topicId]?.[resourceId]?.[activityId]?.values || {};
+}
+
+function formatLastActive(value) {
+    if (!value) return 'No timestamp';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'No timestamp';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getLastActiveTime(value) {
+    if (!value) return 0;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function computeLearnerSummary(learner) {
+    const topics = responseData?.topics || [];
+    const resources = responseData?.resources || [];
+    const topicProgresses = topics.map(topic => getLearnerTopicOverallProgress(learner, topic.id));
+    const overall = topicProgresses.length
+        ? topicProgresses.reduce((acc, val) => acc + val, 0) / topicProgresses.length
+        : 0;
+
+    const resourceTotals = resources.map(resource => {
+        const values = topics.map(topic => getLearnerTopicResourceProgress(learner, topic.id, resource.id));
+        const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+        return { ...resource, average };
+    });
+
+    return {
+        overall,
+        progressPercent: clampPercent(overall),
+        topicsCompleted: topicProgresses.filter(p => p >= 0.9).length,
+        totalTopics: topics.length,
+        resourceTotals,
+        lastActive: learner?.lastActive || learner?.last_update || learner?.lastUpdate || null
+    };
+}
+
+function resourceColor(index) {
+    const colors = ['#2563eb', '#16a34a', '#f59e0b', '#0f766e', '#7c3aed', '#dc2626'];
+    return colors[index % colors.length];
+}
+
+function renderResourceProfile(summary) {
+    const resources = (summary.resourceTotals || []).filter(resource => resource.average > 0);
+    if (!resources.length) {
+        return '<span class="resource-profile-empty">No activity profile</span>';
+    }
+
+    const total = resources.reduce((sum, resource) => sum + resource.average, 0) || 1;
+    return `
+        <div class="resource-profile" title="Relative activity by resource type">
+            ${resources.map((resource, index) => {
+                const width = Math.max(4, (resource.average / total) * 100);
+                return `<span class="resource-profile-segment" title="${escapeHtml(resource.name)} ${clampPercent(resource.average)}%" style="width:${width}%; background:${resourceColor(index)};"></span>`;
+            }).join('')}
+        </div>
+    `;
+}
+
+function getCellStatusCounts(topicId, resourceId) {
+    const counts = { completed: 0, inProgress: 0, notStarted: 0 };
+    (responseData?.learners || []).forEach(learner => {
+        if (learner?.isHidden === true) return;
+        const p = getLearnerTopicResourceProgress(learner, topicId, resourceId);
+        if (p === 1) {
+            counts.completed += 1;
+        } else if (p > 0) {
+            counts.inProgress += 1;
+        } else {
+            counts.notStarted += 1;
+        }
+    });
+    return counts;
+}
+
+function renderCellStatusCounts(topicId, resourceId) {
+    const counts = getCellStatusCounts(topicId, resourceId);
+    return `
+        <div class="cell-counts" title="Completed, in progress, not started">
+            <span class="c-done">✓ ${counts.completed}</span>
+            <span class="c-prog">⏵ ${counts.inProgress}</span>
+            <span class="c-none">○ ${counts.notStarted}</span>
+        </div>
+    `;
+}
+
+function normalizeAttemptSequence(values) {
+    const raw = values?.aSeq || values?.aseq || values?.attemptSequence || values?.trajectory || '';
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.map(item => String(item));
+    return String(raw).split(/[,\s|>]+/).map(item => item.trim()).filter(Boolean);
+}
+
+function renderAttemptSequence(values) {
+    const seq = normalizeAttemptSequence(values);
+    if (!seq.length) return '';
+    const trimmed = seq.slice(-12);
+    return `
+        <span class="attempt-seq" title="Recent attempt trajectory">
+            ${trimmed.map(item => {
+                const normalized = String(item).toLowerCase();
+                const cls = ['1', 'true', 'success', 'correct', 'c'].includes(normalized)
+                    ? 'success'
+                    : (['0', 'false', 'fail', 'failed', 'incorrect', 'i'].includes(normalized) ? 'miss' : 'partial');
+                return `<span class="attempt-dot ${cls}"></span>`;
+            }).join('')}
+        </span>
+    `;
+}
+
+function renderActivityMeta(values) {
+    const items = [];
+    const attempts = values?.a ?? values?.attempts ?? values?.attempt_count;
+    const success = values?.s ?? values?.success ?? values?.successRate;
+    const seq = renderAttemptSequence(values);
+
+    if (attempts !== undefined && attempts !== null && attempts !== '') {
+        items.push(`${escapeHtml(attempts)} ${Number(attempts) === 1 ? 'attempt' : 'attempts'}`);
+    }
+    if (success !== undefined && success !== null && success !== '') {
+        const successValue = Number(success);
+        const successPercent = successValue > 1 ? successValue : successValue * 100;
+        items.push(Number.isFinite(successValue) ? `${Math.round(successPercent)}% success` : `${escapeHtml(success)} success`);
+    }
+    if (seq) {
+        items.push(seq);
+    }
+
+    if (!items.length) return '<span class="text-gray-400">Attempt details unavailable</span>';
+    return `<span class="activity-meta">${items.map(item => `<span>${item}</span>`).join('')}</span>`;
+}
+
+function renderDelta(percentDelta) {
+    const delta = Math.round(percentDelta);
+    if (delta > 0) return `<span class="text-green-600 font-bold">+${delta}%</span>`;
+    if (delta < 0) return `<span class="text-red-500 font-bold">${delta}%</span>`;
+    return '<span class="text-gray-500 font-semibold">0%</span>';
+}
+
+function getStudentSortValue(item, key) {
+    const learner = item.learner || {};
+    const summary = item.summary || {};
+    switch (key) {
+        case 'student':
+            return `${learner.id || ''} ${learner.name || ''} ${learner.email || ''}`.toLowerCase();
+        case 'progress':
+            return summary.progressPercent || 0;
+        case 'topics':
+            return summary.topicsCompleted || 0;
+        case 'profile':
+            return (summary.resourceTotals || []).reduce((sum, resource) => sum + (resource.average || 0), 0);
+        case 'lastActive':
+            return getLastActiveTime(summary.lastActive);
+        case 'open':
+            return learner.id || '';
+        default:
+            return summary.progressPercent || 0;
+    }
+}
+
+function compareSortValues(a, b, direction = 'asc') {
+    const multiplier = direction === 'desc' ? -1 : 1;
+    if (typeof a === 'number' && typeof b === 'number') {
+        return (a - b) * multiplier;
+    }
+    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' }) * multiplier;
+}
+
+function updateStudentSortIndicators() {
+    document.querySelectorAll('[data-sort-indicator]').forEach(indicator => {
+        const key = indicator.getAttribute('data-sort-indicator');
+        indicator.classList.toggle('sort-asc', key === studentTableSort.key && studentTableSort.direction === 'asc');
+        indicator.classList.toggle('sort-desc', key === studentTableSort.key && studentTableSort.direction === 'desc');
+    });
+}
+
+function updateBreakdownToggleState() {
+    const masteryGrid = document.getElementById('masteryGrid');
+    const showAllToggle = document.getElementById('showAllBreakdownsToggle');
+    if (showAllToggle) {
+        showAllToggle.checked = showAllBreakdowns;
+    }
+    if (masteryGrid) {
+        masteryGrid.classList.toggle('show-all-breakdowns', showAllBreakdowns);
+    }
+}
+
+function learnerMatchesFilter(learner, filterText) {
+    const filter = (filterText || '').trim().toLowerCase();
+    if (!filter) return true;
+    return [learner?.id, learner?.name, learner?.email]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(filter));
+}
+
+function updateAnalyticsNarrative(metrics) {
+    const container = document.getElementById('analyticsNarrative');
+    const title = document.getElementById('analyticsNarrativeTitle');
+    const text = document.getElementById('analyticsNarrativeText');
+    if (!container || !title || !text) return;
+
+    const learnerCount = responseData?.learners?.length || 0;
+    const strugglingRate = learnerCount ? Math.round((metrics.studentsNeedingHelp / learnerCount) * 100) : 0;
+    title.textContent = 'Course signal';
+
+    if (metrics.engagementScore >= 70 && metrics.overallProgressPercent <= 25) {
+        text.textContent = `${metrics.engagementScore}% of topic-resource cells have activity, but average completion is ${metrics.overallProgressPercent}%. Students are touching the course broadly without finishing much yet; the drill-downs below can separate exploration from stuck work.`;
+    } else if (strugglingRate >= 70) {
+        text.textContent = `${strugglingRate}% of learners are behind the active class pattern. Treat the flag as a triage queue and sort into the most uneven topic-resource cells below.`;
+    } else if (metrics.overallProgressPercent >= 70) {
+        text.textContent = `The class is broadly moving through the material: ${metrics.overallProgressPercent}% average completion with ${metrics.engagementScore}% engagement. Look for low-completion cells and students with stale activity.`;
+    } else {
+        text.textContent = `Engagement is ${metrics.engagementScore}% and progress is ${metrics.overallProgressPercent}%. Use the cell status counts and per-student resource profiles to identify where effort is concentrated.`;
+    }
+
+    container.classList.remove('hidden');
+}
+
+function populateKPIs() {
+    const classAvgData = responseData.groups.find(g => g.name === 'Class Average');
+    if (!classAvgData) return;
+
+    // Course Title
+    document.getElementById('courseTitle').textContent = responseData.context.group.name;
+
+    // Overall Progress - Calculate true class completion percentage
+    let totalPossibleProgress = 0;
+    let totalActualProgress = 0;
+    
+    responseData.topics.forEach(topic => {
+        const topicData = classAvgData.state.topics[topic.id];
+        if (topicData) {
+            // Count all resources for this topic
+            const resourceCount = Object.keys(topicData.values || {}).length;
+            totalPossibleProgress += resourceCount;
+            
+            // Sum actual progress across all resources
+            Object.values(topicData.values || {}).forEach(resource => {
+                totalActualProgress += resource.p || 0;
+            });
+        }
+    });
+    
+    const overallProgressPercent = totalPossibleProgress > 0 ? 
+        Math.round((totalActualProgress / totalPossibleProgress) * 100) : 0;
+    document.getElementById('overallProgress').textContent = `${overallProgressPercent}%`;
+
+    // Students Enrolled
+    document.getElementById('studentsEnrolled').textContent = responseData.learners.length;
+
+    // Engagement Score - Percent of resources with any class activity (> 0 progress)
+    let totalResources = 0;
+    let engagedResources = 0;
+    
+    responseData.topics.forEach(topic => {
+        const topicData = classAvgData.state.topics?.[topic.id];
+        if (topicData?.values) {
+            Object.values(topicData.values).forEach(resource => {
+                totalResources++;
+                if ((resource?.p || 0) > 0) engagedResources++;
+            });
+        }
+    });
+    
+    const engagementScore = totalResources > 0 ? Math.round((engagedResources / totalResources) * 100) : 0;
+    document.getElementById('engagementScore').textContent = `${engagementScore}%`;
+
+    // Most Active Topic
+    let mostActiveTopic = null;
+    let highestProgress = 0;
+    responseData.topics.forEach(topic => {
+        const progress = classAvgData.state.topics[topic.id]?.values['Coding Problems']?.p || 0;
+        if (progress > highestProgress) {
+            highestProgress = progress;
+            mostActiveTopic = topic;
+        }
+    });
+    
+    // Students Needing Intervention - Check ALL resources
+    let studentsNeedingHelp = 0;
+    responseData.learners.forEach(learner => {
+        const learnerProgress = learner.state.topics;
+        let strugglingResources = 0;
+        let totalResources = 0;
+        
+        responseData.topics.forEach(topic => {
+            const learnerTopicData = learnerProgress[topic.id];
+            const classTopicData = classAvgData.state.topics[topic.id];
+            
+            if (learnerTopicData?.values && classTopicData?.values) {
+                // Check each resource in this topic
+                Object.keys(classTopicData.values).forEach(resourceId => {
+                    const learnerResourceProgress = learnerTopicData.values[resourceId]?.p || 0;
+                    const classResourceProgress = classTopicData.values[resourceId]?.p || 0;
+                    
+                    if (classResourceProgress > 0) { // Only consider resources with class activity
+                        totalResources++;
+                        if (learnerResourceProgress < (classResourceProgress * 0.5)) { // Struggling if < 50% of class average
+                            strugglingResources++;
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Student needs intervention if struggling in > 30% of active resources
+        if (totalResources > 0 && (strugglingResources / totalResources) > 0.3) {
+            studentsNeedingHelp++;
+        }
+    });
+    
+    document.getElementById('studentsNeedingHelp').textContent = studentsNeedingHelp;
+    updateAnalyticsNarrative({
+        overallProgressPercent,
+        engagementScore,
+        studentsNeedingHelp
+    });
+    
+}
+
+function updateGrid() {
+    if (!responseData) return;
+    
+    // Update button states
+    updateButtonStates();
+    
+    // Update title and description based on current view
+    updateViewHeader();
+    
+    // Get the content containers
+    const masteryGrid = document.getElementById('masteryGrid').closest('.overflow-x-auto');
+    const perStudentContent = document.getElementById('perStudentContent');
+    
+    if (currentViewMode === 'perStudent') {
+        // Hide mastery grid and show per student content
+        masteryGrid.style.display = 'none';
+        perStudentContent.style.display = 'block';
+        updatePerStudentView();
+    } else {
+        // Show mastery grid and hide per student content
+        masteryGrid.style.display = 'block';
+        perStudentContent.style.display = 'none';
+        updateMasteryGrid();
+    }
+}
+
+function updateViewHeader() {
+    const titleElement = document.getElementById('viewTitle');
+    const descriptionElement = document.getElementById('viewDescription');
+    const classAvgHelp = document.getElementById('classAverageHelpBtn');
+    const perStudentHelp = document.getElementById('perStudentHelpBtn');
+    const classAverageLegend = document.getElementById('classAverageLegend');
+    
+    if (!titleElement || !descriptionElement) return;
+
+    if (classAvgHelp) classAvgHelp.classList.remove('hidden');
+    if (perStudentHelp) perStudentHelp.classList.remove('hidden');
+    if (classAverageLegend) classAverageLegend.classList.toggle('hidden', currentViewMode !== 'classAverage');
+    if (classAvgHelp) classAvgHelp.classList.toggle('is-active', currentViewMode === 'classAverage');
+    if (perStudentHelp) perStudentHelp.classList.toggle('is-active', currentViewMode === 'perStudent');
+    updateBreakdownToggleState();
+    
+    switch (currentViewMode) {
+        case 'myProgress':
+            titleElement.textContent = 'My Progress';
+            descriptionElement.textContent = 'Your individual progress across all topics';
+            break;
+        case 'comparative':
+            titleElement.textContent = 'Comparative View';
+            descriptionElement.textContent = 'Your progress compared to class average';
+            break;
+        case 'classAverage':
+            titleElement.textContent = 'Class Average';
+            descriptionElement.textContent = 'Average class progress across all topics';
+            break;
+        case 'perStudent':
+            titleElement.textContent = 'Student Progress Overview';
+            descriptionElement.textContent = 'Individual student progress tracking';
+            break;
+    }
+}
+
+function updateMasteryGrid() {
+    // Update grid headers
+    const gridHeaders = document.getElementById('gridHeaders');
+    while (gridHeaders.children.length > 1) {
+        gridHeaders.removeChild(gridHeaders.lastChild);
+    }
+    
+    // Add resource headers
+    responseData.resources.forEach((resource, index) => {
+        const th = document.createElement('th');
+        th.className = 'border-0 font-bold text-center py-3 align-middle';
+        th.style.minWidth = '132px';
+        th.innerHTML = `
+            <div class="flex flex-col items-center">
+                <i class="fas fa-tasks text-blue-600 mb-1"></i>
+                <span class="text-sm break-words">${escapeHtml(resource.name)}</span>
+            </div>
+        `;
+        gridHeaders.appendChild(th);
+    });
+    
+    // Update grid body
+    const gridBody = document.getElementById('gridBody');
+    gridBody.innerHTML = '';
+    updateBreakdownToggleState();
+    
+    // Get current data based on view mode
+    let currentData;
+    if (currentViewMode === 'myProgress') {
+        currentData = responseData.learners.find(learner => learner.id === responseData.context.learnerId);
+    } else if (currentViewMode === 'comparative') {
+        // For comparative view, we'll calculate the difference between my progress and class average
+        currentData = calculateComparativeData();
+    } else {
+        currentData = responseData.groups.find(group => group.name === 'Class Average');
+    }
+    
+    if (!currentData) return;
+    
+    // Sort topics by order
+    const sortedTopics = (responseData.topics || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    // Create grid rows
+    sortedTopics.forEach((topic, index) => {
+        const row = document.createElement('tr');
+        
+        // Topic cell with gradient styling
+        const topicProgress = getTopicProgress(currentData, topic.id);
+        const progressPercent = Math.round(topicProgress * 100);
+        const progressColor = getTextColor(topicProgress);
+        const progressBarStyle = getProgressBarStyle(progressPercent);
+        
+        const topicCell = document.createElement('td');
+        topicCell.className = 'border-0 py-2';
+        topicCell.innerHTML = `
+            <div class="flex items-center">
+                <div class="flex-1">
+                    <div class="font-bold mb-1">${escapeHtml(topic.name)}</div>
+                    ${topic.current || topic.covered ? `<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">${topic.current ? 'Current topic' : 'Covered'}</div>` : ''}
+                    <div class="progress" style="height: 6px; background-color: rgba(0,0,0,0.1);">
+                        <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(progressBarStyle).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                    </div>
+                </div>
+                <div class="ml-3">
+                    <span class="badge font-bold" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}; min-width: 50px; text-align: center;">${progressPercent}%</span>
+                </div>
+            </div>
+        `;
+        row.appendChild(topicCell);
+        
+        // Resource cells with text gradient styling
+        responseData.resources.forEach(resource => {
+            const cell = document.createElement('td');
+            const value = getCellValue(currentData, topic.id, resource.id);
+            const textColor = getTextColor(value);
+            
+            cell.className = 'text-center border-0 py-2 progress-cell cursor-pointer align-middle';
+            cell.style.cursor = 'pointer';
+            cell.style.borderRadius = '0';
+            cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resource.name);
+            
+            // Store original colors for hover effect
+            cell.dataset.originalTextColor = textColor;
+            cell.dataset.originalBgColor = 'transparent';
+            
+            // Format the display value based on view mode
+            let displayValue;
+            if (currentViewMode === 'comparative') {
+                const percentage = Math.round(value * 100);
+                displayValue = percentage > 0 ? `+${percentage}%` : `${percentage}%`;
+            } else {
+                displayValue = `${Math.round(value * 100)}%`;
+            }
+            
+            cell.innerHTML = `
+                <div class="legacy-cell-card">
+                    <div class="cell-pct font-bold text-base" style="color: ${textColor};">${displayValue}</div>
+                    ${currentViewMode === 'classAverage' ? renderCellStatusCounts(topic.id, resource.id) : '<div class="text-xs text-gray-400">vs class</div>'}
+                </div>
+            `;
+            
+            // Add hover event listeners for gentle highlight effect
+            cell.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+                if (textColor !== 'inherit') {
+                    this.querySelector('.font-bold').style.color = textColor;
+                } else {
+                    this.querySelector('.font-bold').style.color = '#6c757d';
+                }
+            });
+            
+            cell.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'transparent';
+                this.querySelector('.font-bold').style.color = textColor;
+            });
+            
+            row.appendChild(cell);
+        });
+        
+        gridBody.appendChild(row);
+    });
+}
+
+function updatePerStudentView() {
+    const tableBody = document.getElementById('studentTableBody');
+    tableBody.innerHTML = '';
+    
+    // Show ALL learners (including those with isHidden: true) - no filtering.
+    const sortedLearners = (responseData.learners || [])
+        .map(learner => ({ learner, summary: computeLearnerSummary(learner) }))
+        .filter(item => learnerMatchesFilter(item.learner, studentTableFilter))
+        .sort((a, b) => compareSortValues(
+            getStudentSortValue(a, studentTableSort.key),
+            getStudentSortValue(b, studentTableSort.key),
+            studentTableSort.direction
+        ));
+
+    const filterCount = document.getElementById('studentFilterCount');
+    if (filterCount) {
+        const total = responseData.learners?.length || 0;
+        filterCount.textContent = studentTableFilter.trim()
+            ? `${sortedLearners.length} of ${total} students`
+            : `${total} students`;
+    }
+    updateStudentSortIndicators();
+    
+
+    sortedLearners.forEach(({ learner, summary }) => {
+        const row = document.createElement('tr');
+        row.style.cursor = 'pointer';
+        row.onclick = () => showStudentDetails(learner.id);
+        
+        row.innerHTML = `
+            <td class="border-0 py-2 text-left">
+                <div class="flex items-center">
+                    <div class="bg-cyan-500 rounded-lg flex items-center justify-center mr-2" style="width: 28px; height: 28px;">
+                        <i class="fas fa-user text-white" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold" style="font-size: 0.9rem;">${escapeHtml(learner.id)}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(learner.name || learner.email || '')}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="border-0 py-2 text-center">
+                <div class="flex flex-col items-center">
+                    <div class="font-bold text-base mb-1">${summary.progressPercent}%</div>
+                    <div class="progress" style="width: 110px; height: 5px; border-radius: 2px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${summary.progressPercent}%; ${Object.entries(getProgressBarStyle(summary.progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                    </div>
+                </div>
+            </td>
+            <td class="border-0 py-2 text-center">
+                <div class="flex flex-col items-center">
+                    <div class="font-bold text-base mb-1">${summary.topicsCompleted}/${summary.totalTopics}</div>
+                    <div class="text-gray-500" style="font-size: 0.7rem;">Topics</div>
+                </div>
+            </td>
+            <td class="border-0 py-2 text-center">
+                ${renderResourceProfile(summary)}
+            </td>
+            <td class="border-0 py-2 text-center">
+                <div class="text-sm font-semibold">${formatLastActive(summary.lastActive)}</div>
+            </td>
+            <td class="border-0 py-2 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-chart-line text-blue-600 mb-1" style="font-size: 1rem;"></i>
+                    <div class="text-gray-500" style="font-size: 0.7rem;">Details</div>
+                </div>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+function getTopicProgress(data, topicId) {
+    if (!data?.state?.topics?.[topicId]) return 0;
+    
+    // Try overall progress first
+    if (data.state.topics[topicId].overall?.p !== undefined) {
+        return data.state.topics[topicId].overall.p;
+    }
+    
+    // For class average, try to calculate from individual resources
+    const topicData = data.state.topics[topicId];
+    if (topicData.values) {
+        const resourceValues = Object.values(topicData.values);
+        if (resourceValues.length > 0) {
+            const totalProgress = resourceValues.reduce((sum, resource) => sum + (resource.p || 0), 0);
+            return totalProgress / resourceValues.length;
+        }
+    }
+    
+    return 0;
+}
+
+function calculateComparativeData() {
+    // Get my progress data
+    const myData = responseData.learners.find(learner => learner.id === responseData.context.learnerId);
+    const classData = responseData.groups.find(group => group.name === 'Class Average');
+    
+    if (!myData || !classData) return null;
+    
+    // Create comparative data structure
+    const comparativeData = {
+        state: {
+            topics: {}
+        }
+    };
+    
+    // Calculate differences for each topic
+    responseData.topics.forEach(topic => {
+        const myTopic = myData.state.topics[topic.id];
+        const classTopic = classData.state.topics[topic.id];
+        
+        if (myTopic && classTopic) {
+            comparativeData.state.topics[topic.id] = {
+                values: {}
+            };
+            
+            // Calculate differences for each resource
+            responseData.resources.forEach(resource => {
+                const myValue = myTopic.values?.[resource.id]?.p || 0;
+                const classValue = classTopic.values?.[resource.id]?.p || 0;
+                const difference = myValue - classValue; // Positive = ahead, Negative = behind
+                
+                comparativeData.state.topics[topic.id].values[resource.id] = {
+                    p: difference
+                };
+            });
+            
+            // Calculate overall topic difference
+            const myOverall = myTopic.overall?.p || 0;
+            const classOverall = classTopic.overall?.p || 0;
+            const overallDifference = myOverall - classOverall;
+            
+            comparativeData.state.topics[topic.id].overall = {
+                p: overallDifference
+            };
+        }
+    });
+    
+    return comparativeData;
+}
+
+function getCellValue(data, topicId, resourceId) {
+    if (!data?.state?.topics?.[topicId]?.values?.[resourceId]) return 0;
+    return data.state.topics[topicId].values[resourceId].p || 0;
+}
+
+function getTextColor(value) {
+    // Handle comparative view (can be negative or positive)
+    if (currentViewMode === 'comparative') {
+        // Determine if we're in dark mode using the same logic as base.html
+        const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const savedTheme = localStorage.getItem('theme');
+        const isDarkMode = savedTheme ? savedTheme === 'dark' : userPrefersDark;
+        if (value === 0) {
+            return '#6c757d'; // Secondary color for neutral
+        } else if (value > 0) {
+            // Positive difference (ahead of class) - use green
+            const intensity = Math.min(Math.abs(value), 1); // Cap at 1        
+            if (isDarkMode) {
+                const r = Math.round(40 + (255 - 40) * (1 - intensity));
+                const g = Math.round(167 + (255 - 167) * (1 - intensity));
+                const b = Math.round(69 + (255 - 69) * (1 - intensity));
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                const r = Math.round(40 * intensity);
+                const g = Math.round(167 * intensity);
+                const b = Math.round(69 * intensity);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        } else {
+            // Negative difference (behind class) - use red
+            const intensity = Math.min(Math.abs(value), 1); // Cap at 1
+            if (isDarkMode) {
+                const r = Math.round(220 + (255 - 220) * (1 - intensity));
+                const g = Math.round(53 + (255 - 53) * (1 - intensity));
+                const b = Math.round(69 + (255 - 69) * (1 - intensity));
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                const r = Math.round(220 * intensity);
+                const g = Math.round(53 * intensity);
+                const b = Math.round(69 * intensity);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        }
+    }
+    
+    // Regular progress view
+    const percent = Math.round(value * 100);
+    
+    // Return secondary color for 0%
+    if (percent === 0) {
+        return '#6c757d'; // Secondary color
+    }
+    
+    if (percent <= 50) {
+        // Linear interpolation from danger to warning
+        const ratio = percent / 50;
+        const r = Math.round(220 + (255 - 220) * ratio);
+        const g = Math.round(53 + (193 - 53) * ratio);
+        const b = Math.round(69 + (7 - 69) * ratio);
+        
+        return `rgb(${r}, ${g}, ${b})`;
+    } else {
+        // Linear interpolation from warning to success
+        const ratio = (percent - 50) / 50;
+        const r = Math.round(255 + (40 - 255) * ratio);
+        const g = Math.round(193 + (167 - 193) * ratio);
+        const b = Math.round(7 + (69 - 7) * ratio);
+        
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+}
+
+function getCellStyle(value) {
+    return {
+        backgroundColor: 'transparent',
+        borderColor: '#dee2e6',
+        color: getTextColor(value)
+    };
+}
+
+function getProgressBarStyle(percent) {
+    const value = percent / 100;
+    const color = getTextColor(value);
+    
+    if (percent === 0) {
+        return {
+            backgroundColor: '#6c757d'
+        };
+    }
+    
+    return {
+        backgroundColor: color
+    };
+}
+
+function getBadgeStyle(percent) {
+    // Handle comparative view differently
+    if (currentViewMode === 'comparative') {
+        const value = percent / 100;
+        if (value === 0) {
+            return { backgroundColor: '#6c757d', color: '#ffffff' };
+        } else if (value > 0) {
+            return { backgroundColor: '#16a34a', color: '#ffffff' };
+        } else {
+            return { backgroundColor: '#dc2626', color: '#ffffff' };
+        }
+    }
+    
+    // Regular progress view
+    const value = percent / 100;
+    const color = getTextColor(value);
+    
+    if (percent === 0) {
+        return { backgroundColor: '#6c757d', color: '#ffffff' };
+    }
+    
+    return { backgroundColor: color, color: '#ffffff' };
+}
+
+function showStudentDetails(learnerId) {
+    const learner = responseData.learners.find(l => l.id === learnerId);
+    if (!learner) return;
+
+    const summary = computeLearnerSummary(learner);
+    const sortedTopics = (responseData.topics || []).slice().sort((a,b) => (a.order || 0) - (b.order || 0));
+
+    const modalHtml = `
+        <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="studentModal" aria-hidden="true">
+            <div class="modal-backdrop-close absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+                    <div>
+                        <h5 class="text-lg font-bold mb-1">
+                            <i class="fas fa-user-graduate mr-2"></i>
+                            ${escapeHtml(learner.id)}
+                        </h5>
+                        <div class="text-sm text-white/80">${escapeHtml(learner.name || learner.email || 'Student details')}</div>
+                    </div>
+                    <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6 space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div class="modal-analytics-summary p-4">
+                            <div class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Overall</div>
+                            <div class="text-3xl font-bold">${summary.progressPercent}%</div>
+                        </div>
+                        <div class="modal-analytics-summary p-4">
+                            <div class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Topics Complete</div>
+                            <div class="text-3xl font-bold">${summary.topicsCompleted}/${summary.totalTopics}</div>
+                        </div>
+                        <div class="modal-analytics-summary p-4">
+                            <div class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Last Active</div>
+                            <div class="text-lg font-bold mt-1">${formatLastActive(summary.lastActive)}</div>
+                        </div>
+                        <div class="modal-analytics-summary p-4">
+                            <div class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">Resource Profile</div>
+                            ${renderResourceProfile(summary)}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        ${sortedTopics.map((topic, index) => {
+                            const topicData = learner.state.topics[topic.id] || {};
+                            const progressPercent = clampPercent(getLearnerTopicOverallProgress(learner, topic.id));
+                            return `
+                                <div>
+                                    <div class="card h-full">
+                                        <div class="p-4">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <div class="min-w-0">
+                                                    <div class="flex items-center gap-2">
+                                                        <h6 class="mb-0 font-bold truncate">${escapeHtml(topic.name)}</h6>
+                                                    </div>
+                                                </div>
+                                                <span class="badge" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}">${progressPercent}%</span>
+                                            </div>
+                                            <div class="progress mb-3" style="height: 8px;">
+                                                <div class="progress-bar" style="width: ${progressPercent}%; ${Object.entries(getProgressBarStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                ${responseData.resources.map((resource, rIdx) => {
+                                                    const resourceProgress = (topicData?.values?.[resource.id]?.p || 0) * 100;
+                                                    const resourcePercent = Math.round(resourceProgress);
+                                                    const actList = (responseData.topics.find(t => t.id === topic.id)?.activities?.[resource.id]) || [];
+                                                    const collapseId = `topic-${topic.id}-res-${resource.id}-${rIdx}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+                                                    const activitiesRows = actList.map(activity => {
+                                                        const values = getActivityValues(learner, topic.id, resource.id, activity.id);
+                                                        const aProg = values?.p || 0;
+                                                        const aPerf = values?.k;
+                                                        const aPct = Math.round(aProg * 100);
+                                                        const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
+                                                    return `
+                                                            <tr>
+                                                                <td class="break-words">
+                                                                    <div class="font-semibold">${escapeHtml(activity.name || activity.id)}</div>
+                                                                    <div class="mt-1">${renderActivityMeta(values)}</div>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <div class="progress" style="width: 100px; height: 14px; margin: 0 auto;">
+                                                                        <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="text-center font-semibold">${aPct}%</td>
+                                                                <td class="text-center">${aPerf !== undefined && aPerf !== null ? `${Math.round((aPerf || 0) * 100)}%` : '<span class="text-gray-400">-</span>'}</td>
+                                                                <td class="text-center">
+                                                                    ${status === 'Completed' ? '<span class="badge badge-success">Completed</span>' : status === 'In Progress' ? '<span class="badge badge-secondary">In Progress</span>' : '<span class="badge badge-light">Not Started</span>'}
+                                                                </td>
+                                                            </tr>`;
+                                                    }).join('');
+                                                    return `
+                                                        <div>
+                                                            <div class="flex justify-between items-center">
+                                                                <div class="flex items-center gap-2">
+                                                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                                                                        <i class="fas fa-chevron-down"></i>
+                                                                    </button>
+                                                                    <small class="text-gray-500">${resource.name}</small>
+                                                                </div>
+                                                                <small class="font-semibold">${resourcePercent}%</small>
+                                                            </div>
+                                                            <div class="progress mt-1" style="height: 4px;">
+                                                                <div class="progress-bar" style="width: ${resourcePercent}%; ${Object.entries(getProgressBarStyle(resourcePercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
+                                                            </div>
+                                                            <div class="hidden mt-2" id="${collapseId}">
+                                                                ${actList.length ? `
+                                                                <div class="overflow-x-auto">
+                                                                    <table class="table table-sm mb-0">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Activity</th>
+                                                                                <th class="text-center">Progress</th>
+                                                                                <th class="text-center">%</th>
+                                                                                <th class="text-center">Knowledge</th>
+                                                                                <th class="text-center">Status</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            ${activitiesRows}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>` : '<div class="text-gray-500">No activities listed for this resource.</div>'}
+                                                            </div>
+                                                        </div>
+                                                    `;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('studentModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+    modal.show();
+}
+
+function getCellModalSortValue(student, key) {
+    switch (key) {
+        case 'student':
+            return `${student.id || ''} ${student.name || ''}`.toLowerCase();
+        case 'progress':
+            return student.progressPercent || 0;
+        case 'status':
+            if (student.progressPercent >= 90) return 3;
+            if (student.isStruggling) return 1;
+            return 2;
+        case 'delta':
+            return student.deltaPercent || 0;
+        default:
+            return student.progressPercent || 0;
+    }
+}
+
+function updateCellModalSortIndicators(modalElement, sortState) {
+    modalElement.querySelectorAll('[data-cell-sort-indicator]').forEach(indicator => {
+        const key = indicator.getAttribute('data-cell-sort-indicator');
+        indicator.classList.toggle('sort-asc', key === sortState.key && sortState.direction === 'asc');
+        indicator.classList.toggle('sort-desc', key === sortState.key && sortState.direction === 'desc');
+    });
+}
+
+function renderCellModalRows(studentData, learnerById, activitiesList, topicId, resourceId, sortState) {
+    return studentData
+        .slice()
+        .sort((a, b) => compareSortValues(
+            getCellModalSortValue(a, sortState.key),
+            getCellModalSortValue(b, sortState.key),
+            sortState.direction
+        ))
+        .map((student, idx) => {
+            const safeId = String(student.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + idx;
+            const learner = learnerById[student.id];
+            const displayName = student.name && String(student.name) !== String(student.id)
+                ? `<div class="text-xs text-gray-500 dark:text-gray-400 ml-10">${escapeHtml(student.name)}</div>`
+                : '';
+            const activityRows = activitiesList.map(activity => {
+                const values = getActivityValues(learner, topicId, resourceId, activity.id);
+                const aProg = values?.p || 0;
+                const aPerf = values?.k;
+                const aPct = Math.round(aProg * 100);
+                const status = aPct >= 90 ? 'Completed' : (aPct > 0 ? 'In Progress' : 'Not Started');
+                return `
+                    <tr>
+                        <td class="break-words">
+                            <div class="font-semibold">${escapeHtml(activity.name || activity.id)}</div>
+                            <div class="mt-1">${renderActivityMeta(values)}</div>
+                        </td>
+                        <td class="text-center">
+                            <div class="progress" style="width: 100px; height: 14px;">
+                                <div class="progress-bar" style="width: ${aPct}%; ${Object.entries(getProgressBarStyle(aPct)).map(([k,v]) => `${k.replace(/([A-Z])/g,'-$1').toLowerCase()}: ${v}`).join('; ')}"></div>
+                            </div>
+                        </td>
+                        <td class="text-center font-semibold">${aPct}%</td>
+                        <td class="text-center">${aPerf !== undefined && aPerf !== null ? `${Math.round((aPerf || 0) * 100)}%` : '<span class="text-gray-400">-</span>'}</td>
+                        <td class="text-center">
+                            ${status === 'Completed' ? '<span class="badge badge-success">Completed</span>' : status === 'In Progress' ? '<span class="badge badge-secondary">In Progress</span>' : '<span class="badge badge-light">Not Started</span>'}
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            return `
+                <tr class="${student.isStruggling ? 'table-warning-row' : student.isAboveAverage ? 'table-success-row' : ''}">
+                    <td class="font-bold">
+                        <button class="btn btn-sm btn-outline-secondary mr-2" type="button" data-bs-toggle="collapse" data-bs-target="#act-${safeId}" aria-expanded="false" aria-controls="act-${safeId}">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <span>${escapeHtml(student.id)}</span>
+                        ${displayName}
+                    </td>
+                    <td class="text-center">
+                        <div class="flex items-center justify-center">
+                            <div class="progress mr-2" style="width: 100px; height: 20px;">
+                                <div class="progress-bar" style="width: ${student.progressPercent}%; background-color: ${getTextColor(student.progress)};"></div>
+                            </div>
+                            <span class="font-bold">${student.progressPercent}%</span>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        ${student.progressPercent >= 90 ? '<span class="badge badge-success">Completed</span>' :
+                          student.isStruggling ? '<span class="badge badge-warning">Struggling</span>' :
+                          '<span class="badge badge-secondary">In Progress</span>'}
+                    </td>
+                    <td class="text-center">
+                        ${renderDelta(student.deltaPercent)}
+                        <div class="text-xs text-gray-500 dark:text-gray-400">${formatLastActive(student.lastActive)}</div>
+                    </td>
+                </tr>
+                <tr class="hidden bg-gray-100 dark:bg-gray-700" id="act-${safeId}">
+                    <td colspan="4">
+                        ${activitiesList.length ? `
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Activity</th>
+                                        <th class="text-center">Progress</th>
+                                        <th class="text-center">%</th>
+                                        <th class="text-center">Knowledge</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${activityRows}
+                                </tbody>
+                            </table>
+                        </div>` : '<div class="text-gray-500">No activities listed for this resource.</div>'}
+                    </td>
+                </tr>`;
+        }).join('');
+}
+
+function handleCellClick(topicId, resourceId, topicName, resourceName) {
+    
+    // Get class average data for this topic/resource
+    const classAvgData = responseData.groups.find(g => g.name === 'Class Average');
+    const classProgress = classAvgData?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+    const classProgressPercent = Math.round(classProgress * 100);
+    
+    // Get individual student data for this topic/resource
+    const studentData = responseData.learners.map(learner => {
+        const progress = learner.state.topics?.[topicId]?.values?.[resourceId]?.p || 0;
+        const progressPercent = Math.round(progress * 100);
+        return {
+            id: learner.id,
+            name: learner.name || '',
+            lastActive: learner.lastActive || learner.last_update || learner.lastUpdate || null,
+            progress: progress,
+            progressPercent: progressPercent,
+            deltaPercent: progressPercent - classProgressPercent,
+            isAboveAverage: progress > classProgress,
+            isStruggling: classProgress > 0 && progress < (classProgress * 0.5)
+        };
+    }).sort((a, b) => b.progress - a.progress); // Sort by progress (highest first)
+    
+    // Calculate statistics
+    const totalStudents = studentData.length;
+    const studentsAboveAverage = studentData.filter(s => s.isAboveAverage).length;
+    const studentsStruggling = studentData.filter(s => s.isStruggling).length;
+    const studentsCompleted = studentData.filter(s => s.progressPercent >= 90).length;
+    const averageProgress = studentData.length ? studentData.reduce((sum, s) => sum + s.progress, 0) / totalStudents : 0;
+    const averageProgressPercent = Math.round(averageProgress * 100);
+    
+    // Prepare activity definitions for this topic/resource
+    const topicDef = responseData.topics.find(t => t.id === topicId);
+    const activitiesList = topicDef?.activities?.[resourceId] || [];
+    const cellStatusCounts = getCellStatusCounts(topicId, resourceId);
+
+    // Create modal with Tailwind classes
+    const modalHtml = `
+        <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="cellModal" aria-hidden="true">
+            <div class="modal-backdrop-close absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+                    <h5 class="text-lg font-bold">
+                        <i class="fas fa-chart-bar mr-2"></i>
+                        ${topicName} → ${resourceName}
+                    </h5>
+                    <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="modal-analytics-summary p-4 mb-5">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div>
+                                <h6 class="font-bold mb-1">Student status</h6>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-0">Visible learner counts for this topic-resource cell.</p>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="cell-counts is-visible">
+                                    <span class="c-done">✓ ${cellStatusCounts.completed}</span>
+                                    <span class="c-prog">⏵ ${cellStatusCounts.inProgress}</span>
+                                    <span class="c-none">○ ${cellStatusCounts.notStarted}</span>
+                                </div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    Mean ${averageProgressPercent}% - ${activitiesList.length} activities
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Overview Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-blue-600 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-percentage text-white"></i>
+                                </div>
+                                <h6 class="font-bold mb-1">Class Average</h6>
+                                <div class="text-2xl font-bold text-blue-600">${classProgressPercent}%</div>
+                            </div>
+                        </div>
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-green-600 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-check-circle text-white"></i>
+                                </div>
+                                <h6 class="font-bold mb-1">Completed</h6>
+                                <div class="text-2xl font-bold text-green-600">${studentsCompleted}</div>
+                            </div>
+                        </div>
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-yellow-500 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-exclamation-triangle text-white"></i>
+                                </div>
+                                <h6 class="font-bold mb-1">Struggling</h6>
+                                <div class="text-2xl font-bold text-yellow-500">${studentsStruggling}</div>
+                            </div>
+                        </div>
+                        <div class="card h-full">
+                            <div class="p-4 text-center">
+                                <div class="bg-cyan-500 rounded-full inline-flex items-center justify-center mb-2" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-users text-white"></i>
+                                </div>
+                                <h6 class="font-bold mb-1">Above Average</h6>
+                                <div class="text-2xl font-bold text-cyan-500">${studentsAboveAverage}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Student Progress Breakdown (with expandable activity rows) -->
+                    <div>
+                        <h6 class="font-bold mb-3">
+                            <i class="fas fa-list mr-2"></i>Student Progress Breakdown
+                        </h6>
+                        <div class="overflow-x-auto">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th class="font-bold">
+                                            <button type="button" class="sortable-th text-left" data-cell-sort="student">
+                                                Student <span class="sort-indicator" data-cell-sort-indicator="student"></span>
+                                            </button>
+                                        </th>
+                                        <th class="font-bold text-center">
+                                            <button type="button" class="sortable-th" data-cell-sort="progress">
+                                                Progress <span class="sort-indicator" data-cell-sort-indicator="progress"></span>
+                                            </button>
+                                        </th>
+                                        <th class="font-bold text-center">
+                                            <button type="button" class="sortable-th" data-cell-sort="status">
+                                                Status <span class="sort-indicator" data-cell-sort-indicator="status"></span>
+                                            </button>
+                                        </th>
+                                        <th class="font-bold text-center">
+                                            <button type="button" class="sortable-th" data-cell-sort="delta">
+                                                vs Class Avg <span class="sort-indicator" data-cell-sort-indicator="delta"></span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cellStudentTableBody">
+                                    ${renderCellModalRows(studentData, Object.fromEntries(responseData.learners.map(l => [l.id, l])), activitiesList, topicId, resourceId, { key: 'progress', direction: 'desc' })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('cellModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const cellModalEl = document.getElementById('cellModal');
+    const learnerById = Object.fromEntries(responseData.learners.map(l => [l.id, l]));
+    const cellSortState = { key: 'progress', direction: 'desc' };
+    const cellTableBody = document.getElementById('cellStudentTableBody');
+    if (cellModalEl && cellTableBody) {
+        updateCellModalSortIndicators(cellModalEl, cellSortState);
+        cellModalEl.addEventListener('click', function(event) {
+            const sortButton = event.target.closest('[data-cell-sort]');
+            if (!sortButton) return;
+
+            const key = sortButton.getAttribute('data-cell-sort');
+            if (cellSortState.key === key) {
+                cellSortState.direction = cellSortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                cellSortState.key = key;
+                cellSortState.direction = key === 'student' ? 'asc' : 'desc';
+            }
+
+            cellTableBody.innerHTML = renderCellModalRows(studentData, learnerById, activitiesList, topicId, resourceId, cellSortState);
+            updateCellModalSortIndicators(cellModalEl, cellSortState);
+        });
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('cellModal'));
+    modal.show();
+}
+
+function showError(message) {
+    // Create a modern toast notification
+    const toastDiv = document.createElement('div');
+    toastDiv.className = 'fixed top-4 right-4 z-[9999] bg-red-600 text-white rounded-lg shadow-lg px-4 py-3 flex items-center max-w-md';
+    toastDiv.setAttribute('role', 'alert');
+    toastDiv.innerHTML = `
+        <div class="flex-1 text-sm">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            ${message}
+        </div>
+        <button class="ml-3 text-white/80 hover:text-white text-lg leading-none" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    
+    document.body.appendChild(toastDiv);
+    
+    // Remove toast after 5 seconds
+    setTimeout(() => {
+        if (toastDiv.parentNode) {
+            toastDiv.remove();
+        }
+    }, 5000);
+}
+
+/**
+ * Show error state on a form field (red border and error message)
+ */
+function showFormFieldError(fieldId, errorMessage) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    // Add error styling to the input field
+    field.classList.add('is-invalid');
+    field.style.borderColor = '#dc3545';
+    field.style.borderWidth = '2px';
+    
+    // Also check for dropdowns (ktGroupSelect, ktCourseSelect)
+    let dropdownField = null;
+    if (fieldId === 'grp') {
+        dropdownField = document.getElementById('ktGroupSelect');
+    } else if (fieldId === 'cid') {
+        dropdownField = document.getElementById('ktCourseSelect');
+    }
+    
+    if (dropdownField) {
+        dropdownField.classList.add('is-invalid');
+        dropdownField.style.borderColor = '#dc3545';
+        dropdownField.style.borderWidth = '2px';
+    }
+    
+    // Find or create error message element
+    const fieldCol = field.closest('div');
+    if (!fieldCol) return;
+    
+    // Remove existing error message if any
+    const existingError = fieldCol.querySelector('.field-error-message');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    // Create error message element
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'field-error-message mt-1';
+    errorDiv.innerHTML = `<small class="text-red-500" style="display: block;"><i class="fas fa-exclamation-circle mr-1"></i>${errorMessage}</small>`;
+    fieldCol.appendChild(errorDiv);
+    
+    // Add input/change listener to clear error when user starts typing or changes selection
+    const clearErrorOnInput = function() {
+        clearFieldError(fieldId);
+        field.removeEventListener('input', clearErrorOnInput);
+        if (dropdownField) {
+            dropdownField.removeEventListener('change', clearErrorOnInput);
+        }
+    };
+    field.addEventListener('input', clearErrorOnInput);
+    if (dropdownField) {
+        dropdownField.addEventListener('change', clearErrorOnInput);
+    }
+}
+
+/**
+ * Clear error state from a form field
+ */
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    // Remove error styling from input field
+    field.classList.remove('is-invalid');
+    field.style.borderColor = '';
+    field.style.borderWidth = '';
+    
+    // Also clear dropdown errors if they exist
+    let dropdownField = null;
+    if (fieldId === 'grp') {
+        dropdownField = document.getElementById('ktGroupSelect');
+    } else if (fieldId === 'cid') {
+        dropdownField = document.getElementById('ktCourseSelect');
+    }
+    
+    if (dropdownField) {
+        dropdownField.classList.remove('is-invalid');
+        dropdownField.style.borderColor = '';
+        dropdownField.style.borderWidth = '';
+    }
+    
+    // Remove error message
+    const fieldCol = field.closest('div');
+    if (fieldCol) {
+        const errorMessage = fieldCol.querySelector('.field-error-message');
+        if (errorMessage) {
+            errorMessage.remove();
+        }
+    }
+}
+
+/**
+ * Clear all form field errors
+ */
+function clearFormErrors() {
+    clearFieldError('grp');
+    clearFieldError('cid');
+}
+</script>

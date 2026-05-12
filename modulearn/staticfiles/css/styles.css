@@ -1,0 +1,69 @@
+/* ============================================================
+   ModuLearn – Custom styles (Tailwind companion)
+   Most styling is handled by Tailwind utility classes in templates.
+   This file holds supplementary / hard-to-express-in-utility rules.
+   ============================================================ */
+
+/* Smooth colour transitions for theme switch */
+body {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Breadcrumb links */
+.breadcrumb-item a {
+  text-decoration: none;
+}
+
+/* Modal overlay / backdrop helper
+   Used together with bootstrap-compat.js */
+.modal-overlay {
+  /* base hidden state is controlled by .hidden / .flex classes */
+  transition: opacity 0.15s ease;
+}
+
+/* Table vertical-align helper */
+.table td {
+  vertical-align: middle;
+}
+
+/* Button-group rounding */
+.btn-group {
+  display: inline-flex;
+}
+.btn-group .btn {
+  border-radius: 0;
+}
+.btn-group .btn:first-child {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+.btn-group .btn:last-child {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-group .btn {
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Accordion rotate arrow */
+.accordion-arrow {
+  transition: transform 0.25s ease;
+}
+.accordion-arrow.rotated,
+[aria-expanded="true"] .accordion-arrow {
+  transform: rotate(180deg);
+}
+
+/* Legacy mastery-grid cell sizing (set via JS) */
+.mastery-cell {
+  transition: all 0.2s ease-in-out;
+}

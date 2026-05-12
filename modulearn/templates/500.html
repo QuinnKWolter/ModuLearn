@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Error - ModuLearn{% endblock %}
+
+{% block content %}
+  <section class="max-w-4xl mx-auto hero-shell shell-surface shell-surface-strong text-center">
+    <p class="page-eyebrow">500</p>
+    <h1 class="text-5xl md:text-6xl font-bold mt-4">Something broke on our side.</h1>
+    <p class="mt-5 text-lg text-slate-600 dark:text-slate-300">
+      The request did not complete successfully. Please try again, and if the problem continues, report the page and workflow that triggered it.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="{% url 'main:home' %}" class="btn btn-primary btn-lg">Return Home</a>
+      <a href="{% url 'main:contact' %}" class="btn btn-outline-secondary btn-lg">Report The Issue</a>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,29 @@
+# Python cache files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.sqlite3
+
+# Virtual environments
+venv/
+env/
+
+# Node modules
+node_modules/
+
+# Static and media files (if they are collected separately during build)
+media/
+
+# Local environment files
+.env
+*.log
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.swp
+
+# Git and version control
+.git/
+.gitignore

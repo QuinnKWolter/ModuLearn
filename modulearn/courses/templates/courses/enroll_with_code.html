@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Enroll With Code - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li><a href="{% url 'dashboard:student_dashboard' %}" class="text-blue-600 hover:underline">Student Dashboard</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Enroll With Code</li>
+{% endblock %}
+
+{% block content %}
+  <div class="max-w-xl mx-auto">
+    {% include 'includes/page_header.html' with eyebrow='Enrollment' title='Join a course session' description='Enter the email address and enrollment code you were given to attach the session to your ModuLearn account.' %}
+
+    <section class="card p-8">
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+        <div>
+          <label for="email" class="form-label">Email address <span class="text-red-500">*</span></label>
+          <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div>
+          <label for="code" class="form-label">Enrollment code <span class="text-red-500">*</span></label>
+          <input type="text" class="form-control" id="code" name="code" required>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button type="submit" class="btn btn-primary btn-lg">Join Session</button>
+          <a href="{% url 'dashboard:student_dashboard' %}" class="btn btn-outline-secondary btn-lg">Back To Dashboard</a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

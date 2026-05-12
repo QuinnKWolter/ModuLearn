@@ -1,0 +1,43 @@
+<section class="card p-6">
+  <div class="flex items-center justify-between gap-4 mb-5">
+    <div>
+      <p class="stat-kicker">{{ kicker|default:"Timeline" }}</p>
+      <h2 class="text-2xl font-bold">{{ title|default:"Recent learning activity" }}</h2>
+    </div>
+    {% if count %}
+      <span class="badge badge-info">{{ count }} event{{ count|pluralize }}</span>
+    {% endif %}
+  </div>
+
+  {% if events %}
+    <div class="timeline-list">
+      {% for event in events %}
+        <div class="timeline-item">
+          <span class="timeline-dot"></span>
+          <div>
+            <div class="font-semibold">
+              {{ event.module_title }}
+              {% if event.event_type == 'completion' %}
+                <span class="badge badge-success ml-2">Completed</span>
+              {% elif event.event_type == 'outcome' %}
+                <span class="badge badge-info ml-2">Outcome</span>
+              {% elif event.event_type == 'reopened' %}
+                <span class="badge badge-warning ml-2">Reopened</span>
+              {% else %}
+                <span class="badge badge-secondary ml-2">{{ event.score|floatformat:0 }}%</span>
+              {% endif %}
+            </div>
+            <div class="timeline-meta mt-1">
+              {% if event.created_at %}{{ event.created_at|date:"M d, Y g:i A" }}{% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="text-lg font-semibold text-slate-700 dark:text-slate-200">No activity yet</div>
+      <div class="mt-2">Timeline events will appear here as learners launch, complete, and revisit modules.</div>
+    </div>
+  {% endif %}
+</section>

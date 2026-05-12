@@ -1,0 +1,12 @@
+{
+  "name": "modulearn-ui",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./static_src/tailwind.css -o ./static/css/tailwind.generated.css --minify",
+    "watch:css": "npx tailwindcss -i ./static_src/tailwind.css -o ./static/css/tailwind.generated.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

@@ -1,0 +1,99 @@
+<!-- Student Details Modal -->
+<div id="studentDetailModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+            <h5 class="text-lg font-bold" id="studentDetailModalLabel">
+                <i class="fas fa-user-graduate mr-2"></i>Student Details
+            </h5>
+            <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6" id="studentDetailModalBody">
+            <!-- Student-specific breakdown will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Info Modal (Overview) -->
+<div id="dashboardInfoModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+            <h5 class="text-lg font-bold" id="dashboardInfoLabel"><i class="fas fa-info-circle mr-2"></i>Dashboard Overview</h5>
+            <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+            <h6 class="font-bold mb-2">Header & Data Fetch</h6>
+            <ul class="mb-3 list-disc pl-5 space-y-1 text-sm">
+                <li>Configure Group ID and Course ID, then click Launch Analytics to fetch data.</li>
+            </ul>
+            <h6 class="font-bold mb-2">KPIs</h6>
+            <ul class="mb-3 list-disc pl-5 space-y-1 text-sm">
+                <li><b>Students</b>: number of learners returned.</li>
+                <li><b>Engagement Score</b>: percent of resources with any class activity (> 0 progress).</li>
+                <li><b>Overall Progress</b>: class-average completion across all topics/resources.</li>
+                <li><b>Struggling Students</b>: learners below 50% of class average on >30% of active resources.</li>
+                <li><b>Course Signal</b>: a short interpretation of engagement, completion, and triage pressure.</li>
+            </ul>
+            <h6 class="font-bold mb-2">Class Average View</h6>
+            <ul class="mb-3 list-disc pl-5 space-y-1 text-sm">
+                <li>Rows are topics; columns are resources.</li>
+                <li>Cells show class-average progress plus hover-only completed, in-progress, and not-started counts.</li>
+                <li>Click a cell to open detailed breakdown with per-student sorting, deltas, timestamps, and activity-level rows.</li>
+            </ul>
+            <h6 class="font-bold mb-2">Per Student View</h6>
+            <ul class="mb-0 list-disc pl-5 space-y-1 text-sm">
+                <li>Lists students with overall progress, topics completed, resource-type profile, and latest computed-model timestamp.</li>
+                <li>Click a student to open topic cards with resource progress and collapsible activity lists.</li>
+                <li>Attempt count, success rate, and trajectory dots render when PAWS includes those fields.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Class Average Help Modal -->
+<div id="classAverageHelpModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-green-600 text-white">
+            <h5 class="text-lg font-bold" id="classAverageHelpLabel"><i class="fas fa-users mr-2"></i>Class Average View</h5>
+            <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+            <ul class="mb-0 list-disc pl-5 space-y-1 text-sm">
+                <li>Grid shows class-average progress per topic-resource.</li>
+                <li>Hover a cell to see completed, in-progress, and not-started learner counts.</li>
+                <li>Click a cell to view per-student breakdown and activity-level details for that topic-resource.</li>
+                <li>"Struggling" students in the breakdown are those below 50% of class average for that resource.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Per Student Help Modal -->
+<div id="perStudentHelpModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
+            <h5 class="text-lg font-bold" id="perStudentHelpLabel"><i class="fas fa-list mr-2"></i>Per Student View</h5>
+            <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+            <ul class="mb-0 list-disc pl-5 space-y-1 text-sm">
+                <li>Table lists each student with overall progress, topics completed, resource profile, and last active timestamp.</li>
+                <li>Click a student to see topic-level cards with resource progress bars.</li>
+                <li>Expand a resource to view activities, completion, knowledge, status, and attempt metadata when available.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Error Toast -->
+<div class="fixed bottom-4 right-4 z-[999]">
+    <div id="errorAlert" class="toast hidden bg-red-600 text-white rounded-lg shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="flex items-center px-4 py-3">
+            <div class="flex-1 text-sm" id="errorMessage"></div>
+            <button type="button" data-bs-dismiss="toast" class="ml-3 text-white/80 hover:text-white text-lg leading-none" aria-label="Close">&times;</button>
+        </div>
+    </div>
+</div>

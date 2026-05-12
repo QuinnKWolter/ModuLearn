@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Page Not Found - ModuLearn{% endblock %}
+
+{% block content %}
+  <section class="max-w-4xl mx-auto hero-shell shell-surface shell-surface-strong text-center">
+    <p class="page-eyebrow">404</p>
+    <h1 class="text-5xl md:text-6xl font-bold mt-4">That page is not here.</h1>
+    <p class="mt-5 text-lg text-slate-600 dark:text-slate-300">
+      The route may have changed, or the link may point to a page that no longer exists.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="{% url 'main:home' %}" class="btn btn-primary btn-lg">Return Home</a>
+      <a href="{% url 'main:home' %}" class="btn btn-outline-secondary btn-lg">Go Home</a>
+    </div>
+  </section>
+{% endblock %}

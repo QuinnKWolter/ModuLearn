@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Learning Analytics Dashboard - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">Instructor Dashboard</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Legacy Analytics</li>
+{% endblock %}
+
+{% block content %}
+  <section>
+    {% include 'dashboard/components/legacy_dashboard_header.html' %}
+
+    <div id="dashboardContent" class="hidden">
+        {% include 'dashboard/components/dashboard_kpi_cards.html' %}
+        {% include 'dashboard/components/dashboard_mastery_grid.html' %}
+    </div>
+
+    {% include 'dashboard/components/dashboard_modals.html' %}
+  </section>
+{% endblock %}
+
+{% block extra_css %}
+{% include 'dashboard/components/dashboard_styles.html' %}
+{% endblock %}
+
+{% block extra_js %}
+{{ auto_groups|json_script:"auto-groups-data" }}
+<script>
+    // Pass auto_groups from backend to frontend JavaScript (already fetched via direct DB query)
+    const autoGroupsElement = document.getElementById('auto-groups-data');
+    window.autoGroups = autoGroupsElement ? JSON.parse(autoGroupsElement.textContent) : [];
+    window.legacyGroupsApiUrl = "{% url 'dashboard:get_legacy_groups_api' %}?variant=courses";
+    // Pass preselected IDs from GET parameters
+    window.preselectedGroup = "{{ preselected_group|escapejs }}";
+    window.preselectedCourse = "{{ preselected_course|escapejs }}";
+</script>
+{% include 'dashboard/components/dashboard_scripts.html' %}
+{% endblock %}

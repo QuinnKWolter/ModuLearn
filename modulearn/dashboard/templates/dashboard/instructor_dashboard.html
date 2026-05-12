@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Instructor Dashboard - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Instructor Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div
+  id="instructorDashboardApp"
+  data-csrf-token="{{ csrf_token }}"
+  data-course-details-pattern="{% url 'courses:course_details' course_id='__COURSE_ID__' %}"
+  data-course-delete-pattern="{% url 'courses:delete_course' course_id='__COURSE_ID__' %}"
+  data-get-enrollments-pattern="{% url 'courses:get_course_enrollments' course_instance_id='__COURSE_INSTANCE_ID__' %}"
+  data-remove-enrollment-pattern="{% url 'courses:remove_enrollment' enrollment_id=0 %}"
+  data-bulk-enroll-pattern="{% url 'courses:bulk_enroll_students' course_instance_id='__COURSE_INSTANCE_ID__' %}"
+  data-create-course-instance-pattern="{% url 'courses:create_course_instance' course_id='__COURSE_ID__' %}"
+  data-check-group-name-url="{% url 'courses:check_group_name' %}"
+  data-create-course-url="{% url 'courses:create_course' %}"
+  data-generate-course-auth-url="{% url 'dashboard:generate_course_auth_url' %}"
+  data-reset-course-authoring-password-url="{% url 'dashboard:reset_course_authoring_password' %}"
+  data-proxy-course-authoring-x-login-url="{% url 'dashboard:proxy_course_authoring_x_login' %}"
+  data-resource-api-pattern="{% url 'dashboard:get_course_resources_api' group_login='__GROUP_LOGIN__' %}"
+  data-legacy-groups-url="{% url 'dashboard:get_legacy_groups_api' %}?variant=masterygrids"
+  data-legacy-dashboard-base-url="{% url 'dashboard:legacy_dashboard' %}"
+  data-lti-launch-path="{% url 'lti:launch' %}"
+  data-course-authoring-x-login-url="{{ course_authoring_x_login_url }}"
+  data-course-authoring-app-url="{{ course_authoring_app_url }}"
+>
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8">
+    <article class="card p-5">
+      <div class="stat-kicker">Course Structures</div>
+      <div class="text-4xl font-bold mt-3">{{ courses|length }}</div>
+      <p class="mt-2 text-slate-600 dark:text-slate-300">Reusable course definitions you can spin into new teaching sessions.</p>
+    </article>
+    <article class="card p-5">
+      <div class="stat-kicker">Managed Sessions</div>
+      <div class="text-4xl font-bold mt-3">{{ course_instances.count }}</div>
+      <p class="mt-2 text-slate-600 dark:text-slate-300">Active ModuLearn course instances with enrollment and analytics controls.</p>
+    </article>
+    <article class="card p-5">
+      <div class="stat-kicker">Cross-Role Access</div>
+      <div class="text-4xl font-bold mt-3">{{ enrolled_instances|length }}</div>
+      <p class="mt-2 text-slate-600 dark:text-slate-300">Sessions where you are also enrolled as a learner for verification or demo work.</p>
+    </article>
+    <article class="card p-5">
+      <div class="stat-kicker">Legacy Surfaces</div>
+      <div class="text-4xl font-bold mt-3" id="legacyGroupsCount">{% if legacy_group_count is not None %}{{ legacy_group_count }}{% else %}<span class="spinner-border loading-spin" role="status" aria-label="Loading legacy groups"></span>{% endif %}</div>
+      <p class="mt-2 text-slate-600 dark:text-slate-300">KnowledgeTree and MasteryGrids groups kept available as secondary tools.</p>
+    </article>
+  </section>
+
+  <section class="grid gap-8 xl:grid-cols-[minmax(0,1.9fr)_360px]">
+    <div>
+      <div class="card p-6 mb-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-3xl">
+            <h2 class="text-3xl font-bold mt-2">Import, create, and manage without leaving the dashboard.</h2>
+            <p class="mt-3 text-slate-600 dark:text-slate-300">
+              Native ModuLearn workflows stay in the foreground. Legacy and external-authoring integrations are still here, but visually secondary.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button class="btn btn-outline-secondary btn-lg" id="importCourseButton">
+              <i class="bi bi-upload mr-2"></i>Import From Course Authoring
+            </button>
+            <a class="btn btn-primary btn-lg" href="{% url 'courses:create_semester_course' %}">
+              <i class="bi bi-mortarboard mr-2"></i>Create Semester Session
+            </a>
+            <button class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#importJsonCourseModal">
+              <i class="bi bi-file-earmark-code mr-2"></i>Import JSON Structure
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {% include 'dashboard/components/courses_section.html' %}
+      {% include 'dashboard/components/session_management_section.html' %}
+      {% if show_legacy_groups_section %}
+        {% include 'dashboard/components/legacy_courses_section.html' %}
+      {% endif %}
+    </div>
+
+    <aside class="space-y-6">
+      <section class="card p-6">
+        <div class="stat-kicker">Native First</div>
+        <h2 class="text-2xl font-bold mt-3">Primary dashboards stay focused on active teaching work.</h2>
+        <p class="mt-3 text-slate-600 dark:text-slate-300">
+          Use the dashboard and native analytics as the default workflow. Legacy MasteryGrids and KnowledgeTree entry points remain available below when you need them.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <a href="{% url 'dashboard:modulearn_analytics_dashboard' %}" class="btn btn-outline-secondary">Native Analytics</a>
+          <a href="{% url 'dashboard:legacy_dashboard' %}" class="btn btn-outline-secondary">Legacy Analytics</a>
+        </div>
+      </section>
+
+      {% include 'includes/timeline_panel.html' with events=recent_timeline count=recent_timeline|length title='Your recent completion events' kicker='Timeline' %}
+    </aside>
+  </section>
+
+  {% include 'dashboard/components/modals.html' %}
+  {% include 'dashboard/components/course_resources_modal.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/shared/course-resources-modal.js' %}"></script>
+<script src="{% static 'js/dashboard/instructor-dashboard.js' %}"></script>
+{% endblock %}

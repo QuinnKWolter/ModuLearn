@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up - ModuLearn{% endblock %}
+
+{% block breadcrumbs_wrapper %}{% endblock %}
+
+{% block content %}
+  <div class="max-w-lg mx-auto py-8">
+    <section class="card p-8">
+      <form method="post" novalidate class="space-y-4">
+        {% csrf_token %}
+        {% include 'includes/tailwind_form.html' with form=form %}
+        <button type="submit" class="btn btn-primary w-full">Create Account</button>
+      </form>
+      <p class="mt-5 text-sm text-center text-slate-500 dark:text-slate-300">
+        Already registered?
+        <a href="{% url 'accounts:login' %}" class="text-blue-600 hover:underline">Sign in here</a>.
+      </p>
+    </section>
+  </div>
+{% endblock %}

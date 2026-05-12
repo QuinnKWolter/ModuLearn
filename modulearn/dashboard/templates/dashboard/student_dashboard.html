@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Student Dashboard</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .student-session-list {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  .student-session {
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .dark .student-session {
+    border-color: rgba(71, 85, 105, 0.65);
+    background: rgba(15, 23, 42, 0.46);
+  }
+
+  .student-session-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .student-session-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .student-session-chevron {
+    width: 1.875rem;
+    height: 1.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    transition: transform 0.16s ease;
+  }
+
+  details[open] .student-session-chevron {
+    transform: rotate(90deg);
+  }
+
+  .student-session-title {
+    min-width: 0;
+  }
+
+  .student-session-meter {
+    width: min(12rem, 22vw);
+    min-width: 7rem;
+    height: 0.45rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.25);
+  }
+
+  .student-session-meter-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #16a34a);
+  }
+
+  .student-session-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    padding: 1rem;
+  }
+
+  .student-course-activity {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .student-course-activity-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.5rem;
+    background: rgba(148, 163, 184, 0.1);
+  }
+
+  @media (max-width: 720px) {
+    .student-session-summary {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .student-session-metrics {
+      grid-column: 1 / -1;
+      padding-left: 2.75rem;
+      width: 100%;
+    }
+
+    .student-session-meter {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Student View' title='Your learning dashboard' description='Pick up where you left off, see your next best move, and review your recent module activity in one place.' %}
+
+  <div class="grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
+    <section class="space-y-6">
+      {% if lti_data %}
+        <section class="card p-5">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+            {% if lti_data.picture %}
+              <img src="{{ lti_data.picture }}" alt="User Picture" class="h-14 w-14 rounded-xl object-cover">
+            {% endif %}
+            <div class="grid flex-1 gap-4 md:grid-cols-2">
+              <div>
+                <div class="stat-kicker">LTI Identity</div>
+                <div class="text-lg font-bold">{{ lti_data.name|default:user.get_full_name|default:user.username }}</div>
+                {% if lti_data.email or user.email %}
+                  <div class="mt-1 text-sm text-slate-500 dark:text-slate-300">{{ lti_data.email|default:user.email }}</div>
+                {% endif %}
+              </div>
+              <div>
+                <div class="stat-kicker">Course Context</div>
+                <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  {{ lti_data.context.title|default:lti_data.context.label|default:"Imported from your LMS session" }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      <section class="space-y-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-2xl font-bold">Your course sessions</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Current progress and course-specific activity stay grouped by session.</p>
+          </div>
+          <a href="{% url 'courses:enroll_with_code' %}" class="btn btn-outline-primary">Enroll With Code</a>
+        </div>
+
+        <div class="student-session-list">
+          {% for course_instance in course_instances %}
+            {% with progress=course_instance.user_enrollment.course_progress %}
+              <details class="student-session" {% if course_instance.is_expanded %}open{% endif %}>
+                <summary class="student-session-summary">
+                  <span class="student-session-chevron" aria-hidden="true">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                  </span>
+
+                  <span class="student-session-title">
+                    <span class="stat-kicker">Course Session</span>
+                    <span class="block truncate text-2xl font-bold">{{ course_instance.course.title }}</span>
+                    <span class="block truncate text-sm text-slate-500 dark:text-slate-300">{{ course_instance.group_name|default:"Independent Session" }}</span>
+                  </span>
+
+                  <span class="student-session-metrics flex items-center gap-3">
+                    <span class="student-session-meter" aria-hidden="true">
+                      <span class="student-session-meter-fill" style="width: {{ progress.overall_progress|default:0|floatformat:0 }}%;"></span>
+                    </span>
+                    <span class="text-sm font-semibold whitespace-nowrap">
+                      {{ progress.overall_progress|default:0|floatformat:0 }}% · {{ progress.modules_completed }}/{{ progress.total_modules }}
+                    </span>
+                  </span>
+                </summary>
+
+                <div class="student-session-body">
+                  <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_220px]">
+                    <div class="space-y-4">
+                      {% if course_instance.course.description %}
+                        <p class="text-sm text-slate-600 dark:text-slate-300">{{ course_instance.course.description|truncatewords:28 }}</p>
+                      {% endif %}
+
+                      <div class="grid gap-3 sm:grid-cols-3">
+                        <div class="shell-surface p-4 rounded-xl">
+                          <div class="stat-kicker">Progress</div>
+                          <div class="mt-1 text-2xl font-bold">{{ progress.overall_progress|default:0|floatformat:0 }}%</div>
+                        </div>
+                        <div class="shell-surface p-4 rounded-xl">
+                          <div class="stat-kicker">Score</div>
+                          <div class="mt-1 text-2xl font-bold">{{ progress.overall_score|default:0|floatformat:1 }}%</div>
+                        </div>
+                        <div class="shell-surface p-4 rounded-xl">
+                          <div class="stat-kicker">Completed</div>
+                          <div class="mt-1 text-2xl font-bold">{{ progress.modules_completed }}/{{ progress.total_modules }}</div>
+                        </div>
+                      </div>
+
+                      <div class="shell-surface p-4 rounded-xl">
+                        <div class="mb-3 flex items-center justify-between gap-3">
+                          <div class="stat-kicker">Recent activity</div>
+                          {% if course_instance.timeline %}
+                            <span class="text-xs text-slate-500 dark:text-slate-300">{{ course_instance.timeline|length }} latest</span>
+                          {% endif %}
+                        </div>
+                        {% if course_instance.timeline %}
+                          <div class="student-course-activity">
+                            {% for event in course_instance.timeline %}
+                              <div class="student-course-activity-row text-sm">
+                                <span class="min-w-0">
+                                  <span class="block truncate font-semibold">{{ event.module_title }}</span>
+                                  <span class="text-xs text-slate-500 dark:text-slate-300">{{ event.created_at|date:"M d, g:i A" }}</span>
+                                </span>
+                                <span class="badge {% if event.event_type == 'completion' %}badge-success{% elif event.event_type == 'outcome' %}badge-info{% else %}badge-secondary{% endif %}">
+                                  {% if event.event_type == 'completion' %}Done{% elif event.score is not None %}{{ event.score|floatformat:0 }}%{% else %}{{ event.event_type|title }}{% endif %}
+                                </span>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                          <p class="text-sm text-slate-500 dark:text-slate-300 mb-0">No recent module activity yet.</p>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                      <a href="{% url 'courses:course_detail' instance_id=course_instance.id %}" class="btn btn-primary w-full">Open Session</a>
+                      <a href="{% url 'courses:enroll_with_code' %}" class="btn btn-outline-secondary w-full">Add Another Code</a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            {% endwith %}
+          {% empty %}
+            <div class="empty-state">
+              <div class="text-xl font-semibold text-slate-700 dark:text-slate-200">No enrolled courses yet</div>
+              <p class="mt-2">Use an enrollment code to join your first ModuLearn course.</p>
+              <a href="{% url 'courses:enroll_with_code' %}" class="btn btn-primary mt-4">Enroll With Code</a>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </section>
+
+    {% include 'includes/timeline_panel.html' with events=timeline title='Recent student activity' kicker='Timeline' count=timeline|length %}
+  </div>
+{% endblock %}

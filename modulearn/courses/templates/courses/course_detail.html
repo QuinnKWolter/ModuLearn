@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+{% load course_tags %}
+
+{% block title %}{{ course.title }} - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}">Home</a></li>
+  <li>/</li>
+  {% if is_instructor and not is_enrolled %}
+    <li><a href="{% url 'dashboard:instructor_dashboard' %}">Instructor Dashboard</a></li>
+  {% else %}
+    <li><a href="{% url 'dashboard:student_dashboard' %}">Student Dashboard</a></li>
+  {% endif %}
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">{{ course.title }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .course-unit-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .course-unit {
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.88);
+  }
+
+  .dark .course-unit {
+    border-color: rgba(71, 85, 105, 0.65);
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .course-unit-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .course-unit-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .course-unit-chevron {
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    transition: transform 0.16s ease;
+  }
+
+  details[open] .course-unit-chevron {
+    transform: rotate(90deg);
+  }
+
+  .course-unit-title {
+    min-width: 0;
+  }
+
+  .course-unit-meter {
+    width: min(11rem, 22vw);
+    min-width: 7rem;
+    height: 0.375rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.25);
+  }
+
+  .course-unit-meter-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #16a34a);
+  }
+
+  .course-unit-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    padding: 0.35rem 0.75rem 0.75rem;
+  }
+
+  .course-module-list {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .course-module-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.625rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 0.5rem;
+  }
+
+  .course-module-row:hover {
+    background: rgba(37, 99, 235, 0.07);
+  }
+
+  .course-module-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 7.25rem;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .course-module-status.is-complete {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .course-module-status.is-active {
+    color: #075985;
+    background: #e0f2fe;
+  }
+
+  .course-module-status.is-todo {
+    color: #475569;
+    background: #f1f5f9;
+  }
+
+  .course-module-status.is-locked {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .course-module-row.is-locked {
+    opacity: 0.72;
+  }
+
+  .course-module-row.is-locked:hover {
+    background: transparent;
+  }
+
+  .course-visibility-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #334155;
+    background: #e2e8f0;
+  }
+
+  .course-visibility-chip.is-hidden {
+    color: #7f1d1d;
+    background: #fee2e2;
+  }
+
+  .course-visibility-chip.is-locked {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .dark .course-module-status.is-todo {
+    color: #cbd5e1;
+    background: rgba(71, 85, 105, 0.55);
+  }
+
+  @media (max-width: 720px) {
+    .course-unit-summary {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .course-unit-metrics {
+      grid-column: 1 / -1;
+      padding-left: 2.625rem;
+    }
+
+    .course-unit-meter {
+      width: 100%;
+    }
+
+    .course-module-row {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .course-module-status,
+    .course-module-row .btn {
+      grid-column: 2;
+      justify-self: start;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Course' title=course.title description=course.description %}
+
+  <div class="grid gap-8 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,1fr)]">
+    <section class="space-y-6">
+      <div class="card p-6">
+        <div class="grid gap-4 md:grid-cols-3">
+          <div class="shell-surface p-5 rounded-2xl">
+            <div class="stat-kicker">Session</div>
+            <div class="text-xl font-bold mt-2">{{ current_instance.group_name|default:"Default Session" }}</div>
+          </div>
+          <div class="shell-surface p-5 rounded-2xl">
+            <div class="stat-kicker">Modules Completed</div>
+            <div class="text-xl font-bold mt-2">
+              {% if course_progress %}{{ course_progress.modules_completed }}/{{ course_progress.total_modules }}{% else %}{{ course.total_modules }} total{% endif %}
+            </div>
+          </div>
+          <div class="shell-surface p-5 rounded-2xl">
+            <div class="stat-kicker">Role</div>
+            <div class="text-xl font-bold mt-2">
+              {% if is_instructor %}Instructor{% elif is_enrolled %}Student{% else %}Visitor{% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if is_enrolled and course_progress %}
+          <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
+            <div>
+              <div class="flex items-center justify-between text-sm mb-2">
+                <span class="font-semibold">Course progress</span>
+                <span>{{ course_progress.overall_progress|default:0|floatformat:1 }}%</span>
+              </div>
+              <div class="progress h-4">
+                {% with progress_pct=course_progress.overall_progress|default:0 %}
+                  <div class="progress-bar bg-green-500" style="width: {{ progress_pct|floatformat:0 }}%"></div>
+                {% endwith %}
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="shell-surface p-4 rounded-2xl">
+                <div class="stat-kicker">Score</div>
+                <div class="text-2xl font-bold mt-1">{{ course_progress.overall_score|floatformat:1 }}%</div>
+              </div>
+              <div class="shell-surface p-4 rounded-2xl">
+                <div class="stat-kicker">Completed At</div>
+                <div class="text-sm font-semibold mt-2">
+                  {% if course_progress.completed_at %}
+                    {{ course_progress.completed_at|date:"M d, Y" }}
+                  {% else %}
+                    In progress
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% elif not is_enrolled and user.is_authenticated and user.is_student %}
+          <form method="post" class="mt-6">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-lg">Enroll In This Course</button>
+          </form>
+        {% endif %}
+      </div>
+
+      {% if is_instructor or is_enrolled %}
+        <div class="course-unit-list">
+          {% for card in unit_cards %}
+            <details class="course-unit" {% if card.is_expanded %}open{% endif %}>
+              <summary class="course-unit-summary">
+                <span class="course-unit-chevron" aria-hidden="true">
+                  <i class="fa-solid fa-chevron-right text-xs"></i>
+                </span>
+
+                <span class="course-unit-title">
+                  <span class="flex flex-wrap items-center gap-2">
+                    <span class="stat-kicker">Unit {{ forloop.counter }}</span>
+                    {% if card.is_complete %}
+                      <span class="badge badge-success">Complete</span>
+                    {% endif %}
+                    {% if is_instructor and not card.is_visible %}
+                      <span class="course-visibility-chip is-hidden"><i class="fa-solid fa-eye-slash"></i> Hidden</span>
+                    {% endif %}
+                    {% if card.is_locked %}
+                      <span class="course-visibility-chip is-locked"><i class="fa-solid fa-lock"></i> Locked</span>
+                    {% endif %}
+                  </span>
+                  <span class="block truncate text-xl font-bold">{{ card.unit.title }}</span>
+                  {% if card.unit.description %}
+                    <span class="block truncate text-sm text-slate-600 dark:text-slate-300">{{ card.unit.description }}</span>
+                  {% endif %}
+                </span>
+
+                <span class="course-unit-metrics flex items-center gap-3">
+                  <span class="course-unit-meter" aria-hidden="true">
+                    <span class="course-unit-meter-fill" style="width: {{ card.progress_percent }}%;"></span>
+                  </span>
+                  <span class="text-sm font-semibold whitespace-nowrap">
+                    {{ card.completed_count }}/{{ card.module_count }} &middot; {{ card.progress_percent }}%
+                  </span>
+                </span>
+              </summary>
+
+              <div class="course-unit-body">
+                {% if card.modules %}
+                  <div class="course-module-list">
+                    {% for module in card.modules %}
+                      <article class="course-module-row {% if not module.can_access %}is-locked{% endif %}">
+                        <span class="{% if module.is_complete %}text-green-600{% else %}text-slate-400{% endif %}" aria-hidden="true">
+                          <i class="{{ module.icon_class }}"></i>
+                        </span>
+                        <span class="min-w-0">
+                          {% if module.can_access %}
+                            <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="truncate font-semibold text-blue-700 dark:text-blue-300 hover:underline">
+                              {{ module.title }}
+                            </a>
+                          {% else %}
+                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{{ module.title }}</span>
+                          {% endif %}
+                          <span class="block text-xs text-slate-500 dark:text-slate-400">
+                            {{ module.type_label }}{% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
+                            {% if is_instructor and not module.is_visible %} · Hidden from students{% endif %}
+                          </span>
+                        </span>
+                        <span class="course-module-status {{ module.status_class }}">
+                          {{ module.status }} <span>{{ module.progress_percent }}%</span>
+                        </span>
+                        {% if module.can_access %}
+                          <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="btn btn-outline-primary btn-sm">Open</a>
+                        {% else %}
+                          <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Locked</button>
+                        {% endif %}
+                      </article>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="empty-state">No modules have been added to this unit yet.</div>
+                {% endif %}
+              </div>
+            </details>
+          {% empty %}
+            <div class="empty-state">No units are available for this course yet.</div>
+          {% endfor %}
+        </div>
+      {% elif not user.is_authenticated %}
+        <div class="empty-state">
+          <div class="text-xl font-semibold text-slate-700 dark:text-slate-200">Sign in to access this course</div>
+          <p class="mt-2">Student enrollment and module progress are available after authentication.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    {% include 'includes/timeline_panel.html' with events=timeline title='Recent course timeline' kicker='Course Timeline' count=timeline|length %}
+  </div>
+{% endblock %}

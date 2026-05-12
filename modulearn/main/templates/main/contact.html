@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact Us - ModuLearn{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Contact' title='Contact' description='Use email for bug reports, access issues, implementation notes, and integration questions.' %}
+
+  <section class="max-w-4xl mx-auto grid gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(240px,0.8fr)]">
+    <article class="card p-8">
+      <div class="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+        <i class="bi bi-envelope-paper text-4xl"></i>
+      </div>
+      <h2 class="text-3xl font-bold mt-6">Email the maintainer</h2>
+      <p class="mt-4 text-slate-600 dark:text-slate-300">
+        If you are reporting a bug, include the page you were on, the role you were signed in as, and whether the issue involved LTI, KnowledgeTree, or native course pages.
+      </p>
+      <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary btn-lg mt-6">Contact the maintainer</a>
+    </article>
+
+    <aside class="card p-6">
+      <p class="stat-kicker">Useful Context</p>
+      <ul class="mt-4 list-disc space-y-3 pl-5 text-slate-600 dark:text-slate-300 marker:text-blue-500 dark:marker:text-blue-300">
+        <li><strong class="text-slate-900 dark:text-slate-100">Role:</strong> student, instructor, or both</li>
+        <li><strong class="text-slate-900 dark:text-slate-100">Page:</strong> the page or route where the issue happened</li>
+        <li><strong class="text-slate-900 dark:text-slate-100">Area:</strong> whether it involved LTI, analytics, enrollment, or a native course page</li>
+        <li><strong class="text-slate-900 dark:text-slate-100">Evidence:</strong> screenshots or exact error text when available</li>
+      </ul>
+      <p class="mt-6 text-sm text-slate-500 dark:text-slate-400">Email: QuinnKWolter@pitt.edu</p>
+    </aside>
+  </section>
+{% endblock %}

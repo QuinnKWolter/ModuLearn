@@ -1,0 +1,70 @@
+<!-- Modern Analytics Overview -->
+<div class="mb-6 analytics-overview">
+    <div class="card overflow-hidden analytics-card">
+        <div class="p-5 sm:p-6">
+            <div class="flex items-center mb-6">
+                <div class="analytics-icon analytics-icon-neutral mr-3">
+                    <i class="fas fa-chart-line text-white text-xl"></i>
+                </div>
+                <div>
+                    <h2 id="courseTitle" class="text-xl mb-1 font-bold">Course Analytics</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mb-0">Class progress, learner triage, and activity-level patterns</p>
+                </div>
+            </div>
+
+            <div id="analyticsNarrative" class="analytics-narrative mb-5 hidden">
+                <div class="analytics-narrative-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-sm mb-1" id="analyticsNarrativeTitle">Course signal</div>
+                    <p class="text-sm mb-0 text-gray-600 dark:text-gray-300" id="analyticsNarrativeText"></p>
+                </div>
+            </div>
+            
+            <!-- KPI Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="analytics-kpi analytics-kpi-neutral">
+                    <div class="p-4">
+                        <div class="analytics-kpi-top">
+                            <span class="analytics-kpi-icon"><i class="fas fa-users"></i></span>
+                            <span class="analytics-kpi-label">Students</span>
+                        </div>
+                        <div class="analytics-kpi-value" id="studentsEnrolled">-</div>
+                        <div class="analytics-kpi-note">Total enrolled</div>
+                    </div>
+                </div>
+                <div class="analytics-kpi analytics-kpi-info">
+                    <div class="p-4">
+                        <div class="analytics-kpi-top">
+                            <span class="analytics-kpi-icon"><i class="fas fa-fire"></i></span>
+                            <span class="analytics-kpi-label">Engagement</span>
+                        </div>
+                        <div class="analytics-kpi-value" id="engagementScore">-</div>
+                        <div class="analytics-kpi-note">Topic-resource cells touched</div>
+                    </div>
+                </div>
+                <div class="analytics-kpi analytics-kpi-success">
+                    <div class="p-4">
+                        <div class="analytics-kpi-top">
+                            <span class="analytics-kpi-icon"><i class="fas fa-percentage"></i></span>
+                            <span class="analytics-kpi-label">Progress</span>
+                        </div>
+                        <div class="analytics-kpi-value" id="overallProgress">-</div>
+                        <div class="analytics-kpi-note">Mean completion</div>
+                    </div>
+                </div>
+                <div class="analytics-kpi analytics-kpi-warning">
+                    <div class="p-4">
+                        <div class="analytics-kpi-top">
+                            <span class="analytics-kpi-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                            <span class="analytics-kpi-label">Needs Review</span>
+                        </div>
+                        <div class="analytics-kpi-value" id="studentsNeedingHelp">0</div>
+                        <div class="analytics-kpi-note">Behind in 30%+ of active cells</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

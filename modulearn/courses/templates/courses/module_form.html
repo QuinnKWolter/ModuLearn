@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ module.title }} - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'courses:course_detail' course_instance.id %}">{{ course_instance.course.title }}</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">{{ module.title }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .student-form-stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .student-question {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .dark .student-question {
+    border-color: rgba(71, 85, 105, 0.7);
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  .choice-stack {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .choice-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.6rem;
+    padding: 0.65rem 0.75rem;
+    background: #f8fafc;
+  }
+
+  .dark .choice-chip {
+    border-color: rgba(71, 85, 105, 0.65);
+    background: rgba(30, 41, 59, 0.65);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Form / Survey' title=module.title description=module.description %}
+
+  <div class="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)]">
+    <section class="card p-6">
+      {% if module_form.instructions %}
+        <div class="shell-surface p-4 rounded-2xl mb-5 text-slate-700 dark:text-slate-200">
+          {{ module_form.instructions|linebreaksbr }}
+        </div>
+      {% endif %}
+
+      {% if existing_submission and not module_form.allow_resubmission and not is_instructor %}
+        <div class="empty-state">
+          <div class="text-xl font-bold text-slate-700 dark:text-slate-100">Response submitted</div>
+          <p class="mt-2">This form is complete. Your instructor has disabled resubmission.</p>
+        </div>
+      {% else %}
+        <form method="post" class="student-form-stack">
+          {% csrf_token %}
+          {% for question in questions %}
+            <fieldset class="student-question">
+              <legend class="font-bold text-lg">
+                {{ question.prompt }}
+                {% if question.required %}<span class="text-red-500">*</span>{% endif %}
+              </legend>
+              {% if question.help_text %}
+                <p class="text-sm text-slate-500 dark:text-slate-300 mt-1">{{ question.help_text }}</p>
+              {% endif %}
+
+              <div class="mt-4">
+                {% if question.question_type == 'likert' %}
+                  <div class="grid gap-3 md:grid-cols-5">
+                    {% for value in '12345' %}
+                      <label class="choice-chip justify-center">
+                        <input type="radio" name="question_{{ question.id }}" value="{{ value }}" {% if question.required %}required{% endif %}>
+                        <span>{{ value }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                  <div class="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-300">
+                    <span>{{ question.likert_min_label }}</span>
+                    <span>{{ question.likert_max_label }}</span>
+                  </div>
+                {% elif question.question_type == 'single_choice' %}
+                  <div class="choice-stack">
+                    {% for option in question.options %}
+                      <label class="choice-chip">
+                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" {% if question.required %}required{% endif %}>
+                        <span>{{ option }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                {% elif question.question_type == 'multiple_choice' %}
+                  <div class="choice-stack">
+                    {% for option in question.options %}
+                      <label class="choice-chip">
+                        <input type="checkbox" name="question_{{ question.id }}" value="{{ option }}">
+                        <span>{{ option }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                {% elif question.question_type == 'long_answer' %}
+                  <textarea name="question_{{ question.id }}" rows="6" class="form-control" {% if question.required %}required{% endif %}></textarea>
+                {% else %}
+                  <input name="question_{{ question.id }}" class="form-control" {% if question.required %}required{% endif %}>
+                {% endif %}
+              </div>
+            </fieldset>
+          {% empty %}
+            <div class="empty-state">This form does not have any questions yet.</div>
+          {% endfor %}
+
+          {% if questions and not is_instructor %}
+            <div class="flex justify-end">
+              <button type="submit" class="btn btn-primary btn-lg">{{ module_form.submit_button_label }}</button>
+            </div>
+          {% endif %}
+          {% if is_instructor %}
+            <div class="empty-state">Instructor preview only. Student submissions are disabled from this view.</div>
+          {% endif %}
+        </form>
+      {% endif %}
+    </section>
+
+    <aside class="card p-6">
+      <div class="stat-kicker">Completion</div>
+      <div class="text-2xl font-bold mt-2">
+        {% if progress.is_complete %}Complete{% else %}Not submitted{% endif %}
+      </div>
+      <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Submitting this form marks the module complete and can unlock downstream content.</p>
+      <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary mt-5 w-full">Back To Course</a>
+    </aside>
+  </div>
+{% endblock %}

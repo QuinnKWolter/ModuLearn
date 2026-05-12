@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Creating Course - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">Instructor Dashboard</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Create Course</li>
+{% endblock %}
+
+{% block content %}
+  <div class="max-w-2xl mx-auto py-8">
+    <div id="loadingState" class="card p-10 text-center">
+      <div class="inline-flex mx-auto items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+        <span class="spinner-border" aria-hidden="true"></span>
+      </div>
+      <h1 class="text-3xl font-bold mt-6">Importing your course structure</h1>
+      <p class="text-slate-600 dark:text-slate-300 mt-3">ModuLearn is pulling the authored structure, normalizing modules, and preparing instructor workflows.</p>
+      <div class="progress h-3 mt-6">
+        <div class="progress-bar bg-blue-600 animate-pulse" style="width: 100%"></div>
+      </div>
+    </div>
+
+    <div id="errorState" class="card p-10 text-center hidden">
+      <div class="inline-flex mx-auto items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-300">
+        <i class="bi bi-exclamation-triangle-fill text-3xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold mt-6">Course creation hit a snag</h1>
+      <div class="alert alert-danger mt-5">
+        <p id="errorMessage" class="mb-0"></p>
+      </div>
+      <div class="flex flex-col sm:flex-row justify-center gap-3 mt-6">
+        <button type="button" onclick="window.location.reload()" class="btn btn-primary">Try Again</button>
+        <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">Return To Dashboard</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    window.createSemesterCourseConfig = {
+      courseExportUrl: "{{ course_export_url|escapejs }}",
+      createCourseUrl: "{{ create_course_url|escapejs }}",
+      redirectUrl: "{{ instructor_dashboard_url|escapejs }}",
+    };
+  </script>
+  <script src="{% static 'js/courses/create-semester-course.js' %}"></script>
+{% endblock %}

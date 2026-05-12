@@ -1,0 +1,66 @@
+{% load static %}
+<header class="site-header">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between gap-4 py-3.5">
+      <a class="site-brand" href="{% url 'main:home' %}">
+        <span class="site-brand-mark">
+          <img src="{% static 'img/logo_32.png' %}" alt="ModuLearn Logo" class="h-8 w-8">
+        </span>
+        <span class="min-w-0">
+          <span class="block text-xs uppercase tracking-[0.24em] text-white/60">ModuLearn</span>
+        </span>
+      </a>
+
+      <div class="hidden xl:flex items-center gap-1">
+        {% for item in primary_navigation %}
+          {% if item.section == 'primary' %}
+            <a class="site-nav-link{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="hidden lg:flex items-center gap-2">
+        {% for item in primary_navigation %}
+          {% if item.section == 'secondary' %}
+            <a class="site-nav-link secondary{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if user.is_authenticated %}
+          <a class="site-nav-link" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">Logout</a>
+          <form id="logout-form-header" action="{% url 'accounts:logout' %}" method="post" class="hidden">
+            {% csrf_token %}
+          </form>
+        {% endif %}
+        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle theme" aria-pressed="false" title="Toggle theme">
+          <i class="bi" data-theme-icon aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 lg:hidden">
+        <button type="button" class="theme-toggle compact" data-theme-toggle aria-label="Toggle theme" aria-pressed="false" title="Toggle theme">
+          <i class="bi" data-theme-icon aria-hidden="true"></i>
+        </button>
+        <button type="button" class="site-nav-link compact" data-mobile-toggle aria-label="Open navigation" aria-expanded="false">
+          <i class="bi bi-list text-xl" data-mobile-toggle-icon aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="site-mobile-panel hidden lg:hidden pb-4" data-mobile-nav>
+      <div class="grid gap-2">
+        {% for item in primary_navigation %}
+          <a class="site-nav-link{% if item.section == 'secondary' %} secondary{% endif %}{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+        {% if user.is_authenticated %}
+          <a class="site-nav-link" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header-mobile').submit();">Logout</a>
+          <form id="logout-form-header-mobile" action="{% url 'accounts:logout' %}" method="post" class="hidden">
+            {% csrf_token %}
+          </form>
+        {% endif %}
+        <button type="button" class="theme-toggle mobile" data-theme-toggle aria-label="Toggle theme" aria-pressed="false" title="Toggle theme">
+          <i class="bi" data-theme-icon></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>

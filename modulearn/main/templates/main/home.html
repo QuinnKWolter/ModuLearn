@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - ModuLearn{% endblock %}
+
+{% block breadcrumbs_wrapper %}{% endblock %}
+
+{% block content %}
+  <section class="hero-shell shell-surface shell-surface-strong mb-8">
+    <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,1fr)]">
+      <div>
+        <h1 class="text-5xl md:text-6xl font-bold">Course pages, tool launches, and progress in one place.</h1>
+        <p class="mt-5 text-xl text-slate-600 dark:text-slate-300 max-w-2xl">ModuLearn is a Django application for course delivery, external learning tools, enrollment, and progress tracking.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          {% if user.is_authenticated %}
+            {% if user.is_student %}
+              <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}">Open Student Dashboard</a>
+            {% endif %}
+            {% if user.is_instructor %}
+              <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}">Open Instructor Dashboard</a>
+            {% endif %}
+          {% else %}
+            <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">Sign In</a>
+            <a class="btn btn-outline-secondary btn-lg" href="{% url 'accounts:signup' %}">Create Account</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid gap-4">
+        <div class="card p-6">
+          <div class="stat-kicker">Students</div>
+          <div class="text-3xl font-bold mt-2">Launch modules and review progress</div>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Student pages focus on assigned courses, current progress, and recent activity.</p>
+        </div>
+        <div class="card p-6">
+          <div class="stat-kicker">Instructors</div>
+          <div class="text-3xl font-bold mt-2">Manage sessions, enrollment, and analytics</div>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Instructor tools cover course setup, invite codes, enrollments, and reporting.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid gap-6 md:grid-cols-3">
+    <article class="card card-hover p-6">
+      <div class="inline-flex w-12 h-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+        <i class="bi bi-grid-3x3-gap text-2xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold mt-5">Role dashboards</h2>
+      <p class="mt-3 text-slate-600 dark:text-slate-300">Students and instructors get focused dashboards for course sessions, modules, and activity.</p>
+    </article>
+    <article class="card card-hover p-6">
+      <div class="inline-flex w-12 h-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-300">
+        <i class="bi bi-link-45deg text-2xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold mt-5">External tools</h2>
+      <p class="mt-3 text-slate-600 dark:text-slate-300">Supports LTI launches, legacy integrations, and embedded module workflows.</p>
+    </article>
+    <article class="card card-hover p-6">
+      <div class="inline-flex w-12 h-12 items-center justify-center rounded-2xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300">
+        <i class="bi bi-graph-up-arrow text-2xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold mt-5">Progress data</h2>
+      <p class="mt-3 text-slate-600 dark:text-slate-300">Tracks completion, outcomes, and timeline events for students and course instances.</p>
+    </article>
+  </section>
+{% endblock %}

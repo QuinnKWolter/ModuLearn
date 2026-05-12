@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}About ModuLearn{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='About' title='About ModuLearn' description='ModuLearn is a Django application for course delivery, external learning tools, enrollment, and progress tracking.' %}
+
+  <section class="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
+    <div class="space-y-6">
+      <article class="card p-6">
+        <h2 class="text-2xl font-bold">What it does</h2>
+        <p class="mt-4 text-slate-600 dark:text-slate-300">
+          ModuLearn brings together course pages, module launches, enrollment flows, analytics, and progress tracking.
+          It also keeps legacy integrations available for workflows that still depend on them.
+        </p>
+      </article>
+
+      <div class="grid gap-6 md:grid-cols-2">
+        <article class="card card-hover p-6">
+          <h3 class="text-xl font-bold">Course delivery</h3>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Supports course instances, modules, invite-code enrollment, and role-specific dashboards.</p>
+        </article>
+        <article class="card card-hover p-6">
+          <h3 class="text-xl font-bold">External tools</h3>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Handles LTI launches, embedded tools, and existing integration paths used by the project.</p>
+        </article>
+        <article class="card card-hover p-6">
+          <h3 class="text-xl font-bold">Progress tracking</h3>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Stores completion state, completion timestamps, outcomes, and timeline events.</p>
+        </article>
+        <article class="card card-hover p-6">
+          <h3 class="text-xl font-bold">Implementation style</h3>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Server-rendered Django templates, shared static assets, and a single application shell across the site.</p>
+        </article>
+      </div>
+    </div>
+
+    <aside class="space-y-6">
+      <article class="card p-6">
+        <p class="stat-kicker">Current Status</p>
+        <h2 class="text-2xl font-bold mt-2">Active project</h2>
+        <p class="mt-4 text-slate-600 dark:text-slate-300">
+          The application is under active refinement. Bug reports and workflow feedback help guide ongoing cleanup and feature work.
+        </p>
+      </article>
+
+      <article class="card p-6">
+        <p class="stat-kicker">Core Stack</p>
+        <div class="space-y-4 mt-4">
+          <div class="flex items-center justify-between"><span>Python</span><strong>Runtime</strong></div>
+          <div class="flex items-center justify-between"><span>Django</span><strong>Application framework</strong></div>
+          <div class="flex items-center justify-between"><span>Static CSS/JS</span><strong>Frontend layer</strong></div>
+        </div>
+      </article>
+
+      <article class="card p-6">
+        <h2 class="text-2xl font-bold">Contact</h2>
+        <p class="mt-3 text-slate-600 dark:text-slate-300">Use email for questions, bug reports, and implementation notes.</p>
+        <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary mt-5">Email the maintainer</a>
+      </article>
+    </aside>
+  </section>
+{% endblock %}

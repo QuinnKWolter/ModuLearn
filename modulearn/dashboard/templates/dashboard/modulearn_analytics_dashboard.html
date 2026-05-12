@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ModuLearn Analytics Dashboard - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">Instructor Dashboard</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">Native Analytics</li>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Analytics' title='Native ModuLearn analytics' description='Review progress, engagement, and struggling learners using the native course-instance data model.' %}
+
+  <section class="grid gap-6 xl:grid-cols-[minmax(0,1.9fr)_320px]">
+    <div>
+      {% include 'dashboard/components/modulearn_dashboard_header.html' %}
+
+      <div id="dashboardContent" class="hidden">
+        {% include 'dashboard/components/dashboard_kpi_cards.html' %}
+        {% include 'dashboard/components/dashboard_mastery_grid.html' %}
+      </div>
+
+      {% include 'dashboard/components/dashboard_modals.html' %}
+    </div>
+
+    <aside class="card p-6">
+      <p class="stat-kicker">How To Use This View</p>
+      <h2 class="text-2xl font-bold mt-3">Choose a course session and load the dashboard.</h2>
+      <p class="mt-3 text-slate-600 dark:text-slate-300">
+        This view uses ModuLearn’s own course, unit, module, and progress models. It is the preferred analytics surface for native sessions.
+      </p>
+      <div class="mt-5 space-y-3 text-sm text-slate-600 dark:text-slate-300">
+        <div>Select one course session at a time.</div>
+        <div>Use class-average mode to spot weak areas across units and module types.</div>
+        <div>Switch to per-student mode to scan learner pacing and completion patterns.</div>
+      </div>
+    </aside>
+  </section>
+{% endblock %}
+
+{% block extra_css %}
+{% include 'dashboard/components/dashboard_styles.html' %}
+{% endblock %}
+
+{% block extra_js %}
+{{ course_instances|json_script:"modulearn-course-instances-data" }}
+<script>
+  const instancesEl = document.getElementById('modulearn-course-instances-data');
+  window.modulearnCourseInstances = instancesEl ? JSON.parse(instancesEl.textContent) : [];
+  window.preselectedInstanceId = "{{ preselected_instance_id|escapejs }}";
+</script>
+{% include 'dashboard/components/analytics_renderer.html' %}
+{% include 'dashboard/components/modulearn_dashboard_fetcher.html' %}
+{% endblock %}
+

@@ -1,0 +1,110 @@
+{% extends 'content_base.html' %}
+{% load static %}
+
+{% block title %}Launching Activity - ModuLearn{% endblock %}
+
+{% block content %}
+  <div class="app-launch-shell">
+    <section class="card shell-surface-strong overflow-hidden w-full max-w-2xl">
+      <div class="content-shell-header">
+        <a href="{% url 'main:home' %}" class="inline-flex items-center gap-3 no-underline">
+          <span class="site-brand-mark shrink-0">
+            <img src="{% static 'img/logo_32.png' %}" alt="ModuLearn Logo" class="h-8 w-8">
+          </span>
+          <span>
+            <span class="block text-xs font-bold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">ModuLearn</span>
+            <span class="block text-sm font-semibold text-slate-900 dark:text-slate-100">Secure tool launch in progress</span>
+          </span>
+        </a>
+        <button type="button" class="theme-toggle compact" data-theme-toggle aria-label="Toggle theme" aria-pressed="false" title="Toggle theme">
+          <i class="bi" data-theme-icon aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="launch-status-card">
+        <div class="launch-status-grid">
+          <div class="page-eyebrow mx-auto">
+            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+            Launching External Activity
+          </div>
+
+          <div class="launch-spinner" id="spinner" aria-hidden="true"></div>
+
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">Connecting to your learning tool</h1>
+            <p class="launch-status-copy mt-3 text-base" id="status-text" aria-live="polite">
+              ModuLearn is packaging your launch, passing secure context, and opening the activity.
+            </p>
+          </div>
+
+          <form id="ltiLaunchForm" action="{{ action }}" method="post" target="_self" class="space-y-4">
+            {% for k, v in params.items %}
+              <input type="hidden" name="{{ k|escape }}" value="{{ v|escape }}">
+            {% endfor %}
+
+            <noscript>
+              <div class="alert alert-info text-left">
+                JavaScript is disabled. Use the button below to continue into the activity.
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg">Launch Activity</button>
+            </noscript>
+          </form>
+
+          <div class="flex flex-col items-center gap-3">
+            <button type="button" class="btn btn-primary btn-lg hidden" id="manualLaunch">
+              Continue To Activity
+            </button>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+              If the tool does not open automatically after a few seconds, continue manually.
+            </p>
+          </div>
+
+          <div class="alert alert-danger launch-error hidden" id="errorMessage" role="alert">
+            There was a problem launching the activity. Please try again, or return to the previous page and relaunch.
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+    (function () {
+      var form = document.getElementById('ltiLaunchForm');
+      var spinner = document.getElementById('spinner');
+      var statusText = document.getElementById('status-text');
+      var manualButton = document.getElementById('manualLaunch');
+      var errorMessage = document.getElementById('errorMessage');
+
+      function showManualButton() {
+        spinner.classList.add('hidden');
+        statusText.textContent = 'Ready to continue into the activity.';
+        manualButton.classList.remove('hidden');
+      }
+
+      function showError() {
+        spinner.classList.add('hidden');
+        statusText.textContent = 'Launch needs your attention.';
+        manualButton.classList.remove('hidden');
+        errorMessage.classList.remove('hidden');
+      }
+
+      function autoSubmit() {
+        try {
+          form.submit();
+        } catch (error) {
+          console.error('Auto-submit failed:', error);
+          showError();
+        }
+      }
+
+      manualButton.addEventListener('click', function () {
+        form.submit();
+      });
+
+      window.setTimeout(showManualButton, 3000);
+      autoSubmit();
+    })();
+  </script>
+{% endblock %}

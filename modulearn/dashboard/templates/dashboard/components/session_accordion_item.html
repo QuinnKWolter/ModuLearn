@@ -1,0 +1,206 @@
+<div class="card border border-gray-200 dark:border-gray-700 overflow-hidden">
+  <h2 id="heading{{ course_instance.id }}">
+    <button class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+            type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapse{{ course_instance.id }}" aria-expanded="false"
+            aria-controls="collapse{{ course_instance.id }}">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center shrink-0">
+          <i class="bi bi-book text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <div>
+          <div class="font-semibold">{{ course_instance.course.title }}</div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">
+            <i class="bi bi-tag mr-1"></i>{{ course_instance.group_name }}
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="badge badge-info">{{ course_instance.enrollments.count }} student{{ course_instance.enrollments.count|pluralize }}</span>
+        <i class="bi bi-chevron-down text-gray-400 accordion-arrow"></i>
+      </div>
+    </button>
+  </h2>
+  <div id="collapse{{ course_instance.id }}" class="hidden" aria-labelledby="heading{{ course_instance.id }}">
+    <div class="px-4 pb-4 pt-2">
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="stat-card bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-people text-blue-600 dark:text-blue-400 text-lg"></i>
+            <div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">Enrolled</div>
+              <div class="text-lg font-bold">{{ course_instance.enrollments.count }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-calendar-check text-green-600 dark:text-green-400 text-lg"></i>
+            <div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">Created</div>
+              <div class="text-sm font-semibold">{{ course_instance.created_at|date:"M d, Y" }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-graph-up text-yellow-500 text-lg"></i>
+            <div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">Avg Progress</div>
+              <div class="text-lg font-bold">{{ course_instance.avg_progress|floatformat:0|default:"0" }}%</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-star text-cyan-500 text-lg"></i>
+            <div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">Avg Score</div>
+              <div class="text-lg font-bold">{{ course_instance.avg_score|floatformat:0|default:"0" }}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-eye mr-1"></i>View Course
+        </a>
+        {% if not enrolled %}
+        <a href="{% url 'courses:course_configuration' course_instance.id %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-sliders mr-1"></i>Configure
+        </a>
+        {% endif %}
+        <button class="btn btn-sm btn-outline-primary copy-lti-url"
+                data-course-instance-id="{{ course_instance.id }}"
+                title="Copy LTI Launch URL">
+          <i class="bi bi-link-45deg mr-1"></i>Copy LTI URL
+        </button>
+        <button class="btn btn-sm btn-outline-warning"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#manageEnrollmentModal"
+                data-course-instance-id="{{ course_instance.id }}"
+                data-course-title="{{ course_instance.course.title }}"
+                data-group-name="{{ course_instance.group_name }}">
+          <i class="bi bi-people mr-1"></i>Manage Enrollment
+        </button>
+        <a href="{% url 'dashboard:modulearn_analytics_dashboard' %}?instance_id={{ course_instance.id }}" class="btn btn-sm btn-outline-info">
+          <i class="bi bi-graph-up mr-1"></i>Analytics
+        </a>
+      </div>
+
+      <!-- Course Description -->
+      {% if course_instance.course.description %}
+      <div class="mb-4">
+        <h6 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</h6>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ course_instance.course.description|truncatewords:50 }}</p>
+      </div>
+      {% endif %}
+
+      {% if course_instance.recent_activity %}
+      <div class="mb-4">
+        <h6 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Recent Activity</h6>
+        <div class="space-y-2">
+          {% for event in course_instance.recent_activity %}
+          <div class="rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 px-3 py-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="font-medium text-sm">{{ event.module_title }}</div>
+              <span class="badge {% if event.event_type == 'completion' %}badge-success{% elif event.event_type == 'outcome' %}badge-info{% elif event.event_type == 'reopened' %}badge-warning{% else %}badge-secondary{% endif %}">
+                {{ event.event_type|title }}
+              </span>
+            </div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {% if event.score is not None %}{{ event.score|floatformat:0 }}% · {% endif %}
+              {{ event.created_at|date:"M d, Y g:i A" }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Students Section -->
+      <div>
+        <div class="flex justify-between items-center mb-3">
+          <h6 class="font-semibold flex items-center gap-2">
+            <i class="bi bi-people"></i>Students ({{ course_instance.enrollments.count }})
+          </h6>
+          <button class="btn btn-link text-sm p-0"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#studentList-{{ course_instance.id }}"
+                  aria-expanded="false">
+            <i class="bi bi-chevron-down mr-1"></i>View All
+          </button>
+        </div>
+
+        <div class="hidden" id="studentList-{{ course_instance.id }}">
+          {% if course_instance.enrollments.count > 0 %}
+          <div class="overflow-x-auto">
+            <table class="table table-hover table-sm">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Progress</th>
+                  <th class="text-center">Modules</th>
+                  <th class="text-right">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for enrollment in course_instance.enrollments.all %}
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center shrink-0">
+                        <i class="bi bi-person text-blue-600 dark:text-blue-400 text-xs"></i>
+                      </div>
+                      <div>
+                        <div class="font-medium text-sm">{{ enrollment.student.username }}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ enrollment.student.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <div class="progress flex-1 h-1.5" style="min-width: 60px;">
+                        {% with progress_pct=enrollment.course_progress.overall_progress|default:0 %}
+                        <div class="progress-bar bg-green-500"
+                             role="progressbar"
+                             style="width: {{ progress_pct|floatformat:0 }}%; min-width: 0%; display: block;"
+                             aria-valuenow="{{ progress_pct|floatformat:0 }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                        </div>
+                        {% endwith %}
+                      </div>
+                      <span class="text-xs font-semibold whitespace-nowrap">{{ enrollment.course_progress.overall_progress|default:0|floatformat:0 }}%</span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge badge-secondary">
+                      {{ enrollment.course_progress.modules_completed }}/{{ enrollment.course_progress.total_modules }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <span class="font-semibold {% if enrollment.course_progress.overall_score >= 90 %}text-green-600{% elif enrollment.course_progress.overall_score >= 70 %}text-yellow-500{% else %}text-red-500{% endif %}">
+                      {{ enrollment.course_progress.overall_score|floatformat:1 }}%
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-6">
+            <i class="bi bi-inbox text-gray-300 dark:text-gray-600 text-3xl"></i>
+            <p class="text-gray-400 mt-2 text-sm">No students enrolled yet</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
