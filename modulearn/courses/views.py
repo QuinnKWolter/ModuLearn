@@ -30,7 +30,7 @@ from django.conf import settings
 import jwt
 import time
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.views import View
 import xml.etree.ElementTree as ET
@@ -46,7 +46,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 import requests
-from django.db import models
+from django.db import models, transaction
 from modulearn.integrations.course_authoring import build_course_export_url
 from modulearn.learning.selectors.courses import build_course_detail_context
 from modulearn.learning.services.access_rules import (
@@ -54,6 +54,7 @@ from modulearn.learning.services.access_rules import (
     evaluate_module_access,
     evaluate_unit_access,
     log_module_access,
+    next_order_for_unit,
     next_order_for_module,
     sync_module_progress_for_course,
 )
@@ -176,6 +177,9 @@ def course_configuration(request, instance_id):
             if action == "update_structure":
                 _update_course_structure_controls(request, course)
                 messages.success(request, "Course visibility and locking controls were updated.")
+            elif action == "add_unit":
+                _create_manual_unit(request, course)
+                messages.success(request, "Unit added to the course structure.")
             elif action == "add_module":
                 _create_custom_module(request, course)
                 messages.success(request, "Module added to the course structure.")
@@ -231,6 +235,22 @@ def _update_course_structure_controls(request, course):
             ])
 
 
+def _create_manual_unit(request, course):
+    title = (request.POST.get("unit_title") or "").strip()
+    if not title:
+        raise ValueError("Unit title is required.")
+
+    Unit.objects.create(
+        course=course,
+        title=title,
+        description=request.POST.get("unit_description", ""),
+        order=int(request.POST.get("unit_order") or next_order_for_unit(course)),
+        is_visible=True,
+        is_locked=False,
+        unlock_rule={},
+    )
+
+
 def _create_custom_module(request, course):
     unit_id = request.POST.get("unit_id")
     unit = get_object_or_404(Unit, id=unit_id, course=course)
@@ -243,6 +263,8 @@ def _create_custom_module(request, course):
     if not title:
         raise ValueError("Module title is required.")
 
+    supported_protocols = ['splice'] if module_type == Module.MODULE_TYPE_SPLICE_SMART_CONTENT else []
+
     module = Module.objects.create(
         unit=unit,
         title=title,
@@ -253,7 +275,7 @@ def _create_custom_module(request, course):
         content_file=request.FILES.get("content_file"),
         is_visible=True,
         is_locked=False,
-        supported_protocols=[],
+        supported_protocols=supported_protocols,
     )
 
     if module_type == Module.MODULE_TYPE_FORM:
@@ -1635,11 +1657,13 @@ def delete_course_instance(request, instance_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@csrf_exempt
+@login_required
+@require_GET
+@ensure_csrf_cookie
 def create_semester_course(request):
     logger.debug("Entered create_semester_course view")
     
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         logger.warning(f"Permission denied for user: {request.user}")
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
 
@@ -1652,6 +1676,7 @@ def create_semester_course(request):
             'course_id': course_id,
             'course_export_url': build_course_export_url(course_id) if course_id else '',
             'create_course_url': reverse('courses:create_course'),
+            'create_raw_session_url': reverse('courses:create_raw_course_session'),
             'instructor_dashboard_url': reverse('dashboard:instructor_dashboard'),
         })
         logger.debug("Successfully rendered create_semester_course.html")
@@ -1659,3 +1684,55 @@ def create_semester_course(request):
     except Exception as e:
         logger.error(f"Error rendering template: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@login_required
+@require_POST
+def create_raw_course_session(request):
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
+
+    course_title = (data.get("course_title") or "").strip() or "Untitled Course"
+    group_name = (data.get("group_name") or "").strip() or "Session"
+    course_description = (data.get("course_description") or "").strip()
+
+    try:
+        with transaction.atomic():
+            course_id = f"manual-{uuid.uuid4().hex[:16]}"
+            course = Course.objects.create(
+                id=course_id,
+                title=course_title,
+                description=course_description,
+            )
+            course.instructors.add(request.user)
+
+            instance = CourseInstance.objects.create(
+                course=course,
+                group_name=group_name,
+            )
+            instance.instructors.add(request.user)
+
+            Unit.objects.create(
+                course=course,
+                title="Unit 1",
+                description="",
+                order=next_order_for_unit(course),
+            )
+
+        return JsonResponse({
+            'success': True,
+            'course_id': course.id,
+            'instance_id': instance.id,
+            'redirect_url': reverse('courses:course_configuration', kwargs={'instance_id': instance.id}),
+        })
+    except Exception as error:
+        logger.exception("Failed to create custom course session for user %s", request.user.id)
+        return JsonResponse({
+            'success': False,
+            'error': str(error) or 'Unable to create custom course session.'
+        }, status=500)

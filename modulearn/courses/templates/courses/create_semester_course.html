@@ -13,7 +13,36 @@
 
 {% block content %}
   <div class="max-w-2xl mx-auto py-8">
-    <div id="loadingState" class="card p-10 text-center">
+    <div id="manualState" class="card p-6{% if course_export_url %} hidden{% endif %}">
+      <div class="stat-kicker">Session Setup</div>
+      <h1 class="text-2xl font-bold mt-2">Create a custom course session</h1>
+      <p class="text-slate-600 dark:text-slate-300 mt-2">Start empty, then populate units and modules manually.</p>
+
+      <form id="createRawSessionForm" class="grid gap-4 mt-5">
+        {% csrf_token %}
+        <div id="manualError" class="alert alert-danger hidden mb-0" role="alert"></div>
+        <div>
+          <label for="rawCourseTitle" class="stat-kicker">Course title</label>
+          <input id="rawCourseTitle" name="course_title" class="form-control mt-1" placeholder="Untitled Course" required>
+        </div>
+        <div>
+          <label for="rawSessionName" class="stat-kicker">Session name</label>
+          <input id="rawSessionName" name="group_name" class="form-control mt-1" placeholder="Fall 2026 - Section A" required>
+        </div>
+        <div>
+          <label for="rawCourseDescription" class="stat-kicker">Description (optional)</label>
+          <textarea id="rawCourseDescription" name="course_description" class="form-control mt-1" rows="3" placeholder="Optional course description"></textarea>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1">
+          <button id="createRawSessionButton" type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle mr-2"></i>Create Custom Session
+          </button>
+          <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+    <div id="loadingState" class="card p-10 text-center{% if not course_export_url %} hidden{% endif %}">
       <div class="inline-flex mx-auto items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
         <span class="spinner-border" aria-hidden="true"></span>
       </div>
@@ -43,8 +72,11 @@
 {% block extra_js %}
   <script>
     window.createSemesterCourseConfig = {
+      csrfToken: "{{ csrf_token|escapejs }}",
+      courseId: "{{ course_id|default:''|escapejs }}",
       courseExportUrl: "{{ course_export_url|escapejs }}",
       createCourseUrl: "{{ create_course_url|escapejs }}",
+      createRawSessionUrl: "{{ create_raw_session_url|escapejs }}",
       redirectUrl: "{{ instructor_dashboard_url|escapejs }}",
     };
   </script>

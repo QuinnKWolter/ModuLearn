@@ -1,4 +1,4 @@
-Django==6.0.2
+django==6.0.5
 djangorestframework
 django-cors-headers
 django-oauth-toolkit

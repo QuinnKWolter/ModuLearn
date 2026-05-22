@@ -177,3 +177,25 @@ class CourseProgressTests(TestCase):
                 event_type=ModuleAccessLog.EVENT_FORM_SUBMIT,
             ).exists()
         )
+
+    def test_configuration_can_add_splice_module_with_splice_protocol(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'add_module',
+                'unit_id': self.unit.id,
+                'module_type': Module.MODULE_TYPE_SPLICE_SMART_CONTENT,
+                'title': 'SPLICE Practice',
+                'description': 'Adaptive frame content',
+                'order': 40,
+                'content_url': 'https://splice-learning.example/activity/1',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        module = Module.objects.get(unit=self.unit, title='SPLICE Practice')
+        self.assertEqual(module.module_type, Module.MODULE_TYPE_SPLICE_SMART_CONTENT)
+        self.assertEqual(module.content_url, 'https://splice-learning.example/activity/1')
+        self.assertEqual(module.supported_protocols, ['splice'])

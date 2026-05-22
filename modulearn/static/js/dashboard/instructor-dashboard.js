@@ -424,6 +424,7 @@
     const legacyLoading = document.getElementById('legacyGroupsLoading');
     const legacyMeta = document.getElementById('legacyGroupsMeta');
     const legacyCount = document.getElementById('legacyGroupsCount');
+    const legacySection = document.getElementById('legacyGroupsSection');
 
     function filterLegacyGroups() {
       if (!legacySearchInput || !legacyContainer) return;
@@ -473,11 +474,19 @@
       }
 
       if (!normalizedGroups.length) {
+        if (legacySection) legacySection.classList.add('hidden');
         legacyContainer.innerHTML = '';
         legacyContainer.classList.add('hidden');
-        if (legacyEmptyMsg) legacyEmptyMsg.classList.remove('hidden');
+        if (legacyEmptyMsg) legacyEmptyMsg.classList.add('hidden');
+        if (legacySearchInput) {
+          legacySearchInput.value = '';
+          legacySearchInput.disabled = true;
+        }
+        if (legacyClearBtn) legacyClearBtn.classList.add('hidden');
         return;
       }
+
+      if (legacySection) legacySection.classList.remove('hidden');
 
       legacyContainer.innerHTML = normalizedGroups.map((group) => `
         <div class="legacy-group-card" data-group-name="${escapeHtml(group.groupName.toLowerCase())}" data-group-login="${escapeHtml(group.groupLogin.toLowerCase())}">

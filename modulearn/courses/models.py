@@ -94,11 +94,13 @@ class Unit(models.Model):
 class Module(models.Model):
     MODULE_TYPE_IMPORTED = 'imported'
     MODULE_TYPE_EXTERNAL_LINK = 'external_link'
+    MODULE_TYPE_SPLICE_SMART_CONTENT = 'splice_smart_content'
     MODULE_TYPE_FILE = 'file'
     MODULE_TYPE_FORM = 'form'
     MODULE_TYPE_CHOICES = [
         (MODULE_TYPE_IMPORTED, 'Imported Activity'),
         (MODULE_TYPE_EXTERNAL_LINK, 'External Link'),
+        (MODULE_TYPE_SPLICE_SMART_CONTENT, 'SPLICE Smart Learning Content'),
         (MODULE_TYPE_FILE, 'Uploaded File'),
         (MODULE_TYPE_FORM, 'Form / Survey'),
     ]

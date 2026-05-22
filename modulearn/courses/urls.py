@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.course_list, name='course_list'),
     path('check-group-name/', views.check_group_name, name='check_group_name'),
     path('create-semester-course/', views.create_semester_course, name='create_semester_course'),
+    path('create-raw-session/', views.create_raw_course_session, name='create_raw_course_session'),
     path('create/', views.create_course, name='create_course'),
     path('update-module-progress/<int:module_id>/', views.update_module_progress, name='update_module_progress'),
     # Instructor preview (no tracking) route

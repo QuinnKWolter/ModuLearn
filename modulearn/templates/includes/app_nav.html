@@ -13,7 +13,7 @@
 
       <div class="hidden xl:flex items-center gap-1">
         {% for item in primary_navigation %}
-          {% if item.section == 'primary' %}
+          {% if item.section == 'primary' and item.label != 'Profile' and item.label != 'Login' and item.label != 'Sign Up' %}
             <a class="site-nav-link{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
           {% endif %}
         {% endfor %}
@@ -21,15 +21,37 @@
 
       <div class="hidden lg:flex items-center gap-2">
         {% for item in primary_navigation %}
-          {% if item.section == 'secondary' %}
+          {% if item.section == 'secondary' and item.label != 'Profile' %}
             <a class="site-nav-link secondary{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
           {% endif %}
         {% endfor %}
         {% if user.is_authenticated %}
-          <a class="site-nav-link" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">Logout</a>
+          {% with display_name=user.get_full_name|default:user.username %}
+            <details class="site-user-menu">
+              <summary class="site-nav-link secondary">
+                <span class="site-user-menu-name">{{ display_name|truncatechars:30 }}</span>
+                <i class="bi bi-chevron-down site-user-menu-caret" aria-hidden="true"></i>
+              </summary>
+              <div class="site-user-menu-panel" role="menu" aria-label="User menu">
+                <a class="site-user-menu-item" href="{% url 'accounts:profile' %}" role="menuitem">Profile</a>
+                <a class="site-user-menu-item" href="{% url 'accounts:logout' %}" role="menuitem" onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">Logout</a>
+              </div>
+            </details>
+          {% endwith %}
           <form id="logout-form-header" action="{% url 'accounts:logout' %}" method="post" class="hidden">
             {% csrf_token %}
           </form>
+        {% else %}
+          <details class="site-user-menu">
+            <summary class="site-nav-link secondary">
+              <span class="site-user-menu-name">Account</span>
+              <i class="bi bi-chevron-down site-user-menu-caret" aria-hidden="true"></i>
+            </summary>
+            <div class="site-user-menu-panel" role="menu" aria-label="Account menu">
+              <a class="site-user-menu-item" href="{% url 'accounts:login' %}" role="menuitem">Login</a>
+              <a class="site-user-menu-item" href="{% url 'accounts:signup' %}" role="menuitem">Sign Up</a>
+            </div>
+          </details>
         {% endif %}
         <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle theme" aria-pressed="false" title="Toggle theme">
           <i class="bi" data-theme-icon aria-hidden="true"></i>
@@ -49,13 +71,37 @@
     <div class="site-mobile-panel hidden lg:hidden pb-4" data-mobile-nav>
       <div class="grid gap-2">
         {% for item in primary_navigation %}
-          <a class="site-nav-link{% if item.section == 'secondary' %} secondary{% endif %}{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
+          {% if item.label != 'Profile' and item.label != 'Login' and item.label != 'Sign Up' %}
+            <a class="site-nav-link{% if item.section == 'secondary' %} secondary{% endif %}{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
+          {% endif %}
         {% endfor %}
         {% if user.is_authenticated %}
-          <a class="site-nav-link" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header-mobile').submit();">Logout</a>
+          {% with display_name=user.get_full_name|default:user.username %}
+            <details class="site-mobile-user-menu">
+              <summary class="site-nav-link">
+                <span>{{ display_name|truncatechars:30 }}</span>
+                <i class="bi bi-chevron-down site-user-menu-caret" aria-hidden="true"></i>
+              </summary>
+              <div class="grid gap-2 pl-3 border-l border-white/20 ml-2">
+                <a class="site-nav-link secondary" href="{% url 'accounts:profile' %}">Profile</a>
+                <a class="site-nav-link secondary" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header-mobile').submit();">Logout</a>
+              </div>
+            </details>
+          {% endwith %}
           <form id="logout-form-header-mobile" action="{% url 'accounts:logout' %}" method="post" class="hidden">
             {% csrf_token %}
           </form>
+        {% else %}
+          <details class="site-mobile-user-menu">
+            <summary class="site-nav-link">
+              <span>Account</span>
+              <i class="bi bi-chevron-down site-user-menu-caret" aria-hidden="true"></i>
+            </summary>
+            <div class="grid gap-2 pl-3 border-l border-white/20 ml-2">
+              <a class="site-nav-link secondary" href="{% url 'accounts:login' %}">Login</a>
+              <a class="site-nav-link secondary" href="{% url 'accounts:signup' %}">Sign Up</a>
+            </div>
+          </details>
         {% endif %}
         <button type="button" class="theme-toggle mobile" data-theme-toggle aria-label="Toggle theme" aria-pressed="false" title="Toggle theme">
           <i class="bi" data-theme-icon></i>

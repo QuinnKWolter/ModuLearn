@@ -392,36 +392,50 @@
     const legacyClearBtn = document.getElementById('clearLegacySearch');
     const legacyEmptyMsg = document.getElementById('legacyGroupsEmpty');
     const legacyContainer = document.getElementById('legacyGroupsContainer');
+    const legacySection = document.getElementById('legacyGroupsSection');
     if (legacySearchInput && legacyContainer) {
       const legacyCards = Array.from(legacyContainer.querySelectorAll('.legacy-group-card'));
-      const filterLegacyGroups = () => {
-        const searchTerm = legacySearchInput.value.toLowerCase().trim();
-        let visibleCount = 0;
-
-        legacyCards.forEach((card) => {
-          const groupName = card.dataset.groupName || '';
-          const groupLogin = card.dataset.groupLogin || '';
-          const matches = !searchTerm || groupName.includes(searchTerm) || groupLogin.includes(searchTerm);
-          card.style.display = matches ? '' : 'none';
-          if (matches) visibleCount += 1;
-        });
-
+      if (legacyCards.length === 0) {
+        if (legacySection) {
+          legacySection.classList.add('hidden');
+        }
         if (legacyEmptyMsg) {
-          legacyEmptyMsg.classList.toggle('hidden', !(searchTerm && visibleCount === 0));
+          legacyEmptyMsg.classList.add('hidden');
         }
-        legacyContainer.classList.toggle('hidden', Boolean(searchTerm && visibleCount === 0));
-        if (legacyClearBtn) {
-          legacyClearBtn.classList.toggle('hidden', !searchTerm);
+      } else {
+        if (legacySection) {
+          legacySection.classList.remove('hidden');
         }
-      };
 
-      legacySearchInput.addEventListener('input', filterLegacyGroups);
-      if (legacyClearBtn) {
-        legacyClearBtn.addEventListener('click', () => {
-          legacySearchInput.value = '';
-          filterLegacyGroups();
-          legacySearchInput.focus();
-        });
+        const filterLegacyGroups = () => {
+          const searchTerm = legacySearchInput.value.toLowerCase().trim();
+          let visibleCount = 0;
+
+          legacyCards.forEach((card) => {
+            const groupName = card.dataset.groupName || '';
+            const groupLogin = card.dataset.groupLogin || '';
+            const matches = !searchTerm || groupName.includes(searchTerm) || groupLogin.includes(searchTerm);
+            card.style.display = matches ? '' : 'none';
+            if (matches) visibleCount += 1;
+          });
+
+          if (legacyEmptyMsg) {
+            legacyEmptyMsg.classList.toggle('hidden', !(searchTerm && visibleCount === 0));
+          }
+          legacyContainer.classList.toggle('hidden', Boolean(searchTerm && visibleCount === 0));
+          if (legacyClearBtn) {
+            legacyClearBtn.classList.toggle('hidden', !searchTerm);
+          }
+        };
+
+        legacySearchInput.addEventListener('input', filterLegacyGroups);
+        if (legacyClearBtn) {
+          legacyClearBtn.addEventListener('click', () => {
+            legacySearchInput.value = '';
+            filterLegacyGroups();
+            legacySearchInput.focus();
+          });
+        }
       }
     }
 

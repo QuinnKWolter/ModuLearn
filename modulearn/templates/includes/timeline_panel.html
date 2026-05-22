@@ -1,4 +1,4 @@
-<section class="card p-6">
+<section class="card p-6{% if panel_class %} {{ panel_class }}{% endif %}">
   <div class="flex items-center justify-between gap-4 mb-5">
     <div>
       <p class="stat-kicker">{{ kicker|default:"Timeline" }}</p>
@@ -10,7 +10,7 @@
   </div>
 
   {% if events %}
-    <div class="timeline-list">
+    <div class="timeline-list{% if list_class %} {{ list_class }}{% endif %}">
       {% for event in events %}
         <div class="timeline-item">
           <span class="timeline-dot"></span>

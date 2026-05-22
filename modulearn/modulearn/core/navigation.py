@@ -25,7 +25,6 @@ def build_navigation(request):
         _nav_item("Student", reverse("dashboard:student_dashboard"), requires_auth=True),
         _nav_item("Instructor", reverse("dashboard:instructor_dashboard"), requires_auth=True),
         _nav_item("Analytics", reverse("dashboard:modulearn_analytics_dashboard"), requires_auth=True, match_prefix=True),
-        _nav_item("Legacy", reverse("dashboard:legacy_dashboard"), section="secondary", requires_auth=True, match_prefix=True),
         _nav_item("Profile", reverse("accounts:profile"), requires_auth=True, match_prefix=True),
         _nav_item("Login", reverse("accounts:login"), requires_guest=True),
         _nav_item("Sign Up", reverse("accounts:signup"), requires_guest=True),
@@ -48,7 +47,7 @@ def build_navigation(request):
             continue
         if item["label"] == "Student" and not role_snapshot["effective_is_student"]:
             continue
-        if item["label"] in {"Instructor", "Analytics", "Legacy"} and not role_snapshot["effective_is_instructor"]:
+        if item["label"] in {"Instructor", "Analytics"} and not role_snapshot["effective_is_instructor"]:
             continue
         item["is_active"] = (
             current_path == item["url"] or
