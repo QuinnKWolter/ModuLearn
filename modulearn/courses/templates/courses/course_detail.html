@@ -6,7 +6,7 @@
 {% block breadcrumbs %}
   <li><a href="{% url 'main:home' %}">Home</a></li>
   <li>/</li>
-  {% if is_instructor and not is_enrolled %}
+  {% if is_instructor %}
     <li><a href="{% url 'dashboard:instructor_dashboard' %}">Instructor Dashboard</a></li>
   {% else %}
     <li><a href="{% url 'dashboard:student_dashboard' %}">Student Dashboard</a></li>
@@ -260,7 +260,16 @@
               </div>
             </div>
           </div>
-        {% elif not is_enrolled and user.is_authenticated and user.is_student %}
+          {% if participant_session %}
+            <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200/70 bg-blue-50/70 p-4 dark:border-blue-400/20 dark:bg-blue-400/10">
+              <div>
+                <div class="font-bold text-slate-900 dark:text-white">Research session</div>
+                <p class="text-sm text-slate-600 dark:text-slate-300">Condition: {{ participant_session.condition|default:'assigned' }} · Status: {{ participant_session.get_status_display }}</p>
+              </div>
+              <a class="btn btn-primary" href="{% url 'recruitment:complete' participant_session.uuid %}">Finish Study</a>
+            </div>
+          {% endif %}
+        {% elif not is_enrolled and user.is_authenticated and effective_is_student %}
           <form method="post" class="mt-6">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary btn-lg">Enroll In This Course</button>

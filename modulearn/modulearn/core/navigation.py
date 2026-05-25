@@ -28,12 +28,23 @@ def build_navigation(request):
         _nav_item("Profile", reverse("accounts:profile"), requires_auth=True, match_prefix=True),
         _nav_item("Login", reverse("accounts:login"), requires_guest=True),
         _nav_item("Sign Up", reverse("accounts:signup"), requires_guest=True),
-        _nav_item("About", reverse("main:about"), match_prefix=True),
-        _nav_item("Contact", reverse("main:contact"), match_prefix=True),
+        _nav_item("Info", reverse("main:info"), match_prefix=True),
     ]
 
     if not is_authenticated:
         visible = [item for item in items if not item["requires_auth"] and (not item["requires_guest"] or not is_authenticated)]
+        for item in visible:
+            item["is_active"] = (
+                current_path == item["url"] or
+                (item["match_prefix"] and item["url"] != "/" and current_path.startswith(item["url"]))
+            )
+        return visible
+
+    if getattr(user, "is_anonymous_participant", False):
+        visible = [
+            item for item in items
+            if item["label"] in {"Home", "Student", "Info"} and not item["requires_guest"]
+        ]
         for item in visible:
             item["is_active"] = (
                 current_path == item["url"] or

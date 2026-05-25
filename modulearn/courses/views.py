@@ -137,7 +137,7 @@ def course_list(request):
     Role-specific dashboards now own course/session cards.
     """
     role_snapshot = get_user_role_snapshot(request.user)
-    if role_snapshot["effective_is_instructor"] and not role_snapshot["effective_is_student"]:
+    if role_snapshot["effective_is_instructor"]:
         return redirect("dashboard:instructor_dashboard")
     return redirect("dashboard:student_dashboard")
 
@@ -151,7 +151,8 @@ def course_detail(request, instance_id):
     context = build_course_detail_context(request.user, course_instance)
 
     # Handle enrollment POST request
-    if request.method == 'POST' and request.user.is_student:
+    role_snapshot = get_user_role_snapshot(request.user)
+    if request.method == 'POST' and role_snapshot["effective_is_student"]:
         if not context['is_enrolled']:
             Enrollment.objects.create(
                 student=request.user, 
@@ -171,7 +172,11 @@ def course_configuration(request, instance_id):
         raise PermissionDenied("Only instructors can configure this course.")
 
     course = course_instance.course
+    research_has_participants = course.instances.filter(recruitment_sources__participant_sessions__isnull=False).exists()
     if request.method == "POST":
+        if course.is_locked_for_research and research_has_participants:
+            messages.error(request, "This course protocol is locked because recruitment has started. Duplicate the course before changing structure.")
+            return redirect("courses:course_configuration", instance_id=course_instance.id)
         action = request.POST.get("action")
         try:
             if action == "update_structure":
@@ -196,6 +201,9 @@ def course_configuration(request, instance_id):
         "unit_groups": _module_rule_context(course),
         "module_types": Module.MODULE_TYPE_CHOICES[1:],
         "question_types": ModuleFormQuestion.TYPE_CHOICES,
+        "research_conditions": sorted({condition for source in course_instance.recruitment_sources.all() for condition in source.conditions}),
+        "is_locked_for_research": course.is_locked_for_research,
+        "research_has_participants": research_has_participants,
     }
     return render(request, "courses/course_configuration.html", context)
 
@@ -370,7 +378,7 @@ def unenroll(request, course_id):
 
 @csrf_exempt
 def create_course(request):
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
 
     try:
@@ -807,7 +815,7 @@ def preview_iframe_module(request, module_id):
     """
     module = get_object_or_404(Module, id=module_id)
 
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return HttpResponseForbidden("Preview is limited to instructors")
 
     # Get the module's content URL and selected protocol
@@ -1138,7 +1146,7 @@ def enroll_with_code(request):
 @require_POST
 @login_required
 def create_enrollment_code(request, course_instance_id):
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return JsonResponse({'success': False, 'error': 'Permission denied.'})
 
     try:
@@ -1230,15 +1238,18 @@ def update_module_progress(request, module_id):
     try:
         data = json.loads(request.body)
         
-        # Find the active course instance for this user and module
-        course_instance = CourseInstance.objects.filter(
+        course_instance_id = data.get('course_instance_id')
+        course_instance_query = CourseInstance.objects.filter(
             course=course,
             enrollments__student=request.user,
             active=True
-        ).first()
-        
+        )
+        if course_instance_id:
+            course_instance_query = course_instance_query.filter(id=course_instance_id)
+        course_instance = course_instance_query.first()
+
         if not course_instance:
-            return JsonResponse({'error': 'No active enrollment found'}, status=404)
+            return JsonResponse({'error': 'No active enrollment found for this course instance'}, status=404)
 
         allowed, reason = _user_can_access_module(request.user, course_instance, module)
         if not allowed:
@@ -1258,6 +1269,15 @@ def update_module_progress(request, module_id):
             enrollment__course_instance=course_instance
         )
         course_progress.update_progress()
+
+        participant_session = getattr(enrollment := course_progress.enrollment, 'participant_sessions', None)
+        if participant_session is not None:
+            session = enrollment.participant_sessions.filter(
+                recruitment_source__course_instance=course_instance
+            ).first()
+            if session and session.status in {'entered', 'consented'}:
+                session.status = 'in_progress'
+                session.save(update_fields=['status', 'updated_at'])
         
         return JsonResponse({
             'success': True,
@@ -1283,7 +1303,7 @@ def duplicate_course_instance(request, course_instance_id):
     """
     Duplicates a course instance with a new group name.
     """
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return JsonResponse({'success': False, 'error': 'Permission denied'})
         
     try:
@@ -1348,7 +1368,7 @@ def create_course_instance(request, course_id):
     """
     logger.info(f"Attempting to create course instance for course_id: {course_id}, user: {request.user}")
     
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         logger.warning(f"Permission denied: User {request.user} is not an instructor")
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     
@@ -1451,7 +1471,7 @@ def delete_course(request, course_id):
     """
     Deletes a course and all its instances.
     """
-    if not request.user.is_instructor:
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return JsonResponse({'success': False, 'error': 'Permission denied'})
         
     try:

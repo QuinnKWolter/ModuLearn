@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Study Link Unavailable - ModuLearn{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto">
+  <div class="card p-8 text-center">
+    <div class="feature-icon mx-auto mb-4"><i class="bi bi-shield-exclamation" aria-hidden="true"></i></div>
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Study link unavailable</h1>
+    <p class="mt-3 text-slate-600 dark:text-slate-300">{{ reason|default:'This recruitment link cannot be used right now.' }}</p>
+  </div>
+</section>
+{% endblock %}

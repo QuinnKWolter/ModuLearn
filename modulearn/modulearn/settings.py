@@ -158,7 +158,8 @@ INSTALLED_APPS = [
     'courses',
     'dashboard',
     'main',
-    'lti'
+    'lti',
+    'recruitment',
 ]
 
 MIDDLEWARE = [

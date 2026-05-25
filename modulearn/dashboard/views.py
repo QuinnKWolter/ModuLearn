@@ -27,6 +27,9 @@ def student_dashboard(request):
     """
     Displays the student's dashboard with enrolled courses.
     """
+    role_snapshot = get_user_role_snapshot(request.user)
+    if role_snapshot["effective_is_instructor"]:
+        return redirect('dashboard:instructor_dashboard')
     return render(request, 'dashboard/student_dashboard.html', build_student_dashboard_context(request.user))
 
 @login_required
@@ -84,6 +87,7 @@ def fetch_modulearn_instance_analytics(request):
 
     try:
         from courses.models import Unit, Module, ModuleProgress
+        from recruitment.models import ParticipantSession
 
         course_instance = CourseInstance.objects.select_related('course').get(id=instance_id)
         if not course_instance.instructors.filter(id=request.user.id).exists():
@@ -156,6 +160,12 @@ def fetch_modulearn_instance_analytics(request):
 
         enrollment_ids = [e.id for e in enrollments]
         module_ids = [m.id for m in modules]
+        sessions_by_enrollment = {
+            session.enrollment_id: session
+            for session in ParticipantSession.objects.filter(enrollment_id__in=enrollment_ids)
+            .select_related('recruitment_source')
+            .order_by('-entered_at')
+        }
 
         progress_qs = ModuleProgress.objects.filter(
             enrollment_id__in=enrollment_ids,
@@ -213,10 +223,14 @@ def fetch_modulearn_instance_analytics(request):
                             'values': {'k': kk, 'p': p}
                         }
 
+            participant_session = sessions_by_enrollment.get(e.id)
             learners.append({
                 'id': e.student.username,
                 'name': getattr(e.student, 'full_name', '') or e.student.username,
                 'email': getattr(e.student, 'email', '') or '',
+                'condition': getattr(participant_session, 'condition', '') or '',
+                'participant_session_uuid': str(participant_session.uuid) if participant_session else '',
+                'recruitment_platform': participant_session.recruitment_source.platform if participant_session else '',
                 'isHidden': False,
                 'state': {
                     'topics': per_topic,
@@ -224,26 +238,38 @@ def fetch_modulearn_instance_analytics(request):
                 }
             })
 
-        # Class average
-        class_avg_topics = {}
-        for u in units:
-            values = {}
-            overall_vals = []
-            for r in resources:
-                rid = r['id']
-                if learners:
-                    vals = [l['state']['topics'][str(u.id)]['values'].get(rid, {}).get('p', 0.0) for l in learners]
-                    avg_p = sum(vals) / len(vals)
-                else:
-                    avg_p = 0.0
-                values[rid] = {'k': 0.0, 'p': avg_p}
-                overall_vals.append(avg_p)
+        def _average_topics_for_learners(selected_learners):
+            avg_topics = {}
+            for unit in units:
+                values = {}
+                overall_vals = []
+                for resource in resources:
+                    rid = resource['id']
+                    if selected_learners:
+                        vals = [learner['state']['topics'][str(unit.id)]['values'].get(rid, {}).get('p', 0.0) for learner in selected_learners]
+                        avg_p = sum(vals) / len(vals)
+                    else:
+                        avg_p = 0.0
+                    values[rid] = {'k': 0.0, 'p': avg_p}
+                    overall_vals.append(avg_p)
+                overall_p = (sum(overall_vals) / len(overall_vals)) if overall_vals else 0.0
+                avg_topics[str(unit.id)] = {
+                    'values': values,
+                    'overall': {'k': 0.0, 'p': overall_p},
+                }
+            return avg_topics
 
-            overall_p = (sum(overall_vals) / len(overall_vals)) if overall_vals else 0.0
-            class_avg_topics[str(u.id)] = {
-                'values': values,
-                'overall': {'k': 0.0, 'p': overall_p},
+        # Class and condition averages
+        class_avg_topics = _average_topics_for_learners(learners)
+        condition_names = sorted({learner.get('condition') for learner in learners if learner.get('condition')})
+        condition_groups = [
+            {
+                'name': f"Condition: {condition}",
+                'condition': condition,
+                'state': {'topics': _average_topics_for_learners([learner for learner in learners if learner.get('condition') == condition])},
             }
+            for condition in condition_names
+        ]
 
         response_data = {
             'learners': learners,
@@ -253,7 +279,7 @@ def fetch_modulearn_instance_analytics(request):
             'groups': [{
                 'name': 'Class Average',
                 'state': {'topics': class_avg_topics}
-            }],
+            }, *condition_groups],
             'context': {
                 'group': {
                     'name': f"{course.title if course else 'Course'} — {course_instance.group_name or 'Session'}"
@@ -263,6 +289,7 @@ def fetch_modulearn_instance_analytics(request):
                 'course_id': str(course.id) if course else None,
                 'course_name': course.title if course else '',
                 'domain': 'modulearn',
+                'condition_counts': {condition: len([learner for learner in learners if learner.get('condition') == condition]) for condition in condition_names},
             }
         }
 

@@ -25,7 +25,7 @@
             <a class="site-nav-link secondary{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
           {% endif %}
         {% endfor %}
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and not user.is_anonymous_participant %}
           {% with display_name=user.get_full_name|default:user.username %}
             <details class="site-user-menu">
               <summary class="site-nav-link secondary">
@@ -41,7 +41,7 @@
           <form id="logout-form-header" action="{% url 'accounts:logout' %}" method="post" class="hidden">
             {% csrf_token %}
           </form>
-        {% else %}
+        {% elif not user.is_authenticated %}
           <details class="site-user-menu">
             <summary class="site-nav-link secondary">
               <span class="site-user-menu-name">Account</span>
@@ -75,7 +75,7 @@
             <a class="site-nav-link{% if item.section == 'secondary' %} secondary{% endif %}{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
           {% endif %}
         {% endfor %}
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and not user.is_anonymous_participant %}
           {% with display_name=user.get_full_name|default:user.username %}
             <details class="site-mobile-user-menu">
               <summary class="site-nav-link">
@@ -91,7 +91,7 @@
           <form id="logout-form-header-mobile" action="{% url 'accounts:logout' %}" method="post" class="hidden">
             {% csrf_token %}
           </form>
-        {% else %}
+        {% elif not user.is_authenticated %}
           <details class="site-mobile-user-menu">
             <summary class="site-nav-link">
               <span>Account</span>

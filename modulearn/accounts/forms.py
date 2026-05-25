@@ -4,18 +4,27 @@ from django.contrib.auth import password_validation
 from .models import User
 
 class SignUpForm(UserCreationForm):
+    ROLE_CHOICES = (
+        ('student', 'Student'),
+        ('instructor', 'Instructor'),
+    )
+
     email = forms.EmailField(
         max_length=254,
         required=True,
         help_text='We\'ll never share your email with anyone else.'
     )
     full_name = forms.CharField(max_length=100, required=True, label='Full Name')
-    is_instructor = forms.BooleanField(required=False, label='Instructor')
-    is_student = forms.BooleanField(required=False, label='Student', initial=True)
+    role = forms.ChoiceField(
+        choices=ROLE_CHOICES,
+        initial='student',
+        widget=forms.RadioSelect,
+        label='Role',
+    )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'full_name', 'password1', 'password2', 'is_instructor', 'is_student')
+        fields = ('username', 'email', 'full_name', 'password1', 'password2', 'role')
 
 class LoginForm(AuthenticationForm):
     class Meta:

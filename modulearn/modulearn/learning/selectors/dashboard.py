@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from courses.models import Course, CourseInstance, Enrollment
+from recruitment.models import ParticipantSession
 from modulearn.integrations.config import get_course_authoring_base_url
 from modulearn.integrations.course_authoring import (
     build_course_authoring_app_url,
@@ -40,6 +41,8 @@ def build_instructor_dashboard_context(user):
         "enrollments",
         "enrollments__course_progress",
         "enrollments__student",
+        "recruitment_sources",
+        "recruitment_sources__participant_sessions",
     )
 
     for instance in course_instances:
@@ -53,30 +56,16 @@ def build_instructor_dashboard_context(user):
             instance.avg_progress = 0
             instance.avg_score = 0
         instance.recent_activity = get_course_instance_recent_activity(instance, limit=5)
-
-    student_enrollments = Enrollment.objects.filter(student=user).select_related(
-        "course_instance",
-        "course_instance__course",
-        "course_progress",
-    )
-    enrolled_instances = []
-    for enrollment in student_enrollments:
-        instance = enrollment.course_instance
-        instance.user_enrollment = enrollment
-        if instance not in course_instances:
-            enrolled_instances.append(instance)
-
-    for instance in enrolled_instances:
-        enrollments = list(instance.enrollments.all())
-        if enrollments:
-            total_progress = sum(enrollment.course_progress.overall_progress for enrollment in enrollments)
-            total_score = sum(enrollment.course_progress.overall_score for enrollment in enrollments)
-            instance.avg_progress = total_progress / len(enrollments)
-            instance.avg_score = total_score / len(enrollments)
-        else:
-            instance.avg_progress = 0
-            instance.avg_score = 0
-        instance.recent_activity = get_course_instance_recent_activity(instance, limit=3)
+        for source in instance.recruitment_sources.all():
+            sessions = list(source.participant_sessions.all())
+            counts = {status: 0 for status, _label in ParticipantSession.STATUS_CHOICES}
+            for participant_session in sessions:
+                counts[participant_session.status] = counts.get(participant_session.status, 0) + 1
+            source.status_summary = [
+                {"status": status, "label": label, "count": counts.get(status, 0)}
+                for status, label in ParticipantSession.STATUS_CHOICES
+                if counts.get(status, 0) or status in {ParticipantSession.STATUS_ENTERED, ParticipantSession.STATUS_COMPLETED}
+            ]
 
     role_snapshot = get_user_role_snapshot(user)
     show_legacy_groups_section = bool(user.kt_login or user.kt_user_id or getattr(user, "kt_groups", None))
@@ -84,11 +73,9 @@ def build_instructor_dashboard_context(user):
     return {
         "courses": courses,
         "course_instances": course_instances,
-        "enrolled_instances": enrolled_instances,
         "legacy_groups": [],
         "legacy_group_count": None,
         "show_legacy_groups_section": show_legacy_groups_section or role_snapshot["effective_is_instructor"],
-        "recent_timeline": get_student_timeline(user, limit=8, event_types=("completion", "outcome")),
         "course_authoring_base_url": get_course_authoring_base_url(),
         "course_authoring_x_login_url": build_x_login_url(),
         "course_authoring_app_url": build_course_authoring_app_url(),

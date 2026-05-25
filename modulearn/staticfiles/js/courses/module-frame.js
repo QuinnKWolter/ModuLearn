@@ -121,6 +121,7 @@
             'X-CSRFToken': csrfNode ? csrfNode.value : '',
           },
           body: JSON.stringify({
+            course_instance_id: config.courseInstanceId || null,
             data: [{
               activityId: String(config.moduleId || ''),
               completion: messageData.score === 1.0,

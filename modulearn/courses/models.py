@@ -25,6 +25,7 @@ class Course(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    is_locked_for_research = models.BooleanField(default=False)
     instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True}, blank=True)
 
     def __str__(self):

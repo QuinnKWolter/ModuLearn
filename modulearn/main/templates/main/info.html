@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Info - ModuLearn{% endblock %}
+
+{% block breadcrumbs_wrapper %}{% endblock %}
+
+{% block content %}
+  <div class="public-page public-page-narrow">
+    <header class="public-page-header">
+      <div class="public-title-row">
+        <h1>Info</h1>
+        <span class="badge badge-primary">Active project</span>
+      </div>
+      <p>What ModuLearn does, how it is built, and how to reach the maintainer.</p>
+    </header>
+
+    <section class="public-grid public-grid-three" aria-label="ModuLearn overview">
+      <article class="public-card public-card-feature">
+        <div class="public-icon public-icon-blue"><i class="bi bi-window-stack" aria-hidden="true"></i></div>
+        <h2>What it does</h2>
+        <p>Connects course pages, module launches, enrollment, analytics, and progress.</p>
+      </article>
+      <article class="public-card public-card-feature">
+        <div class="public-icon public-icon-cyan"><i class="bi bi-plug" aria-hidden="true"></i></div>
+        <h2>Integrations</h2>
+        <p>Supports LTI, embedded resources, and legacy KnowledgeTree workflows.</p>
+      </article>
+      <article class="public-card public-card-feature">
+        <div class="public-icon public-icon-green"><i class="bi bi-code-square" aria-hidden="true"></i></div>
+        <h2>Core stack</h2>
+        <dl class="public-kv-list">
+          <div><dt>Python</dt><dd>Runtime</dd></div>
+          <div><dt>Django</dt><dd>Framework</dd></div>
+          <div><dt>Static CSS/JS</dt><dd>Frontend</dd></div>
+          <div><dt>SQLite</dt><dd>Local data</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="public-contact-layout public-contact-layout-balanced" aria-label="Contact">
+      <article class="public-card public-contact-action">
+        <div class="public-icon public-icon-blue"><i class="bi bi-envelope-paper" aria-hidden="true"></i></div>
+        <h2>Problems or feedback?</h2>
+        <h2>Email the maintainer!</h2>
+        <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary btn-lg">QuinnKWolter@pitt.edu</a>
+      </article>
+
+      <aside class="public-card public-checklist-card">
+        <div class="public-icon public-icon-cyan"><i class="bi bi-card-checklist" aria-hidden="true"></i></div>
+        <h2>Include in your message</h2>
+        <ul class="public-checklist">
+          <li><strong>Role</strong><span>Student or instructor</span></li>
+          <li><strong>Page</strong><span>Route or screen</span></li>
+          <li><strong>Area</strong><span>LTI, analytics, enrollment, course page</span></li>
+          <li><strong>Evidence</strong><span>Screenshot or exact error</span></li>
+        </ul>
+      </aside>
+    </section>
+  </div>
+{% endblock %}

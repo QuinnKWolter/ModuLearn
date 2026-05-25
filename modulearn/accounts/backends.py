@@ -131,7 +131,7 @@ class KnowledgeTreeBackend(ModelBackend):
             email=kt_user_data.get('email', '') or f"{username}@knowledgetree.local",
             full_name=kt_user_data.get('name', '') or username,
             is_instructor=is_instructor,
-            is_student=not is_instructor,  # Preserve explicit dual-role assignments on existing users; new KT-only users still default by role.
+            is_student=not is_instructor,
         )
         
         if kt_user_id:
@@ -165,12 +165,12 @@ class KnowledgeTreeBackend(ModelBackend):
         if user.kt_login:
             from dashboard.kt_utils import is_user_instructor_in_aggregate
             is_instructor = is_user_instructor_in_aggregate(user.kt_login)
-            # Promote roles when external data confirms them, but do not demote an
-            # existing student role just because the KT check identifies instructor access.
-            if is_instructor and not user.is_instructor:
-                logger.info(f"Updating user {user.username} instructor status: {user.is_instructor} -> True")
-                user.is_instructor = True
-            elif not is_instructor and not user.is_student:
-                logger.info(f"Updating user {user.username} student status: {user.is_student} -> True")
-                user.is_student = True
+            if user.is_instructor != is_instructor or user.is_student == is_instructor:
+                logger.info(
+                    f"Updating user {user.username} role from "
+                    f"is_instructor={user.is_instructor}, is_student={user.is_student} "
+                    f"to is_instructor={is_instructor}, is_student={not is_instructor}"
+                )
+                user.is_instructor = is_instructor
+                user.is_student = not is_instructor
 

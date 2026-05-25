@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Study Entry - ModuLearn{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto">
+  <div class="card p-8">
+    <div class="feature-icon mb-4"><i class="bi bi-clipboard-check" aria-hidden="true"></i></div>
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Study entry</h1>
+    <p class="mt-3 text-slate-600 dark:text-slate-300">Your participant session is ready. Continue when you are ready to begin the study materials.</p>
+    <dl class="grid gap-3 sm:grid-cols-2 mt-6 text-sm">
+      <div class="shell-surface p-3 rounded-lg">
+        <dt class="stat-kicker">Platform</dt>
+        <dd class="font-bold mt-1">{{ participant_session.recruitment_source.get_platform_display }}</dd>
+      </div>
+      <div class="shell-surface p-3 rounded-lg">
+        <dt class="stat-kicker">Status</dt>
+        <dd class="font-bold mt-1">{{ participant_session.get_status_display }}</dd>
+      </div>
+    </dl>
+    <form method="post" class="mt-6">
+      {% csrf_token %}
+      <button class="btn btn-primary btn-lg" type="submit">Continue To Study</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

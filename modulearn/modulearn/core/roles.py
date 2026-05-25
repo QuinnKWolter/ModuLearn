@@ -110,6 +110,7 @@ def get_user_role_snapshot(user):
     snapshot = {
         "effective_is_student": False,
         "effective_is_instructor": False,
+        "primary_role": None,
         "legacy_course_groups": [],
     }
 
@@ -125,10 +126,13 @@ def get_user_role_snapshot(user):
         CourseInstance.objects.filter(instructors=user).exists()
     )
     legacy_course_groups = get_legacy_course_groups(user)
+    effective_is_instructor = native_instructor or teaches_native or bool(legacy_course_groups)
+    effective_is_student = (native_student or enrolled_student) and not effective_is_instructor
 
     snapshot = {
-        "effective_is_student": native_student or enrolled_student,
-        "effective_is_instructor": native_instructor or teaches_native or bool(legacy_course_groups),
+        "effective_is_student": effective_is_student,
+        "effective_is_instructor": effective_is_instructor,
+        "primary_role": "instructor" if effective_is_instructor else "student" if effective_is_student else None,
         "legacy_course_groups": legacy_course_groups,
     }
 

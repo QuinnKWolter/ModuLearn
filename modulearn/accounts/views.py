@@ -116,8 +116,9 @@ def signup(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.full_name = form.cleaned_data.get('full_name', '')
-            user.is_instructor = form.cleaned_data.get('is_instructor', False)
-            user.is_student = form.cleaned_data.get('is_student', True)
+            selected_role = form.cleaned_data.get('role', 'student')
+            user.is_instructor = selected_role == 'instructor'
+            user.is_student = selected_role == 'student'
             user.save()
             
             # Get password from form before saving (form.save() may clear it)

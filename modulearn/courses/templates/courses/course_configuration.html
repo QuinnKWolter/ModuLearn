@@ -506,6 +506,13 @@
         </div>
       </div>
 
+      {% if is_locked_for_research %}
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100 mb-4">
+          <strong>Research protocol locked.</strong>
+          {% if research_has_participants %}Participants have entered a recruitment source for this course, so structure edits are blocked.{% else %}Recruitment has been configured; edits remain available until the first participant enters.{% endif %}
+        </div>
+      {% endif %}
+
       <form method="post" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_structure">
@@ -565,9 +572,13 @@
                         <option value="previous_unit_completed" {% if group.unit.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>After previous unit completed</option>
                         <option value="module_accessed" {% if group.unit.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected module accessed</option>
                         <option value="module_completed" {% if group.unit.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected module completed</option>
+                        <option value="condition_equals" {% if group.unit.unlock_rule_type == 'condition_equals' %}selected{% endif %}>For selected research condition</option>
                       </select>
                       <select name="unit_{{ group.unit.id }}_rule_target" class="form-control">
-                        <option value="">Select module if needed</option>
+                        <option value="">Select module or condition if needed</option>
+                        {% for condition in research_conditions %}
+                          <option value="{{ condition }}" {% if group.unit.unlock_rule_target == condition %}selected{% endif %}>Condition: {{ condition }}</option>
+                        {% endfor %}
                         {% for target_group in unit_groups %}
                           {% for target in target_group.modules %}
                             <option value="{{ target.id }}" {% if group.unit.unlock_rule_target == target.id %}selected{% endif %}>{{ target_group.unit.title }} - {{ target.title }}</option>
@@ -622,9 +633,13 @@
                                   <option value="previous_unit_completed" {% if module.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>After previous unit completed</option>
                                   <option value="module_accessed" {% if module.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected module accessed</option>
                                   <option value="module_completed" {% if module.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected module completed</option>
+                                  <option value="condition_equals" {% if module.unlock_rule_type == 'condition_equals' %}selected{% endif %}>For selected research condition</option>
                                 </select>
                                 <select name="module_{{ module.id }}_rule_target" class="form-control" aria-label="Module unlock target">
-                                  <option value="">Select module if needed</option>
+                                  <option value="">Select module or condition if needed</option>
+                                  {% for condition in research_conditions %}
+                                    <option value="{{ condition }}" {% if module.unlock_rule_target == condition %}selected{% endif %}>Condition: {{ condition }}</option>
+                                  {% endfor %}
                                   {% for target_group in unit_groups %}
                                     {% for target in target_group.modules %}
                                       <option value="{{ target.id }}" {% if module.unlock_rule_target == target.id %}selected{% endif %}>{{ target_group.unit.title }} - {{ target.title }}</option>

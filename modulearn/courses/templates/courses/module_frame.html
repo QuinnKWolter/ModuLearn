@@ -53,6 +53,7 @@
   <script>
     window.moduleFrameConfig = {
       moduleId: Number("{{ module.id }}"),
+      courseInstanceId: Number("{% if course_instance %}{{ course_instance.id }}{% else %}0{% endif %}"),
       previewMode: "{{ preview_mode|yesno:'true,false' }}" === "true",
       progressUrl: "{% if not preview_mode %}{% url 'courses:update_module_progress' module.id %}{% endif %}",
     };

@@ -27,7 +27,10 @@ def build_unlock_rule(rule_type: str | None, target_id: str | int | None = None)
         return {}
     condition: dict[str, Any] = {"type": rule_type}
     if target_id not in (None, ""):
-        condition["target_id"] = int(target_id)
+        if rule_type == "condition_equals":
+            condition["target_id"] = str(target_id).strip()
+        else:
+            condition["target_id"] = int(target_id)
     return {"mode": "all", "conditions": [condition]}
 
 
@@ -128,6 +131,8 @@ def _condition_passes(condition: dict[str, Any], enrollment, *, subject_unit=Non
         return _unit_accessed(enrollment, target_id)
     if condition_type == "unit_completed":
         return _unit_completed(enrollment, target_id)
+    if condition_type == "condition_equals":
+        return _participant_condition(enrollment) == str(target_id or "")
     if condition_type == "previous_unit_accessed":
         unit = subject_unit or getattr(subject_module, "unit", None)
         previous_unit = _previous_unit(unit)
@@ -138,6 +143,18 @@ def _condition_passes(condition: dict[str, Any], enrollment, *, subject_unit=Non
         return _unit_completed(enrollment, previous_unit.id) if previous_unit else True
 
     return False
+
+
+def _participant_condition(enrollment) -> str:
+    if not enrollment:
+        return ""
+    try:
+        session = enrollment.participant_sessions.filter(
+            recruitment_source__course_instance=enrollment.course_instance
+        ).order_by("-entered_at").first()
+    except Exception:
+        session = None
+    return getattr(session, "condition", "") or ""
 
 
 def _module_accessed(enrollment, module_id) -> bool:
@@ -209,6 +226,7 @@ def _rule_reason(rule: dict[str, Any] | None) -> str:
         "unit_completed": "Unlocks after the selected unit is completed",
         "previous_unit_accessed": "Unlocks after the previous unit has been fully accessed",
         "previous_unit_completed": "Unlocks after the previous unit is completed",
+        "condition_equals": "Unlocks for participants assigned to the selected condition",
     }
     conditions = (rule or {}).get("conditions") or []
     if not conditions:

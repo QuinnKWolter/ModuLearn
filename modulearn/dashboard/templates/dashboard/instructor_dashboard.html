@@ -34,7 +34,7 @@
   .dashboard-layout {
     display: grid;
     gap: 1rem;
-    grid-template-columns: minmax(0, 1.85fr) minmax(340px, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
 
@@ -177,14 +177,11 @@
 
       {% include 'dashboard/components/courses_section.html' %}
       {% include 'dashboard/components/session_management_section.html' %}
+      {% include 'dashboard/components/recruitment_panel.html' %}
       {% if show_legacy_groups_section %}
         {% include 'dashboard/components/legacy_courses_section.html' %}
       {% endif %}
     </div>
-
-    <aside class="dashboard-right-col">
-      {% include 'includes/timeline_panel.html' with events=recent_timeline count=recent_timeline|length title='Your recent completion events' kicker='Timeline' panel_class='timeline-sidebar-panel' list_class='timeline-sidebar-list' %}
-    </aside>
   </section>
 
   {% include 'dashboard/components/modals.html' %}

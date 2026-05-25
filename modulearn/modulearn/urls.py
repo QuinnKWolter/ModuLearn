@@ -21,6 +21,9 @@ urlpatterns = [
     # Dashboard
     path('dashboard/', include('dashboard.urls', namespace='dashboard')),
 
+    # Research recruitment
+    path('r/', include('recruitment.urls', namespace='recruitment')),
+
     # Static Pages
     path('', include('main.urls', namespace='main')),
 

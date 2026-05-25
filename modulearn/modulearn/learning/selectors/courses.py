@@ -14,8 +14,9 @@ def build_course_detail_context(user, course_instance):
     course_progress = None
     module_progress_data = {}
     timeline = []
+    participant_session = None
 
-    if getattr(user, "is_authenticated", False):
+    if getattr(user, "is_authenticated", False) and not is_instructor:
         enrollment = Enrollment.objects.filter(
             student=user,
             course_instance=course_instance,
@@ -36,6 +37,10 @@ def build_course_detail_context(user, course_instance):
                 for module_progress in module_progresses
             }
             timeline = get_course_timeline_for_student(course_instance, user, limit=12)
+            if getattr(user, "is_anonymous_participant", False):
+                participant_session = enrollment.participant_sessions.filter(
+                    recruitment_source__course_instance=course_instance
+                ).select_related("recruitment_source").first()
 
     units = list(course.units.prefetch_related("modules", "modules__form").all())
     unit_cards = []
@@ -134,4 +139,5 @@ def build_course_detail_context(user, course_instance):
         "course_progress": course_progress,
         "module_progress_data": module_progress_data,
         "timeline": timeline,
+        "participant_session": participant_session,
     }
