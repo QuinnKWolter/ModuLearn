@@ -35,5 +35,3 @@ uploads/
 # Git and version control
 .git/
 
-# Local scratch files
-weekendchanges.diff

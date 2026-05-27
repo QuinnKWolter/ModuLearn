@@ -9,6 +9,6 @@ rm -rf ModuLearn.new
 git clone https://github.com/QuinnKWolter/ModuLearn.git ModuLearn.new
 sudo rm -rf ModuLearn
 sudo mv ModuLearn.new ModuLearn
-sudo docker-compose build --no-cache
+sudo docker-compose build
 sudo docker-compose down
 sudo docker-compose up -d

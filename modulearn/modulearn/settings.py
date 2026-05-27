@@ -265,7 +265,13 @@ FORCE_SCRIPT_NAME = normalize_url_path(
     default='/modulearn' if IS_PRODUCTION else '',
 )
 
+# =============================================================================
 # Static files (CSS, JavaScript, Images)
+#
+# WhiteNoise compresses collected static files with ThreadPoolExecutor by
+# default. The production PAWS container has a low thread ceiling, so the
+# storage classes below keep compression deliberately single-threaded.
+# =============================================================================
 STATIC_URL = normalize_url_path(
     os.getenv('STATIC_URL'),
     default='/modulearn-static/' if IS_PRODUCTION else '/static/',
@@ -275,19 +281,46 @@ STATIC_URL = normalize_url_path(
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# 1. Subclass WhiteNoise to throttle its parallel thread pool workers down to 1
 if WHITENOISE_AVAILABLE:
-    from whitenoise.storage import CompressedManifestStaticFilesStorage
-    
-    class ThreadThrottledManifestStorage(CompressedManifestStaticFilesStorage):
-        max_workers = 1
+    from whitenoise.storage import CompressedManifestStaticFilesStorage, CompressedStaticFilesStorage
 
-# 2. Map your backend configuration variables to point to your new class string
+    class SingleThreadedCompressionMixin:
+        def iter_compressed_file_pairs(self, paths):
+            extensions = globals().get("WHITENOISE_SKIP_COMPRESS_EXTENSIONS", None)
+            self.compressor = self.create_compressor(extensions=extensions, quiet=True)
+
+            for path in paths:
+                if not self.compressor.should_compress(path):
+                    continue
+
+                full_path = self.path(path)
+                prefix_len = len(full_path) - len(path)
+                for compressed_path in self.compressor.compress(full_path):
+                    compressed_name = compressed_path[prefix_len:]
+                    yield path, compressed_name
+
+    class SingleThreadedCompressedStaticFilesStorage(
+        SingleThreadedCompressionMixin,
+        CompressedStaticFilesStorage,
+    ):
+        def post_process(self, paths, dry_run=False, **options):
+            if dry_run:
+                return
+
+            for path, compressed_name in self.iter_compressed_file_pairs(paths):
+                yield path, compressed_name, True
+
+    class SingleThreadedCompressedManifestStaticFilesStorage(
+        SingleThreadedCompressionMixin,
+        CompressedManifestStaticFilesStorage,
+    ):
+        def compress_files(self, paths):
+            yield from self.iter_compressed_file_pairs(paths)
+
 if DEBUG and WHITENOISE_AVAILABLE:
-    STATICFILES_BACKEND = 'whitenoise.storage.CompressedStaticFilesStorage'
+    STATICFILES_BACKEND = 'modulearn.settings.SingleThreadedCompressedStaticFilesStorage'
 elif WHITENOISE_AVAILABLE:
-    # Explicitly points to the custom class we defined above inside this settings file
-    STATICFILES_BACKEND = 'modulearn.settings.ThreadThrottledManifestStorage'
+    STATICFILES_BACKEND = 'modulearn.settings.SingleThreadedCompressedManifestStaticFilesStorage'
 elif DEBUG:
     STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 else:
