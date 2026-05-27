@@ -274,15 +274,25 @@ STATIC_URL = normalize_url_path(
 
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_BACKEND = (
-    'whitenoise.storage.CompressedStaticFilesStorage'
-    if DEBUG and WHITENOISE_AVAILABLE else
-    'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    if WHITENOISE_AVAILABLE else
-    'django.contrib.staticfiles.storage.StaticFilesStorage'
-    if DEBUG else
-    'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-)
+
+# 1. Subclass WhiteNoise to throttle its parallel thread pool workers down to 1
+if WHITENOISE_AVAILABLE:
+    from whitenoise.storage import CompressedManifestStaticFilesStorage
+    
+    class ThreadThrottledManifestStorage(CompressedManifestStaticFilesStorage):
+        max_workers = 1
+
+# 2. Map your backend configuration variables to point to your new class string
+if DEBUG and WHITENOISE_AVAILABLE:
+    STATICFILES_BACKEND = 'whitenoise.storage.CompressedStaticFilesStorage'
+elif WHITENOISE_AVAILABLE:
+    # Explicitly points to the custom class we defined above inside this settings file
+    STATICFILES_BACKEND = 'modulearn.settings.ThreadThrottledManifestStorage'
+elif DEBUG:
+    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+else:
+    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
@@ -291,13 +301,12 @@ STORAGES = {
         'BACKEND': STATICFILES_BACKEND,
     },
 }
+
 if WHITENOISE_AVAILABLE:
     WHITENOISE_AUTOREFRESH = DEBUG
     WHITENOISE_USE_FINDERS = DEBUG
     WHITENOISE_ALLOW_ALL_ORIGINS = True
     WHITENOISE_STATIC_PREFIX = STATIC_URL
-    from whitenoise.storage import CompressedManifestStaticFilesStorage
-    CompressedManifestStaticFilesStorage.max_workers = 1
 
 MEDIA_URL = normalize_url_path(
     os.getenv('MEDIA_URL'),
