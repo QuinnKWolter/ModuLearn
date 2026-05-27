@@ -50,7 +50,6 @@ if os.getenv('DJANGO_PRODUCTION') and parse_boolish(os.getenv('DJANGO_PRODUCTION
     DEBUG = False
 
 IS_PRODUCTION = not DEBUG
-WHITENOISE_AVAILABLE = find_spec('whitenoise') is not None
 
 import logging
 logger = logging.getLogger(__name__)
@@ -94,9 +93,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'lti.middleware.LTIAuthMiddleware',
 ]
-
-if WHITENOISE_AVAILABLE:
-    MIDDLEWARE.insert(2, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'modulearn.urls'
 
@@ -151,14 +147,11 @@ STATIC_URL = os.getenv('STATIC_URL', '/modulearn-static/' if IS_PRODUCTION else 
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-if WHITENOISE_AVAILABLE:
-    from whitenoise.storage import CompressedManifestStaticFilesStorage
-    # Globally clamp WhiteNoise thread creation to 1 to honor system limits safely
-    CompressedManifestStaticFilesStorage.max_workers = 1
-    
-    STATICFILES_BACKEND = 'whitenoise.storage.CompressedManifestStaticFilesStorage' if not DEBUG else 'whitenoise.storage.CompressedStaticFilesStorage'
+# Pure Django engine—completely sequential, zero background threads
+if DEBUG:
+    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 else:
-    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage' if not DEBUG else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 STORAGES = {
     'default': {
@@ -168,12 +161,6 @@ STORAGES = {
         'BACKEND': STATICFILES_BACKEND,
     },
 }
-
-if WHITENOISE_AVAILABLE:
-    WHITENOISE_AUTOREFRESH = DEBUG
-    WHITENOISE_USE_FINDERS = DEBUG
-    WHITENOISE_ALLOW_ALL_ORIGINS = True
-    WHITENOISE_STATIC_PREFIX = STATIC_URL
 
 MEDIA_ROOT = BASE_DIR / 'media'
 serve_media_env = parse_boolish(os.getenv('SERVE_MEDIA_FILES'))
