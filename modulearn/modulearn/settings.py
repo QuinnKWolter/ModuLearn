@@ -10,6 +10,7 @@ import warnings
 from importlib.util import find_spec
 from pathlib import Path
 from dotenv import load_dotenv
+import multiprocessing
 
 try:
     from cryptography.utils import CryptographyDeprecationWarning
@@ -295,6 +296,8 @@ if WHITENOISE_AVAILABLE:
     WHITENOISE_USE_FINDERS = DEBUG
     WHITENOISE_ALLOW_ALL_ORIGINS = True
     WHITENOISE_STATIC_PREFIX = STATIC_URL
+    from whitenoise.storage import CompressedManifestStaticFilesStorage
+    CompressedManifestStaticFilesStorage.max_workers = 1
 
 MEDIA_URL = normalize_url_path(
     os.getenv('MEDIA_URL'),
