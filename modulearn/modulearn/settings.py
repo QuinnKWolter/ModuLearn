@@ -10,13 +10,11 @@ import warnings
 from importlib.util import find_spec
 from pathlib import Path
 from dotenv import load_dotenv
-import multiprocessing
 
 try:
     from cryptography.utils import CryptographyDeprecationWarning
-except Exception:  # pragma: no cover - optional dependency import guard
+except Exception:  # pragma: no cover
     CryptographyDeprecationWarning = None
-
 
 # Suppress deprecation warnings from third-party libraries
 warnings.filterwarnings('ignore', category=UserWarning, module='pkg_resources')
@@ -31,13 +29,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from project root .env (one level above BASE_DIR)
 env_path = BASE_DIR.parent / '.env'
 env_loaded = load_dotenv(dotenv_path=env_path)
-# Note: Logger is defined later, so we'll log this after logger is initialized
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-k7s0j45f+h4q_a%8llu@en)@mnbq&e535btz)ce@%6no0uw&i%'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# Automatic environment detection
 def parse_boolish(value):
     """Parse common boolean environment values; ignore unrelated strings."""
     if value is None:
@@ -49,88 +44,21 @@ def parse_boolish(value):
         return False
     return None
 
-def get_debug_setting():
-    """
-    Automatically detect if we're in development or production environment.
-    Returns True for development, False for production.
-    """
-    # Check for explicit DEBUG environment variable first
-    debug_env = parse_boolish(os.getenv('DEBUG'))
-    if debug_env is not None:
-        return debug_env
+# Clean, robust environment selection
+DEBUG = parse_boolish(os.getenv('DEBUG', 'False'))
+if os.getenv('DJANGO_PRODUCTION') and parse_boolish(os.getenv('DJANGO_PRODUCTION')):
+    DEBUG = False
 
-    if production_requested():
-        return False
-
-    development_commands = {'runserver', 'test', 'shell', 'makemigrations'}
-    if any(command in sys.argv for command in development_commands):
-        return True
-    
-    # Check for development indicators
-    development_indicators = [
-        # Environment variables that indicate development
-        parse_boolish(os.getenv('DJANGO_DEVELOPMENT')) is True,
-        parse_boolish(os.getenv('DEVELOPMENT')) is True,
-        parse_boolish(os.getenv('DEV')) is True,
-        
-        # Check if running in development mode
-        os.getenv('RUNSERVER', '').lower() == 'true',
-        
-        # Check for common development hostnames
-        os.getenv('HOSTNAME', '').lower() in ['localhost', 'dev', 'development'],
-        
-        # Check if we're running on localhost (common in development)
-        os.getenv('SERVER_NAME', '').lower() in ['localhost', '127.0.0.1'],
-    ]
-    
-    # If any development indicator is set, we're in development
-    if any(development_indicators):
-        return True
-    
-    # Check for production indicators
-    production_indicators = [
-        # Check for production hostnames
-        'proxy.personalized-learning.org' in os.getenv('HOSTNAME', ''),
-        'proxy.personalized-learning.org' in os.getenv('SERVER_NAME', ''),
-    ]
-    
-    # If any production indicator is set, we're in production
-    if any(production_indicators):
-        return False
-    
-    # Default to production for safety (more secure)
-    return False
-
-DEBUG = get_debug_setting()
 IS_PRODUCTION = not DEBUG
 WHITENOISE_AVAILABLE = find_spec('whitenoise') is not None
 
 import logging
 logger = logging.getLogger(__name__)
 
-raw_debug_env = os.getenv('DEBUG')
-if raw_debug_env and parse_boolish(raw_debug_env) is None:
-    logger.info(
-        "Ignoring non-boolean DEBUG value %r; using ModuLearn environment heuristics instead.",
-        raw_debug_env,
-    )
-
-# Log .env file loading status (now that logger is defined)
 if env_loaded:
     logger.info(f"Loaded .env file from: {env_path}")
 else:
-    missing_env_message = f".env file not found at: {env_path} - using defaults or system environment variables"
-    if DEBUG:
-        logger.info(missing_env_message)
-    else:
-        logger.warning(missing_env_message)
-
-if not WHITENOISE_AVAILABLE:
-    logger.warning(
-        "WhiteNoise is not installed for interpreter %s; using Django staticfiles fallbacks instead.",
-        sys.executable,
-    )
-
+    logger.warning(f".env file not found at: {env_path} - using system environment defaults")
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -140,14 +68,12 @@ ALLOWED_HOSTS = [
 
 # Application definition
 INSTALLED_APPS = [
-    # Default Django apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Your apps
     'modulearn',
     'accounts',
     'courses',
@@ -193,10 +119,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'modulearn.wsgi.application'
 
-# store db outside of the project
+# Ensure database directory storage exists cleanly
 os.makedirs(BASE_DIR / '../modulearn-storage/db', exist_ok=True)
 
-# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -204,23 +129,13 @@ DATABASES = {
     }
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -228,26 +143,20 @@ USE_L10N = True
 USE_TZ = True
 
 # =============================================================================
-# Static files (CSS, JavaScript, Images)
-#
-# WhiteNoise compresses collected static files with ThreadPoolExecutor by
-# default. The production PAWS container has a low thread ceiling, so the
-# storage classes below keep compression deliberately single-threaded.
+# STATIC & MEDIA ASSET MANAGEMENT
 # =============================================================================
-# Gunicorn handles script prefix variables natively via proxy request headers
 FORCE_SCRIPT_NAME = None
 
-# Assign static directories cleanly based on active infrastructure environment
 STATIC_URL = os.getenv('STATIC_URL', '/modulearn-static/' if IS_PRODUCTION else '/static/')
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Single-threaded worker configuration to respect server process ceilings
 if WHITENOISE_AVAILABLE:
     from whitenoise.storage import CompressedManifestStaticFilesStorage
+    # Globally clamp WhiteNoise thread creation to 1 to honor system limits safely
+    CompressedManifestStaticFilesStorage.max_workers = 1
     
-    class SequentiallyCompressedManifestStorage(CompressedManifestStaticFilesStorage):
-        max_workers = 1
-
-    STATICFILES_BACKEND = 'modulearn.settings.SequentiallyCompressedManifestStorage' if not DEBUG else 'whitenoise.storage.CompressedStaticFilesStorage'
+    STATICFILES_BACKEND = 'whitenoise.storage.CompressedManifestStaticFilesStorage' if not DEBUG else 'whitenoise.storage.CompressedStaticFilesStorage'
 else:
     STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage' if not DEBUG else 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
@@ -270,57 +179,42 @@ MEDIA_ROOT = BASE_DIR / 'media'
 serve_media_env = parse_boolish(os.getenv('SERVE_MEDIA_FILES'))
 SERVE_MEDIA_FILES = serve_media_env if serve_media_env is not None else DEBUG
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = 'accounts:login'
 
-# Custom Authentication Backends
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.KnowledgeTreeBackend',  # KnowledgeTree authentication
-    'django.contrib.auth.backends.ModelBackend',  # Default Django authentication
+    'accounts.backends.KnowledgeTreeBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
-# KnowledgeTree Authentication Configuration
 KNOWLEDGETREE = {
     'AUTH_ENABLED': os.getenv('KT_AUTH_ENABLED', 'True').lower() == 'true',
-    'AUTH_METHOD': os.getenv('KT_AUTH_METHOD', 'api'),  # 'api', 'database', or 'both'
+    'AUTH_METHOD': os.getenv('KT_AUTH_METHOD', 'api'),
     'AUTH_FALLBACK': os.getenv('KT_AUTH_FALLBACK', 'True').lower() == 'true',
     'API_URL': os.getenv('KT_API_URL', 'http://adapt2.sis.pitt.edu'),
     'API_TIMEOUT': int(os.getenv('KT_API_TIMEOUT', '10')),
-    'SECURITY_CHECK_PATH': os.getenv('KT_SECURITY_CHECK_PATH', '/kt/content/j_security_check'),  # Path to j_security_check (legacy, not currently used)
+    'SECURITY_CHECK_PATH': os.getenv('KT_SECURITY_CHECK_PATH', '/kt/content/j_security_check'),
 }
 
-# PAWS MySQL Database Configuration (single database server with multiple schemas)
-# This database contains both KnowledgeTree (portal_test2 schema) and Aggregate (aggregate schema) data
 PAWS_DATABASE = {
-    # Database connection (use 'host.docker.internal' if MySQL is on Docker host, or direct IP if on same server)
     'HOST': os.getenv('PAWS_DB_HOST', '127.0.0.1'),
     'PORT': int(os.getenv('PAWS_DB_PORT', '3306')),
     'USER': os.getenv('PAWS_DB_USER', ''),
     'PASSWORD': os.getenv('PAWS_DB_PASSWORD', ''),
-    # Schema names (databases on the same MySQL server)
     'KNOWLEDGETREE_SCHEMA': os.getenv('PAWS_DB_KT_SCHEMA', 'portal_test2'),
     'AGGREGATE_SCHEMA': os.getenv('PAWS_DB_AGGREGATE_SCHEMA', 'aggregate'),
-    # SSH Tunnel configuration (only needed if MySQL is on a remote server)
     'SSH_HOST': os.getenv('PAWS_DB_SSH_HOST', ''),
     'SSH_PORT': int(os.getenv('PAWS_DB_SSH_PORT', '22')),
     'SSH_USER': os.getenv('PAWS_DB_SSH_USER', ''),
     'SSH_PASSWORD': os.getenv('PAWS_DB_SSH_PASSWORD', ''),
     'SSH_KEY_PATH': os.getenv('PAWS_DB_SSH_KEY_PATH', ''),
-    'USE_SSH': os.getenv('PAWS_DB_USE_SSH', 'False').lower() == 'true',  # Only True if MySQL is on remote server
+    'USE_SSH': os.getenv('PAWS_DB_USE_SSH', 'False').lower() == 'true',
 }
 
-# Auto-detect if SSH should be used if credentials are provided but USE_SSH is False
-# Note: If MySQL is on the same server as Docker, use host.docker.internal (or host IP) and set USE_SSH=False
 if not PAWS_DATABASE['USE_SSH'] and PAWS_DATABASE.get('SSH_HOST') and PAWS_DATABASE.get('SSH_USER'):
-    logger.warning(f"SSH credentials provided (SSH_HOST={PAWS_DATABASE['SSH_HOST']}, SSH_USER={PAWS_DATABASE['SSH_USER']}) "
-                  f"but PAWS_DB_USE_SSH is False. If MySQL is on the same server, use host.docker.internal and set USE_SSH=False. "
-                  f"If MySQL is remote, set PAWS_DB_USE_SSH=True to enable SSH tunneling.")
+    logger.warning(f"SSH credentials provided but PAWS_DB_USE_SSH is False.")
 
-# Legacy compatibility - map to old structure if needed
 if KNOWLEDGETREE['AUTH_METHOD'] in ('database', 'both'):
     KNOWLEDGETREE['DATABASE'] = PAWS_DATABASE
 
@@ -328,47 +222,28 @@ AGGREGATE = {
     'DATABASE': PAWS_DATABASE,
 }
 
-# Log database configuration status (without sensitive data) at startup
-# This is done here because logger and PAWS_DATABASE are now both defined
 try:
     db_config = PAWS_DATABASE
-    logger.info(f"PAWS Database Config - USE_SSH: {db_config['USE_SSH']}, "
-                f"HOST: {db_config['HOST']}, PORT: {db_config['PORT']}, "
-                f"SSH_HOST: {db_config['SSH_HOST'] or 'Not set'}, "
-                f"SSH_USER: {db_config['SSH_USER'] or 'Not set'}, "
-                f"USER: {db_config['USER'][:3] + '...' if db_config['USER'] else 'Not set'}")
+    logger.info(f"PAWS Database Config registered for host: {db_config['HOST']}")
 except Exception:
-    pass  # Skip if there's any issue
+    pass
 
-# Database configuration for KnowledgeTree (if using direct database access)
-if KNOWLEDGETREE['AUTH_METHOD'] in ('database', 'both'):
-    KNOWLEDGETREE['DATABASE'] = {
-        'HOST': os.getenv('KT_DB_HOST', ''),
-        'PORT': int(os.getenv('KT_DB_PORT', '3306')),
-        'NAME': os.getenv('KT_DB_NAME', ''),
-        'USER': os.getenv('KT_DB_USER', ''),
-        'PASSWORD': os.getenv('KT_DB_PASSWORD', ''),
-    }
-
-# Django REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # OAuth2 authentication
-        'rest_framework.authentication.SessionAuthentication',          # Session authentication
-        # Add other authentication classes if needed
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',  # Require authentication by default
+        'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',       # Render responses in JSON
+        'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
 }
 
-# OAuth2 Provider Settings (using django-oauth-toolkit)
 OAUTH2_PROVIDER = {
-    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,  # Access token lifespan
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
     'AUTHORIZATION_CODE_EXPIRE_SECONDS': 600,
     'ROTATE_REFRESH_TOKEN': True,
     'SCOPES': {
@@ -378,96 +253,42 @@ OAUTH2_PROVIDER = {
     },
 }
 
-# CORS Headers Configuration
 CORS_ALLOWED_ORIGINS = [
     'https://canvas.instructure.com',
     'https://saltire.lti.app',
 ]
 
-# Security Settings
-# SECURE_SSL_REDIRECT = not DEBUG          # Redirect HTTP to HTTPS in production
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# Logging Configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
+        'verbose': {'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}', 'style': '{'},
+        'simple': {'format': '{levelname} {message}', 'style': '{'},
     },
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'simple'},
     },
     'root': {
         'handlers': ['console'],
         'level': 'INFO',
     },
     'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'courses': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'dashboard': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'modulearn.dashboard.db_queries': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        # LTI Tool Consumer logging - detailed for diagnosing issues
-        'lti': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'lti.models': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'lti.services': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'modulearn.views_lti': {
-            'handlers': ['console'],
-            'level': 'INFO',  # Shows launch/outcome flow - set to DEBUG for more detail
-            'propagate': False,
-        },
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'courses': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
+        'dashboard': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
+        'lti': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
     },
 }
 
-# Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'       # Replace with your email host
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@example.com'     # Replace with your email
-EMAIL_HOST_PASSWORD = 'your-email-password'    # Replace with your email password
+EMAIL_HOST_USER = 'your-email@example.com'
+EMAIL_HOST_PASSWORD = 'your-email-password'
 
-LOGIN_URL = 'accounts:login'
-
-# LTI 1.3 Configuration
 LTI_CONFIG = {
     'https://saltire.lti.app/platform': {
         'client_id': 'saltire.lti.app',
@@ -481,7 +302,6 @@ LTI_CONFIG = {
     }
 }
 
-# Cache Configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
@@ -491,8 +311,6 @@ CACHES = {
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
-# Local HTTP development cannot use SameSite=None cookies because browsers require Secure.
-# Use Lax/HTTP-safe cookies locally, and the cross-site iframe-safe settings everywhere else.
 DEV_HTTPS = os.getenv('MODULEARN_DEV_HTTPS', '').lower() in ('1', 'true', 'yes', 'on')
 if DEBUG and not DEV_HTTPS:
     SESSION_COOKIE_SAMESITE = 'Lax'
@@ -505,20 +323,14 @@ else:
     CSRF_COOKIE_SAMESITE = 'None'
     CSRF_COOKIE_SECURE = True
 
-# Configuration for acting as an LTI tool consumer
 LTI_CONSUMER_CONFIG = {
     'client_id': 'external-tool-client-id',
     'public_key_file': './modulearn/public.key',
     'private_key_file': './modulearn/private.key',
-    # Add any other necessary configuration specific to the external tool
 }
 
 def get_primary_domain():
-    """Returns the primary domain to use for the application"""
-    return os.getenv(
-        'PRIMARY_DOMAIN',
-        'http://localhost:8000' if DEBUG else 'https://proxy.personalized-learning.org',
-    ).rstrip('/')
+    return os.getenv('PRIMARY_DOMAIN', 'http://localhost:8000' if DEBUG else 'https://proxy.personalized-learning.org').rstrip('/')
 
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
@@ -542,41 +354,15 @@ LTI_TOOL_CONFIG = {
     ]
 }
 
-# CSRF trusted origins
-CSRF_TRUSTED_ORIGINS = [
-    'https://proxy.personalized-learning.org',
-]
-
-# LTI 1.1 Configuration
+CSRF_TRUSTED_ORIGINS = ['https://proxy.personalized-learning.org']
 LTI_11_CONSUMER_KEY = 'modulearn_key'
 LTI_11_CONSUMER_SECRET = 'modulearn_secret'
-
 USE_X_FORWARDED_HOST = True
 
-# =============================================================================
-# LTI TOOL CONSUMER CONFIGURATION
-# =============================================================================
-# Configuration for launching external LTI tools from ModuLearn.
-# Tool configurations are loaded from lti/config.py with credentials from env vars.
-#
-# Required environment variables per tool:
-#   {TOOL}_KEY      - OAuth consumer key
-#   {TOOL}_SECRET   - OAuth consumer secret
-#   {TOOL}_LAUNCH   - Base launch URL
-#
-# Example:
-#   CODECHECK_KEY=your_key
-#   CODECHECK_SECRET=your_secret
-#   CODECHECK_LAUNCH=https://codecheck.io/lti
-
-# UM Service URL for outcome forwarding (ADAPT2 protocol)
 UM_SERVICE_URL = os.getenv('UM_SERVICE_URL', 'http://adapt2.sis.pitt.edu/aggregate2/UserActivity')
-
-# LTI launch cache TTL (hours) - how long to remember launch context for outcomes
 LTI_CACHE_TTL_HOURS = int(os.getenv('LTI_CACHE_TTL_HOURS', '24'))
 
-# DEPRECATED: Old tool env mapping (kept for backward compatibility)
-# Use lti/config.py for new tool configurations
+# Backward compatibility fallbacks
 LTI_TOOL_ENVS = {
     "codecheck": ("CODECHECK_KEY", "CODECHECK_SECRET", "CODECHECK_LAUNCH"),
     "codelab": ("CODELAB_KEY", "CODELAB_SECRET", "CODELAB_LAUNCH"),
@@ -588,16 +374,13 @@ LTI_TOOL_ENVS = {
     "opendsa_slideshows": ("OPENDSA_SLIDESHOWS_KEY", "OPENDSA_SLIDESHOWS_SECRET", "OPENDSA_SLIDESHOWS_LAUNCH"),
 }
 
-# DEPRECATED: Old URL builder (kept for backward compatibility)
 def LTI_URL_BUILDER(tool: str, base: str, sub: str) -> str:
-    """Deprecated: Use lti.services.get_launch_url() instead."""
     if tool == "ctat":
         return f"{base.rstrip('/')}/mg_{sub}"
     if tool in ("opendsa_problems", "opendsa_slideshows"):
         return f"{base}?custom_ex_settings=%7B%7D&custom_ex_short_name={sub}"
     return base
 
-# Optional: tight proxy allowlist (HTTP origins you're willing to fetch)
 PROXY_ALLOWED_HOSTS = {
     "columbus.exp.sis.pitt.edu",
     "pawscomp2.sis.pitt.edu",
