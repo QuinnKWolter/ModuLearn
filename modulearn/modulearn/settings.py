@@ -49,6 +49,33 @@ def parse_boolish(value):
     return None
 
 
+def normalize_url_path(value, *, default='', trailing_slash=False):
+    """Normalize environment-driven URL path prefixes."""
+    value = (value or default or '').strip()
+    if not value:
+        return ''
+    if value.startswith(('http://', 'https://')):
+        return value.rstrip('/') + '/' if trailing_slash else value.rstrip('/')
+    if not value.startswith('/'):
+        value = f'/{value}'
+    if trailing_slash:
+        value = value.rstrip('/') + '/'
+    else:
+        value = value.rstrip('/')
+    return value
+
+
+def production_requested():
+    """Return True when environment explicitly requests production behavior."""
+    return any([
+        parse_boolish(os.getenv('DJANGO_PRODUCTION')) is True,
+        parse_boolish(os.getenv('PRODUCTION')) is True,
+        parse_boolish(os.getenv('PROD')) is True,
+        os.getenv('ENVIRONMENT', '').lower() == 'production',
+        os.getenv('ENV', '').lower() == 'production',
+    ])
+
+
 def get_debug_setting():
     """
     Automatically detect if we're in development or production environment.
@@ -59,8 +86,11 @@ def get_debug_setting():
     if debug_env is not None:
         return debug_env
 
-    management_commands = {'runserver', 'test', 'shell', 'makemigrations', 'migrate', 'collectstatic'}
-    if any(command in sys.argv for command in management_commands):
+    if production_requested():
+        return False
+
+    development_commands = {'runserver', 'test', 'shell', 'makemigrations'}
+    if any(command in sys.argv for command in development_commands):
         return True
     
     # Check for development indicators
@@ -86,15 +116,6 @@ def get_debug_setting():
     
     # Check for production indicators
     production_indicators = [
-        # Environment variables that indicate production
-        parse_boolish(os.getenv('DJANGO_PRODUCTION')) is True,
-        parse_boolish(os.getenv('PRODUCTION')) is True,
-        parse_boolish(os.getenv('PROD')) is True,
-        
-        # Check for common production environment variables
-        os.getenv('ENVIRONMENT', '').lower() == 'production',
-        os.getenv('ENV', '').lower() == 'production',
-        
         # Check for production hostnames
         'proxy.personalized-learning.org' in os.getenv('HOSTNAME', ''),
         'proxy.personalized-learning.org' in os.getenv('SERVER_NAME', ''),
@@ -108,6 +129,7 @@ def get_debug_setting():
     return False
 
 DEBUG = get_debug_setting()
+IS_PRODUCTION = not DEBUG
 WHITENOISE_AVAILABLE = find_spec('whitenoise') is not None
 
 import logging
@@ -232,11 +254,22 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+# URL mount points.
+#
+# Local development normally serves the app at / with /static/ and /media/.
+# Production on proxy.personalized-learning.org mounts the app at /modulearn,
+# while static assets are served from /modulearn-static/.
+FORCE_SCRIPT_NAME = normalize_url_path(
+    os.getenv('FORCE_SCRIPT_NAME'),
+    default='/modulearn' if IS_PRODUCTION else '',
+)
+
 # Static files (CSS, JavaScript, Images)
-if DEBUG:
-    STATIC_URL = '/static/'
-else:
-    STATIC_URL = '/modulearn-static/'
+STATIC_URL = normalize_url_path(
+    os.getenv('STATIC_URL'),
+    default='/modulearn-static/' if IS_PRODUCTION else '/static/',
+    trailing_slash=True,
+)
 
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -261,9 +294,16 @@ if WHITENOISE_AVAILABLE:
     WHITENOISE_AUTOREFRESH = DEBUG
     WHITENOISE_USE_FINDERS = DEBUG
     WHITENOISE_ALLOW_ALL_ORIGINS = True
+    WHITENOISE_STATIC_PREFIX = STATIC_URL
 
-MEDIA_URL = '/modulearn/media/'
+MEDIA_URL = normalize_url_path(
+    os.getenv('MEDIA_URL'),
+    default=f'{FORCE_SCRIPT_NAME}/media/' if FORCE_SCRIPT_NAME else '/media/',
+    trailing_slash=True,
+)
 MEDIA_ROOT = BASE_DIR / 'media'
+serve_media_env = parse_boolish(os.getenv('SERVE_MEDIA_FILES'))
+SERVE_MEDIA_FILES = serve_media_env if serve_media_env is not None else DEBUG
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -510,14 +550,20 @@ LTI_CONSUMER_CONFIG = {
 
 def get_primary_domain():
     """Returns the primary domain to use for the application"""
-    if DEBUG:
-        return "http://localhost:8000"
-    return "https://proxy.personalized-learning.org"
+    return os.getenv(
+        'PRIMARY_DOMAIN',
+        'http://localhost:8000' if DEBUG else 'https://proxy.personalized-learning.org',
+    ).rstrip('/')
+
+
+def get_application_base_url():
+    """Return the public origin plus any reverse-proxy script prefix."""
+    return f"{get_primary_domain()}{FORCE_SCRIPT_NAME or ''}"
 
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
     'description': 'A multi-protocol eLearning module bundling and delivery platform',
-    'launch_url': f'{get_primary_domain()}/lti/launch/',
+    'launch_url': f'{get_application_base_url()}/lti/launch/',
     'custom_fields': {
         'canvas_course_id': '$Canvas.course.id',
         'canvas_user_id': '$Canvas.user.id'
@@ -545,9 +591,6 @@ CSRF_TRUSTED_ORIGINS = [
 LTI_11_CONSUMER_KEY = 'modulearn_key'
 LTI_11_CONSUMER_SECRET = 'modulearn_secret'
 
-# Only force script name in production (not in development)
-if not DEBUG:
-    FORCE_SCRIPT_NAME = '/modulearn'
 USE_X_FORWARDED_HOST = True
 
 # =============================================================================

@@ -11,6 +11,12 @@ services:
     restart: always
     env_file:
       - ./.env
+    environment:
+      DJANGO_PRODUCTION: "True"
+      FORCE_SCRIPT_NAME: "/modulearn"
+      STATIC_URL: "/modulearn-static/"
+      MEDIA_URL: "/modulearn/media/"
+      SERVE_MEDIA_FILES: "True"
     volumes:
       - ./modulearn-storage/db:/modulearn-storage/db
       - ./modulearn-storage/media:/modulearn/media

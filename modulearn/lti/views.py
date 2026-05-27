@@ -280,7 +280,7 @@ def lti_config(request):
         <blti:description>{settings.LTI_TOOL_CONFIG['description']}</blti:description>
         <blti:launch_url>{launch_url}</blti:launch_url>
         <blti:secure_launch_url>{launch_url}</blti:secure_launch_url>
-        <blti:icon>{domain}/static/img/logo_128.png</blti:icon>
+        <blti:icon>{domain}{settings.STATIC_URL}img/logo_128.png</blti:icon>
         <blti:custom>
             <lticm:property name="canvas_course_id">$Canvas.course.id</lticm:property>
             <lticm:property name="canvas_user_id">$Canvas.user.id</lticm:property>

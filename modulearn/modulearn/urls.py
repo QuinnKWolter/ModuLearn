@@ -45,6 +45,8 @@ urlpatterns = [
     path("cbum/<path:rest>", views_proxy.forward_cbum, name="forward_cbum"),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or getattr(settings, 'SERVE_MEDIA_FILES', False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
