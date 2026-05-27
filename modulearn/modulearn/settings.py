@@ -49,34 +49,6 @@ def parse_boolish(value):
         return False
     return None
 
-
-def normalize_url_path(value, *, default='', trailing_slash=False):
-    """Normalize environment-driven URL path prefixes."""
-    value = (value or default or '').strip()
-    if not value:
-        return ''
-    if value.startswith(('http://', 'https://')):
-        return value.rstrip('/') + '/' if trailing_slash else value.rstrip('/')
-    if not value.startswith('/'):
-        value = f'/{value}'
-    if trailing_slash:
-        value = value.rstrip('/') + '/'
-    else:
-        value = value.rstrip('/')
-    return value
-
-
-def production_requested():
-    """Return True when environment explicitly requests production behavior."""
-    return any([
-        parse_boolish(os.getenv('DJANGO_PRODUCTION')) is True,
-        parse_boolish(os.getenv('PRODUCTION')) is True,
-        parse_boolish(os.getenv('PROD')) is True,
-        os.getenv('ENVIRONMENT', '').lower() == 'production',
-        os.getenv('ENV', '').lower() == 'production',
-    ])
-
-
 def get_debug_setting():
     """
     Automatically detect if we're in development or production environment.
@@ -255,16 +227,6 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# URL mount points.
-#
-# Local development normally serves the app at / with /static/ and /media/.
-# Production on proxy.personalized-learning.org mounts the app at /modulearn,
-# while static assets are served from /modulearn-static/.
-FORCE_SCRIPT_NAME = normalize_url_path(
-    os.getenv('FORCE_SCRIPT_NAME'),
-    default='/modulearn' if IS_PRODUCTION else '',
-)
-
 # =============================================================================
 # Static files (CSS, JavaScript, Images)
 #
@@ -272,59 +234,22 @@ FORCE_SCRIPT_NAME = normalize_url_path(
 # default. The production PAWS container has a low thread ceiling, so the
 # storage classes below keep compression deliberately single-threaded.
 # =============================================================================
-STATIC_URL = normalize_url_path(
-    os.getenv('STATIC_URL'),
-    default='/modulearn-static/' if IS_PRODUCTION else '/static/',
-    trailing_slash=True,
-)
+# Gunicorn handles script prefix variables natively via proxy request headers
+FORCE_SCRIPT_NAME = None
 
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Assign static directories cleanly based on active infrastructure environment
+STATIC_URL = os.getenv('STATIC_URL', '/modulearn-static/' if IS_PRODUCTION else '/static/')
 
+# Single-threaded worker configuration to respect server process ceilings
 if WHITENOISE_AVAILABLE:
-    from whitenoise.storage import CompressedManifestStaticFilesStorage, CompressedStaticFilesStorage
+    from whitenoise.storage import CompressedManifestStaticFilesStorage
+    
+    class SequentiallyCompressedManifestStorage(CompressedManifestStaticFilesStorage):
+        max_workers = 1
 
-    class SingleThreadedCompressionMixin:
-        def iter_compressed_file_pairs(self, paths):
-            extensions = globals().get("WHITENOISE_SKIP_COMPRESS_EXTENSIONS", None)
-            self.compressor = self.create_compressor(extensions=extensions, quiet=True)
-
-            for path in paths:
-                if not self.compressor.should_compress(path):
-                    continue
-
-                full_path = self.path(path)
-                prefix_len = len(full_path) - len(path)
-                for compressed_path in self.compressor.compress(full_path):
-                    compressed_name = compressed_path[prefix_len:]
-                    yield path, compressed_name
-
-    class SingleThreadedCompressedStaticFilesStorage(
-        SingleThreadedCompressionMixin,
-        CompressedStaticFilesStorage,
-    ):
-        def post_process(self, paths, dry_run=False, **options):
-            if dry_run:
-                return
-
-            for path, compressed_name in self.iter_compressed_file_pairs(paths):
-                yield path, compressed_name, True
-
-    class SingleThreadedCompressedManifestStaticFilesStorage(
-        SingleThreadedCompressionMixin,
-        CompressedManifestStaticFilesStorage,
-    ):
-        def compress_files(self, paths):
-            yield from self.iter_compressed_file_pairs(paths)
-
-if DEBUG and WHITENOISE_AVAILABLE:
-    STATICFILES_BACKEND = 'modulearn.settings.SingleThreadedCompressedStaticFilesStorage'
-elif WHITENOISE_AVAILABLE:
-    STATICFILES_BACKEND = 'modulearn.settings.SingleThreadedCompressedManifestStaticFilesStorage'
-elif DEBUG:
-    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+    STATICFILES_BACKEND = 'modulearn.settings.SequentiallyCompressedManifestStorage' if not DEBUG else 'whitenoise.storage.CompressedStaticFilesStorage'
 else:
-    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+    STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage' if not DEBUG else 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 STORAGES = {
     'default': {
@@ -341,11 +266,6 @@ if WHITENOISE_AVAILABLE:
     WHITENOISE_ALLOW_ALL_ORIGINS = True
     WHITENOISE_STATIC_PREFIX = STATIC_URL
 
-MEDIA_URL = normalize_url_path(
-    os.getenv('MEDIA_URL'),
-    default=f'{FORCE_SCRIPT_NAME}/media/' if FORCE_SCRIPT_NAME else '/media/',
-    trailing_slash=True,
-)
 MEDIA_ROOT = BASE_DIR / 'media'
 serve_media_env = parse_boolish(os.getenv('SERVE_MEDIA_FILES'))
 SERVE_MEDIA_FILES = serve_media_env if serve_media_env is not None else DEBUG
@@ -600,15 +520,10 @@ def get_primary_domain():
         'http://localhost:8000' if DEBUG else 'https://proxy.personalized-learning.org',
     ).rstrip('/')
 
-
-def get_application_base_url():
-    """Return the public origin plus any reverse-proxy script prefix."""
-    return f"{get_primary_domain()}{FORCE_SCRIPT_NAME or ''}"
-
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
     'description': 'A multi-protocol eLearning module bundling and delivery platform',
-    'launch_url': f'{get_application_base_url()}/lti/launch/',
+    'launch_url': f'{get_primary_domain()}/lti/launch/',
     'custom_fields': {
         'canvas_course_id': '$Canvas.course.id',
         'canvas_user_id': '$Canvas.user.id'

@@ -13,7 +13,6 @@ services:
       - ./.env
     environment:
       DJANGO_PRODUCTION: "True"
-      FORCE_SCRIPT_NAME: "/modulearn"
       STATIC_URL: "/modulearn-static/"
       MEDIA_URL: "/modulearn/media/"
       SERVE_MEDIA_FILES: "True"
@@ -24,4 +23,3 @@ services:
     extra_hosts:
       - "host.docker.internal:172.17.0.1"
       - "adapt2.sis.pitt.edu:172.17.0.1"
-      
