@@ -371,3 +371,17 @@ PROXY_ALLOWED_HOSTS = {
 }
 PROXY_MAX_BYTES = 5 * 1024 * 1024
 PROXY_CORS_ORIGIN = 'https://proxy.personalized-learning.org'
+
+# =============================================================================
+# PRODUCTION PROXY ROUTING CORRECTION
+# =============================================================================
+if IS_PRODUCTION:
+    class FixProxySlashes:
+        def __init__(self, get_response):
+            self.get_response = get_response
+        def __call__(self, request):
+            if request.path_info.startswith('//'):
+                request.path_info = '/' + request.path_info.lstrip('/')
+            return self.get_response(request)
+            
+    MIDDLEWARE.insert(0, 'modulearn.settings.FixProxySlashes')
