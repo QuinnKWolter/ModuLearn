@@ -1,0 +1,46 @@
+# Python runtime/cache artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases and persisted runtime state
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+modulearn-storage/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.log
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node/Tailwind dependencies and cache
+node_modules/
+.npm/
+
+# Django generated/static runtime output
+staticfiles/
+media/
+course_modules/
+uploads/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local handoff/scratch artifacts
+weekendchanges.diff

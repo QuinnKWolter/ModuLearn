@@ -6,7 +6,6 @@ services:
     build:
       context: ./ModuLearn/modulearn/
       dockerfile: ./Dockerfile
-    privileged: true
     ports:
       - "20600:8000"
     restart: always
@@ -14,6 +13,7 @@ services:
       - ./.env
     volumes:
       - ./modulearn-storage/db:/modulearn-storage/db
+      - ./modulearn-storage/media:/modulearn/media
       - ./.env:/.env:ro
     extra_hosts:
       - "host.docker.internal:172.17.0.1"

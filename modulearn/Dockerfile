@@ -6,7 +6,7 @@ WORKDIR /modulearn
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libpq-dev gcc --no-install-recommends && \
+    libpq-dev gcc nodejs npm --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
@@ -15,8 +15,15 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install frontend build dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
 # Copy the project files into the container
 COPY . .
+
+# Build Tailwind CSS for production
+RUN npm run build:css && rm -rf node_modules
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
