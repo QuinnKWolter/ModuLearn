@@ -13,3 +13,4 @@ paramiko>=2.7.0,<2.9.0
 cryptography>=3.4.8
 defusedxml>=0.7.1
 PyJWT>=2.8.0
+gunicorn==23.0.0

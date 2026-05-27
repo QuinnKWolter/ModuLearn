@@ -23,7 +23,7 @@ RUN npm ci
 COPY . .
 
 # Build Tailwind CSS for production
-RUN npm run build:css && rm -rf node_modules
+RUN npm run build:css
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
