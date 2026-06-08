@@ -21,6 +21,27 @@ from modulearn.settings import get_primary_domain
 
 logger = logging.getLogger(__name__)
 
+
+def apply_lti_roles(user, roles):
+    normalized_roles = [str(role).lower() for role in roles]
+    launch_is_instructor = any(
+        'instructor' in role or 'teachingassistant' in role
+        for role in normalized_roles
+    )
+    launch_is_student = any(
+        'learner' in role or 'student' in role
+        for role in normalized_roles
+    )
+
+    if launch_is_instructor:
+        user.is_instructor = True
+        user.is_student = False
+    elif not user.is_instructor:
+        user.is_student = launch_is_student or not normalized_roles
+
+    user.save(update_fields=['is_instructor', 'is_student'])
+
+
 # ----------------------
 # LTI 1.3 Views
 # ----------------------
@@ -168,9 +189,7 @@ def process_launch_data(request, launch_data):
     if isinstance(roles, str):
         roles = roles.split(',')
 
-    user.is_instructor = any(role for role in roles if 'Instructor' in role or 'TeachingAssistant' in role)
-    user.is_student = any(role for role in roles if 'Learner' in role or 'Student' in role) or not user.is_instructor
-    user.save(update_fields=['is_instructor', 'is_student'])
+    apply_lti_roles(user, roles)
 
     # Log the user in before trying to access enrollments
     # Use ModelBackend since LTI users are created directly, not authenticated through a backend

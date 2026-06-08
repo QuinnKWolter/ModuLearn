@@ -236,7 +236,6 @@ OAUTH2_PROVIDER = {
 
 CORS_ALLOWED_ORIGINS = [
     'https://canvas.instructure.com',
-    'https://saltire.lti.app',
 ]
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'

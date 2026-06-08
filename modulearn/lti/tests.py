@@ -26,6 +26,38 @@ from lti.services import (
     generate_source_id,
 )
 from lti.config import get_tool_config, is_tool_configured, list_configured_tools
+from lti.views import apply_lti_roles
+
+
+class LTIRoleTests(TestCase):
+    def test_learner_launch_does_not_demote_existing_instructor(self):
+        user = User.objects.create_user(
+            username='lti-instructor',
+            is_instructor=True,
+            is_student=False,
+        )
+
+        apply_lti_roles(user, ['Learner'])
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_instructor)
+        self.assertFalse(user.is_student)
+
+    def test_instructor_launch_promotes_existing_student(self):
+        user = User.objects.create_user(
+            username='lti-student-role',
+            is_instructor=False,
+            is_student=True,
+        )
+
+        apply_lti_roles(
+            user,
+            ['http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor'],
+        )
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_instructor)
+        self.assertFalse(user.is_student)
 
 
 class LTIServicesTestCase(TestCase):

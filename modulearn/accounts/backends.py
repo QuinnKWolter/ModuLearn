@@ -88,6 +88,7 @@ class KnowledgeTreeBackend(ModelBackend):
             if user:
                 # User exists and is linked to this KT account
                 self._update_user_from_kt(user, kt_user_data)
+                user.save()
                 return user
         
         # Try to find by kt_login (username) - primary matching method
@@ -165,12 +166,17 @@ class KnowledgeTreeBackend(ModelBackend):
         if user.kt_login:
             from dashboard.kt_utils import is_user_instructor_in_aggregate
             is_instructor = is_user_instructor_in_aggregate(user.kt_login)
-            if user.is_instructor != is_instructor or user.is_student == is_instructor:
+            if is_instructor:
+                if not user.is_instructor or user.is_student:
+                    logger.info(
+                        f"Promoting user {user.username} after aggregate.ent_non_student "
+                        "confirmed instructor status"
+                    )
+                user.is_instructor = True
+                user.is_student = False
+            elif user.is_instructor:
                 logger.info(
-                    f"Updating user {user.username} role from "
-                    f"is_instructor={user.is_instructor}, is_student={user.is_student} "
-                    f"to is_instructor={is_instructor}, is_student={not is_instructor}"
+                    f"Preserving existing instructor role for {user.username}; "
+                    "aggregate.ent_non_student did not confirm instructor status"
                 )
-                user.is_instructor = is_instructor
-                user.is_student = not is_instructor
 
