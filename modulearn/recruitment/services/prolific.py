@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 import requests
 from django.conf import settings
@@ -21,8 +22,33 @@ class ProlificIds:
     session_id: str = ""
 
 
+PROLIFIC_ID_PATTERN = re.compile(r"^[a-fA-F0-9]{24}$")
+
+
 def completion_url(code: str) -> str:
     return f"{PROLIFIC_COMPLETION_BASE_URL}?cc={code}"
+
+
+def validate_prolific_ids(ids: ProlificIds):
+    missing = []
+    if not ids.pid:
+        missing.append("PROLIFIC_PID")
+    if not ids.study_id:
+        missing.append("STUDY_ID")
+    if not ids.session_id:
+        missing.append("SESSION_ID")
+    if missing:
+        raise ProlificVerificationError(f"Missing Prolific parameter: {', '.join(missing)}.")
+
+    invalid = []
+    if not PROLIFIC_ID_PATTERN.match(ids.pid):
+        invalid.append("PROLIFIC_PID")
+    if not PROLIFIC_ID_PATTERN.match(ids.study_id):
+        invalid.append("STUDY_ID")
+    if not PROLIFIC_ID_PATTERN.match(ids.session_id):
+        invalid.append("SESSION_ID")
+    if invalid:
+        raise ProlificVerificationError(f"Invalid Prolific identifier format: {', '.join(invalid)}.")
 
 
 def verify_secured_url(token: str, expected: ProlificIds) -> dict:

@@ -89,19 +89,30 @@ def evaluate_unit_access(unit, enrollment, *, include_hidden: bool = False) -> A
         return AccessState(True, True)
     if _rule_passes(unit.unlock_rule, enrollment, subject_unit=unit):
         return AccessState(True, True)
-    return AccessState(True, False, _rule_reason(unit.unlock_rule) or "Locked until the instructor conditions are met")
+    return AccessState(True, False, _rule_reason(unit.unlock_rule, subject_unit=unit) or "Locked until the instructor conditions are met")
 
 
 def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None = None, include_hidden: bool = False) -> AccessState:
     if not module.is_visible and not include_hidden:
         return AccessState(False, False, "Hidden by instructor")
+    has_dynamic_unlock = _has_dynamic_module_unlock(enrollment, module)
     if unit_state is not None and not unit_state.can_access:
+        if unit_state.is_visible and has_dynamic_unlock:
+            return AccessState(True, True)
         return AccessState(unit_state.is_visible, False, unit_state.reason or "Unit is locked")
     if not module.is_locked:
         return AccessState(True, True)
+    if has_dynamic_unlock:
+        return AccessState(True, True)
     if _rule_passes(module.unlock_rule, enrollment, subject_module=module):
         return AccessState(True, True)
-    return AccessState(True, False, _rule_reason(module.unlock_rule) or "Locked until the instructor conditions are met")
+    return AccessState(
+        True,
+        False,
+        _rule_reason(module.unlock_rule, subject_module=module)
+        or _branch_reason(module)
+        or "Locked until the instructor conditions are met",
+    )
 
 
 def _rule_passes(rule: dict[str, Any] | None, enrollment, *, subject_unit=None, subject_module=None) -> bool:
@@ -117,6 +128,15 @@ def _rule_passes(rule: dict[str, Any] | None, enrollment, *, subject_unit=None, 
         for condition in conditions
     ]
     return any(results) if rule.get("mode") == "any" else all(results)
+
+
+def _has_dynamic_module_unlock(enrollment, module) -> bool:
+    try:
+        from modulearn.learning.services.adaptive_branching import has_dynamic_module_unlock
+
+        return has_dynamic_module_unlock(enrollment, module)
+    except Exception:
+        return False
 
 
 def _condition_passes(condition: dict[str, Any], enrollment, *, subject_unit=None, subject_module=None) -> bool:
@@ -214,21 +234,94 @@ def _previous_unit(unit):
     )
 
 
-def _rule_reason(rule: dict[str, Any] | None) -> str:
-    labels = {
-        "module_accessed": "Unlocks after the selected module is accessed",
-        "resource_accessed": "Unlocks after the selected resource is accessed",
-        "module_completed": "Unlocks after the selected module is completed",
-        "form_completed": "Unlocks after the selected form is completed",
-        "survey_completed": "Unlocks after the selected survey is completed",
-        "quiz_completed": "Unlocks after the selected quiz is completed",
-        "unit_accessed": "Unlocks after the selected unit has been fully accessed",
-        "unit_completed": "Unlocks after the selected unit is completed",
-        "previous_unit_accessed": "Unlocks after the previous unit has been fully accessed",
-        "previous_unit_completed": "Unlocks after the previous unit is completed",
-        "condition_equals": "Unlocks for participants assigned to the selected condition",
-    }
+def _rule_reason(rule: dict[str, Any] | None, *, subject_unit=None, subject_module=None) -> str:
     conditions = (rule or {}).get("conditions") or []
     if not conditions:
         return ""
-    return labels.get(conditions[0].get("type"), "")
+    condition = conditions[0]
+    condition_type = condition.get("type")
+    target_id = condition.get("target_id")
+
+    if condition_type in {"module_accessed", "resource_accessed"}:
+        target = _module_title(target_id)
+        return f"Unlocks after {target} is accessed" if target else "Unlocks after the selected module is accessed"
+    if condition_type in {"module_completed", "form_completed", "survey_completed", "quiz_completed"}:
+        target = _module_title(target_id)
+        return f"Unlocks after {target} is completed" if target else "Unlocks after the selected module is completed"
+    if condition_type == "unit_accessed":
+        target = _unit_title(target_id)
+        return f"Unlocks after {target} has been fully accessed" if target else "Unlocks after the selected unit has been fully accessed"
+    if condition_type == "unit_completed":
+        target = _unit_title(target_id)
+        return f"Unlocks after {target} is completed" if target else "Unlocks after the selected unit is completed"
+    if condition_type == "previous_unit_accessed":
+        previous_unit = _previous_unit(subject_unit or getattr(subject_module, "unit", None))
+        return (
+            f"Unlocks after {previous_unit.title} has been fully accessed"
+            if previous_unit
+            else "Unlocks after the previous unit has been fully accessed"
+        )
+    if condition_type == "previous_unit_completed":
+        previous_unit = _previous_unit(subject_unit or getattr(subject_module, "unit", None))
+        return (
+            f"Unlocks after {previous_unit.title} is completed"
+            if previous_unit
+            else "Unlocks after the previous unit is completed"
+        )
+    if condition_type == "condition_equals":
+        return f"Unlocks for participants in condition {target_id}" if target_id else "Unlocks for participants assigned to the selected condition"
+    return ""
+
+
+def _module_title(module_id) -> str:
+    if not module_id:
+        return ""
+    try:
+        from courses.models import Module
+
+        return Module.objects.filter(id=module_id).values_list("title", flat=True).first() or ""
+    except Exception:
+        return ""
+
+
+def _unit_title(unit_id) -> str:
+    if not unit_id:
+        return ""
+    try:
+        from courses.models import Unit
+
+        return Unit.objects.filter(id=unit_id).values_list("title", flat=True).first() or ""
+    except Exception:
+        return ""
+
+
+def _branch_reason(module) -> str:
+    if not module or not getattr(module, "id", None):
+        return ""
+    try:
+        from courses.models import ModuleBranchRule
+
+        rules = list(
+            ModuleBranchRule.objects.filter(target_module=module, active=True)
+            .select_related("source_module")
+            .order_by("priority", "id")[:2]
+        )
+    except Exception:
+        return ""
+    if not rules:
+        return ""
+
+    def describe(rule):
+        source_title = getattr(rule.source_module, "title", "the source module")
+        condition_labels = {
+            ModuleBranchRule.CONDITION_SUCCESS: f"{source_title} is answered correctly",
+            ModuleBranchRule.CONDITION_FAILURE: f"{source_title} is answered incorrectly",
+            ModuleBranchRule.CONDITION_COMPLETED: f"{source_title} is completed",
+            ModuleBranchRule.CONDITION_SCORE_GTE: f"{source_title} score is at least {rule.threshold or 70:g}%",
+            ModuleBranchRule.CONDITION_SCORE_LT: f"{source_title} score is below {rule.threshold or 70:g}%",
+        }
+        return condition_labels.get(rule.condition_type, f"{source_title} meets its branch condition")
+
+    if len(rules) == 1:
+        return f"Unlocks when {describe(rules[0])}"
+    return "Unlocks when " + " or ".join(describe(rule) for rule in rules)

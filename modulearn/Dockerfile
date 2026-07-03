@@ -1,13 +1,19 @@
-# Use an official Python image as a base
+FROM node:22-slim AS frontend
+
+WORKDIR /build
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build:css
+
+
+# Use an official Python image as the runtime base
 FROM python:3.14.3-slim
 
 # Set the working directory in the container
 WORKDIR /modulearn
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libpq-dev gcc nodejs npm --no-install-recommends && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
 COPY requirements.txt .
@@ -15,15 +21,11 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install frontend build dependencies
-COPY package.json package-lock.json ./
-RUN npm ci
-
 # Copy the project files into the container
 COPY . .
 
-# Build Tailwind CSS for production
-RUN npm run build:css
+# Copy the generated stylesheet without carrying Node into the runtime image
+COPY --from=frontend /build/static/css/tailwind.generated.css ./static/css/tailwind.generated.css
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

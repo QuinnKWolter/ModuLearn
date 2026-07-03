@@ -45,7 +45,7 @@ urlpatterns = [
     path("cbum/<path:rest>", views_proxy.forward_cbum, name="forward_cbum"),
 ]
 
-if settings.DEBUG or getattr(settings, 'SERVE_MEDIA_FILES', False):
+if (settings.DEBUG or getattr(settings, 'SERVE_MEDIA_FILES', False)) and settings.MEDIA_URL not in ('', '/'):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

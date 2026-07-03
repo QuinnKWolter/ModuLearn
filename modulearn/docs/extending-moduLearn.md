@@ -16,6 +16,10 @@
 3. Keep the public route stable if you are refactoring an existing flow.
 4. Add at least one smoke or service-level test for the behavior.
 
+## Adding course plugin behavior
+
+Use `docs/course-plugins.md` for the course-level plugin contract, storage shape, registry rules, and recommendation hook guidance.
+
 ## Adding a module/tool provider
 
 1. Decide whether the tool is:

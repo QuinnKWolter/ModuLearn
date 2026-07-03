@@ -26,6 +26,7 @@ class Course(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     is_locked_for_research = models.BooleanField(default=False)
+    plugin_config = models.JSONField(default=dict, blank=True)
     instructors = models.ManyToManyField(User, related_name='courses_taught', limit_choices_to={'is_instructor': True}, blank=True)
 
     def __str__(self):
@@ -34,6 +35,10 @@ class Course(models.Model):
     def total_modules(self):
         """Return the total number of modules in the course."""
         return Module.objects.filter(unit__course=self).count()
+
+    def is_plugin_enabled(self, plugin_key):
+        from modulearn.learning.services.course_plugins import is_course_plugin_enabled
+        return is_course_plugin_enabled(self, plugin_key)
 
 class CourseInstance(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='instances', null=True, blank=True)
@@ -180,6 +185,43 @@ class Module(models.Model):
                 return protocol
         return None
 
+
+class ModuleBranchRule(models.Model):
+    CONDITION_SUCCESS = 'success'
+    CONDITION_FAILURE = 'failure'
+    CONDITION_COMPLETED = 'completed'
+    CONDITION_SCORE_GTE = 'score_gte'
+    CONDITION_SCORE_LT = 'score_lt'
+    CONDITION_CHOICES = [
+        (CONDITION_SUCCESS, 'Correct / Successful'),
+        (CONDITION_FAILURE, 'Incorrect / Unsuccessful'),
+        (CONDITION_COMPLETED, 'Completed'),
+        (CONDITION_SCORE_GTE, 'Score At Least'),
+        (CONDITION_SCORE_LT, 'Score Below'),
+    ]
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='branch_rules')
+    source_module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='branch_source_rules')
+    target_module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='branch_target_rules')
+    condition_type = models.CharField(max_length=32, choices=CONDITION_CHOICES)
+    threshold = models.FloatField(null=True, blank=True)
+    priority = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['course', 'active'], name='branch_course_active_idx'),
+            models.Index(fields=['source_module', 'active'], name='branch_source_active_idx'),
+            models.Index(fields=['target_module', 'active'], name='branch_target_active_idx'),
+        ]
+        ordering = ['source_module_id', 'priority', 'id']
+
+    def __str__(self):
+        return f"If {self.source_module.title} {self.get_condition_type_display()} unlock {self.target_module.title}"
+
+
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')
     course_instance = models.ForeignKey(CourseInstance, on_delete=models.CASCADE, related_name='enrollments')
@@ -191,6 +233,26 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.course_instance}"
+
+
+class EnrollmentModuleUnlock(models.Model):
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='dynamic_module_unlocks')
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='dynamic_unlocks')
+    source_module = models.ForeignKey(Module, on_delete=models.SET_NULL, null=True, blank=True, related_name='dynamic_unlock_sources')
+    source_rule = models.ForeignKey(ModuleBranchRule, on_delete=models.CASCADE, null=True, blank=True, related_name='unlock_events')
+    reason = models.CharField(max_length=128, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('enrollment', 'module', 'source_rule')
+        indexes = [
+            models.Index(fields=['enrollment', 'module'], name='unlock_enroll_module_idx'),
+            models.Index(fields=['source_rule', 'created_at'], name='unlock_rule_created_idx'),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.enrollment} unlocked {self.module.title}"
 
 class ModuleProgress(models.Model):
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='module_progress', null=True, blank=True)

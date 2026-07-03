@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from courses.models import Course, CourseInstance, Enrollment
+from courses.models import Enrollment
 from dashboard.kt_utils import (
     get_course_ids_from_aggregate_db,
     get_user_groups_with_course_ids,
@@ -103,30 +103,30 @@ def get_legacy_masterygrids_groups(user):
     return groups
 
 
-def get_user_role_snapshot(user):
+def get_user_role_snapshot(user, *, include_legacy_groups=False):
     if hasattr(user, "_modulearn_role_snapshot"):
-        return user._modulearn_role_snapshot
+        cached_snapshot = user._modulearn_role_snapshot
+        if not include_legacy_groups or cached_snapshot.get("_includes_legacy_groups"):
+            return cached_snapshot
 
     snapshot = {
         "effective_is_student": False,
         "effective_is_instructor": False,
         "primary_role": None,
         "legacy_course_groups": [],
+        "_includes_legacy_groups": False,
     }
 
     if not getattr(user, "is_authenticated", False):
-        user._modulearn_role_snapshot = snapshot
+        if not include_legacy_groups:
+            user._modulearn_role_snapshot = snapshot
         return snapshot
 
-    enrolled_student = Enrollment.objects.filter(student=user, active=True).exists()
     native_instructor = bool(getattr(user, "is_instructor", False))
     native_student = bool(getattr(user, "is_student", False))
-    teaches_native = (
-        Course.objects.filter(instructors=user).exists() or
-        CourseInstance.objects.filter(instructors=user).exists()
-    )
-    legacy_course_groups = get_legacy_course_groups(user)
-    effective_is_instructor = native_instructor or teaches_native or bool(legacy_course_groups)
+    enrolled_student = Enrollment.objects.filter(student=user, active=True).exists()
+    legacy_course_groups = get_legacy_course_groups(user) if include_legacy_groups and native_instructor else []
+    effective_is_instructor = native_instructor
     effective_is_student = (native_student or enrolled_student) and not effective_is_instructor
 
     snapshot = {
@@ -134,7 +134,9 @@ def get_user_role_snapshot(user):
         "effective_is_instructor": effective_is_instructor,
         "primary_role": "instructor" if effective_is_instructor else "student" if effective_is_student else None,
         "legacy_course_groups": legacy_course_groups,
+        "_includes_legacy_groups": include_legacy_groups,
     }
 
-    user._modulearn_role_snapshot = snapshot
+    if not include_legacy_groups:
+        user._modulearn_role_snapshot = snapshot
     return snapshot

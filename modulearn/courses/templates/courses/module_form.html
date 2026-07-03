@@ -139,7 +139,13 @@
         {% if progress.is_complete %}Complete{% else %}Not submitted{% endif %}
       </div>
       <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Submitting this form marks the module complete and can unlock downstream content.</p>
-      <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary mt-5 w-full">Back To Course</a>
+      <div class="mt-5 grid gap-2">
+        {% include 'courses/components/next_module_button.html' with button_class='w-full justify-center' %}
+        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary w-full justify-center">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          Back To Course
+        </a>
+      </div>
     </aside>
   </div>
 {% endblock %}

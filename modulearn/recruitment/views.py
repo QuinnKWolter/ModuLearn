@@ -13,13 +13,21 @@ from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from courses.models import CourseProgress, Enrollment
 from recruitment.models import ParticipantSession, RecruitmentEntryLog, RecruitmentSource
 from recruitment.services.conditions import assign_condition
-from recruitment.services.prolific import ProlificIds, ProlificVerificationError, completion_url, verify_secured_url, verify_submission_api
+from recruitment.services.prolific import (
+    ProlificIds,
+    ProlificVerificationError,
+    completion_url,
+    validate_prolific_ids,
+    verify_secured_url,
+    verify_submission_api,
+)
 from recruitment.services.sona import SonaCreditError, client_credit_url, grant_credit_server_side
 
 User = get_user_model()
@@ -106,6 +114,7 @@ def _verify_entry(request, source: RecruitmentSource, platform: str, external_pi
             study_id=request.GET.get("STUDY_ID", ""),
             session_id=request.GET.get("SESSION_ID", ""),
         )
+        validate_prolific_ids(ids)
         if source.prolific_study_id and ids.study_id and source.prolific_study_id != ids.study_id:
             raise ProlificVerificationError("This Prolific study id does not match the recruitment source.")
         if source.prolific_use_secured_url:
@@ -137,13 +146,25 @@ def enter(request, source_id):
         return reject("Missing participant identifier.")
     if platform != source.platform:
         return reject("This participant link does not match the configured recruitment platform.")
-    if not source.has_capacity():
-        return reject("This study has reached its participant cap.", 403)
-
     try:
         verification_metadata = _verify_entry(request, source, platform, external_pid)
     except ProlificVerificationError as exc:
         return reject(str(exc), 403)
+
+    session_external_study_id = request.GET.get("STUDY_ID", "")
+    session_external_session_id = request.GET.get("SESSION_ID", "")
+    lookup = {
+        "recruitment_source": source,
+        "external_session_id": session_external_session_id,
+    } if platform == RecruitmentSource.PLATFORM_PROLIFIC else {
+        "recruitment_source": source,
+        "external_pid": external_pid,
+    }
+    existing_session = ParticipantSession.objects.filter(**lookup).first()
+    if existing_session and existing_session.external_pid and existing_session.external_pid != external_pid:
+        return reject("This Prolific submission does not match the participant identifier.", 403)
+    if not existing_session and not source.has_capacity():
+        return reject("This study has reached its participant cap.", 403)
 
     with transaction.atomic():
         user = _provision_participant_user(source, external_pid)
@@ -159,8 +180,8 @@ def enter(request, source_id):
         session_defaults = {
             "user": user,
             "enrollment": enrollment,
-            "external_study_id": request.GET.get("STUDY_ID", ""),
-            "external_session_id": request.GET.get("SESSION_ID", ""),
+            "external_study_id": session_external_study_id,
+            "external_session_id": session_external_session_id,
             "raw_query_string": log_data["raw_query_string"],
             "referer": log_data["referer"],
             "ip_address": log_data["ip_address"],
@@ -168,13 +189,19 @@ def enter(request, source_id):
             "completion_metadata": {"entry_verification": verification_metadata},
         }
         participant_session, created = ParticipantSession.objects.get_or_create(
-            recruitment_source=source,
-            external_pid=external_pid,
-            defaults=session_defaults,
+            **lookup,
+            defaults={
+                **session_defaults,
+                "external_pid": external_pid,
+            },
         )
         if not created:
+            if not participant_session.external_pid:
+                participant_session.external_pid = external_pid
             participant_session.user = participant_session.user or user
             participant_session.enrollment = participant_session.enrollment or enrollment
+            participant_session.external_study_id = session_defaults["external_study_id"] or participant_session.external_study_id
+            participant_session.external_session_id = session_defaults["external_session_id"] or participant_session.external_session_id
             participant_session.raw_query_string = log_data["raw_query_string"]
             participant_session.referer = log_data["referer"]
             participant_session.ip_address = log_data["ip_address"]
@@ -197,8 +224,11 @@ def enter(request, source_id):
         return redirect("recruitment:already_completed", session_uuid=participant_session.uuid)
 
     request.session["participant_session_uuid"] = str(participant_session.uuid)
+    if participant_session.status == ParticipantSession.STATUS_ENTERED:
+        participant_session.status = ParticipantSession.STATUS_IN_PROGRESS
+        participant_session.save(update_fields=["status", "updated_at"])
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-    return redirect("recruitment:consent", session_uuid=participant_session.uuid)
+    return redirect("courses:course_detail", instance_id=source.course_instance_id)
 
 
 @login_required
@@ -228,6 +258,23 @@ def already_completed(request, session_uuid):
 def thank_you(request, session_uuid):
     participant_session = get_object_or_404(ParticipantSession, uuid=session_uuid)
     return render(request, "recruitment/thank_you.html", {"participant_session": participant_session})
+
+
+@login_required
+def complete_current(request, course_instance_id):
+    participant_session = (
+        ParticipantSession.objects.select_related("recruitment_source")
+        .filter(
+            user=request.user,
+            recruitment_source__course_instance_id=course_instance_id,
+        )
+        .order_by("-entered_at")
+        .first()
+    )
+    if not participant_session:
+        messages.error(request, "No active recruitment participant session was found for this course.")
+        return redirect("courses:course_detail", instance_id=course_instance_id)
+    return redirect("recruitment:complete", session_uuid=participant_session.uuid)
 
 
 @login_required
@@ -285,7 +332,11 @@ def _determine_outcome(participant_session: ParticipantSession) -> str:
         progress = participant_session.enrollment.course_progress
     except Exception:
         progress = None
-    if progress and progress.is_complete:
+    if progress and (
+        progress.completed_at
+        or progress.overall_progress >= 100
+        or (progress.total_modules > 0 and progress.modules_completed >= progress.total_modules)
+    ):
         return ParticipantSession.STATUS_COMPLETED
     return participant_session.status if participant_session.is_finished else ParticipantSession.STATUS_COMPLETED
 
@@ -296,6 +347,17 @@ def _prolific_code_for_outcome(source: RecruitmentSource, outcome: str) -> str:
     if outcome == ParticipantSession.STATUS_ATTENTION_FAILED:
         return source.prolific_completion_code_attention_failed or source.prolific_completion_code_complete
     return source.prolific_completion_code_complete
+
+
+def _redirect_after_source_save(request, course_instance):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect("courses:course_configuration", instance_id=course_instance.id)
 
 
 @login_required
@@ -310,7 +372,7 @@ def create_source(request, course_instance_id):
     platform = request.POST.get("platform", "").strip()
     if platform not in {RecruitmentSource.PLATFORM_PROLIFIC, RecruitmentSource.PLATFORM_SONA}:
         messages.error(request, "Choose Prolific or SONA for the recruitment source.")
-        return redirect("dashboard:instructor_dashboard")
+        return _redirect_after_source_save(request, course_instance)
 
     existing_source = RecruitmentSource.objects.filter(course_instance=course_instance, platform=platform).first()
 
@@ -325,7 +387,7 @@ def create_source(request, course_instance_id):
         "is_active": request.POST.get("is_active") == "on",
         "max_participants": _optional_int(request.POST.get("max_participants")),
         "condition_strategy": request.POST.get("condition_strategy") or RecruitmentSource.CONDITION_HASH,
-        "condition_labels": request.POST.get("condition_labels", "").strip(),
+        "condition_labels": posted_or_existing("condition_labels"),
         "prolific_study_id": posted_or_existing("prolific_study_id"),
         "prolific_completion_code_complete": posted_or_existing("prolific_completion_code_complete"),
         "prolific_completion_code_screened_out": posted_or_existing("prolific_completion_code_screened_out"),
@@ -347,7 +409,7 @@ def create_source(request, course_instance_id):
         course.is_locked_for_research = True
         course.save(update_fields=["is_locked_for_research"])
     messages.success(request, f"{'Created' if created else 'Updated'} {source.get_platform_display()} recruitment for {course_instance}.")
-    return redirect("dashboard:instructor_dashboard")
+    return _redirect_after_source_save(request, course_instance)
 
 
 def _optional_int(value):

@@ -1,12 +1,19 @@
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .backends import KnowledgeTreeBackend
 from .models import User
+from modulearn.core.roles import get_user_role_snapshot
 
 
+@override_settings(
+    STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    }
+)
 class AccountPageTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -31,7 +38,8 @@ class AccountPageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse('accounts:profile'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Profile and integrations')
+        self.assertContains(response, 'Profile Summary')
+        self.assertContains(response, 'Student')
 
 
 class KnowledgeTreeBackendRoleTests(TestCase):
@@ -63,7 +71,7 @@ class KnowledgeTreeBackendRoleTests(TestCase):
         self.assertFalse(user.is_student)
 
     @patch('dashboard.kt_utils.is_user_instructor_in_aggregate', return_value=True)
-    def test_confirmed_aggregate_instructor_promotes_existing_student(self, _lookup):
+    def test_confirmed_aggregate_instructor_does_not_promote_existing_student(self, _lookup):
         user = User.objects.create_user(
             username='kt-student',
             password='safe-pass-123',
@@ -82,5 +90,23 @@ class KnowledgeTreeBackendRoleTests(TestCase):
         })
 
         user.refresh_from_db()
-        self.assertTrue(user.is_instructor)
-        self.assertFalse(user.is_student)
+        self.assertFalse(user.is_instructor)
+        self.assertTrue(user.is_student)
+
+    def test_kt_identity_does_not_make_student_effective_instructor(self):
+        user = User.objects.create_user(
+            username='RITEL_DEMO_Student',
+            password='safe-pass-123',
+            kt_user_id=39059,
+            kt_login='RITEL_DEMO_Student',
+            kt_groups=['RITELDemoGroup'],
+            is_instructor=False,
+            is_student=True,
+        )
+
+        snapshot = get_user_role_snapshot(user, include_legacy_groups=True)
+
+        self.assertFalse(snapshot['effective_is_instructor'])
+        self.assertTrue(snapshot['effective_is_student'])
+        self.assertEqual(snapshot['primary_role'], 'student')
+        self.assertEqual(snapshot['legacy_course_groups'], [])

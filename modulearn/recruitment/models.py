@@ -4,6 +4,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from courses.models import CourseInstance, Enrollment
@@ -179,13 +180,15 @@ class ParticipantSession(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["recruitment_source", "external_pid"],
-                name="uniq_participant_session_per_source_pid",
+                fields=["recruitment_source", "external_session_id"],
+                condition=~Q(external_session_id=""),
+                name="uniq_participant_session_per_source_ext_session",
             ),
         ]
         indexes = [
             models.Index(fields=["status", "entered_at"]),
             models.Index(fields=["condition"]),
+            models.Index(fields=["recruitment_source", "external_pid"], name="recruitment_source_pid_idx"),
         ]
         ordering = ["-entered_at", "id"]
 

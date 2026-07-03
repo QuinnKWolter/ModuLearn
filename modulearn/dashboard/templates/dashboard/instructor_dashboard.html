@@ -100,6 +100,38 @@
     justify-content: center;
   }
 
+  .demo-course-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .demo-course-option {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(248, 250, 252, 0.78);
+  }
+
+  .dark .demo-course-option {
+    border-color: rgba(71, 85, 105, 0.64);
+    background: rgba(15, 23, 42, 0.44);
+  }
+
+  .demo-course-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.45rem;
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.1);
+  }
+
   @media (max-width: 1279px) {
     .dashboard-layout {
       grid-template-columns: 1fr;
@@ -173,11 +205,17 @@
             <i class="bi bi-file-earmark-code mr-2"></i>Import JSON Structure
           </button>
         </div>
+        {% if show_create_demo_course %}
+          <div class="mt-3 flex justify-end">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#demoCourseModal">
+              <i class="bi bi-stars mr-1"></i>Create Demo Course
+            </button>
+          </div>
+        {% endif %}
       </div>
 
       {% include 'dashboard/components/courses_section.html' %}
       {% include 'dashboard/components/session_management_section.html' %}
-      {% include 'dashboard/components/recruitment_panel.html' %}
       {% if show_legacy_groups_section %}
         {% include 'dashboard/components/legacy_courses_section.html' %}
       {% endif %}
@@ -186,6 +224,48 @@
 
   {% include 'dashboard/components/modals.html' %}
   {% include 'dashboard/components/course_resources_modal.html' %}
+
+  {% if show_create_demo_course %}
+    <div id="demoCourseModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+      <div class="modal-backdrop-close absolute inset-0"></div>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-3">
+            <span class="demo-course-icon"><i class="bi bi-stars" aria-hidden="true"></i></span>
+            <div>
+              <div class="stat-kicker">Demo Suite</div>
+              <h2 class="text-xl font-bold mt-1 mb-0">Create Demo Course</h2>
+            </div>
+          </div>
+          <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+          <div class="demo-course-grid">
+            {% for option in demo_course_options %}
+              <article class="demo-course-option">
+                <span class="demo-course-icon">
+                  <i class="bi {% if option.key == 'adaptive_branching' %}bi-diagram-3{% else %}bi-code-square{% endif %}" aria-hidden="true"></i>
+                </span>
+                <div class="min-w-0">
+                  <h3 class="font-bold text-slate-900 dark:text-white">{{ option.title }}</h3>
+                  <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">{{ option.summary }}</p>
+                </div>
+                <form
+                  method="post"
+                  action="{% url 'dashboard:create_demo_course' %}"
+                  onsubmit="return confirm('Create {{ option.title|escapejs }} for your instructor account?');"
+                >
+                  {% csrf_token %}
+                  <input type="hidden" name="demo_type" value="{{ option.key }}">
+                  <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap">Create</button>
+                </form>
+              </article>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
 

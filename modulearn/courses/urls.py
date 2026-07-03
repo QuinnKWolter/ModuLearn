@@ -27,6 +27,7 @@ urlpatterns = [
     path('<str:course_id>/delete/', views.delete_course, name='delete_course'),
     path('instance/<int:instance_id>/', views.course_detail, name='course_detail'),
     path('instance/<int:instance_id>/configure/', views.course_configuration, name='course_configuration'),
+    path('instance/<int:instance_id>/export/', views.export_course, name='export_course'),
     path('instance/<int:instance_id>/modules/<int:module_id>/launch/', 
          views.launch_iframe_module, 
          name='launch_iframe_module'),

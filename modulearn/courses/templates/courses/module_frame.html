@@ -7,11 +7,14 @@
     <input id="module-frame-csrf" type="hidden" value="{{ csrf_token }}">
 
     {% if not preview_mode and course_instance %}
-      <div class="max-w-7xl mx-auto mb-4 flex items-center justify-between gap-3">
-        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          Back To Course
-        </a>
+      <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back To Course
+          </a>
+          {% include 'courses/components/next_module_button.html' with button_class='btn-sm' %}
+        </div>
         <div class="text-sm text-slate-600 dark:text-slate-300">
           <span class="font-semibold text-slate-900 dark:text-slate-100">{{ module.title }}</span>
           <span class="mx-2 text-slate-400 dark:text-slate-500">/</span>

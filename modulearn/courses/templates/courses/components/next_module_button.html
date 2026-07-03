@@ -1,0 +1,11 @@
+{% if next_module %}
+  <a href="{% url 'courses:launch_iframe_module' course_instance.id next_module.id %}" class="btn btn-primary {{ button_class|default:'' }}" title="Open {{ next_module.title }}">
+    <span>Next Module</span>
+    <i class="bi bi-arrow-right" aria-hidden="true"></i>
+  </a>
+{% else %}
+  <button type="button" class="btn btn-outline-secondary {{ button_class|default:'' }} opacity-75" disabled title="No visible unlocked module is available yet">
+    <span>No Unlocked Module</span>
+    <i class="bi bi-lock" aria-hidden="true"></i>
+  </button>
+{% endif %}

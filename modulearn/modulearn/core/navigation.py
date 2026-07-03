@@ -41,16 +41,7 @@ def build_navigation(request):
         return visible
 
     if getattr(user, "is_anonymous_participant", False):
-        visible = [
-            item for item in items
-            if item["label"] in {"Home", "Student", "Info"} and not item["requires_guest"]
-        ]
-        for item in visible:
-            item["is_active"] = (
-                current_path == item["url"] or
-                (item["match_prefix"] and item["url"] != "/" and current_path.startswith(item["url"]))
-            )
-        return visible
+        return []
 
     filtered = []
     for item in items:

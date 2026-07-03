@@ -9,6 +9,7 @@ from .models import (
     EnrollmentCode,
     Module,
     ModuleAccessLog,
+    ModuleBranchRule,
     ModuleForm,
     ModuleFormAnswer,
     ModuleFormQuestion,
@@ -21,7 +22,7 @@ from .models import (
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import json
-from .utils import fetch_course_details, create_course_from_json
+from .utils import fetch_course_details, create_course_from_json, export_course_to_json
 import logging
 import traceback
 from django.urls import reverse
@@ -58,8 +59,14 @@ from modulearn.learning.services.access_rules import (
     next_order_for_module,
     sync_module_progress_for_course,
 )
+from modulearn.learning.services.course_plugins import (
+    available_course_plugins,
+    enabled_course_plugins,
+    normalize_course_plugin_config,
+)
 from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch
 from modulearn.core.roles import get_user_role_snapshot
+from recruitment.services.participants import participant_course_redirect, user_can_access_participant_course
 
 User = get_user_model()
 
@@ -121,14 +128,52 @@ def _user_can_access_module(user, course_instance, module):
     return module_state.can_access, module_state.reason
 
 
+def _get_next_accessible_module(user, course_instance, current_module):
+    is_instructor = _is_course_instructor(user, course_instance)
+    enrollment = _get_active_enrollment(user, course_instance)
+    seen_current = False
+
+    for unit in course_instance.course.units.prefetch_related("modules").all():
+        unit_state = evaluate_unit_access(unit, enrollment, include_hidden=is_instructor)
+        if not is_instructor and not unit_state.is_visible:
+            continue
+
+        for module in unit.modules.all():
+            if module.id == current_module.id:
+                seen_current = True
+                continue
+            if not seen_current:
+                continue
+
+            module_state = evaluate_module_access(
+                module,
+                enrollment,
+                unit_state=unit_state,
+                include_hidden=is_instructor,
+            )
+            if is_instructor or module_state.can_access:
+                return module
+    return None
+
+
 def _module_rule_context(course):
-    return [
-        {
+    unit_groups = []
+    prior_modules = []
+    units = list(course.units.prefetch_related("modules").all())
+    for index, unit in enumerate(units):
+        modules = list(unit.modules.all())
+        group = {
             "unit": unit,
-            "modules": list(unit.modules.all()),
+            "modules": modules,
+            "has_previous_unit": index > 0,
+            "unlock_target_modules": list(prior_modules),
         }
-        for unit in course.units.prefetch_related("modules").all()
-    ]
+        unit_groups.append(group)
+        for module in modules:
+            module.has_previous_unit = index > 0
+            module.unlock_target_modules = list(prior_modules)
+            prior_modules.append(module)
+    return unit_groups
 
 @login_required
 def course_list(request):
@@ -136,6 +181,10 @@ def course_list(request):
     Legacy course index entry point.
     Role-specific dashboards now own course/session cards.
     """
+    redirect_response = participant_course_redirect(request.user)
+    if redirect_response:
+        return redirect_response
+
     role_snapshot = get_user_role_snapshot(request.user)
     if role_snapshot["effective_is_instructor"]:
         return redirect("dashboard:instructor_dashboard")
@@ -148,11 +197,13 @@ def course_detail(request, instance_id):
     that the user has access to.
     """
     course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    if not user_can_access_participant_course(request.user, course_instance.id):
+        raise PermissionDenied("Research participants can only access their assigned course session.")
     context = build_course_detail_context(request.user, course_instance)
 
     # Handle enrollment POST request
     role_snapshot = get_user_role_snapshot(request.user)
-    if request.method == 'POST' and role_snapshot["effective_is_student"]:
+    if request.method == 'POST' and role_snapshot["effective_is_student"] and not getattr(request.user, "is_anonymous_participant", False):
         if not context['is_enrolled']:
             Enrollment.objects.create(
                 student=request.user, 
@@ -188,6 +239,12 @@ def course_configuration(request, instance_id):
             elif action == "add_module":
                 _create_custom_module(request, course)
                 messages.success(request, "Module added to the course structure.")
+            elif action == "update_plugins":
+                _update_course_plugins(request, course)
+                messages.success(request, "Course plugin settings were updated.")
+            elif action == "update_branching":
+                _update_branching_rules(request, course)
+                messages.success(request, "Adaptive branching rules were updated.")
             else:
                 messages.error(request, "Unknown course configuration action.")
         except Exception as exc:
@@ -195,43 +252,101 @@ def course_configuration(request, instance_id):
             messages.error(request, str(exc))
         return redirect("courses:course_configuration", instance_id=course_instance.id)
 
+    plugin_flags = enabled_course_plugins(course)
+    recruitment_sources = list(course_instance.recruitment_sources.all())
+    try:
+        from recruitment.models import ParticipantSession
+        for source in recruitment_sources:
+            sessions = list(source.participant_sessions.all())
+            counts = {status: 0 for status, _label in ParticipantSession.STATUS_CHOICES}
+            for participant_session in sessions:
+                counts[participant_session.status] = counts.get(participant_session.status, 0) + 1
+            source.status_summary = [
+                {"status": status, "label": label, "count": counts.get(status, 0)}
+                for status, label in ParticipantSession.STATUS_CHOICES
+                if counts.get(status, 0) or status in {ParticipantSession.STATUS_ENTERED, ParticipantSession.STATUS_COMPLETED}
+            ]
+    except Exception:
+        logger.exception("Unable to build recruitment source summaries for course instance %s", course_instance.id)
+
     context = {
         "course": course,
         "course_instance": course_instance,
         "unit_groups": _module_rule_context(course),
+        "branch_modules": _branch_module_options(course),
+        "branch_rules": _branch_rule_context(course),
         "module_types": Module.MODULE_TYPE_CHOICES[1:],
+        "branch_condition_types": ModuleBranchRule.CONDITION_CHOICES,
         "question_types": ModuleFormQuestion.TYPE_CHOICES,
         "research_conditions": sorted({condition for source in course_instance.recruitment_sources.all() for condition in source.conditions}),
         "is_locked_for_research": course.is_locked_for_research,
         "research_has_participants": research_has_participants,
+        "adaptive_branching_enabled": plugin_flags.get("adaptive_branching", False),
+        "course_plugins": [
+            {**plugin, "enabled": plugin_flags.get(plugin["key"], False)}
+            for plugin in available_course_plugins()
+        ],
+        "recruitment_sources": recruitment_sources,
     }
     return render(request, "courses/course_configuration.html", context)
 
 
+@login_required
+def export_course(request, instance_id):
+    course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    if not _is_course_instructor(request.user, course_instance):
+        raise PermissionDenied("Only instructors can export this course.")
+
+    course_data = export_course_to_json(course_instance.course)
+    safe_course_id = "".join(
+        character if character.isalnum() or character in {"-", "_"} else "-"
+        for character in str(course_instance.course.id)
+    ).strip("-") or "course"
+    filename = f"{safe_course_id}-modulearn-export.json"
+    response = JsonResponse(course_data, json_dumps_params={"indent": 2})
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 def _update_course_structure_controls(request, course):
-    for unit in course.units.all():
+    rule_context = _module_rule_context(course)
+    valid_conditions = set(
+        condition
+        for instance in course.instances.all()
+        for source in instance.recruitment_sources.all()
+        for condition in source.conditions
+    )
+
+    for group in rule_context:
+        unit = group["unit"]
         prefix = f"unit_{unit.id}"
         unit.title = request.POST.get(f"{prefix}_title", unit.title).strip() or unit.title
         unit.description = request.POST.get(f"{prefix}_description", unit.description)
         unit.order = int(request.POST.get(f"{prefix}_order") or unit.order or 0)
         unit.is_visible = _parse_bool(request.POST.get(f"{prefix}_visible"))
-        unit.is_locked = _parse_bool(request.POST.get(f"{prefix}_locked"))
-        unit.unlock_rule = build_unlock_rule(
+        unit.is_locked, unit.unlock_rule = _normalize_unlock_settings(
+            _parse_bool(request.POST.get(f"{prefix}_locked")),
             request.POST.get(f"{prefix}_rule_type"),
             request.POST.get(f"{prefix}_rule_target"),
+            valid_module_ids={module.id for module in group["unlock_target_modules"]},
+            valid_conditions=valid_conditions,
+            has_previous_unit=group["has_previous_unit"],
         )
         unit.save(update_fields=["title", "description", "order", "is_visible", "is_locked", "unlock_rule"])
 
-        for module in unit.modules.all():
+        for module in group["modules"]:
             module_prefix = f"module_{module.id}"
             module.title = request.POST.get(f"{module_prefix}_title", module.title).strip() or module.title
             module.description = request.POST.get(f"{module_prefix}_description", module.description)
             module.order = int(request.POST.get(f"{module_prefix}_order") or module.order or 0)
             module.is_visible = _parse_bool(request.POST.get(f"{module_prefix}_visible"))
-            module.is_locked = _parse_bool(request.POST.get(f"{module_prefix}_locked"))
-            module.unlock_rule = build_unlock_rule(
+            module.is_locked, module.unlock_rule = _normalize_unlock_settings(
+                _parse_bool(request.POST.get(f"{module_prefix}_locked")),
                 request.POST.get(f"{module_prefix}_rule_type"),
                 request.POST.get(f"{module_prefix}_rule_target"),
+                valid_module_ids={target.id for target in getattr(module, "unlock_target_modules", [])},
+                valid_conditions=valid_conditions,
+                has_previous_unit=getattr(module, "has_previous_unit", False),
             )
             module.save(update_fields=[
                 "title",
@@ -241,6 +356,164 @@ def _update_course_structure_controls(request, course):
                 "is_locked",
                 "unlock_rule",
             ])
+
+
+def _normalize_unlock_settings(is_locked, rule_type, target_id, *, valid_module_ids, valid_conditions, has_previous_unit):
+    rule_type = (rule_type or "none").strip()
+    target_id = (str(target_id).strip() if target_id not in (None, "") else "")
+    target_module_rules = {"module_accessed", "module_completed"}
+    previous_unit_rules = {"previous_unit_accessed", "previous_unit_completed"}
+
+    if rule_type == "none":
+        return is_locked, {}
+
+    if rule_type in previous_unit_rules:
+        if not has_previous_unit:
+            return False, {}
+        return True, build_unlock_rule(rule_type, None)
+
+    if rule_type == "condition_equals":
+        if not target_id or target_id not in valid_conditions:
+            return False, {}
+        return True, build_unlock_rule(rule_type, target_id)
+
+    if rule_type in target_module_rules:
+        try:
+            module_id = int(target_id)
+        except (TypeError, ValueError):
+            return False, {}
+        if module_id not in valid_module_ids:
+            return False, {}
+        return True, build_unlock_rule(rule_type, module_id)
+
+    return False, {}
+
+
+def _branch_module_options(course):
+    return list(
+        Module.objects.filter(unit__course=course)
+        .select_related("unit")
+        .order_by("unit__order", "unit__id", "order", "id")
+    )
+
+
+def _branch_rule_context(course):
+    return list(
+        ModuleBranchRule.objects.filter(course=course)
+        .select_related("source_module", "source_module__unit", "target_module", "target_module__unit")
+        .order_by("source_module__unit__order", "source_module__order", "priority", "id")
+    )
+
+
+def _update_branching_rules(request, course):
+    modules = {
+        module.id: module
+        for module in _branch_module_options(course)
+    }
+
+    for rule in ModuleBranchRule.objects.filter(course=course):
+        prefix = f"branch_rule_{rule.id}"
+        if _parse_bool(request.POST.get(f"{prefix}_delete")):
+            rule.delete()
+            continue
+        rule.active = _parse_bool(request.POST.get(f"{prefix}_active"))
+        try:
+            rule.priority = int(request.POST.get(f"{prefix}_priority") or rule.priority or 0)
+        except (TypeError, ValueError):
+            rule.priority = 0
+        rule.save(update_fields=["active", "priority", "updated_at"])
+
+    source_id = request.POST.get("branch_source_module")
+    target_id = request.POST.get("branch_target_module")
+    condition_type = (request.POST.get("branch_condition_type") or "").strip()
+    threshold_value = request.POST.get("branch_threshold")
+
+    if not any([source_id, target_id, condition_type, threshold_value]):
+        return
+
+    try:
+        source_module = modules[int(source_id)]
+        target_module = modules[int(target_id)]
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("Choose a valid source and target module for the branch rule.")
+
+    if source_module.id == target_module.id:
+        raise ValueError("A branch rule cannot unlock the same module that triggered it.")
+
+    valid_condition_types = {value for value, _label in ModuleBranchRule.CONDITION_CHOICES}
+    if condition_type not in valid_condition_types:
+        raise ValueError("Choose a valid branch condition.")
+
+    threshold = None
+    if condition_type in {ModuleBranchRule.CONDITION_SCORE_GTE, ModuleBranchRule.CONDITION_SCORE_LT}:
+        try:
+            threshold = float(threshold_value)
+        except (TypeError, ValueError):
+            raise ValueError("Score-based branch rules need a numeric threshold.")
+        threshold = max(0.0, min(threshold, 100.0))
+
+    try:
+        priority = int(request.POST.get("branch_priority") or 0)
+    except (TypeError, ValueError):
+        priority = 0
+
+    ModuleBranchRule.objects.get_or_create(
+        course=course,
+        source_module=source_module,
+        target_module=target_module,
+        condition_type=condition_type,
+        threshold=threshold,
+        defaults={"priority": priority, "active": True},
+    )
+
+    target_module.is_visible = True
+    target_module.is_locked = True
+    target_module.unlock_rule = {}
+    target_module.save(update_fields=["is_visible", "is_locked", "unlock_rule"])
+
+
+def _update_course_plugins(request, course):
+    current_config = normalize_course_plugin_config(course.plugin_config)
+    was_guided_sequence_enabled = bool(
+        current_config["plugins"].get("guided_sequence", {}).get("enabled")
+    )
+    for plugin in available_course_plugins():
+        plugin_key = plugin["key"]
+        current_config["plugins"][plugin_key]["enabled"] = _parse_bool(
+            request.POST.get(f"plugin_{plugin_key}_enabled")
+        )
+    course.plugin_config = current_config
+    course.save(update_fields=["plugin_config"])
+    if (
+        current_config["plugins"].get("guided_sequence", {}).get("enabled")
+        and not was_guided_sequence_enabled
+    ):
+        _apply_guided_sequence_defaults(course)
+
+
+def _apply_guided_sequence_defaults(course):
+    units = list(course.units.prefetch_related("modules").all())
+    previous_module = None
+    for index, unit in enumerate(units):
+        unit.is_visible = True
+        if index == 0:
+            unit.is_locked = False
+            unit.unlock_rule = {}
+        else:
+            unit.is_locked = True
+            unit.unlock_rule = build_unlock_rule("previous_unit_completed")
+        unit.save(update_fields=["is_visible", "is_locked", "unlock_rule"])
+
+        for module in unit.modules.all():
+            module.is_visible = True
+            if previous_module is None:
+                module.is_locked = False
+                module.unlock_rule = {}
+            else:
+                module.is_locked = True
+                module.unlock_rule = build_unlock_rule("module_completed", previous_module.id)
+            module.save(update_fields=["is_visible", "is_locked", "unlock_rule"])
+            previous_module = module
 
 
 def _create_manual_unit(request, course):
@@ -439,6 +712,7 @@ def launch_iframe_module(request, instance_id, module_id):
             "course_instance": course_instance,
             "progress": module_progress,
             "resource_kind": "file",
+            "next_module": _get_next_accessible_module(request.user, course_instance, module),
         })
 
     if module.module_type == Module.MODULE_TYPE_EXTERNAL_LINK:
@@ -447,6 +721,7 @@ def launch_iframe_module(request, instance_id, module_id):
             "course_instance": course_instance,
             "progress": module_progress,
             "resource_kind": "external_link",
+            "next_module": _get_next_accessible_module(request.user, course_instance, module),
         })
     
     # Get the module's content URL and selected protocol
@@ -473,6 +748,12 @@ def launch_iframe_module(request, instance_id, module_id):
         module.provider_id and module.provider_id.lower() == 'codecheck'
     ) or (
         url_tool and url_tool.lower() == 'codecheck'
+    )
+    is_direct_codecheck_file = bool(
+        parsed_url
+        and parsed_url.hostname
+        and parsed_url.hostname.lower() == 'codecheck.io'
+        and parsed_url.path.startswith('/files/')
     )
     
     # SPECIAL HANDLING: JSVEE URL transformation
@@ -551,11 +832,18 @@ def launch_iframe_module(request, instance_id, module_id):
             logger.info(f"Module {module.id}: Transformed WebEx URL from {parsed.geturl()} to: {content_url}")
     
     if is_codecheck:
-        # CodeCheck: Simply construct the direct URL and load it in iframe
-        # Format: https://codecheck.io/files/wiley/{module_name}
-        module_name = url_sub if url_sub else module.title
-        if module_name:
-            content_url = f"https://codecheck.io/files/wiley/{module_name}"
+        # CodeCheck demos and manually created modules may already carry a real
+        # /files/<author>/<id> URL. Preserve those; only synthesize the legacy
+        # Wiley path when the module came from an LTI-style URL with a sub value.
+        if is_direct_codecheck_file:
+            content_url = force_https_url(content_url)
+            logger.info(f"Module {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
+            parsed_url = urlparse(content_url)
+            query_params = parse_qs(parsed_url.query) if parsed_url else {}
+            selected_protocol = 'splice'
+            is_lti_launch_url = False
+        elif url_sub:
+            content_url = f"https://codecheck.io/files/wiley/{url_sub}"
             logger.info(f"Module {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
             # Re-parse the new URL
             parsed_url = urlparse(content_url)
@@ -564,7 +852,7 @@ def launch_iframe_module(request, instance_id, module_id):
             selected_protocol = 'splice'  # Use splice for direct loading with session params
             is_lti_launch_url = False
         else:
-            logger.warning(f"Module {module.id}: CodeCheck detected but no module name available")
+            logger.warning(f"Module {module.id}: CodeCheck detected but no direct file URL or sub parameter is available")
             selected_protocol = 'splice'
             is_lti_launch_url = False
     else:
@@ -714,6 +1002,7 @@ def launch_iframe_module(request, instance_id, module_id):
         'iframe_src': iframe_src,
         'refuses_iframe': refuses_iframe,
         'refuses_iframe_reason': refuses_iframe_reason,
+        'next_module': _get_next_accessible_module(request.user, course_instance, module),
     }
     
     response = render(request, 'courses/module_frame.html', context)
@@ -804,6 +1093,7 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
         "progress": module_progress,
         "existing_submission": existing_submission,
         "is_instructor": is_instructor,
+        "next_module": _get_next_accessible_module(request.user, course_instance, module),
     })
 
 @login_required
@@ -836,13 +1126,25 @@ def preview_iframe_module(request, module_id):
     ) or (
         url_tool and url_tool.lower() == 'codecheck'
     )
+    is_direct_codecheck_file = bool(
+        parsed_url
+        and parsed_url.hostname
+        and parsed_url.hostname.lower() == 'codecheck.io'
+        and parsed_url.path.startswith('/files/')
+    )
     
     if is_codecheck:
-        # CodeCheck: Simply construct the direct URL and load it in iframe
-        # Format: https://codecheck.io/files/wiley/{module_name}
-        module_name = url_sub if url_sub else module.title
-        if module_name:
-            content_url = f"https://codecheck.io/files/wiley/{module_name}"
+        # Preserve real CodeCheck file URLs; only synthesize the old Wiley URL
+        # for LTI-style imports that provide a sub parameter.
+        if is_direct_codecheck_file:
+            content_url = force_https_url(content_url)
+            logger.info(f"Preview module {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
+            parsed_url = urlparse(content_url)
+            query_params = parse_qs(parsed_url.query) if parsed_url else {}
+            selected_protocol = 'splice'
+            is_lti_launch_url_check = False
+        elif url_sub:
+            content_url = f"https://codecheck.io/files/wiley/{url_sub}"
             logger.info(f"Preview module {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
             # Re-parse the new URL
             parsed_url = urlparse(content_url)
@@ -851,7 +1153,7 @@ def preview_iframe_module(request, module_id):
             selected_protocol = 'splice'  # Use splice for direct loading with session params
             is_lti_launch_url_check = False
         else:
-            logger.warning(f"Preview module {module.id}: CodeCheck detected but no module name available")
+            logger.warning(f"Preview module {module.id}: CodeCheck detected but no direct file URL or sub parameter is available")
             selected_protocol = 'splice'
             is_lti_launch_url_check = False
     

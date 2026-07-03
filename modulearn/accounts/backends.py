@@ -161,22 +161,7 @@ class KnowledgeTreeBackend(ModelBackend):
         if kt_user_data.get('login'):
             user.kt_login = kt_user_data['login']
         
-        # Update instructor/student status based on aggregate.ent_non_student
-        # Only update if user has kt_login (needed for the check)
-        if user.kt_login:
-            from dashboard.kt_utils import is_user_instructor_in_aggregate
-            is_instructor = is_user_instructor_in_aggregate(user.kt_login)
-            if is_instructor:
-                if not user.is_instructor or user.is_student:
-                    logger.info(
-                        f"Promoting user {user.username} after aggregate.ent_non_student "
-                        "confirmed instructor status"
-                    )
-                user.is_instructor = True
-                user.is_student = False
-            elif user.is_instructor:
-                logger.info(
-                    f"Preserving existing instructor role for {user.username}; "
-                    "aggregate.ent_non_student did not confirm instructor status"
-                )
+        # Existing ModuLearn role flags are authoritative. KnowledgeTree can update
+        # identity metadata here, but it must not promote/demote a user that was
+        # signed up locally or configured through the admin interface.
 

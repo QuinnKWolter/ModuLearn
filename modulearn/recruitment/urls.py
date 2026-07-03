@@ -6,7 +6,9 @@ app_name = "recruitment"
 
 urlpatterns = [
     path("enter/<int:source_id>/", views.enter, name="enter"),
+    path("prolific/<int:source_id>/", views.enter, name="prolific_enter"),
     path("consent/<uuid:session_uuid>/", views.consent, name="consent"),
+    path("complete-current/<int:course_instance_id>/", views.complete_current, name="complete_current"),
     path("complete/<uuid:session_uuid>/", views.complete, name="complete"),
     path("thanks/<uuid:session_uuid>/", views.thank_you, name="thank_you"),
     path("already-completed/<uuid:session_uuid>/", views.already_completed, name="already_completed"),

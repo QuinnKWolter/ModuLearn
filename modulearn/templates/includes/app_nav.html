@@ -25,7 +25,12 @@
             <a class="site-nav-link secondary{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
           {% endif %}
         {% endfor %}
-        {% if user.is_authenticated and not user.is_anonymous_participant %}
+        {% if user.is_authenticated and user.is_anonymous_participant %}
+          <form id="logout-form-header" action="{% url 'accounts:logout' %}" method="post" class="hidden">
+            {% csrf_token %}
+          </form>
+          <a class="site-nav-link secondary" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">Exit</a>
+        {% elif user.is_authenticated %}
           {% with display_name=user.get_full_name|default:user.username %}
             <details class="site-user-menu">
               <summary class="site-nav-link secondary">
@@ -75,7 +80,12 @@
             <a class="site-nav-link{% if item.section == 'secondary' %} secondary{% endif %}{% if item.is_active %} is-active{% endif %}" href="{{ item.url }}" {% if item.is_active %}aria-current="page"{% endif %}>{{ item.label }}</a>
           {% endif %}
         {% endfor %}
-        {% if user.is_authenticated and not user.is_anonymous_participant %}
+        {% if user.is_authenticated and user.is_anonymous_participant %}
+          <a class="site-nav-link secondary" href="{% url 'accounts:logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form-header-mobile').submit();">Exit</a>
+          <form id="logout-form-header-mobile" action="{% url 'accounts:logout' %}" method="post" class="hidden">
+            {% csrf_token %}
+          </form>
+        {% elif user.is_authenticated %}
           {% with display_name=user.get_full_name|default:user.username %}
             <details class="site-mobile-user-menu">
               <summary class="site-nav-link">

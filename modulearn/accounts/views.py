@@ -14,6 +14,7 @@ from .forms import (
 )
 import logging
 from modulearn.core.roles import get_legacy_masterygrids_groups, get_user_role_snapshot
+from recruitment.services.participants import participant_course_redirect
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +207,10 @@ def profile_view(request):
     """
     Displays and allows editing of the user's profile.
     """
+    redirect_response = participant_course_redirect(request.user)
+    if redirect_response:
+        return redirect_response
+
     role_snapshot = get_user_role_snapshot(request.user)
     profile_form = ProfileEditForm(instance=request.user)
     # Choose password form:

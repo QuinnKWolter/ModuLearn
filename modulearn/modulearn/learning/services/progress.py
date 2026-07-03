@@ -171,12 +171,15 @@ def apply_progress_snapshot(
                 course_progress.submit_grade_to_canvas()
 
     for current_event_type in dict.fromkeys(event_types):
-        log_module_progress_event(
+        event = log_module_progress_event(
             module_progress,
             event_type=current_event_type,
             source=source,
             payload=payload,
         )
+        from modulearn.learning.services.adaptive_branching import handle_progress_event
+
+        handle_progress_event(event)
 
     return module_progress
 

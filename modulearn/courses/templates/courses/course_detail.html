@@ -206,6 +206,7 @@
 {% endblock %}
 
 {% block content %}
+  {{ course_plugins|json_script:"coursePluginFlags" }}
   {% include 'includes/page_header.html' with eyebrow='Course' title=course.title description=course.description %}
 
   <div class="grid gap-8 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,1fr)]">

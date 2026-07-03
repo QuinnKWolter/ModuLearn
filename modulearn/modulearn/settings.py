@@ -39,7 +39,8 @@ def parse_boolish(value):
     return None
 
 # Clean, robust environment selection
-DEBUG = parse_boolish(os.getenv('DEBUG', 'False'))
+debug_env = parse_boolish(os.getenv('DEBUG', 'False'))
+DEBUG = debug_env if debug_env is not None else False
 if os.getenv('DJANGO_PRODUCTION') and parse_boolish(os.getenv('DJANGO_PRODUCTION')):
     DEBUG = False
 
@@ -156,6 +157,7 @@ STORAGES = {
     },
 }
 
+MEDIA_URL = os.getenv('MEDIA_URL', '/modulearn-media/' if IS_PRODUCTION else '/media/')
 MEDIA_ROOT = BASE_DIR / 'media'
 serve_media_env = parse_boolish(os.getenv('SERVE_MEDIA_FILES'))
 SERVE_MEDIA_FILES = serve_media_env if serve_media_env is not None else DEBUG

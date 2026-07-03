@@ -9,6 +9,17 @@ DEFAULT_TIMELINE_EVENTS = ("completion", "outcome", "reopened", "progress")
 def _serialize_event(event):
     course_instance = getattr(event, "course_instance", None)
     course = getattr(course_instance, "course", None)
+    user = getattr(event, "user", None)
+    learner_name = (
+        getattr(user, "full_name", None)
+        or getattr(user, "get_full_name", lambda: "")()
+        or getattr(user, "username", "")
+    )
+    learner_name = str(learner_name).strip()
+    learner_email = (getattr(user, "email", "") or "").strip()
+    learner_initials = "".join(part[0] for part in learner_name.split()[:2]).upper()
+    if not learner_initials and getattr(user, "username", ""):
+        learner_initials = str(user.username)[:2].upper()
     return {
         "id": event.id,
         "event_type": event.event_type,
@@ -18,6 +29,10 @@ def _serialize_event(event):
         "score": event.score,
         "success": event.success,
         "module_title": event.module.title if event.module_id else "",
+        "learner_name": learner_name,
+        "learner_username": getattr(user, "username", ""),
+        "learner_email": learner_email,
+        "learner_initials": learner_initials,
         "course_title": course.title if course else "",
         "course_instance_id": course_instance.id if course_instance else None,
         "group_name": course_instance.group_name if course_instance else "",

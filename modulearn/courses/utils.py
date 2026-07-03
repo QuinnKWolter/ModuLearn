@@ -1,6 +1,6 @@
 import requests
 import logging
-from .models import Course, Unit, Module
+from .models import Course, Unit, Module, ModuleBranchRule
 from django.contrib.auth import get_user_model
 import json
 import traceback
@@ -11,6 +11,7 @@ from modulearn.integrations.course_authoring import (
     build_course_export_url,
     build_x_login_token_url,
 )
+from modulearn.learning.services.course_plugins import normalize_course_plugin_config
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -68,12 +69,15 @@ def create_course_from_json(course_data, current_user):
     # Use the 'id' from the JSON as the primary key
     course_id = course_data['id']
     
+    plugin_config = normalize_course_plugin_config(course_data.get('plugin_config') or course_data.get('plugins') or {})
+
     # Create the Course object
     course, created = Course.objects.get_or_create(
         id=course_id,  # Use the JSON 'id' as the primary key
         defaults={
             'title': course_data.get('name', ''),
             'description': course_data.get('description', ''),
+            'plugin_config': plugin_config,
         }
     )
     logger.debug(f"Course {'created' if created else 'retrieved'}: {course}")
@@ -88,6 +92,9 @@ def create_course_from_json(course_data, current_user):
             updated = True
         if description != course.description:
             course.description = description
+            updated = True
+        if plugin_config != normalize_course_plugin_config(course.plugin_config):
+            course.plugin_config = plugin_config
             updated = True
         if updated:
             course.save()
@@ -109,18 +116,34 @@ def create_course_from_json(course_data, current_user):
     
     # Create Unit and Module objects
     provider_protocols_map = course_data.get('provider_protocols', {}) or {}
+    module_lookup = {}
     for unit_index, unit_data in enumerate(course_data.get('units', []), start=1):
         unit, created = Unit.objects.get_or_create(
             course=course,
             title=unit_data['name'],
             defaults={
                 'description': unit_data.get('description', ''),
-                'order': unit_index * 10,
+                'order': unit_data.get('order') or unit_index * 10,
+                'is_visible': unit_data.get('is_visible', True),
+                'is_locked': unit_data.get('is_locked', False),
+                'unlock_rule': unit_data.get('unlock_rule') or {},
             }
         )
-        if not created and unit.order == 0:
-            unit.order = unit_index * 10
-            unit.save(update_fields=['order'])
+        if not created:
+            unit_updates = []
+            unit_order = unit_data.get('order') or (unit_index * 10 if unit.order == 0 else unit.order)
+            for field_name, value in (
+                ('description', unit_data.get('description', '')),
+                ('order', unit_order),
+                ('is_visible', unit_data.get('is_visible', unit.is_visible)),
+                ('is_locked', unit_data.get('is_locked', unit.is_locked)),
+                ('unlock_rule', unit_data.get('unlock_rule') or unit.unlock_rule or {}),
+            ):
+                if getattr(unit, field_name) != value:
+                    setattr(unit, field_name, value)
+                    unit_updates.append(field_name)
+            if unit_updates:
+                unit.save(update_fields=unit_updates)
         logger.debug(f"Unit {'created' if created else 'retrieved'}: {unit}")
         
         module_index = 0
@@ -128,33 +151,155 @@ def create_course_from_json(course_data, current_user):
             for activity in activities:
                 module_index += 1
                 provider_id = activity.get('provider_id', '') or ''
-                supported_protocols = provider_protocols_map.get(provider_id, [])
+                supported_protocols = activity.get('supported_protocols') or provider_protocols_map.get(provider_id, [])
                 module, created = Module.objects.get_or_create(
                     unit=unit,
                     title=activity['name'],
                     defaults={
-                        'module_type': Module.MODULE_TYPE_IMPORTED,
-                        'order': module_index * 10,
-                        'description': f"Provider: {provider_id or 'unknown'}, Author: {activity.get('author_id', 'unknown')}",
+                        'module_type': activity.get('module_type') or Module.MODULE_TYPE_IMPORTED,
+                        'order': activity.get('order') or module_index * 10,
+                        'description': activity.get('description') or f"Provider: {provider_id or 'unknown'}, Author: {activity.get('author_id', 'unknown')}",
                         'content_url': activity.get('url', ''),
                         'provider_id': provider_id,
+                        'platform_name': activity.get('platform_name', '') or activity.get('resource_id', ''),
+                        'author': activity.get('author_id', ''),
                         'supported_protocols': supported_protocols,
+                        'is_visible': activity.get('is_visible', True),
+                        'is_locked': activity.get('is_locked', False),
+                        'unlock_rule': activity.get('unlock_rule') or {},
+                        'content_data': activity.get('content_data') or None,
                     }
                 )
                 # Update protocols/provider if module existed and differs
                 updated = False
+                desired_module_type = activity.get('module_type') or module.module_type
+                desired_order = activity.get('order') or module.order
+                if module.order != desired_order:
+                    module.order = desired_order
+                    updated = True
                 if module.provider_id != provider_id:
                     module.provider_id = provider_id
+                    updated = True
+                if module.module_type != desired_module_type:
+                    module.module_type = desired_module_type
+                    updated = True
+                if activity.get('description') is not None and module.description != activity.get('description'):
+                    module.description = activity.get('description') or ''
+                    updated = True
+                if activity.get('url') is not None and module.content_url != activity.get('url'):
+                    module.content_url = activity.get('url') or None
+                    updated = True
+                if activity.get('platform_name') is not None and module.platform_name != activity.get('platform_name'):
+                    module.platform_name = activity.get('platform_name') or ''
+                    updated = True
+                if activity.get('is_visible') is not None and module.is_visible != activity.get('is_visible'):
+                    module.is_visible = activity.get('is_visible')
+                    updated = True
+                if activity.get('is_locked') is not None and module.is_locked != activity.get('is_locked'):
+                    module.is_locked = activity.get('is_locked')
+                    updated = True
+                if activity.get('unlock_rule') is not None and module.unlock_rule != (activity.get('unlock_rule') or {}):
+                    module.unlock_rule = activity.get('unlock_rule') or {}
+                    updated = True
+                if activity.get('content_data') is not None and module.content_data != (activity.get('content_data') or None):
+                    module.content_data = activity.get('content_data') or None
                     updated = True
                 if module.supported_protocols != supported_protocols:
                     module.supported_protocols = supported_protocols
                     updated = True
                 if updated:
                     module.save()
+                module_lookup[(unit.title, module.title)] = module
                 logger.debug(f"Module {'created' if created else 'retrieved'}: {module}")
+
+    if 'branch_rules' in course_data:
+        ModuleBranchRule.objects.filter(course=course).delete()
+        for rule_data in course_data.get('branch_rules') or []:
+            source_module = module_lookup.get((rule_data.get('source_unit'), rule_data.get('source_module')))
+            target_module = module_lookup.get((rule_data.get('target_unit'), rule_data.get('target_module')))
+            condition_type = rule_data.get('condition_type')
+            valid_conditions = {value for value, _label in ModuleBranchRule.CONDITION_CHOICES}
+            if not source_module or not target_module or condition_type not in valid_conditions:
+                continue
+            ModuleBranchRule.objects.create(
+                course=course,
+                source_module=source_module,
+                target_module=target_module,
+                condition_type=condition_type,
+                threshold=rule_data.get('threshold'),
+                priority=rule_data.get('priority') or 0,
+                active=rule_data.get('active', True),
+            )
     
     logger.info(f"Successfully created/updated course: {course}")
     return course  # Make sure we return the course object
+
+
+def export_course_to_json(course):
+    provider_protocols = {}
+    units = []
+
+    for unit in course.units.prefetch_related('modules').all():
+        activities = {}
+        for module in unit.modules.all():
+            resource_id = module.platform_name or module.provider_id or module.get_module_type_display()
+            provider_id = module.provider_id or resource_id
+            if provider_id and module.supported_protocols:
+                provider_protocols[provider_id] = module.supported_protocols
+
+            activities.setdefault(resource_id, []).append({
+                'name': module.title,
+                'description': module.description,
+                'url': module.content_url or '',
+                'module_type': module.module_type,
+                'provider_id': provider_id,
+                'platform_name': module.platform_name,
+                'author_id': module.author,
+                'order': module.order,
+                'is_visible': module.is_visible,
+                'is_locked': module.is_locked,
+                'unlock_rule': module.unlock_rule or {},
+                'content_data': module.content_data or {},
+                'supported_protocols': module.supported_protocols or [],
+            })
+
+        units.append({
+            'name': unit.title,
+            'description': unit.description,
+            'order': unit.order,
+            'is_visible': unit.is_visible,
+            'is_locked': unit.is_locked,
+            'unlock_rule': unit.unlock_rule or {},
+            'activities': activities,
+        })
+
+    return {
+        'schema': 'modulearn-course-export-v1',
+        'id': course.id,
+        'name': course.title,
+        'description': course.description,
+        'plugin_config': normalize_course_plugin_config(course.plugin_config),
+        'provider_protocols': provider_protocols,
+        'branch_rules': [
+            {
+                'source_unit': rule.source_module.unit.title,
+                'source_module': rule.source_module.title,
+                'target_unit': rule.target_module.unit.title,
+                'target_module': rule.target_module.title,
+                'condition_type': rule.condition_type,
+                'threshold': rule.threshold,
+                'priority': rule.priority,
+                'active': rule.active,
+            }
+            for rule in course.branch_rules.select_related(
+                'source_module',
+                'source_module__unit',
+                'target_module',
+                'target_module__unit',
+            ).order_by('source_module__unit__order', 'source_module__order', 'priority', 'id')
+        ],
+        'units': units,
+    }
 
 def send_grade_to_canvas(xml_payload, outcome_service_url, consumer_key, consumer_secret):
     """Helper function to send grades to Canvas via LTI 1.1"""

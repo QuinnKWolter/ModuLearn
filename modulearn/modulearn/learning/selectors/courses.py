@@ -4,6 +4,7 @@ from courses.models import CourseProgress, Enrollment, ModuleProgress
 
 from .timelines import get_course_timeline_for_student
 from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
+from modulearn.learning.services.course_plugins import enabled_course_plugins
 
 
 def build_course_detail_context(user, course_instance):
@@ -140,4 +141,5 @@ def build_course_detail_context(user, course_instance):
         "module_progress_data": module_progress_data,
         "timeline": timeline,
         "participant_session": participant_session,
+        "course_plugins": enabled_course_plugins(course),
     }

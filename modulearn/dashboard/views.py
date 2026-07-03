@@ -1,9 +1,12 @@
 from django.shortcuts import render, redirect
 from courses.models import Enrollment, Course, CourseInstance
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 import requests
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from courses.utils import get_course_auth_token, reset_course_authoring_password
+from courses.demo_courses import create_demo_course_for_key
 import json
 from urllib.parse import urlparse
 from .kt_utils import get_course_resources, get_user_groups_with_course_ids, has_kt_session, get_kt_login_url
@@ -19,6 +22,7 @@ from modulearn.core.roles import (
     get_legacy_masterygrids_groups,
     get_user_role_snapshot,
 )
+from recruitment.services.participants import participant_course_redirect
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +31,10 @@ def student_dashboard(request):
     """
     Displays the student's dashboard with enrolled courses.
     """
+    redirect_response = participant_course_redirect(request.user)
+    if redirect_response:
+        return redirect_response
+
     role_snapshot = get_user_role_snapshot(request.user)
     if role_snapshot["effective_is_instructor"]:
         return redirect('dashboard:instructor_dashboard')
@@ -37,9 +45,35 @@ def instructor_dashboard(request):
     """
     Displays the instructor's dashboard with their courses and course instances.
     """
+    redirect_response = participant_course_redirect(request.user)
+    if redirect_response:
+        return redirect_response
+
     if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return redirect('dashboard:student_dashboard')
     return render(request, 'dashboard/instructor_dashboard.html', build_instructor_dashboard_context(request.user))
+
+
+@login_required
+@require_POST
+def create_demo_course(request):
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
+        messages.error(request, "Only instructors can create demo courses.")
+        return redirect('dashboard:student_dashboard')
+
+    try:
+        demo_key = (request.POST.get("demo_type") or "").strip()
+        _course, instance = create_demo_course_for_key(request.user, demo_key)
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect('dashboard:instructor_dashboard')
+    except Exception:
+        logger.exception("Failed to create demo course for user %s", request.user.id)
+        messages.error(request, "The demo course could not be created. Please try again.")
+        return redirect('dashboard:instructor_dashboard')
+
+    messages.success(request, "Demo course created. You can review and configure it here.")
+    return redirect('courses:course_configuration', instance_id=instance.id)
 
 
 @login_required
@@ -48,6 +82,10 @@ def modulearn_analytics_dashboard(request):
     ModuLearn-native analytics dashboard (non-legacy).
     Reuses the legacy dashboard KPI/grid templates, but sources data from ORM models.
     """
+    redirect_response = participant_course_redirect(request.user)
+    if redirect_response:
+        return redirect_response
+
     if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return redirect('dashboard:student_dashboard')
 

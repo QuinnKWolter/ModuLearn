@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from courses.models import Course, CourseInstance, Enrollment
+from courses.demo_courses import available_demo_course_options
 from recruitment.models import ParticipantSession
 from modulearn.integrations.config import get_course_authoring_base_url
 from modulearn.integrations.course_authoring import (
@@ -69,6 +70,7 @@ def build_instructor_dashboard_context(user):
 
     role_snapshot = get_user_role_snapshot(user)
     show_legacy_groups_section = bool(user.kt_login or user.kt_user_id or getattr(user, "kt_groups", None))
+    demo_course_options = available_demo_course_options(user)
 
     return {
         "courses": courses,
@@ -79,4 +81,6 @@ def build_instructor_dashboard_context(user):
         "course_authoring_base_url": get_course_authoring_base_url(),
         "course_authoring_x_login_url": build_x_login_url(),
         "course_authoring_app_url": build_course_authoring_app_url(),
+        "demo_course_options": demo_course_options,
+        "show_create_demo_course": bool(demo_course_options),
     }

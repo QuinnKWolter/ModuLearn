@@ -4,9 +4,11 @@ from .models import (
     CourseInstance,
     CourseProgress,
     Enrollment,
+    EnrollmentModuleUnlock,
     EnrollmentCode,
     Module,
     ModuleAccessLog,
+    ModuleBranchRule,
     ModuleForm,
     ModuleFormAnswer,
     ModuleFormQuestion,
@@ -59,6 +61,17 @@ class ModuleAccessLogAdmin(admin.ModelAdmin):
     list_filter = ('event_type', 'created_at')
     search_fields = ('user__username', 'module__title', 'course_instance__group_name')
 
+
+class ModuleBranchRuleAdmin(admin.ModelAdmin):
+    list_display = ('course', 'source_module', 'condition_type', 'target_module', 'active', 'priority')
+    list_filter = ('condition_type', 'active')
+    search_fields = ('course__title', 'source_module__title', 'target_module__title')
+
+
+class EnrollmentModuleUnlockAdmin(admin.ModelAdmin):
+    list_display = ('enrollment', 'module', 'source_module', 'source_rule', 'created_at')
+    search_fields = ('enrollment__student__username', 'module__title', 'source_module__title')
+
 admin.site.register(Course, CourseAdmin)
 admin.site.register(CourseInstance, CourseInstanceAdmin)
 admin.site.register(Unit, UnitAdmin)
@@ -72,3 +85,5 @@ admin.site.register(ModuleForm, ModuleFormAdmin)
 admin.site.register(ModuleFormSubmission)
 admin.site.register(ModuleFormAnswer)
 admin.site.register(ModuleAccessLog, ModuleAccessLogAdmin)
+admin.site.register(ModuleBranchRule, ModuleBranchRuleAdmin)
+admin.site.register(EnrollmentModuleUnlock, EnrollmentModuleUnlockAdmin)

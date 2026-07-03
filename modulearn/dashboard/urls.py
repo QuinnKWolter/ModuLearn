@@ -7,6 +7,7 @@ app_name = 'dashboard'
 urlpatterns = [
     path('student/', views.student_dashboard, name='student_dashboard'),
     path('instructor/', views.instructor_dashboard, name='instructor_dashboard'),
+    path('instructor/create-demo-course/', views.create_demo_course, name='create_demo_course'),
     path('legacy/', views.legacy_dashboard, name='legacy_dashboard'),
     path('modulearn-analytics/', views.modulearn_analytics_dashboard, name='modulearn_analytics_dashboard'),
     path("api/generate_course_auth_url/", generate_course_auth_url, name="generate_course_auth_url"),
