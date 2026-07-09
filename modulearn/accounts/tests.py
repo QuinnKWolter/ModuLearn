@@ -1,9 +1,11 @@
 from unittest.mock import patch
 
+from django.contrib.auth import authenticate
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .backends import KnowledgeTreeBackend
+from .forms import ProfileEditForm, SignUpForm
 from .models import User
 from modulearn.core.roles import get_user_role_snapshot
 
@@ -40,6 +42,73 @@ class AccountPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Profile Summary')
         self.assertContains(response, 'Student')
+
+    def test_user_emails_are_normalized_on_save(self):
+        user = User.objects.create_user(
+            username='mixed-email',
+            email='  QuinnKWolter@Gmail.COM ',
+            password='safe-pass-123',
+        )
+
+        self.assertEqual(user.email, 'quinnkwolter@gmail.com')
+
+    def test_signup_rejects_case_insensitive_duplicate_email(self):
+        form = SignUpForm(data={
+            'username': 'another-learner',
+            'email': 'LEARNER@EXAMPLE.COM',
+            'full_name': 'Another Learner',
+            'password1': 'safe-pass-456',
+            'password2': 'safe-pass-456',
+            'role': 'student',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
+    def test_profile_rejects_case_insensitive_duplicate_email(self):
+        other = User.objects.create_user(
+            username='other-learner',
+            email='other@example.com',
+            password='safe-pass-123',
+        )
+
+        form = ProfileEditForm(
+            instance=other,
+            data={'email': 'LEARNER@EXAMPLE.COM', 'full_name': 'Other Learner'},
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+
+    def test_profile_allows_unchanged_legacy_duplicate_email(self):
+        duplicate = User.objects.create_user(
+            username='legacy-duplicate',
+            email='learner@example.com',
+            password='safe-pass-123',
+        )
+
+        form = ProfileEditForm(
+            instance=duplicate,
+            data={'email': 'LEARNER@EXAMPLE.COM', 'full_name': 'Legacy Duplicate'},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        saved_user = form.save()
+        self.assertEqual(saved_user.email, 'learner@example.com')
+
+    def test_email_shaped_username_authenticates_case_insensitively(self):
+        user = User.objects.create_user(
+            username='QuinnKWolter@Gmail.com',
+            email='QuinnKWolter@Gmail.com',
+            password='safe-pass-123',
+        )
+
+        authenticated = authenticate(
+            username='quinnkwolter@gmail.COM',
+            password='safe-pass-123',
+        )
+
+        self.assertEqual(authenticated.pk, user.pk)
 
 
 class KnowledgeTreeBackendRoleTests(TestCase):

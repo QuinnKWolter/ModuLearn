@@ -39,7 +39,7 @@ class RecruitmentEntryFlowTests(TestCase):
             "SESSION_ID": "cccccccccccccccccccccccc",
         })
 
-        self.assertRedirects(response, reverse("courses:course_detail", args=[self.instance.id]))
+        self.assertRedirects(response, reverse("recruitment:sessions"))
         session = ParticipantSession.objects.get(recruitment_source=source)
         self.assertEqual(session.external_pid, "5a9d64f5f6dfdd0001eaa73d")
         self.assertEqual(session.external_session_id, "cccccccccccccccccccccccc")
@@ -172,7 +172,25 @@ class RecruitmentEntryFlowTests(TestCase):
         self.assertEqual(response["Location"], next_url)
         self.assertTrue(RecruitmentSource.objects.filter(course_instance=self.instance, platform="prolific").exists())
 
-    def test_anonymous_participant_profile_and_dashboard_redirect_to_assigned_course(self):
+    def test_create_source_uses_one_session_condition(self):
+        self.client.force_login(self.instructor)
+
+        self.client.post(
+            reverse("recruitment:create_source", args=[self.instance.id]),
+            {
+                "platform": RecruitmentSource.PLATFORM_PROLIFIC,
+                "label": "Control wave",
+                "is_active": "on",
+                "condition_labels": "control,treatment",
+            },
+        )
+
+        source = RecruitmentSource.objects.get(course_instance=self.instance, platform="prolific")
+        self.assertEqual(source.condition_labels, "control")
+        self.assertEqual(source.conditions, ["control"])
+        self.assertEqual(source.session_condition, "control")
+
+    def test_anonymous_participant_profile_and_dashboard_redirect_to_study_sessions(self):
         source = RecruitmentSource.objects.create(
             course_instance=self.instance,
             platform=RecruitmentSource.PLATFORM_PROLIFIC,
@@ -182,10 +200,11 @@ class RecruitmentEntryFlowTests(TestCase):
             "STUDY_ID": "bbbbbbbbbbbbbbbbbbbbbbbb",
             "SESSION_ID": "cccccccccccccccccccccccc",
         })
-        course_url = reverse("courses:course_detail", args=[self.instance.id])
+        sessions_url = reverse("recruitment:sessions")
 
-        self.assertRedirects(self.client.get(reverse("accounts:profile")), course_url)
-        self.assertRedirects(self.client.get(reverse("dashboard:student_dashboard")), course_url)
+        self.assertRedirects(self.client.get(reverse("accounts:profile")), sessions_url)
+        self.assertRedirects(self.client.get(reverse("dashboard:student_dashboard")), sessions_url)
+        self.assertRedirects(self.client.get(reverse("courses:course_detail", args=[self.instance.id])), sessions_url)
 
     def test_anonymous_participant_cannot_open_other_course_session(self):
         other_course = Course.objects.create(id="other-research", title="Other Research")
@@ -203,3 +222,25 @@ class RecruitmentEntryFlowTests(TestCase):
         response = self.client.get(reverse("courses:course_detail", args=[other_instance.id]))
 
         self.assertEqual(response.status_code, 403)
+
+    def test_participant_resume_opens_first_available_module(self):
+        unit = self.course.units.create(title="Unit 1", order=10)
+        module = unit.modules.create(title="First Module", order=10)
+        source = RecruitmentSource.objects.create(
+            course_instance=self.instance,
+            platform=RecruitmentSource.PLATFORM_PROLIFIC,
+        )
+        self.client.get(reverse("recruitment:prolific_enter", args=[source.id]), {
+            "PROLIFIC_PID": "5a9d64f5f6dfdd0001eaa73d",
+            "STUDY_ID": "bbbbbbbbbbbbbbbbbbbbbbbb",
+            "SESSION_ID": "cccccccccccccccccccccccc",
+        })
+        session = ParticipantSession.objects.get(recruitment_source=source)
+
+        response = self.client.get(reverse("recruitment:resume_session", args=[session.uuid]))
+
+        self.assertRedirects(
+            response,
+            reverse("courses:launch_iframe_module", args=[self.instance.id, module.id]),
+            fetch_redirect_response=False,
+        )

@@ -35,6 +35,13 @@ urlpatterns = [
     # HTTP proxy for mixed content (HTTP tools in HTTPS iframe)
     path("proxy/", views_proxy.http_get_proxy, name="http_get_proxy"),  # query-mode for compatibility
     path("proxy/<path:rest>", views_proxy.http_get_proxy_path, name="http_get_proxy_path"),
+
+    # PCRS assigns these legacy result images dynamically as root-relative URLs.
+    path(
+        "mgrids/static/problems/img/<str:filename>",
+        views_proxy.pcrs_feedback_asset,
+        name="pcrs_feedback_asset",
+    ),
     
     # Catch-all for external activity API calls (e.g., /pcex/api/track/activity)
     # These are relative URLs from activities that expect to be on pawscomp2.sis.pitt.edu

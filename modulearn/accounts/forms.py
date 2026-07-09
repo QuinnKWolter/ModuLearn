@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm, SetPasswordForm
 from django.contrib.auth import password_validation
+from .email_utils import normalize_email_address
 from .models import User
 
 class SignUpForm(UserCreationForm):
@@ -26,6 +27,12 @@ class SignUpForm(UserCreationForm):
         model = User
         fields = ('username', 'email', 'full_name', 'password1', 'password2', 'role')
 
+    def clean_email(self):
+        email = normalize_email_address(self.cleaned_data.get('email'))
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('An account with this email address already exists.')
+        return email
+
 class LoginForm(AuthenticationForm):
     class Meta:
         model = User
@@ -48,6 +55,18 @@ class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('email', 'full_name')
+
+    def clean_email(self):
+        email = normalize_email_address(self.cleaned_data.get('email'))
+        original_email = normalize_email_address(
+            User.objects.filter(pk=self.instance.pk).values_list('email', flat=True).first()
+        )
+        if (
+            email != original_email
+            and User.objects.exclude(pk=self.instance.pk).filter(email__iexact=email).exists()
+        ):
+            raise forms.ValidationError('An account with this email address already exists.')
+        return email
 
 class PasswordChangeFormCustom(PasswordChangeForm):
     """Custom password change form with better styling."""

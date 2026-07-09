@@ -10,6 +10,7 @@ from oauthlib.oauth1 import Client
 from oauthlib.oauth1.rfc5849 import signature
 import uuid
 from django.conf import settings
+from django.core.exceptions import ValidationError
 import logging
 import time
 import hashlib
@@ -474,6 +475,34 @@ class EnrollmentCode(models.Model):
 
     class Meta:
         unique_together = ('email', 'course_instance')
+
+    def clean(self):
+        from accounts.email_utils import normalize_email_address
+
+        super().clean()
+        self.email = normalize_email_address(self.email)
+        if (
+            self.email
+            and self.course_instance_id
+            and type(self).objects.exclude(pk=self.pk).filter(
+                email__iexact=self.email,
+                course_instance_id=self.course_instance_id,
+            ).exists()
+        ):
+            raise ValidationError({
+                "email": "An enrollment code already exists for this email and course session.",
+            })
+
+    def save(self, *args, **kwargs):
+        from accounts.email_utils import normalize_email_address
+
+        normalized_email = normalize_email_address(self.email)
+        email_changed = normalized_email != self.email
+        self.email = normalized_email
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and email_changed:
+            kwargs["update_fields"] = set(update_fields) | {"email"}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Code for {self.email} - {self.course_instance}"

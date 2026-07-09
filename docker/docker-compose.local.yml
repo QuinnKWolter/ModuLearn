@@ -1,0 +1,25 @@
+services:
+  webapp:
+    container_name: modulearn__webapp_local
+    build:
+      context: ../modulearn
+      dockerfile: Dockerfile
+    ports:
+      - "20600:8000"
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DEBUG: "True"
+      DJANGO_PRODUCTION: "False"
+      DJANGO_FORCE_SCRIPT_NAME: ""
+      STATIC_URL: "/static/"
+      MEDIA_URL: "/media/"
+      SERVE_MEDIA_FILES: "True"
+    volumes:
+      - ../modulearn-storage/db:/modulearn-storage/db
+      - ../modulearn-storage/media:/modulearn/media
+      - ../.env:/.env:ro
+    command: >
+      /bin/sh -c "python manage.py migrate --noinput &&
+      python manage.py runserver 0.0.0.0:8000"

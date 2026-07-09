@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Study Sessions - ModuLearn{% endblock %}
+
+{% block breadcrumbs_wrapper %}{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <div class="stat-kicker">Study Access</div>
+    <h1 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mt-2">Your study sessions</h1>
+    <p class="text-slate-600 dark:text-slate-300 mt-2">Resume the assigned session below. Other ModuLearn pages are hidden for study participant accounts.</p>
+  </div>
+
+  <div class="grid gap-4">
+    {% for card in session_cards %}
+      <article class="card p-5">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-0">{{ card.course.title }}</h2>
+              <span class="badge badge-secondary">{{ card.session.get_status_display }}</span>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">{{ card.course_instance.group_name|default:'Study session' }}</p>
+            {% if card.session.condition %}
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Assigned condition: {{ card.session.condition }}</p>
+            {% endif %}
+          </div>
+
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {% if card.resume_module and not card.session.is_finished %}
+              <a class="btn btn-primary justify-center" href="{% url 'recruitment:resume_session' card.session.uuid %}">
+                <span>Resume</span>
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+              </a>
+            {% elif card.session.is_finished %}
+              <span class="btn btn-outline-secondary justify-center opacity-75">Finished</span>
+            {% else %}
+              <span class="btn btn-outline-secondary justify-center opacity-75">No module available</span>
+            {% endif %}
+            <a class="btn btn-outline-secondary justify-center" href="{% url 'recruitment:complete' card.session.uuid %}">
+              Finish Study
+            </a>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+            <span>Progress</span>
+            <span>{{ card.course_progress.overall_progress|default:0|floatformat:0 }}%</span>
+          </div>
+          <div class="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+            <div class="h-full rounded-full bg-emerald-500" style="width: {{ card.course_progress.overall_progress|default:0|floatformat:0 }}%;"></div>
+          </div>
+          {% if card.resume_module and not card.session.is_finished %}
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-3">Next up: <strong>{{ card.resume_module.title }}</strong></p>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <div class="card p-8 text-center">
+        <div class="feature-icon mx-auto mb-4"><i class="bi bi-link-45deg" aria-hidden="true"></i></div>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">No study sessions found</h2>
+        <p class="text-slate-600 dark:text-slate-300 mt-2">Open the participant link provided by your study platform to begin.</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

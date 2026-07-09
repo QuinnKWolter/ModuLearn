@@ -104,8 +104,23 @@
           return;
         }
 
+        var hasScoreText = Boolean(
+          messageData.state &&
+          messageData.state.scoreText &&
+          messageData.state.scoreText.indexOf('/') !== -1
+        );
+        var isPcexTrackingOnly = Boolean(
+          messageData.state &&
+          messageData.state.trackingData &&
+          !hasScoreText &&
+          (typeof messageData.score !== 'number' || messageData.score === 0)
+        );
+        if (isPcexTrackingOnly) {
+          return;
+        }
+
         var progressValue = 0;
-        if (messageData.state && messageData.state.scoreText && messageData.state.scoreText.indexOf('/') !== -1) {
+        if (hasScoreText) {
           var parts = messageData.state.scoreText.split('/');
           var completed = parseInt(parts[0], 10);
           var total = parseInt(parts[1], 10);

@@ -18,6 +18,7 @@ from courses.models import Course, Module, CourseInstance, Enrollment, CoursePro
 import logging
 from modulearn.integrations.config import prefixed_path
 from modulearn.settings import get_primary_domain
+from accounts.email_utils import find_user_by_email, normalize_email_address, unique_username_for_email
 
 logger = logging.getLogger(__name__)
 
@@ -167,22 +168,36 @@ def process_launch_data(request, launch_data):
         logger.error("No user identifier found in launch data")
         return HttpResponse('Missing user identifier in launch data.', status=400)
 
-    email = (
+    email = normalize_email_address(
         launch_data.get('email') or  # LTI 1.3 email
         launch_data.get('lis_person_contact_email_primary') or  # LTI 1.1 email
         f"{user_id}@canvas.instructure.com"  # Fallback email
     )
 
-    # Get or create user with email as username for better identification
-    user, created = User.objects.get_or_create(
-        username=email,  # Use email as username for better identification
-        defaults={
-            'email': email,
-            'first_name': launch_data.get('given_name') or launch_data.get('lis_person_name_given', ''),
-            'last_name': launch_data.get('family_name') or launch_data.get('lis_person_name_family', ''),
-            'canvas_user_id': user_id
-        }
-    )
+    user = User.objects.filter(canvas_user_id=user_id).order_by('id').first()
+    email_owner = find_user_by_email(email)
+    if user is None:
+        user = email_owner
+
+    created = user is None
+    if created:
+        user = User.objects.create_user(
+            username=unique_username_for_email(email),
+            email=email,
+            first_name=launch_data.get('given_name') or launch_data.get('lis_person_name_given', ''),
+            last_name=launch_data.get('family_name') or launch_data.get('lis_person_name_family', ''),
+            canvas_user_id=user_id,
+        )
+    else:
+        update_fields = []
+        if not user.canvas_user_id:
+            user.canvas_user_id = user_id
+            update_fields.append('canvas_user_id')
+        if email and user.email != email and (email_owner is None or email_owner.pk == user.pk):
+            user.email = email
+            update_fields.append('email')
+        if update_fields:
+            user.save(update_fields=update_fields)
 
     # Update user roles
     roles = launch_data.get('roles', [])

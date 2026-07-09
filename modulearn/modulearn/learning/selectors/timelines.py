@@ -26,6 +26,7 @@ def _serialize_event(event):
         "source": event.source,
         "created_at": timezone.localtime(event.created_at),
         "progress": event.progress,
+        "progress_percent": round(float(event.progress or 0) * 100),
         "score": event.score,
         "success": event.success,
         "module_title": event.module.title if event.module_id else "",
@@ -50,10 +51,17 @@ def _base_queryset():
     ).order_by("-created_at")
 
 
+def _visible_timeline_events(queryset):
+    # Completion snapshots can emit both a progress=100% event and a completion
+    # event. Keep the semantically useful completion entry in every timeline.
+    return queryset.exclude(event_type="progress", progress__gte=1.0)
+
+
 def get_student_timeline(user, *, limit: int = 12, event_types=DEFAULT_TIMELINE_EVENTS):
     queryset = _base_queryset().filter(user=user)
     if event_types:
         queryset = queryset.filter(event_type__in=event_types)
+    queryset = _visible_timeline_events(queryset)
     return [_serialize_event(event) for event in queryset[:limit]]
 
 
@@ -61,6 +69,7 @@ def get_course_timeline_for_student(course_instance, user, *, limit: int = 12, e
     queryset = _base_queryset().filter(user=user, course_instance=course_instance)
     if event_types:
         queryset = queryset.filter(event_type__in=event_types)
+    queryset = _visible_timeline_events(queryset)
     return [_serialize_event(event) for event in queryset[:limit]]
 
 
@@ -68,4 +77,5 @@ def get_course_instance_recent_activity(course_instance, *, limit: int = 12, eve
     queryset = _base_queryset().filter(course_instance=course_instance)
     if event_types:
         queryset = queryset.filter(event_type__in=event_types)
+    queryset = _visible_timeline_events(queryset)
     return [_serialize_event(event) for event in queryset[:limit]]

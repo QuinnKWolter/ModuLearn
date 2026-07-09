@@ -4,11 +4,30 @@ Custom Django authentication backends for ModuLearn.
 
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from .knowledgetree_auth import KnowledgeTreeAuthService, KnowledgeTreeAuthError
+from .email_utils import find_user_by_email, normalize_email_address
 import logging
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+
+class EmailCaseInsensitiveBackend(ModelBackend):
+    """Authenticate email-shaped identifiers without case sensitivity."""
+
+    def authenticate(self, request, username=None, password=None, **kwargs):
+        identifier = normalize_email_address(username or kwargs.get(User.USERNAME_FIELD))
+        if not identifier or "@" not in identifier or password is None:
+            return None
+
+        candidates = User.objects.filter(
+            Q(email__iexact=identifier) | Q(username__iexact=identifier)
+        ).distinct().order_by("id")
+        for user in candidates:
+            if user.check_password(password) and self.user_can_authenticate(user):
+                return user
+        return None
 
 
 class KnowledgeTreeBackend(ModelBackend):
@@ -100,9 +119,27 @@ class KnowledgeTreeBackend(ModelBackend):
             self._update_user_from_kt(user, kt_user_data)
             user.save()
             return user
+
+        # KT and local usernames may differ, but a matching email still denotes
+        # the same local identity.
+        user = find_user_by_email(kt_user_data.get('email'))
+        if user:
+            if user.kt_user_id and kt_user_id and user.kt_user_id != kt_user_id:
+                logger.warning(
+                    "Email %s is already linked to a different KT user",
+                    user.email,
+                )
+                return None
+            if kt_user_id and not user.kt_user_id:
+                user.kt_user_id = kt_user_id
+            user.kt_login = kt_login
+            self._update_user_from_kt(user, kt_user_data)
+            user.save()
+            return user
         
         # Try to find by username (ModuLearn username)
-        user = User.objects.filter(username=username).first()
+        username_lookup = {'username__iexact': username} if '@' in username else {'username': username}
+        user = User.objects.filter(**username_lookup).first()
         if user:
             if user.kt_user_id and kt_user_id and user.kt_user_id != kt_user_id:
                 # Username exists and is linked to different KT account

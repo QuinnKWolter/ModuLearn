@@ -6,7 +6,8 @@ Run with:
 """
 import os
 from unittest.mock import patch, MagicMock
-from django.test import TestCase, Client, override_settings
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import TestCase, Client, RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -26,7 +27,7 @@ from lti.services import (
     generate_source_id,
 )
 from lti.config import get_tool_config, is_tool_configured, list_configured_tools
-from lti.views import apply_lti_roles
+from lti.views import apply_lti_roles, process_launch_data
 
 
 class LTIRoleTests(TestCase):
@@ -42,6 +43,38 @@ class LTIRoleTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_instructor)
         self.assertFalse(user.is_student)
+
+    def test_lti_launch_reuses_email_case_insensitively(self):
+        user = User.objects.create_user(
+            username='existing-lti-user',
+            email='LTI.Student@Example.com',
+            password='safe-pass-123',
+            is_student=True,
+        )
+        course = Course.objects.create(id='case-lti-course', title='Case LTI Course')
+        instance = CourseInstance.objects.create(course=course, group_name='LTI Case Session')
+        request = RequestFactory().get('/lti/launch/')
+        SessionMiddleware(lambda current_request: None).process_request(request)
+        request.session.save()
+
+        response = process_launch_data(request, {
+            'user_id': 'canvas-case-user',
+            'email': 'LTI.STUDENT@EXAMPLE.COM',
+            'roles': ['Learner'],
+            'custom_course_id': str(instance.id),
+        })
+
+        self.assertEqual(response.status_code, 302)
+        user.refresh_from_db()
+        self.assertEqual(user.email, 'lti.student@example.com')
+        self.assertEqual(user.canvas_user_id, 'canvas-case-user')
+        self.assertTrue(
+            Enrollment.objects.filter(student=user, course_instance=instance).exists()
+        )
+        self.assertEqual(
+            User.objects.filter(email__iexact='lti.student@example.com').count(),
+            1,
+        )
 
     def test_instructor_launch_promotes_existing_student(self):
         user = User.objects.create_user(

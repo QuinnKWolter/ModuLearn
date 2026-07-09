@@ -48,6 +48,12 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 import requests
 from django.db import models, transaction
+from accounts.email_utils import (
+    emails_equal,
+    find_user_by_email,
+    normalize_email_address,
+    unique_username_for_email,
+)
 from modulearn.integrations.course_authoring import build_course_export_url
 from modulearn.learning.selectors.courses import build_course_detail_context
 from modulearn.learning.services.access_rules import (
@@ -65,6 +71,7 @@ from modulearn.learning.services.course_plugins import (
     normalize_course_plugin_config,
 )
 from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch
+from modulearn.learning.services.pcrs_tracking import is_pcrs_url
 from modulearn.core.roles import get_user_role_snapshot
 from recruitment.services.participants import participant_course_redirect, user_can_access_participant_course
 
@@ -88,19 +95,47 @@ def force_https_url(url: str) -> str:
     except Exception:
         return url
 
+def is_pcex_url(url: str) -> bool:
+    """Return true for PCEX pages that need same-origin API interception."""
+    if not url:
+        return False
+    try:
+        u = urlparse(url)
+    except Exception:
+        return False
+    return bool(
+        u.path.startswith('/pcex/')
+        or u.path == '/pcex'
+        or u.path.startswith('/pcex-authoring/')
+    )
+
+def should_proxy_intercepted_activity_url(url: str) -> bool:
+    """Only proxy outcome-intercepted URLs whose host is explicitly allowlisted."""
+    if not (is_pcex_url(url) or is_pcrs_url(url)):
+        return False
+    try:
+        u = urlparse(url)
+    except Exception:
+        return False
+    return u.hostname in getattr(settings, "PROXY_ALLOWED_HOSTS", set())
+
 def to_path_style_proxy(url: str) -> str:
     """Convert URL to path-style proxy format for iframe src."""
     from urllib.parse import urlparse
     u = urlparse(url)
-    # Only allow http here
-    if u.scheme != "http":
-        return url   # for https, keep direct
+    if u.scheme not in {"http", "https"}:
+        return url
     # guard host
     if u.hostname not in getattr(settings, "PROXY_ALLOWED_HOSTS", set()):
         return url
-    # Build /proxy/http/<host>/<path>?<query>
+    # The proxy endpoint keeps browser-side activity APIs same-origin with
+    # ModuLearn so PCEX/PCRS outcomes can be intercepted.
     path = u.path.lstrip('/')
-    base = f"/proxy/http/{u.hostname}/{path}"
+    scheme = "https" if u.scheme == "https" else "http"
+    base = f"/proxy/{scheme}/{u.hostname}/{path}"
+    script_name = getattr(settings, 'FORCE_SCRIPT_NAME', '')
+    if script_name:
+        base = script_name.rstrip('/') + base
     return f"{base}?{u.query}" if u.query else base
 
 
@@ -199,6 +234,8 @@ def course_detail(request, instance_id):
     course_instance = get_object_or_404(CourseInstance, id=instance_id)
     if not user_can_access_participant_course(request.user, course_instance.id):
         raise PermissionDenied("Research participants can only access their assigned course session.")
+    if getattr(request.user, "is_anonymous_participant", False):
+        return redirect("recruitment:sessions")
     context = build_course_detail_context(request.user, course_instance)
 
     # Handle enrollment POST request
@@ -608,6 +645,8 @@ def module_detail(request, instance_id, unit_id, module_id):
     Keep the route for compatibility, but send users directly to the launch flow.
     """
     course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    if not user_can_access_participant_course(request.user, course_instance.id):
+        raise PermissionDenied("Research participants can only access their assigned course session.")
     course = course_instance.course
     
     # Check if user has access to this course instance
@@ -675,6 +714,8 @@ def create_course(request):
 @login_required
 def launch_iframe_module(request, instance_id, module_id):
     course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    if not user_can_access_participant_course(request.user, course_instance.id):
+        raise PermissionDenied("Research participants can only access their assigned course session.")
     module = get_object_or_404(Module, id=module_id, unit__course=course_instance.course)
     course = course_instance.course  # Get course from course_instance
     
@@ -713,6 +754,7 @@ def launch_iframe_module(request, instance_id, module_id):
             "progress": module_progress,
             "resource_kind": "file",
             "next_module": _get_next_accessible_module(request.user, course_instance, module),
+            "participant_mode": getattr(request.user, "is_anonymous_participant", False),
         })
 
     if module.module_type == Module.MODULE_TYPE_EXTERNAL_LINK:
@@ -722,6 +764,7 @@ def launch_iframe_module(request, instance_id, module_id):
             "progress": module_progress,
             "resource_kind": "external_link",
             "next_module": _get_next_accessible_module(request.user, course_instance, module),
+            "participant_mode": getattr(request.user, "is_anonymous_participant", False),
         })
     
     # Get the module's content URL and selected protocol
@@ -907,8 +950,10 @@ def launch_iframe_module(request, instance_id, module_id):
     
     # Check if this is a WebEx exercise (should not have session parameters)
     is_webex = content_url and '/web_ex_' in content_url
+    is_pcex_activity = is_pcex_url(content_url)
+    is_pcrs_activity = is_pcrs_url(content_url)
     
-    if content_url and (is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url and not is_webex:
+    if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url and not is_webex:
         # Build session parameters matching the working codebase pattern
         # grp: group_name (or course_instance.id as fallback)
         grp = course_instance.group_name if course_instance and course_instance.group_name else (str(course_instance.id) if course_instance else 'default')
@@ -932,6 +977,8 @@ def launch_iframe_module(request, instance_id, module_id):
             existing_params['sid'] = [sid]
         if 'cid' not in existing_params and cid:
             existing_params['cid'] = [cid]
+        if (is_pcex_activity or is_pcrs_activity) and 'module_id' not in existing_params:
+            existing_params['module_id'] = [str(module.id)]
         
         # Rebuild URL with all parameters
         new_query = urlencode(existing_params, doseq=True)
@@ -949,8 +996,12 @@ def launch_iframe_module(request, instance_id, module_id):
             f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
         )
         
-        # Force HTTPS for iframe embedding (no proxy rewriting)
-        activity_url_with_params = force_https_url(activity_url_with_params)
+        if should_proxy_intercepted_activity_url(activity_url_with_params):
+            use_proxy = True
+        else:
+            # Force HTTPS for iframe embedding when we are not intentionally
+            # proxying same-origin PCEX activity APIs.
+            activity_url_with_params = force_https_url(activity_url_with_params)
     
     logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
     logger.info(f"Module {module.id} - Original content_url: {original_content_url}")
@@ -985,9 +1036,13 @@ def launch_iframe_module(request, instance_id, module_id):
             f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
         )
     else:
-        # Use the URL with session parameters directly, forcing HTTPS if needed
-        iframe_src = force_https_url(activity_url_with_params)
-        logger.info(f"Module {module.id}: Final iframe_src (direct, https): {iframe_src}")
+        if use_proxy:
+            iframe_src = to_path_style_proxy(activity_url_with_params)
+            logger.info(f"Module {module.id}: Final iframe_src (proxied): {iframe_src}")
+        else:
+            # Use the URL with session parameters directly, forcing HTTPS if needed
+            iframe_src = force_https_url(activity_url_with_params)
+            logger.info(f"Module {module.id}: Final iframe_src (direct, https): {iframe_src}")
 
     context = {
         'module': module,
@@ -1003,6 +1058,7 @@ def launch_iframe_module(request, instance_id, module_id):
         'refuses_iframe': refuses_iframe,
         'refuses_iframe_reason': refuses_iframe_reason,
         'next_module': _get_next_accessible_module(request.user, course_instance, module),
+        'participant_mode': getattr(request.user, "is_anonymous_participant", False),
     }
     
     response = render(request, 'courses/module_frame.html', context)
@@ -1094,6 +1150,35 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
         "existing_submission": existing_submission,
         "is_instructor": is_instructor,
         "next_module": _get_next_accessible_module(request.user, course_instance, module),
+        "participant_mode": getattr(request.user, "is_anonymous_participant", False),
+    })
+
+
+@login_required
+@require_GET
+def next_accessible_module(request, instance_id, module_id):
+    course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    if not user_can_access_participant_course(request.user, course_instance.id):
+        raise PermissionDenied("Research participants can only access their assigned course session.")
+
+    module = get_object_or_404(Module, id=module_id, unit__course=course_instance.course)
+    is_instructor = _is_course_instructor(request.user, course_instance)
+    enrollment = _get_active_enrollment(request.user, course_instance)
+    if not (is_instructor or enrollment):
+        return JsonResponse({"available": False, "message": "You are not enrolled in this course session."}, status=403)
+
+    next_module = _get_next_accessible_module(request.user, course_instance, module)
+    if not next_module:
+        return JsonResponse({
+            "available": False,
+            "message": "No visible unlocked module is available yet.",
+        })
+
+    return JsonResponse({
+        "available": True,
+        "id": next_module.id,
+        "title": next_module.title,
+        "url": reverse("courses:launch_iframe_module", args=[course_instance.id, next_module.id]),
     })
 
 @login_required
@@ -1200,8 +1285,10 @@ def preview_iframe_module(request, module_id):
     # For preview mode, use minimal parameters since there's no course instance
     use_proxy = False
     activity_url_with_params = content_url
+    is_pcex_activity = is_pcex_url(content_url)
+    is_pcrs_activity = is_pcrs_url(content_url)
     
-    if content_url and (is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url_check:
+    if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url_check:
         # Build session parameters for preview (minimal since no course instance)
         # grp: 'preview' for instructor previews
         grp = 'preview'
@@ -1242,8 +1329,11 @@ def preview_iframe_module(request, module_id):
             f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
         )
         
-        # Force HTTPS for iframe embedding (no proxy rewriting)
-        activity_url_with_params = force_https_url(activity_url_with_params)
+        if should_proxy_intercepted_activity_url(activity_url_with_params):
+            use_proxy = True
+        else:
+            # Force HTTPS for iframe embedding when not using the PAWS proxy.
+            activity_url_with_params = force_https_url(activity_url_with_params)
     
     logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
     logger.debug(f"Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
@@ -1273,8 +1363,7 @@ def preview_iframe_module(request, module_id):
         )
         logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}, sub={lti_sub}")
     else:
-        # Use the URL with session parameters directly, forcing HTTPS if needed
-        iframe_src = force_https_url(activity_url_with_params)
+        iframe_src = to_path_style_proxy(activity_url_with_params) if use_proxy else force_https_url(activity_url_with_params)
 
     context = {
         'module': module,
@@ -1383,8 +1472,8 @@ class CaliperAnalyticsView(View):
 def enroll_with_code(request):
     if request.method == "POST":
         try:
-            email = request.POST.get('email')
-            code = request.POST.get('code')
+            email = normalize_email_address(request.POST.get('email'))
+            code = (request.POST.get('code') or '').strip()
             
             if not email or not code:
                 messages.error(request, 'Both email and code are required.')
@@ -1392,7 +1481,7 @@ def enroll_with_code(request):
             
             # Find the enrollment code
             try:
-                enrollment_code = EnrollmentCode.objects.get(email=email, code=code)
+                enrollment_code = EnrollmentCode.objects.get(email__iexact=email, code=code)
             except EnrollmentCode.DoesNotExist:
                 messages.error(request, 'Invalid enrollment code or email.')
                 return redirect('courses:enroll_with_code')
@@ -1400,19 +1489,14 @@ def enroll_with_code(request):
             course_instance = enrollment_code.course_instance
             
             # Get or create user
-            user = User.objects.filter(email=email).first()
+            user = (
+                request.user
+                if request.user.is_authenticated and emails_equal(request.user.email, email)
+                else find_user_by_email(email)
+            )
             if not user:
-                # Create new user with email as username
-                username = email.split('@')[0]
-                base_username = username
-                counter = 1
-                # Ensure unique username
-                while User.objects.filter(username=username).exists():
-                    username = f"{base_username}{counter}"
-                    counter += 1
-                
                 user = User.objects.create_user(
-                    username=username,
+                    username=unique_username_for_email(email, local_part_only=True),
                     email=email,
                     password=code  # Using enrollment code as initial password
                 )
@@ -1434,7 +1518,7 @@ def enroll_with_code(request):
             
             # Log the user in
             if not request.user.is_authenticated:
-                login(request, user)
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             
             return redirect('courses:course_detail', instance_id=course_instance.id)
             
@@ -1454,7 +1538,7 @@ def create_enrollment_code(request, course_instance_id):
     try:
         data = json.loads(request.body)
         name = data.get('name')
-        email = data.get('email')
+        email = normalize_email_address(data.get('email'))
         code = data.get('code')
 
         if not (name and email and code):
@@ -1463,7 +1547,7 @@ def create_enrollment_code(request, course_instance_id):
         course_instance = get_object_or_404(CourseInstance, id=course_instance_id)
         
         # Check if user already exists
-        existing_user = User.objects.filter(email=email).first()
+        existing_user = find_user_by_email(email)
         
         # Check if user is already enrolled
         if existing_user:
@@ -1499,7 +1583,7 @@ def create_enrollment_code(request, course_instance_id):
             status = 'existing_user'
         else:
             user = User.objects.create_user(
-                username=email,
+                username=unique_username_for_email(email),
                 email=email,
                 password=code
             )
@@ -1855,18 +1939,23 @@ def bulk_enroll_students(request, course_instance_id):
         new_enrollments = []
         error_details = []
         
-        for email in emails:
+        seen_emails = set()
+        for raw_email in emails:
+            email = normalize_email_address(raw_email)
             try:
                 validate_email(email)
-                
-                # Get or create user with email as username
-                user, user_created = User.objects.get_or_create(
-                    email=email,
-                    defaults={
-                        'username': email,  # Use full email as username
-                        'is_student': True
-                    }
-                )
+                if email in seen_emails:
+                    continue
+                seen_emails.add(email)
+
+                user = find_user_by_email(email)
+                user_created = user is None
+                if user_created:
+                    user = User.objects.create_user(
+                        username=unique_username_for_email(email),
+                        email=email,
+                        is_student=True,
+                    )
                 logger.debug("Bulk enrollment user %s: %s", "created" if user_created else "found", user.username)
                 
                 # Check enrollment

@@ -55,11 +55,16 @@
       <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Opening this resource is recorded in the course access log.</p>
       <div class="mt-5 grid gap-2">
         {% include 'courses/components/next_module_button.html' with button_class='w-full justify-center' %}
-        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary w-full justify-center">
+        <a href="{% if participant_mode %}{% url 'recruitment:sessions' %}{% else %}{% url 'courses:course_detail' course_instance.id %}{% endif %}" class="btn btn-outline-secondary w-full justify-center">
           <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          Back To Course
+          {% if participant_mode %}Study Sessions{% else %}Back To Course{% endif %}
         </a>
       </div>
     </aside>
   </div>
+{% endblock %}
+
+{% block extra_js %}
+  {% load static %}
+  <script src="{% static 'js/courses/next-module-button.js' %}"></script>
 {% endblock %}

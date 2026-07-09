@@ -12,6 +12,7 @@ from modulearn.integrations.course_authoring import (
     build_x_login_token_url,
 )
 from modulearn.learning.services.course_plugins import normalize_course_plugin_config
+from accounts.email_utils import find_user_by_email, normalize_email_address, unique_username_for_email
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -106,12 +107,16 @@ def create_course_from_json(course_data, current_user):
     # Add the instructor from the JSON data
     instructor_data = course_data.get('instructor', {})
     if instructor_data:
-        instructor_email = instructor_data.get('email')
+        instructor_email = normalize_email_address(instructor_data.get('email'))
         if instructor_email:
-            instructor_user, created = User.objects.get_or_create(
-                email=instructor_email,
-                defaults={'username': instructor_email.split('@')[0], 'is_instructor': True}
-            )
+            instructor_user = find_user_by_email(instructor_email)
+            if instructor_user is None:
+                instructor_user = User.objects.create_user(
+                    username=unique_username_for_email(instructor_email, local_part_only=True),
+                    email=instructor_email,
+                    is_instructor=True,
+                    is_student=False,
+                )
             course.instructors.add(instructor_user)
     
     # Create Unit and Module objects

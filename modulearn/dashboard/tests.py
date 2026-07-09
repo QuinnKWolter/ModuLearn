@@ -3,6 +3,7 @@ from django.urls import reverse
 
 from accounts.models import User
 from courses.models import Course, CourseInstance, Enrollment, Module, ModuleBranchRule, ModuleProgress, ModuleProgressEvent, Unit
+from modulearn.learning.selectors.timelines import get_course_instance_recent_activity
 
 
 @override_settings(
@@ -80,7 +81,34 @@ class DashboardViewTests(TestCase):
         self.assertContains(response, 'Variable Assignment')
         self.assertContains(response, 'Demo Learner')
         self.assertContains(response, 'student1@example.com')
-        self.assertContains(response, 'Done')
+        self.assertContains(response, 'Completed')
+
+    def test_timelines_hide_redundant_100_percent_progress_events(self):
+        unit = Unit.objects.create(course=self.course, title='Unit 1')
+        module = Module.objects.create(unit=unit, title='Variable Assignment')
+        enrollment = Enrollment.objects.get(student=self.student, course_instance=self.instance)
+        module_progress, _created = ModuleProgress.objects.get_or_create(
+            user=self.student,
+            enrollment=enrollment,
+            module=module,
+        )
+        for event_type in ('progress', 'completion'):
+            ModuleProgressEvent.objects.create(
+                module_progress=module_progress,
+                user=self.student,
+                module=module,
+                course_instance=self.instance,
+                event_type=event_type,
+                source='test',
+                progress=1.0,
+                score=100.0,
+                success=True,
+            )
+
+        events = get_course_instance_recent_activity(self.instance)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['event_type'], 'completion')
 
     def test_instructor_dashboard_redirects_students(self):
         self.client.force_login(self.student)

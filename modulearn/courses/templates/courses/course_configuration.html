@@ -1587,9 +1587,9 @@
         <section class="rounded-lg border border-blue-200/70 bg-blue-50/70 p-4 dark:border-blue-400/20 dark:bg-blue-400/10">
           <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h3 class="font-bold text-slate-900 dark:text-white">Participant completion link</h3>
+              <h3 class="font-bold text-slate-900 dark:text-white">End-of-study credit link</h3>
               <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                Add this URL as a final External Link module when you want participants to explicitly claim credit at the end of the course.
+                Add this URL as the final module or final-page link. It resolves the logged-in participant session and sends Prolific participants to their configured completion URL.
               </p>
             </div>
             <span class="badge badge-primary">Current participant aware</span>
@@ -1628,14 +1628,20 @@
                     {% endfor %}
                   </div>
 
-                  <label class="stat-kicker block mt-3">Entry URL template</label>
-                  <textarea class="form-control cfg-study-url mt-1" readonly>{% if source.platform == 'prolific' %}{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:enter' source.id %}?PROLIFIC_PID={% templatetag openvariable %}%PROLIFIC_PID%{% templatetag closevariable %}&STUDY_ID={% templatetag openvariable %}%STUDY_ID%{% templatetag closevariable %}&SESSION_ID={% templatetag openvariable %}%SESSION_ID%{% templatetag closevariable %}{% else %}{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:enter' source.id %}?sona_id=%SURVEY_CODE%{% endif %}</textarea>
+                  <label class="stat-kicker block mt-3">Participant entry link</label>
+                  <textarea class="form-control cfg-study-url mt-1" readonly>{% if source.platform == 'prolific' %}{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:prolific_enter' source.id %}?PROLIFIC_PID={% templatetag openvariable %}%PROLIFIC_PID%{% templatetag closevariable %}&STUDY_ID={% templatetag openvariable %}%STUDY_ID%{% templatetag closevariable %}&SESSION_ID={% templatetag openvariable %}%SESSION_ID%{% templatetag closevariable %}{% else %}{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:enter' source.id %}?sona_id=%SURVEY_CODE%{% endif %}</textarea>
+                  {% if source.platform == 'prolific' %}
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Paste this into Prolific as the external study URL with URL parameters enabled. Prolific fills the participant, study, and submission IDs.</p>
+                  {% endif %}
 
                   <div class="flex flex-wrap gap-2 mt-3">
                     <a class="btn btn-outline-secondary btn-sm" href="{% url 'recruitment:export_sessions' source.id %}">
                       <i class="bi bi-download mr-1" aria-hidden="true"></i>Export CSV
                     </a>
-                    <span class="text-xs text-slate-500 dark:text-slate-400 self-center">Condition: {{ source.get_condition_strategy_display }}</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 self-center">Session condition: {{ source.session_condition }}</span>
+                    {% if source.platform == 'prolific' %}
+                      <span class="text-xs text-slate-500 dark:text-slate-400 self-center">{% if source.prolific_completion_code_complete %}Credit redirect ready{% else %}Needs completion code{% endif %}</span>
+                    {% endif %}
                   </div>
                 </article>
               {% endfor %}
@@ -1666,16 +1672,10 @@
               </label>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-3">
-              <label class="text-sm font-semibold">Condition strategy
-                <select class="form-control mt-1" name="condition_strategy">
-                  <option value="hash">Hash-based</option>
-                  <option value="balanced">Balanced counter</option>
-                  <option value="schedule">Preallocated schedule</option>
-                </select>
-              </label>
-              <label class="text-sm font-semibold md:col-span-2">Conditions
-                <input class="form-control mt-1" type="text" name="condition_labels" placeholder="control,treatment">
+            <div class="grid gap-3">
+              <label class="text-sm font-semibold">Session condition
+                <input class="form-control mt-1" type="text" name="condition_labels" maxlength="32" placeholder="control">
+                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-1">One condition is assigned to this study session/source. Create a separate session for a separate condition.</span>
               </label>
             </div>
 
@@ -1684,13 +1684,14 @@
                 <div class="text-sm font-bold mb-2">Prolific</div>
                 <div class="grid gap-2 md:grid-cols-2">
                   <input class="form-control" type="text" name="prolific_study_id" placeholder="Study ID">
-                  <input class="form-control" type="text" name="prolific_completion_code_complete" placeholder="Complete code">
+                  <input class="form-control" type="text" name="prolific_completion_code_complete" placeholder="Completion code for credit">
                   <input class="form-control" type="text" name="prolific_completion_code_screened_out" placeholder="Screen-out code">
                   <input class="form-control" type="text" name="prolific_completion_code_attention_failed" placeholder="Attention-fail code">
                 </div>
                 <label class="inline-flex items-center gap-2 text-sm mt-3">
                   <input type="checkbox" name="prolific_use_secured_url"> Secured External URL
                 </label>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">The Study ID lets ModuLearn reject mismatched Prolific launches. The completion code powers the end-of-study credit redirect.</p>
               </div>
 
               <div class="rounded-md bg-slate-50 dark:bg-slate-900/50 p-3">

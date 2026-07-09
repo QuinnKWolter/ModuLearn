@@ -1,6 +1,8 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+import json
 
-from django.test import TestCase, override_settings
+from django.http import HttpResponse
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from accounts.models import User
@@ -24,7 +26,9 @@ from courses.models import (
 )
 from modulearn.learning.services.progress import apply_progress_snapshot
 from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
+from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_possible
 from modulearn.learning.selectors.courses import build_course_detail_context
+from modulearn.views_proxy import http_get_proxy_path
 from courses.demo_courses import create_adaptive_branching_demo_course, create_intro_python_demo_course
 
 
@@ -73,6 +77,34 @@ class CourseProgressTests(TestCase):
             ModuleProgressEvent.objects.filter(module_progress=module_progress, event_type='completion').exists()
         )
 
+    def test_progress_completion_does_not_create_redundant_100_percent_event(self):
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+
+        apply_progress_snapshot(
+            module_progress,
+            source='test',
+            progress=1.0,
+            score=100.0,
+            success=True,
+            event_type='progress',
+        )
+
+        event_types = list(
+            ModuleProgressEvent.objects.filter(module_progress=module_progress)
+            .order_by('created_at')
+            .values_list('event_type', flat=True)
+        )
+        self.assertEqual(event_types, ['completion'])
+
+    def test_pcrs_legacy_feedback_image_paths_redirect_to_local_assets(self):
+        red_response = self.client.get('/mgrids/static/problems/img/red-sad-face.jpg')
+        yellow_response = self.client.get('/mgrids/static/problems/img/yellow-happy-face.png')
+
+        self.assertEqual(red_response.status_code, 200)
+        self.assertEqual(red_response['Content-Type'], 'image/jpeg')
+        self.assertEqual(yellow_response.status_code, 200)
+        self.assertEqual(yellow_response['Content-Type'], 'image/png')
+
     def test_course_progress_rollup_sets_completed_at_when_all_modules_complete(self):
         for module_progress in ModuleProgress.objects.filter(enrollment=self.enrollment):
             apply_progress_snapshot(
@@ -115,6 +147,64 @@ class CourseProgressTests(TestCase):
         invitation.refresh_from_db()
         self.assertTrue(invitation.used)
 
+    def test_invite_code_matches_existing_user_email_case_insensitively(self):
+        existing_user = User.objects.create_user(
+            username='quinn-existing',
+            email='QuinnKWolter@Gmail.com',
+            password='safe-pass-123',
+        )
+        invitation = EnrollmentCode.objects.create(
+            code='CASE123',
+            email='quinnkwolter@gmail.com',
+            course_instance=self.instance,
+        )
+
+        response = self.client.post(reverse('courses:enroll_with_code'), {
+            'email': 'QUINNKWOLTER@GMAIL.COM',
+            'code': 'CASE123',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            Enrollment.objects.filter(
+                course_instance=self.instance,
+                student=existing_user,
+            ).exists()
+        )
+        self.assertEqual(
+            User.objects.filter(email__iexact='quinnkwolter@gmail.com').count(),
+            1,
+        )
+        invitation.refresh_from_db()
+        self.assertTrue(invitation.used)
+
+    def test_bulk_enrollment_reuses_user_email_case_insensitively(self):
+        existing_user = User.objects.create_user(
+            username='bulk-existing',
+            email='Bulk.Student@Example.com',
+            password='safe-pass-123',
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:bulk_enroll_students', args=[self.instance.id]),
+            data=json.dumps({'emails': ['BULK.STUDENT@EXAMPLE.COM']}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['success_count'], 1)
+        self.assertTrue(
+            Enrollment.objects.filter(
+                course_instance=self.instance,
+                student=existing_user,
+            ).exists()
+        )
+        self.assertEqual(
+            User.objects.filter(email__iexact='bulk.student@example.com').count(),
+            1,
+        )
+
     def test_hidden_modules_are_not_in_student_course_context(self):
         self.module_b.is_visible = False
         self.module_b.save(update_fields=['is_visible'])
@@ -146,6 +236,143 @@ class CourseProgressTests(TestCase):
                 event_type=ModuleAccessLog.EVENT_UNLOCK_DENIED,
             ).exists()
         )
+
+    def test_next_accessible_module_endpoint_reflects_new_unlocks(self):
+        self.client.force_login(self.student)
+        self.module_b.is_locked = True
+        self.module_b.unlock_rule = {'mode': 'all', 'conditions': [{'type': 'module_completed', 'target_id': self.module_a.id}]}
+        self.module_b.save(update_fields=['is_locked', 'unlock_rule'])
+
+        locked_response = self.client.get(reverse('courses:next_accessible_module', args=[self.instance.id, self.module_a.id]))
+        self.assertEqual(locked_response.status_code, 200)
+        self.assertFalse(locked_response.json()['available'])
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        apply_progress_snapshot(
+            module_progress,
+            source='test',
+            progress=1.0,
+            score=100.0,
+            success=True,
+        )
+
+        unlocked_response = self.client.get(reverse('courses:next_accessible_module', args=[self.instance.id, self.module_a.id]))
+        self.assertEqual(unlocked_response.status_code, 200)
+        payload = unlocked_response.json()
+        self.assertTrue(payload['available'])
+        self.assertEqual(payload['id'], self.module_b.id)
+        self.assertEqual(
+            payload['url'],
+            reverse('courses:launch_iframe_module', args=[self.instance.id, self.module_b.id]),
+        )
+
+    def test_pcrs_run_response_updates_module_progress(self):
+        self.module_a.content_url = 'https://pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed?act=PCRS&sub=py_avg_two_int_es'
+        self.module_a.save(update_fields=['content_url'])
+        request = RequestFactory().post(
+            '/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/run',
+            data='csrftoken=token&act=PCRS&sub=py_avg_two_int_es',
+            content_type='application/x-www-form-urlencoded',
+        )
+        request.META['HTTP_REFERER'] = (
+            'http://testserver/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed'
+            f'?act=PCRS&sub=py_avg_two_int_es&grp=Fall+2026&usr={self.student.username}'
+            f'&cid={self.course.id}&module_id={self.module_a.id}'
+        )
+        response = HttpResponse(
+            json.dumps({'score': 5, 'max_score': 5, 'best': True, 'results': []}),
+            content_type='application/json',
+            status=200,
+        )
+
+        capture_pcrs_result_if_possible(
+            request,
+            'pcrs.utm.utoronto.ca',
+            'mgrids/problems/python/337/run',
+            response,
+        )
+
+        progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(progress.progress, 1.0)
+        self.assertEqual(progress.score, 100.0)
+        self.assertTrue(progress.is_complete)
+        self.assertEqual(progress.attempts, 1)
+        self.assertTrue(
+            ModuleProgressEvent.objects.filter(
+                module_progress=progress,
+                source='pcrs',
+                event_type='completion',
+            ).exists()
+        )
+
+    def test_pcrs_partial_score_records_partial_progress(self):
+        self.module_a.content_url = 'https://pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed?act=PCRS&sub=py_avg_two_int_es'
+        self.module_a.save(update_fields=['content_url'])
+        request = RequestFactory().post(
+            '/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/run',
+            data='csrftoken=token&act=PCRS&sub=py_avg_two_int_es',
+            content_type='application/x-www-form-urlencoded',
+        )
+        request.META['HTTP_REFERER'] = (
+            'http://testserver/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed'
+            f'?act=PCRS&sub=py_avg_two_int_es&grp=Fall+2026&usr={self.student.username}'
+            f'&cid={self.course.id}&module_id={self.module_a.id}'
+        )
+        response = HttpResponse(
+            json.dumps({'score': 3, 'max_score': 5, 'best': False, 'results': []}),
+            content_type='application/json',
+            status=200,
+        )
+
+        capture_pcrs_result_if_possible(
+            request,
+            'pcrs.utm.utoronto.ca',
+            'mgrids/problems/python/337/run',
+            response,
+        )
+
+        progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(progress.progress, 0.6)
+        self.assertEqual(progress.score, 60.0)
+        self.assertFalse(progress.is_complete)
+        self.assertEqual(progress.attempts, 1)
+
+    @patch('modulearn.views_proxy.requests.post')
+    def test_pcrs_proxy_isolates_upstream_session_and_csrf_cookies(self, post):
+        upstream_response = MagicMock()
+        upstream_response.status_code = 200
+        upstream_response.headers = {'Content-Type': 'application/json'}
+        upstream_response.raw = None
+        upstream_response.iter_content.return_value = [b'{"score": 0, "max_score": 5}']
+        post.return_value.__enter__.return_value = upstream_response
+
+        request = RequestFactory().post(
+            '/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/run',
+            data='csrftoken=modulearn-token&act=PCRS&sub=py_avg_two_int_es',
+            content_type='application/x-www-form-urlencoded',
+            HTTP_COOKIE='csrftoken=modulearn-token; sessionid=modulearn-session',
+            HTTP_X_CSRFTOKEN='modulearn-token',
+        )
+        request.session = {
+            'proxy_upstream_cookies': {
+                'pcrs.utm.utoronto.ca': {
+                    'csrftoken': 'pcrs-token',
+                    'sessionid': 'pcrs-session',
+                },
+            },
+        }
+
+        response = http_get_proxy_path(
+            request,
+            'https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/run',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        _, kwargs = post.call_args
+        self.assertEqual(kwargs['headers']['Cookie'], 'csrftoken=pcrs-token; sessionid=pcrs-session')
+        self.assertEqual(kwargs['headers']['X-CSRFToken'], 'pcrs-token')
+        self.assertEqual(kwargs['data']['csrftoken'], 'pcrs-token')
+        self.assertNotIn('modulearn-session', kwargs['headers']['Cookie'])
 
     def test_form_module_submission_marks_module_complete_and_logs_access(self):
         form_module = Module.objects.create(

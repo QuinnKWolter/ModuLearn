@@ -155,7 +155,7 @@ def apply_progress_snapshot(
     if previous_complete and not module_progress.is_complete:
         event_types.append("reopened")
 
-    if event_type:
+    if event_type and not (event_type == "progress" and "completion" in event_types):
         event_types.insert(0, event_type)
     elif changed and "completion" not in event_types and "reopened" not in event_types:
         event_types.append("progress")

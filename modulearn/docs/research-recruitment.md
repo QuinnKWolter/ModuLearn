@@ -12,6 +12,20 @@ https://<host>/r/prolific/<source_id>/?PROLIFIC_PID={{%PROLIFIC_PID%}}&STUDY_ID=
 
 Prolific fills those placeholders when a participant launches the study.
 
+In the UI, instructors get this link from:
+
+```text
+Instructor Dashboard -> course session card -> Configure -> Study Recruitment icon/modal -> Participant entry link
+```
+
+They should paste it into Prolific as the external study URL and enable URL parameters. The same modal also shows the end-of-study credit link:
+
+```text
+https://<host>/r/complete-current/<course_instance_id>/
+```
+
+Add that URL as the final link/module in the course. It only works for a participant who entered through a recruitment link and is still logged into the corresponding anonymous participant account.
+
 Expected parameters:
 
 - `PROLIFIC_PID`: Prolific participant id, stored as a string.
@@ -25,12 +39,18 @@ On accepted entry, ModuLearn:
 - creates or resumes an anonymous participant `User`,
 - creates or resumes the learner `Enrollment`,
 - creates or resumes a `ParticipantSession`,
-- assigns the participant to a configured research condition,
+- assigns the participant to the session/source condition,
 - logs the entry attempt,
 - signs the participant in,
-- redirects directly to the assigned course session.
+- redirects to the reduced-access study sessions page.
 
-Anonymous participants are intentionally restricted. They are redirected away from profiles and dashboards, cannot enroll in other sessions, and can only view their assigned course session.
+Anonymous participants are intentionally restricted. They are redirected away from profiles and dashboards, cannot browse the normal course hub, cannot enroll in other sessions, and can only resume assigned study sessions/modules.
+
+## Session Conditions
+
+Study conditions are treated as one-to-one with study sessions/sources. The recruitment modal exposes a single **Session condition** field. If an old value contains comma-separated labels, ModuLearn uses the first label for compatibility.
+
+Use separate course sessions when you need separate conditions such as `control` and `treatment`. Unlock rules can still target participant conditions through the course configuration UI.
 
 ## Completion
 
@@ -46,6 +66,14 @@ That endpoint resolves the logged-in participant's active `ParticipantSession`, 
 https://app.prolific.com/submissions/complete?cc=<completion_code>
 ```
 
+For Prolific credit to work end to end:
+
+- the Prolific source must have a completion code configured,
+- the participant must enter through the generated Prolific entry URL,
+- the participant must click the end-of-study credit link while logged into the provisioned participant account.
+
+The Prolific study id is used during entry validation. The completion redirect itself depends on the stored participant session and completion code.
+
 ## Local Testing
 
 Use the generated Prolific URL and replace the placeholders with stable 24-character hex values, for example:
@@ -55,4 +83,3 @@ Use the generated Prolific URL and replace the placeholders with stable 24-chara
 ```
 
 Reusing the same `SESSION_ID` should resume the same `ParticipantSession`. Changing `SESSION_ID` creates a new submission/session if capacity allows.
-

@@ -168,6 +168,7 @@ LOGIN_URL = 'accounts:login'
 
 AUTHENTICATION_BACKENDS = [
     'accounts.backends.KnowledgeTreeBackend',
+    'accounts.backends.EmailCaseInsensitiveBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
@@ -367,11 +368,15 @@ PROXY_ALLOWED_HOSTS = {
     "columbus.exp.sis.pitt.edu",
     "pawscomp2.sis.pitt.edu",
     "adapt2.sis.pitt.edu",
+    "pcrs.utm.utoronto.ca",
     "localhost",
     "127.0.0.1",
 }
 PROXY_MAX_BYTES = 5 * 1024 * 1024
-PROXY_CORS_ORIGIN = 'https://proxy.personalized-learning.org'
+PROXY_CORS_ORIGIN = os.getenv(
+    'PROXY_CORS_ORIGIN',
+    'https://proxy.personalized-learning.org' if IS_PRODUCTION else '',
+) or None
 
 # =============================================================================
 # PRODUCTION PROXY ROUTING CORRECTION

@@ -46,7 +46,7 @@ class RecruitmentSource(models.Model):
     condition_labels = models.CharField(
         max_length=255,
         blank=True,
-        help_text="Comma-separated condition names, e.g. control,treatment.",
+        help_text="Single study condition label for this course session/source, e.g. control.",
     )
 
     prolific_study_id = models.CharField(max_length=64, blank=True)
@@ -83,7 +83,11 @@ class RecruitmentSource(models.Model):
     @property
     def conditions(self) -> list[str]:
         labels = [item.strip() for item in (self.condition_labels or "").split(",") if item.strip()]
-        return labels or ["default"]
+        return labels[:1] or ["default"]
+
+    @property
+    def session_condition(self) -> str:
+        return self.conditions[0]
 
     def participant_count(self) -> int:
         return self.participant_sessions.exclude(status=ParticipantSession.STATUS_REJECTED).count()

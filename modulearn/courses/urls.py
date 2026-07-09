@@ -31,5 +31,8 @@ urlpatterns = [
     path('instance/<int:instance_id>/modules/<int:module_id>/launch/', 
          views.launch_iframe_module, 
          name='launch_iframe_module'),
+    path('instance/<int:instance_id>/modules/<int:module_id>/next/',
+         views.next_accessible_module,
+         name='next_accessible_module'),
     path('instance/<int:instance_id>/units/<int:unit_id>/modules/<int:module_id>/', views.module_detail, name='module_detail'),
 ]

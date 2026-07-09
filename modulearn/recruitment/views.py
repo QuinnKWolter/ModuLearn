@@ -20,6 +20,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from courses.models import CourseProgress, Enrollment
 from recruitment.models import ParticipantSession, RecruitmentEntryLog, RecruitmentSource
 from recruitment.services.conditions import assign_condition
+from recruitment.services.participants import get_participant_resume_module, get_participant_sessions
 from recruitment.services.prolific import (
     ProlificIds,
     ProlificVerificationError,
@@ -228,7 +229,64 @@ def enter(request, source_id):
         participant_session.status = ParticipantSession.STATUS_IN_PROGRESS
         participant_session.save(update_fields=["status", "updated_at"])
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-    return redirect("courses:course_detail", instance_id=source.course_instance_id)
+    return redirect("recruitment:sessions")
+
+
+@login_required
+@require_http_methods(["GET"])
+def sessions(request):
+    if not getattr(request.user, "is_anonymous_participant", False):
+        return redirect("dashboard:student_dashboard")
+
+    participant_sessions = get_participant_sessions(request.user)
+    session_cards = []
+    for participant_session in participant_sessions:
+        course_instance = participant_session.recruitment_source.course_instance
+        course_progress = getattr(participant_session.enrollment, "course_progress", None)
+        resume_module = get_participant_resume_module(participant_session)
+        session_cards.append({
+            "session": participant_session,
+            "course_instance": course_instance,
+            "course": course_instance.course,
+            "course_progress": course_progress,
+            "resume_module": resume_module,
+        })
+    return render(request, "recruitment/sessions.html", {"session_cards": session_cards})
+
+
+@login_required
+@require_http_methods(["GET"])
+def resume_session(request, session_uuid):
+    participant_session = get_object_or_404(
+        ParticipantSession.objects.select_related(
+            "recruitment_source",
+            "recruitment_source__course_instance",
+            "enrollment",
+        ),
+        uuid=session_uuid,
+    )
+    if request.user != participant_session.user and not request.user.is_staff:
+        raise PermissionDenied("You cannot open another participant session.")
+    if getattr(request.user, "is_anonymous_participant", False) and request.user != participant_session.user:
+        raise PermissionDenied("You cannot open another participant session.")
+
+    resume_module = get_participant_resume_module(participant_session)
+    if not resume_module:
+        messages.info(request, "No available module was found for this study session.")
+        return redirect("recruitment:sessions")
+
+    if participant_session.status in {
+        ParticipantSession.STATUS_ENTERED,
+        ParticipantSession.STATUS_CONSENTED,
+    }:
+        participant_session.status = ParticipantSession.STATUS_IN_PROGRESS
+        participant_session.save(update_fields=["status", "updated_at"])
+
+    return redirect(
+        "courses:launch_iframe_module",
+        instance_id=participant_session.recruitment_source.course_instance_id,
+        module_id=resume_module.id,
+    )
 
 
 @login_required
@@ -244,7 +302,7 @@ def consent(request, session_uuid):
         if participant_session.status == ParticipantSession.STATUS_ENTERED:
             participant_session.status = ParticipantSession.STATUS_CONSENTED
             participant_session.save(update_fields=["status", "updated_at"])
-        return redirect("courses:course_detail", instance_id=participant_session.recruitment_source.course_instance_id)
+        return redirect("recruitment:sessions")
     return render(request, "recruitment/consent.html", {"participant_session": participant_session})
 
 
@@ -273,6 +331,8 @@ def complete_current(request, course_instance_id):
     )
     if not participant_session:
         messages.error(request, "No active recruitment participant session was found for this course.")
+        if getattr(request.user, "is_anonymous_participant", False):
+            return redirect("recruitment:sessions")
         return redirect("courses:course_detail", instance_id=course_instance_id)
     return redirect("recruitment:complete", session_uuid=participant_session.uuid)
 
@@ -386,8 +446,8 @@ def create_source(request, course_instance_id):
         "label": request.POST.get("label", "").strip() or (existing_source.label if existing_source else ""),
         "is_active": request.POST.get("is_active") == "on",
         "max_participants": _optional_int(request.POST.get("max_participants")),
-        "condition_strategy": request.POST.get("condition_strategy") or RecruitmentSource.CONDITION_HASH,
-        "condition_labels": posted_or_existing("condition_labels"),
+        "condition_strategy": RecruitmentSource.CONDITION_HASH,
+        "condition_labels": _single_condition_label(posted_or_existing("condition_labels")),
         "prolific_study_id": posted_or_existing("prolific_study_id"),
         "prolific_completion_code_complete": posted_or_existing("prolific_completion_code_complete"),
         "prolific_completion_code_screened_out": posted_or_existing("prolific_completion_code_screened_out"),
@@ -419,6 +479,11 @@ def _optional_int(value):
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _single_condition_label(value: str) -> str:
+    labels = [item.strip() for item in (value or "").split(",") if item.strip()]
+    return labels[0][:32] if labels else ""
 
 
 @login_required
