@@ -58,13 +58,7 @@ class ProfileEditForm(forms.ModelForm):
 
     def clean_email(self):
         email = normalize_email_address(self.cleaned_data.get('email'))
-        original_email = normalize_email_address(
-            User.objects.filter(pk=self.instance.pk).values_list('email', flat=True).first()
-        )
-        if (
-            email != original_email
-            and User.objects.exclude(pk=self.instance.pk).filter(email__iexact=email).exists()
-        ):
+        if User.objects.exclude(pk=self.instance.pk).filter(email__iexact=email).exists():
             raise forms.ValidationError('An account with this email address already exists.')
         return email
 

@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import logging
-
 from django.contrib.auth import get_user_model
-
-logger = logging.getLogger(__name__)
 
 
 def normalize_email_address(value: str | None) -> str:
@@ -23,14 +19,7 @@ def find_user_by_email(value: str | None):
         return None
 
     User = get_user_model()
-    matches = list(User.objects.filter(email__iexact=email).order_by("id")[:2])
-    if len(matches) > 1:
-        logger.warning(
-            "Multiple users share the case-insensitive email identity %s; using user id %s",
-            email,
-            matches[0].id,
-        )
-    return matches[0] if matches else None
+    return User.objects.filter(email__iexact=email).first()
 
 
 def unique_username_for_email(value: str, *, local_part_only: bool = False) -> str:

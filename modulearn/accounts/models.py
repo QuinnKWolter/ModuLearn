@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.functions import Lower
 
 from .email_utils import normalize_email_address
 
@@ -22,19 +23,22 @@ class User(AbstractUser):
     kt_groups = models.JSONField(default=list, blank=True,
                                 help_text="KnowledgeTree groups/courses the user belongs to")
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                condition=~models.Q(email=""),
+                name="accounts_user_email_ci_unique",
+            ),
+        ]
+
     def clean(self):
         super().clean()
         self.email = normalize_email_address(self.email)
-        has_conflict = (
+        if (
             self.email
             and type(self).objects.exclude(pk=self.pk).filter(email__iexact=self.email).exists()
-        )
-        original_email = ""
-        if self.pk:
-            original_email = normalize_email_address(
-                type(self).objects.filter(pk=self.pk).values_list("email", flat=True).first()
-            )
-        if has_conflict and original_email != self.email:
+        ):
             raise ValidationError({"email": "A user with this email address already exists."})
 
     def save(self, *args, **kwargs):

@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth import authenticate
+from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -80,21 +81,13 @@ class AccountPageTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('email', form.errors)
 
-    def test_profile_allows_unchanged_legacy_duplicate_email(self):
-        duplicate = User.objects.create_user(
-            username='legacy-duplicate',
-            email='learner@example.com',
-            password='safe-pass-123',
-        )
-
-        form = ProfileEditForm(
-            instance=duplicate,
-            data={'email': 'LEARNER@EXAMPLE.COM', 'full_name': 'Legacy Duplicate'},
-        )
-
-        self.assertTrue(form.is_valid(), form.errors)
-        saved_user = form.save()
-        self.assertEqual(saved_user.email, 'learner@example.com')
+    def test_database_rejects_case_insensitive_duplicate_email(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            User.objects.create_user(
+                username='duplicate-learner',
+                email='LEARNER@EXAMPLE.COM',
+                password='safe-pass-123',
+            )
 
     def test_email_shaped_username_authenticates_case_insensitively(self):
         user = User.objects.create_user(

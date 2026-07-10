@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta
+from django.db.models.functions import Lower
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import json
@@ -474,7 +475,13 @@ class EnrollmentCode(models.Model):
     used = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('email', 'course_instance')
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                "course_instance",
+                name="courses_enrollmentcode_email_instance_ci_unique",
+            ),
+        ]
 
     def clean(self):
         from accounts.email_utils import normalize_email_address
