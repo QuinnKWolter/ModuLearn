@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-  {% include 'includes/page_header.html' with eyebrow=module.get_module_type_display title=module.title description=module.description %}
+  {% include 'includes/page_header.html' with eyebrow=module.display_type_label title=module.title description=module.description %}
 
   <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
     <section class="card p-6">

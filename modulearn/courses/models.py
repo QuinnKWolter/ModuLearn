@@ -187,6 +187,14 @@ class Module(models.Model):
                 return protocol
         return None
 
+    @property
+    def display_type_label(self):
+        """Human-facing module type, preferring imported resource metadata."""
+        platform_name = (self.platform_name or "").strip()
+        if platform_name and not platform_name.isdigit():
+            return platform_name
+        return self.get_module_type_display()
+
 
 class ModuleBranchRule(models.Model):
     CONDITION_SUCCESS = 'success'

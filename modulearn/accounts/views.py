@@ -177,7 +177,7 @@ def login_view(request):
                         # User authenticated via KnowledgeTree, so they definitely exist there
                         # No need to create them
                         
-                        messages.success(request, 'Successfully signed in with your KnowledgeTree account.')
+                        messages.success(request, 'Successfully signed in to ModuLearn.')
                         return redirect('main:home')
                     else:
                         # Both Django and KnowledgeTree authentication failed

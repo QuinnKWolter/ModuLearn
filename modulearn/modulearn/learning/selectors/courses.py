@@ -110,7 +110,7 @@ def build_course_detail_context(user, course_instance):
                 "is_locked": module.is_locked,
                 "can_access": is_instructor or module_state.can_access,
                 "lock_reason": module_state.reason,
-                "type_label": module.get_module_type_display(),
+                "type_label": module.display_type_label,
             })
 
         unit_percent = round((progress_sum / module_count) * 100) if module_count else 0

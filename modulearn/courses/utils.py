@@ -11,6 +11,10 @@ from modulearn.integrations.course_authoring import (
     build_course_export_url,
     build_x_login_token_url,
 )
+from modulearn.learning.services.slc_replacements import (
+    apply_replacement_metadata,
+    apply_slc_legacy_replacement,
+)
 from modulearn.learning.services.course_plugins import normalize_course_plugin_config
 from accounts.email_utils import find_user_by_email, normalize_email_address, unique_username_for_email
 
@@ -19,6 +23,40 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 COURSE_AUTHORING_TOKEN_URL = build_x_login_token_url()
+
+
+def _resource_metadata_by_id(resources):
+    """Map course-authoring resource IDs to human-facing resource metadata."""
+    metadata = {}
+    for resource in resources or []:
+        resource_id = resource.get('id')
+        if resource_id is None:
+            continue
+        metadata[str(resource_id)] = {
+            'name': resource.get('name') or '',
+            'providers': resource.get('providers') or [],
+        }
+    return metadata
+
+
+def _activity_platform_name(activity, resource_id, resource_metadata):
+    """Return the best display label for an imported activity's resource type."""
+    explicit_label = activity.get('platform_name') or activity.get('resource_name')
+    if explicit_label:
+        return explicit_label
+
+    metadata = resource_metadata.get(str(resource_id), {})
+    resource_name = metadata.get('name')
+    if resource_name:
+        return resource_name
+
+    provider_id = activity.get('provider_id')
+    for provider in metadata.get('providers') or []:
+        if not provider_id or provider.get('id') == provider_id:
+            if provider.get('name'):
+                return provider['name']
+
+    return activity.get('resource_id') or ''
 
 def fetch_course_details(course_id, user):
     logger.info(f"Starting fetch_course_details for course_id: {course_id}")
@@ -120,6 +158,7 @@ def create_course_from_json(course_data, current_user):
             course.instructors.add(instructor_user)
     
     # Create Unit and Module objects
+    resource_metadata = _resource_metadata_by_id(course_data.get('resources'))
     provider_protocols_map = course_data.get('provider_protocols', {}) or {}
     module_lookup = {}
     for unit_index, unit_data in enumerate(course_data.get('units', []), start=1):
@@ -156,28 +195,47 @@ def create_course_from_json(course_data, current_user):
             for activity in activities:
                 module_index += 1
                 provider_id = activity.get('provider_id', '') or ''
+                platform_name = _activity_platform_name(activity, resource_id, resource_metadata)
                 supported_protocols = activity.get('supported_protocols') or provider_protocols_map.get(provider_id, [])
+                activity_url_was_supplied = activity.get('url') is not None
+                content_url = activity.get('url', '')
+                desired_module_type = activity.get('module_type') or Module.MODULE_TYPE_IMPORTED
+                content_data = activity.get('content_data') or None
+                replacement = apply_slc_legacy_replacement(
+                    content_url,
+                    current_module_type=desired_module_type,
+                    current_supported_protocols=supported_protocols,
+                )
+                if replacement:
+                    logger.info(
+                        "Replacing legacy SLC URL during import: %s -> %s",
+                        replacement.original_url,
+                        replacement.replacement_url,
+                    )
+                    content_url = replacement.replacement_url
+                    desired_module_type = replacement.module_type
+                    supported_protocols = replacement.supported_protocols
+                    content_data = apply_replacement_metadata(content_data, replacement)
                 module, created = Module.objects.get_or_create(
                     unit=unit,
                     title=activity['name'],
                     defaults={
-                        'module_type': activity.get('module_type') or Module.MODULE_TYPE_IMPORTED,
+                        'module_type': desired_module_type,
                         'order': activity.get('order') or module_index * 10,
                         'description': activity.get('description') or f"Provider: {provider_id or 'unknown'}, Author: {activity.get('author_id', 'unknown')}",
-                        'content_url': activity.get('url', ''),
+                        'content_url': content_url,
                         'provider_id': provider_id,
-                        'platform_name': activity.get('platform_name', '') or activity.get('resource_id', ''),
+                        'platform_name': platform_name,
                         'author': activity.get('author_id', ''),
                         'supported_protocols': supported_protocols,
                         'is_visible': activity.get('is_visible', True),
                         'is_locked': activity.get('is_locked', False),
                         'unlock_rule': activity.get('unlock_rule') or {},
-                        'content_data': activity.get('content_data') or None,
+                        'content_data': content_data,
                     }
                 )
                 # Update protocols/provider if module existed and differs
                 updated = False
-                desired_module_type = activity.get('module_type') or module.module_type
                 desired_order = activity.get('order') or module.order
                 if module.order != desired_order:
                     module.order = desired_order
@@ -191,11 +249,11 @@ def create_course_from_json(course_data, current_user):
                 if activity.get('description') is not None and module.description != activity.get('description'):
                     module.description = activity.get('description') or ''
                     updated = True
-                if activity.get('url') is not None and module.content_url != activity.get('url'):
-                    module.content_url = activity.get('url') or None
+                if activity_url_was_supplied and module.content_url != content_url:
+                    module.content_url = content_url or None
                     updated = True
-                if activity.get('platform_name') is not None and module.platform_name != activity.get('platform_name'):
-                    module.platform_name = activity.get('platform_name') or ''
+                if platform_name and module.platform_name != platform_name:
+                    module.platform_name = platform_name
                     updated = True
                 if activity.get('is_visible') is not None and module.is_visible != activity.get('is_visible'):
                     module.is_visible = activity.get('is_visible')
@@ -206,8 +264,8 @@ def create_course_from_json(course_data, current_user):
                 if activity.get('unlock_rule') is not None and module.unlock_rule != (activity.get('unlock_rule') or {}):
                     module.unlock_rule = activity.get('unlock_rule') or {}
                     updated = True
-                if activity.get('content_data') is not None and module.content_data != (activity.get('content_data') or None):
-                    module.content_data = activity.get('content_data') or None
+                if content_data is not None and module.content_data != content_data:
+                    module.content_data = content_data
                     updated = True
                 if module.supported_protocols != supported_protocols:
                     module.supported_protocols = supported_protocols

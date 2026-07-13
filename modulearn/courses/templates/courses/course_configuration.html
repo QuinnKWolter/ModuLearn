@@ -1182,7 +1182,7 @@
                           <span class="cfg-module-order">#{{ module.order }}</span>
                           <span class="cfg-module-title">
                             <strong>{{ module.title }}</strong>
-                            <small class="text-slate-500 dark:text-slate-300">{{ module.get_module_type_display }}</small>
+                            <small class="text-slate-500 dark:text-slate-300">{{ module.display_type_label }}</small>
                           </span>
                           <span class="cfg-chip-row">
                             <input type="hidden" name="module_{{ module.id }}_visible" value="{% if module.is_visible %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="visible">

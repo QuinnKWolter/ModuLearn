@@ -30,6 +30,16 @@ from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_pos
 from modulearn.learning.selectors.courses import build_course_detail_context
 from modulearn.views_proxy import http_get_proxy_path
 from courses.demo_courses import create_adaptive_branching_demo_course, create_intro_python_demo_course
+from courses.utils import create_course_from_json
+
+LEGACY_SLC_URL = (
+    'http://pawscomp2.sis.pitt.edu/pcex/index.html?'
+    'lang=JAVA&set=artithmetic.inc_dec_operators&ch=JDecInc2'
+)
+MODERN_SLC_SPLICE_URL = (
+    'https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/'
+    'artithmetic_inc_dec_operators__68bdb308f6cc3d7a9cc096da?index=1'
+)
 
 
 class CourseProgressTests(TestCase):
@@ -452,6 +462,124 @@ class CourseProgressTests(TestCase):
         context = build_course_detail_context(self.student, self.instance)
         self.assertTrue(context['course_plugins']['static_recommendations'])
         self.assertFalse(context['course_plugins']['dynamic_recommendations'])
+
+    def test_imported_activity_uses_resource_name_as_display_type(self):
+        imported_course = create_course_from_json(
+            {
+                'id': 'import-resource-labels',
+                'name': 'Imported Resource Labels',
+                'resources': [
+                    {
+                        'id': 1790000000003,
+                        'name': 'Programming Examples',
+                        'providers': [{'id': 'pcex', 'name': 'Program Construction Examples'}],
+                    },
+                ],
+                'units': [
+                    {
+                        'name': 'Variables and Operations',
+                        'activities': {
+                            '1790000000003': [
+                                {
+                                    'name': 'Increment-Decrement Operators',
+                                    'url': 'http://pawscomp2.sis.pitt.edu/pcex/index.html?lang=JAVA&set=arithmetic.inc_dec',
+                                    'provider_id': 'pcex',
+                                    'author_id': 'r.hosseini',
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+            self.instructor,
+        )
+        imported_instance = CourseInstance.objects.create(
+            course=imported_course,
+            group_name='Imported Label Session',
+        )
+        imported_instance.instructors.add(self.instructor)
+        Enrollment.objects.create(student=self.student, course_instance=imported_instance)
+
+        module = Module.objects.get(unit__course=imported_course, title='Increment-Decrement Operators')
+        self.assertEqual(module.module_type, Module.MODULE_TYPE_IMPORTED)
+        self.assertEqual(module.platform_name, 'Programming Examples')
+        self.assertEqual(module.display_type_label, 'Programming Examples')
+
+        context = build_course_detail_context(self.student, imported_instance)
+        self.assertEqual(
+            context['unit_cards'][0]['modules'][0]['type_label'],
+            'Programming Examples',
+        )
+
+    def test_import_replaces_legacy_slc_url_with_modern_splice_content(self):
+        imported_course = create_course_from_json(
+            {
+                'id': 'legacy-slc-replacement',
+                'name': 'Legacy SLC Replacement',
+                'resources': [
+                    {
+                        'id': 1790000000003,
+                        'name': 'Programming Examples',
+                        'providers': [{'id': 'pcex', 'name': 'Program Construction Examples'}],
+                    },
+                ],
+                'units': [
+                    {
+                        'name': 'Variables and Operations',
+                        'activities': {
+                            '1790000000003': [
+                                {
+                                    'name': 'Increment/Decrement Operators (Case 2)',
+                                    'url': LEGACY_SLC_URL,
+                                    'provider_id': 'pcex',
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+            self.instructor,
+        )
+
+        module = Module.objects.get(unit__course=imported_course, title='Increment/Decrement Operators (Case 2)')
+
+        self.assertEqual(module.content_url, MODERN_SLC_SPLICE_URL)
+        self.assertEqual(module.module_type, Module.MODULE_TYPE_SPLICE_SMART_CONTENT)
+        self.assertEqual(module.supported_protocols[0], 'splice')
+        self.assertEqual(
+            module.content_data['slc_legacy_replacement']['original_url'],
+            LEGACY_SLC_URL,
+        )
+        self.assertEqual(
+            module.content_data['slc_legacy_replacement']['replacement_item_id'],
+            '69cd728e7afb2475509e5e43',
+        )
+
+    def test_manual_module_creation_replaces_legacy_slc_url(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'add_module',
+                'unit_id': self.unit.id,
+                'module_type': Module.MODULE_TYPE_EXTERNAL_LINK,
+                'title': 'Legacy SLC Link',
+                'description': 'Old PAWS link',
+                'order': 40,
+                'content_url': LEGACY_SLC_URL,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        module = Module.objects.get(unit=self.unit, title='Legacy SLC Link')
+        self.assertEqual(module.content_url, MODERN_SLC_SPLICE_URL)
+        self.assertEqual(module.module_type, Module.MODULE_TYPE_SPLICE_SMART_CONTENT)
+        self.assertEqual(module.supported_protocols[0], 'splice')
+        self.assertEqual(
+            module.content_data['slc_legacy_replacement']['old_item_id'],
+            '69cd72ab7afb2475509e61df',
+        )
 
     @override_settings(
         STORAGES={

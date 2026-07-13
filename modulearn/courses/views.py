@@ -72,6 +72,10 @@ from modulearn.learning.services.course_plugins import (
 )
 from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch
 from modulearn.learning.services.pcrs_tracking import is_pcrs_url
+from modulearn.learning.services.slc_replacements import (
+    apply_replacement_metadata,
+    apply_slc_legacy_replacement,
+)
 from modulearn.core.roles import get_user_role_snapshot
 from recruitment.services.participants import participant_course_redirect, user_can_access_participant_course
 
@@ -581,7 +585,24 @@ def _create_custom_module(request, course):
     if not title:
         raise ValueError("Module title is required.")
 
+    content_url = request.POST.get("content_url") or None
     supported_protocols = ['splice'] if module_type == Module.MODULE_TYPE_SPLICE_SMART_CONTENT else []
+    content_data = None
+    replacement = apply_slc_legacy_replacement(
+        content_url,
+        current_module_type=module_type,
+        current_supported_protocols=supported_protocols,
+    )
+    if replacement:
+        logger.info(
+            "Replacing legacy SLC URL during manual module creation: %s -> %s",
+            replacement.original_url,
+            replacement.replacement_url,
+        )
+        content_url = replacement.replacement_url
+        module_type = replacement.module_type
+        supported_protocols = replacement.supported_protocols
+        content_data = apply_replacement_metadata(content_data, replacement)
 
     module = Module.objects.create(
         unit=unit,
@@ -589,8 +610,9 @@ def _create_custom_module(request, course):
         description=request.POST.get("description", ""),
         module_type=module_type,
         order=int(request.POST.get("order") or next_order_for_module(unit)),
-        content_url=request.POST.get("content_url") or None,
+        content_url=content_url,
         content_file=request.FILES.get("content_file"),
+        content_data=content_data,
         is_visible=True,
         is_locked=False,
         supported_protocols=supported_protocols,
