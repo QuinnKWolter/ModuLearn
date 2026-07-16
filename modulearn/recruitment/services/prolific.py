@@ -23,6 +23,7 @@ class ProlificIds:
 
 
 PROLIFIC_OBJECT_ID_PATTERN = re.compile(r"^[a-fA-F0-9]{24}$")
+PROLIFIC_SYNTHETIC_PID_PATTERN = re.compile(r"^(test|demo|pilot)[A-Za-z0-9_-]{1,120}$", re.IGNORECASE)
 PROLIFIC_SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{6,128}$")
 
 
@@ -42,7 +43,7 @@ def validate_prolific_ids(ids: ProlificIds):
         raise ProlificVerificationError(f"Missing Prolific parameter: {', '.join(missing)}.")
 
     invalid = []
-    if not PROLIFIC_OBJECT_ID_PATTERN.match(ids.pid):
+    if not _valid_prolific_pid(ids.pid):
         invalid.append("PROLIFIC_PID")
     if not PROLIFIC_OBJECT_ID_PATTERN.match(ids.study_id):
         invalid.append("STUDY_ID")
@@ -50,6 +51,13 @@ def validate_prolific_ids(ids: ProlificIds):
         invalid.append("SESSION_ID")
     if invalid:
         raise ProlificVerificationError(f"Invalid Prolific identifier format: {', '.join(invalid)}.")
+
+
+def _valid_prolific_pid(value: str) -> bool:
+    return bool(
+        PROLIFIC_OBJECT_ID_PATTERN.match(value)
+        or PROLIFIC_SYNTHETIC_PID_PATTERN.match(value)
+    )
 
 
 def verify_secured_url(token: str, expected: ProlificIds) -> dict:

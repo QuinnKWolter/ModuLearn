@@ -89,6 +89,25 @@ class RecruitmentEntryFlowTests(TestCase):
         self.assertFalse(ParticipantSession.objects.exists())
         self.assertTrue(RecruitmentEntryLog.objects.filter(accepted=False).exists())
 
+    def test_prolific_entry_accepts_synthetic_participant_ids_for_testing(self):
+        study = self.make_study(title="Synthetic PID Study")
+        source = RecruitmentSource.objects.create(
+            study=study,
+            platform=RecruitmentSource.PLATFORM_PROLIFIC,
+            prolific_study_id="bbbbbbbbbbbbbbbbbbbbbbbb",
+        )
+
+        response = self.client.get(reverse("recruitment:study_launch", args=[study.slug]), {
+            "PROLIFIC_PID": "test-participant-01",
+            "STUDY_ID": "bbbbbbbbbbbbbbbbbbbbbbbb",
+            "SESSION_ID": "testsession01",
+        })
+
+        self.assertRedirects(response, reverse("recruitment:sessions"))
+        session = ParticipantSession.objects.get(recruitment_source=source)
+        self.assertEqual(session.external_pid, "test-participant-01")
+        self.assertEqual(session.external_session_id, "testsession01")
+
     def test_prolific_study_launch_accepts_short_session_identifier(self):
         study = self.make_study(title="RITEL Demo Study")
         source = RecruitmentSource.objects.create(
