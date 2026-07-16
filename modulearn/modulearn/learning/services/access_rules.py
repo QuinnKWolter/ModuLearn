@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from django.db.models import Max
+from django.db.models import Max, Q
 
 
 @dataclass(frozen=True)
@@ -59,11 +59,20 @@ def sync_module_progress_for_course(module):
         ModuleProgress.objects.filter(module=module, enrollment__in=enrollments)
         .values_list("enrollment_id", flat=True)
     )
-    rows = [
-        ModuleProgress(user=enrollment.student, module=module, enrollment=enrollment)
-        for enrollment in enrollments
-        if enrollment.id not in existing
-    ]
+    rows = []
+    for enrollment in enrollments:
+        if enrollment.id in existing:
+            continue
+        participant_session = ModuleProgress.participant_session_for_enrollment(enrollment)
+        rows.append(
+            ModuleProgress(
+                user=enrollment.student,
+                module=module,
+                enrollment=enrollment,
+                study_participant_session=participant_session,
+                study_condition=getattr(participant_session, "condition", "") or "",
+            )
+        )
     if rows:
         ModuleProgress.objects.bulk_create(rows, ignore_conflicts=True)
 
@@ -170,7 +179,8 @@ def _participant_condition(enrollment) -> str:
         return ""
     try:
         session = enrollment.participant_sessions.filter(
-            recruitment_source__course_instance=enrollment.course_instance
+            Q(recruitment_source__course_instance=enrollment.course_instance)
+            | Q(recruitment_source__study__course_instance=enrollment.course_instance)
         ).order_by("-entered_at").first()
     except Exception:
         session = None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from courses.models import Course, CourseInstance, Enrollment
 from courses.demo_courses import available_demo_course_options
-from recruitment.models import ParticipantSession
+from recruitment.models import ParticipantSession, Study
 from modulearn.integrations.config import get_course_authoring_base_url
 from modulearn.integrations.course_authoring import (
     build_course_authoring_app_url,
@@ -37,13 +37,31 @@ def build_student_dashboard_context(user):
 
 
 def build_instructor_dashboard_context(user):
-    courses = Course.objects.filter(instructors=user)
-    course_instances = CourseInstance.objects.filter(instructors=user).select_related("course").prefetch_related(
-        "enrollments",
-        "enrollments__course_progress",
-        "enrollments__student",
-        "recruitment_sources",
-        "recruitment_sources__participant_sessions",
+    courses = list(
+        Course.objects.filter(instructors=user)
+        .exclude(instances__study__isnull=False)
+        .distinct()
+        .order_by("title")
+    )
+    course_instances = (
+        CourseInstance.objects.filter(instructors=user)
+        .exclude(study__isnull=False)
+        .select_related("course")
+        .prefetch_related(
+            "enrollments",
+            "enrollments__course_progress",
+            "enrollments__student",
+        )
+        .order_by("course__title", "-created_at")
+    )
+    studies = (
+        Study.objects.filter(instructors=user)
+        .select_related("course_instance", "course_instance__course")
+        .prefetch_related(
+            "conditions",
+            "recruitment_sources",
+            "recruitment_sources__participant_sessions",
+        )
     )
 
     for instance in course_instances:
@@ -57,8 +75,21 @@ def build_instructor_dashboard_context(user):
             instance.avg_progress = 0
             instance.avg_score = 0
         instance.recent_activity = get_course_instance_recent_activity(instance, limit=5)
-        for source in instance.recruitment_sources.all():
+
+    sessions_by_course_id = {course.id: [] for course in courses}
+    for instance in course_instances:
+        sessions_by_course_id.setdefault(instance.course_id, []).append(instance)
+    for course in courses:
+        course.dashboard_sessions = sessions_by_course_id.get(course.id, [])
+    for study in studies:
+        study.condition_labels = ", ".join(condition.label for condition in study.conditions.all())
+        study.participant_total = 0
+        study.prolific_source = None
+        for source in study.recruitment_sources.all():
+            if source.platform == "prolific" and study.prolific_source is None:
+                study.prolific_source = source
             sessions = list(source.participant_sessions.all())
+            study.participant_total += len(sessions)
             counts = {status: 0 for status, _label in ParticipantSession.STATUS_CHOICES}
             for participant_session in sessions:
                 counts[participant_session.status] = counts.get(participant_session.status, 0) + 1
@@ -75,6 +106,8 @@ def build_instructor_dashboard_context(user):
     return {
         "courses": courses,
         "course_instances": course_instances,
+        "course_session_count": len(course_instances),
+        "studies": studies,
         "legacy_groups": [],
         "legacy_group_count": None,
         "show_legacy_groups_section": show_legacy_groups_section or role_snapshot["effective_is_instructor"],

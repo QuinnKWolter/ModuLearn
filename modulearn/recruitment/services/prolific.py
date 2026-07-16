@@ -22,7 +22,8 @@ class ProlificIds:
     session_id: str = ""
 
 
-PROLIFIC_ID_PATTERN = re.compile(r"^[a-fA-F0-9]{24}$")
+PROLIFIC_OBJECT_ID_PATTERN = re.compile(r"^[a-fA-F0-9]{24}$")
+PROLIFIC_SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{6,128}$")
 
 
 def completion_url(code: str) -> str:
@@ -41,11 +42,11 @@ def validate_prolific_ids(ids: ProlificIds):
         raise ProlificVerificationError(f"Missing Prolific parameter: {', '.join(missing)}.")
 
     invalid = []
-    if not PROLIFIC_ID_PATTERN.match(ids.pid):
+    if not PROLIFIC_OBJECT_ID_PATTERN.match(ids.pid):
         invalid.append("PROLIFIC_PID")
-    if not PROLIFIC_ID_PATTERN.match(ids.study_id):
+    if not PROLIFIC_OBJECT_ID_PATTERN.match(ids.study_id):
         invalid.append("STUDY_ID")
-    if not PROLIFIC_ID_PATTERN.match(ids.session_id):
+    if not PROLIFIC_SESSION_ID_PATTERN.match(ids.session_id):
         invalid.append("SESSION_ID")
     if invalid:
         raise ProlificVerificationError(f"Invalid Prolific identifier format: {', '.join(invalid)}.")

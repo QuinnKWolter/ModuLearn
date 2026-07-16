@@ -42,7 +42,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 import uuid
 from django.views.decorators.http import require_http_methods
 from django.db.utils import IntegrityError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -201,6 +201,13 @@ def _module_rule_context(course):
     units = list(course.units.prefetch_related("modules").all())
     for index, unit in enumerate(units):
         modules = list(unit.modules.all())
+        for module in modules:
+            try:
+                module.config_form = module.form
+                module.config_form_questions = list(module.config_form.questions.all())
+            except ModuleForm.DoesNotExist:
+                module.config_form = None
+                module.config_form_questions = []
         group = {
             "unit": unit,
             "modules": modules,
@@ -232,7 +239,7 @@ def course_list(request):
 @login_required
 def course_detail(request, instance_id):
     """
-    Displays details of a specific course instance and related instances 
+    Displays details of a specific course session and related sessions.
     that the user has access to.
     """
     course_instance = get_object_or_404(CourseInstance, id=instance_id)
@@ -264,7 +271,10 @@ def course_configuration(request, instance_id):
         raise PermissionDenied("Only instructors can configure this course.")
 
     course = course_instance.course
-    research_has_participants = course.instances.filter(recruitment_sources__participant_sessions__isnull=False).exists()
+    research_has_participants = course.instances.filter(
+        Q(recruitment_sources__participant_sessions__isnull=False)
+        | Q(study__recruitment_sources__participant_sessions__isnull=False)
+    ).exists()
     if request.method == "POST":
         if course.is_locked_for_research and research_has_participants:
             messages.error(request, "This course protocol is locked because recruitment has started. Duplicate the course before changing structure.")
@@ -294,21 +304,7 @@ def course_configuration(request, instance_id):
         return redirect("courses:course_configuration", instance_id=course_instance.id)
 
     plugin_flags = enabled_course_plugins(course)
-    recruitment_sources = list(course_instance.recruitment_sources.all())
-    try:
-        from recruitment.models import ParticipantSession
-        for source in recruitment_sources:
-            sessions = list(source.participant_sessions.all())
-            counts = {status: 0 for status, _label in ParticipantSession.STATUS_CHOICES}
-            for participant_session in sessions:
-                counts[participant_session.status] = counts.get(participant_session.status, 0) + 1
-            source.status_summary = [
-                {"status": status, "label": label, "count": counts.get(status, 0)}
-                for status, label in ParticipantSession.STATUS_CHOICES
-                if counts.get(status, 0) or status in {ParticipantSession.STATUS_ENTERED, ParticipantSession.STATUS_COMPLETED}
-            ]
-    except Exception:
-        logger.exception("Unable to build recruitment source summaries for course instance %s", course_instance.id)
+    study = getattr(course_instance, "study", None)
 
     context = {
         "course": course,
@@ -319,7 +315,9 @@ def course_configuration(request, instance_id):
         "module_types": Module.MODULE_TYPE_CHOICES[1:],
         "branch_condition_types": ModuleBranchRule.CONDITION_CHOICES,
         "question_types": ModuleFormQuestion.TYPE_CHOICES,
-        "research_conditions": sorted({condition for source in course_instance.recruitment_sources.all() for condition in source.conditions}),
+        "research_conditions": sorted(
+            {condition.label for condition in study.conditions.all()}
+        ) if study else [],
         "is_locked_for_research": course.is_locked_for_research,
         "research_has_participants": research_has_participants,
         "adaptive_branching_enabled": plugin_flags.get("adaptive_branching", False),
@@ -327,7 +325,7 @@ def course_configuration(request, instance_id):
             {**plugin, "enabled": plugin_flags.get(plugin["key"], False)}
             for plugin in available_course_plugins()
         ],
-        "recruitment_sources": recruitment_sources,
+        "study": study,
     }
     return render(request, "courses/course_configuration.html", context)
 
@@ -357,6 +355,10 @@ def _update_course_structure_controls(request, course):
         for source in instance.recruitment_sources.all()
         for condition in source.conditions
     )
+    for instance in course.instances.all():
+        study = getattr(instance, "study", None)
+        if study:
+            valid_conditions.update(study.conditions.values_list("label", flat=True))
 
     for group in rule_context:
         unit = group["unit"]
@@ -397,6 +399,100 @@ def _update_course_structure_controls(request, course):
                 "is_locked",
                 "unlock_rule",
             ])
+            _update_module_form_configuration(request, module)
+
+
+def _update_module_form_configuration(request, module):
+    module_form = ModuleForm.objects.filter(module=module).first()
+    if not module_form:
+        return
+
+    prefix = f"module_{module.id}_form"
+    module_form.instructions = request.POST.get(f"{prefix}_instructions", module_form.instructions)
+    module_form.submit_button_label = (
+        request.POST.get(f"{prefix}_submit_button_label", module_form.submit_button_label).strip()
+        or module_form.submit_button_label
+        or "Submit"
+    )
+    module_form.allow_resubmission = _parse_bool(request.POST.get(f"{prefix}_allow_resubmission"))
+    module_form.save(update_fields=["instructions", "submit_button_label", "allow_resubmission", "updated_at"])
+
+    valid_types = {choice[0] for choice in ModuleFormQuestion.TYPE_CHOICES}
+    for question in module_form.questions.all():
+        question_prefix = f"module_{module.id}_question_{question.id}"
+        if _parse_bool(request.POST.get(f"{question_prefix}_delete")):
+            question.delete()
+            continue
+        _update_form_question_from_post(request, question, question_prefix, valid_types)
+
+    for index in range(1, 4):
+        new_prefix = f"{prefix}_new_question_{index}"
+        prompt = request.POST.get(f"{new_prefix}_prompt")
+        prompt = (prompt or "").strip()
+        if not prompt:
+            continue
+        question_type = request.POST.get(f"{new_prefix}_question_type") or ModuleFormQuestion.TYPE_SHORT_ANSWER
+        if question_type not in valid_types:
+            question_type = ModuleFormQuestion.TYPE_SHORT_ANSWER
+
+        next_order = (
+            module_form.questions.aggregate(max_order=models.Max("order")).get("max_order") or 0
+        ) + 10
+        question = ModuleFormQuestion(form=module_form, prompt=prompt, question_type=question_type, order=next_order)
+        _update_new_form_question_from_post(request, question, new_prefix)
+        question.save()
+
+
+def _update_form_question_from_post(request, question, prefix, valid_types):
+    question.prompt = (request.POST.get(f"{prefix}_prompt") or "").strip() or question.prompt
+    question.help_text = (request.POST.get(f"{prefix}_help_text") or "").strip()
+    question_type = request.POST.get(f"{prefix}_question_type") or question.question_type
+    if question_type in valid_types:
+        question.question_type = question_type
+    question.required = _parse_bool(request.POST.get(f"{prefix}_required"))
+    try:
+        question.order = int(request.POST.get(f"{prefix}_order") or question.order or 0)
+    except (TypeError, ValueError):
+        question.order = 0
+    question.options = _parse_question_options(request.POST.get(f"{prefix}_options"))
+    question.likert_min_label = (
+        request.POST.get(f"{prefix}_likert_min_label") or "Strongly disagree"
+    ).strip()
+    question.likert_max_label = (
+        request.POST.get(f"{prefix}_likert_max_label") or "Strongly agree"
+    ).strip()
+    question.save(update_fields=[
+        "prompt",
+        "help_text",
+        "question_type",
+        "required",
+        "order",
+        "options",
+        "likert_min_label",
+        "likert_max_label",
+    ])
+
+
+def _update_new_form_question_from_post(request, question, prefix):
+    question.help_text = (request.POST.get(f"{prefix}_help_text") or "").strip()
+    question.required = _parse_bool(request.POST.get(f"{prefix}_required", "1"))
+    question.options = _parse_question_options(request.POST.get(f"{prefix}_options"))
+    question.likert_min_label = (
+        request.POST.get(f"{prefix}_likert_min_label")
+        or "Strongly disagree"
+    ).strip()
+    question.likert_max_label = (
+        request.POST.get(f"{prefix}_likert_max_label")
+        or "Strongly agree"
+    ).strip()
+
+
+def _parse_question_options(raw_options):
+    return [
+        option.strip()
+        for option in (raw_options or "").replace("\r\n", "\n").split("\n")
+        if option.strip()
+    ]
 
 
 def _normalize_unlock_settings(is_locked, rule_type, target_id, *, valid_module_ids, valid_conditions, has_previous_unit):
@@ -618,7 +714,7 @@ def _create_custom_module(request, course):
         supported_protocols=supported_protocols,
     )
 
-    if module_type == Module.MODULE_TYPE_FORM:
+    if module_type in Module.FORM_LIKE_TYPES:
         module_form = ModuleForm.objects.create(
             module=module,
             instructions=request.POST.get("form_instructions", ""),
@@ -671,10 +767,10 @@ def module_detail(request, instance_id, unit_id, module_id):
         raise PermissionDenied("Research participants can only access their assigned course session.")
     course = course_instance.course
     
-    # Check if user has access to this course instance
+    # Check if user has access to this course session
     if not (course_instance.instructors.filter(id=request.user.id).exists() or 
             course_instance.enrollments.filter(student=request.user).exists()):
-        raise PermissionDenied("You don't have access to this course instance.")
+        raise PermissionDenied("You don't have access to this course session.")
     
     unit = get_object_or_404(Unit, id=unit_id, course=course)
     module = get_object_or_404(Module, id=module_id, unit=unit)
@@ -694,7 +790,7 @@ def module_detail(request, instance_id, unit_id, module_id):
 @login_required
 def unenroll(request, course_id):
     """
-    Allows a user to unenroll from a course instance.
+    Allows a user to unenroll from a course session.
     """
     course_instance = get_object_or_404(CourseInstance, id=course_id)
     enrollment = Enrollment.objects.filter(
@@ -764,7 +860,7 @@ def launch_iframe_module(request, instance_id, module_id):
         record_module_launch(module_progress, source='iframe_launch')
         log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_LAUNCH)
 
-    if module.module_type == Module.MODULE_TYPE_FORM:
+    if module.module_type in Module.FORM_LIKE_TYPES:
         return _handle_form_module(request, course_instance, module, module_progress, is_instructor)
 
     if module.module_type == Module.MODULE_TYPE_FILE:
@@ -1304,14 +1400,14 @@ def preview_iframe_module(request, module_id):
             lti_tool = url_tool if url_tool else module.provider_id
     
     # For CodeCheck or SPLICE/PITT protocols: append session parameters directly to URL
-    # For preview mode, use minimal parameters since there's no course instance
+    # For preview mode, use minimal parameters since there's no course session
     use_proxy = False
     activity_url_with_params = content_url
     is_pcex_activity = is_pcex_url(content_url)
     is_pcrs_activity = is_pcrs_url(content_url)
     
     if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url_check:
-        # Build session parameters for preview (minimal since no course instance)
+        # Build session parameters for preview (minimal since no course session)
         # grp: 'preview' for instructor previews
         grp = 'preview'
         # usr: username
@@ -1377,7 +1473,7 @@ def preview_iframe_module(request, module_id):
     # Generate iframe src based on protocol
     if selected_protocol == 'lti':
         # Route through our LTI consumer which handles OAuth signing
-        # Include module_id but use 'preview' grp since no course instance
+        # Include module_id but use 'preview' grp since no course session
         
         iframe_src = (
             f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
@@ -1657,7 +1753,7 @@ def update_module_progress(request, module_id):
         course_instance = course_instance_query.first()
 
         if not course_instance:
-            return JsonResponse({'error': 'No active enrollment found for this course instance'}, status=404)
+            return JsonResponse({'error': 'No active enrollment found for this course session'}, status=404)
 
         allowed, reason = _user_can_access_module(request.user, course_instance, module)
         if not allowed:
@@ -1681,7 +1777,8 @@ def update_module_progress(request, module_id):
         participant_session = getattr(enrollment := course_progress.enrollment, 'participant_sessions', None)
         if participant_session is not None:
             session = enrollment.participant_sessions.filter(
-                recruitment_source__course_instance=course_instance
+                Q(recruitment_source__course_instance=course_instance)
+                | Q(recruitment_source__study__course_instance=course_instance)
             ).first()
             if session and session.status in {'entered', 'consented'}:
                 session.status = 'in_progress'
@@ -1709,7 +1806,7 @@ def update_module_progress(request, module_id):
 @require_POST
 def duplicate_course_instance(request, course_instance_id):
     """
-    Duplicates a course instance with a new group name.
+    Duplicates a course session with a new group name.
     """
     if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return JsonResponse({'success': False, 'error': 'Permission denied'})
@@ -1727,7 +1824,7 @@ def duplicate_course_instance(request, course_instance_id):
         if not course_instance.instructors.filter(id=request.user.id).exists():
             return JsonResponse({'success': False, 'error': 'Permission denied'})
             
-        # Duplicate the course instance
+        # Duplicate the course session
         new_instance = course_instance.duplicate(new_group_name)
         
         return JsonResponse({'success': True, 'new_instance_id': new_instance.id})
@@ -1735,7 +1832,7 @@ def duplicate_course_instance(request, course_instance_id):
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)})
     except Exception as e:
-        logger.error(f"Error duplicating course instance: {str(e)}")
+        logger.error(f"Error duplicating course session: {str(e)}")
         return JsonResponse({'success': False, 'error': 'An error occurred while duplicating the course'})
 
 @require_GET
@@ -1774,7 +1871,7 @@ def create_course_instance(request, course_id):
     """
     Creates a new instance of an existing course.
     """
-    logger.info(f"Attempting to create course instance for course_id: {course_id}, user: {request.user}")
+    logger.info(f"Attempting to create course session for course_id: {course_id}, user: {request.user}")
     
     if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         logger.warning(f"Permission denied: User {request.user} is not an instructor")
@@ -1807,14 +1904,14 @@ def create_course_instance(request, course_id):
             logger.warning(f"Group name '{group_name}' already exists for course {course_id}")
             return JsonResponse({'success': False, 'error': 'A session with this group name already exists'})
         
-        # Create new course instance
-        logger.info(f"Creating new course instance with group_name: {group_name}")
+        # Create new course session
+        logger.info(f"Creating new course session with group_name: {group_name}")
         instance = CourseInstance.objects.create(
             course=course,
             group_name=group_name
         )
         instance.instructors.add(request.user)
-        logger.info(f"Successfully created course instance id: {instance.id}")
+        logger.info(f"Successfully created course session id: {instance.id}")
         
         return JsonResponse({'success': True, 'instance_id': instance.id})
         
@@ -1825,7 +1922,7 @@ def create_course_instance(request, course_id):
         logger.error(f"Course not found: {course_id}")
         return JsonResponse({'success': False, 'error': 'Course not found'})
     except Exception as e:
-        logger.error(f"Unexpected error creating course instance: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected error creating course session: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred'})
 
 @login_required
@@ -1935,7 +2032,7 @@ def get_course_enrollments(request, course_instance_id):
         })
         
     except CourseInstance.DoesNotExist:
-        return JsonResponse({'error': 'Course instance not found'}, status=404)
+        return JsonResponse({'error': 'Course session not found'}, status=404)
     except Exception as e:
         logger.error(f"Error fetching enrollments: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
@@ -1943,10 +2040,10 @@ def get_course_enrollments(request, course_instance_id):
 @login_required
 @require_POST
 def bulk_enroll_students(request, course_instance_id):
-    logger.info("Starting bulk enrollment process for course instance %s", course_instance_id)
+    logger.info("Starting bulk enrollment process for course session %s", course_instance_id)
     try:
         course_instance = CourseInstance.objects.get(id=course_instance_id)
-        logger.info("Found course instance %s - %s", course_instance.id, course_instance.course.title)
+        logger.info("Found course session %s - %s", course_instance.id, course_instance.course.title)
         
         if request.user not in course_instance.instructors.all():
             logger.warning("User %s is not authorized for bulk enrollment on instance %s", request.user.username, course_instance.id)
@@ -2032,8 +2129,8 @@ def bulk_enroll_students(request, course_instance_id):
         })
         
     except CourseInstance.DoesNotExist:
-        logger.warning("Course instance %s not found during bulk enrollment", course_instance_id)
-        return JsonResponse({'error': 'Course instance not found'}, status=404)
+        logger.warning("Course session %s not found during bulk enrollment", course_instance_id)
+        return JsonResponse({'error': 'Course session not found'}, status=404)
     except Exception as e:
         logger.exception("Critical error in bulk enrollment for instance %s", course_instance_id)
         logger.error(f"Error in bulk enrollment: {str(e)}", exc_info=True)
@@ -2043,7 +2140,7 @@ def bulk_enroll_students(request, course_instance_id):
 @require_POST
 def remove_enrollment(request, enrollment_id):
     """
-    Remove a student's enrollment from a course instance
+    Remove a student's enrollment from a course session.
     """
     try:
         enrollment = Enrollment.objects.select_related('course_instance').get(id=enrollment_id)
@@ -2079,14 +2176,14 @@ def delete_course_instance(request, instance_id):
     try:
         instance = CourseInstance.objects.get(id=instance_id)
         
-        # Check if user is an instructor for this course instance
+        # Check if user is an instructor for this course session
         if request.user not in instance.instructors.all():
             return JsonResponse({'error': 'Not authorized'}, status=403)
             
         instance.delete()
         return JsonResponse({'success': True})
     except CourseInstance.DoesNotExist:
-        return JsonResponse({'error': 'Course instance not found'}, status=404)
+        return JsonResponse({'error': 'Course session not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 

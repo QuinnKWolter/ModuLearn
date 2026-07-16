@@ -1,13 +1,35 @@
 from django.contrib import admin
 
-from .models import ParticipantSession, RecruitmentAssignmentSlot, RecruitmentEntryLog, RecruitmentSource
+from .models import (
+    ParticipantSession,
+    RecruitmentAssignmentSlot,
+    RecruitmentEntryLog,
+    RecruitmentSource,
+    Study,
+    StudyCondition,
+)
+
+
+class StudyConditionInline(admin.TabularInline):
+    model = StudyCondition
+    extra = 0
+
+
+@admin.register(Study)
+class StudyAdmin(admin.ModelAdmin):
+    list_display = ("title", "slug", "status", "version_label", "course_instance", "created_at")
+    list_filter = ("status",)
+    search_fields = ("title", "slug", "description", "course_instance__group_name", "course_instance__course__title")
+    readonly_fields = ("created_at", "updated_at")
+    filter_horizontal = ("instructors",)
+    inlines = [StudyConditionInline]
 
 
 @admin.register(RecruitmentSource)
 class RecruitmentSourceAdmin(admin.ModelAdmin):
-    list_display = ("id", "course_instance", "platform", "label", "is_active", "max_participants", "condition_strategy", "created_at")
+    list_display = ("id", "study", "course_instance", "platform", "label", "is_active", "max_participants", "condition_strategy", "created_at")
     list_filter = ("platform", "is_active", "condition_strategy")
-    search_fields = ("label", "course_instance__group_name", "course_instance__course__title", "prolific_study_id", "sona_experiment_id")
+    search_fields = ("label", "study__title", "course_instance__group_name", "course_instance__course__title", "prolific_study_id", "sona_experiment_id")
     readonly_fields = ("created_at", "updated_at")
 
 

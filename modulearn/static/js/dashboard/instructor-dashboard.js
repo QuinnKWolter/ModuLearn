@@ -62,6 +62,24 @@
       resourcesClient.bindTriggers(app);
     }
 
+    app.addEventListener('click', async function handleDashboardCopy(event) {
+      const button = event.target.closest('[data-copy-from]');
+      if (!button) return;
+      const target = app.querySelector(`[data-copy-target="${button.dataset.copyFrom}"]`);
+      if (!target) return;
+      const originalText = button.textContent;
+      try {
+        await navigator.clipboard.writeText(target.value || target.textContent || '');
+        button.textContent = 'Copied';
+        window.setTimeout(() => {
+          button.textContent = originalText;
+        }, 1200);
+      } catch (error) {
+        target.focus();
+        if (target.select) target.select();
+      }
+    });
+
     function csrfHeaders(extraHeaders) {
       return Object.assign({ 'X-CSRFToken': config.csrfToken }, extraHeaders || {});
     }

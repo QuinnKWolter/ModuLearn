@@ -845,6 +845,7 @@ def _cache_pcex_activity_metadata(request, parsed_url, content: bytes):
         if isinstance(goal, dict) and not bool(goal.get("fullyWorkedOut"))
     )
     total_goal_count = student_goal_count or len(goals) or 1
+    worked_examples = _pcex_worked_example_metadata(goals)
 
     state = _session_pcex_state(request)
     existing = state.get(context_key, {})
@@ -854,10 +855,90 @@ def _cache_pcex_activity_metadata(request, parsed_url, content: bytes):
     existing["activity_id"] = payload.get("activityName") or _first_query_value(params, "set")
     existing.setdefault("correct_tracking_ids", [])
     existing.setdefault("attempts", 0)
+    if worked_examples:
+        existing["worked_examples"] = worked_examples
+        existing.setdefault("viewed_explanation_steps", [])
     state[context_key] = existing
     request.session["pcex_tracking_state"] = state
     request.session.modified = True
-    logger.info("[PCEX Tracking] Cached %s student-facing goals for %s", total_goal_count, context_key)
+    logger.info(
+        "[PCEX Tracking] Cached %s student-facing goals and %s worked examples for %s",
+        total_goal_count,
+        len(worked_examples),
+        context_key,
+    )
+
+
+def _pcex_worked_example_metadata(goals: list[dict]) -> dict:
+    worked_examples = {}
+    for goal in goals:
+        if not isinstance(goal, dict) or not bool(goal.get("fullyWorkedOut")):
+            continue
+        steps = _pcex_explanation_steps_for_goal(goal)
+        if not steps:
+            continue
+        goal_names = [
+            str(goal.get("fileName") or "").strip(),
+            str(goal.get("name") or "").strip(),
+            str(goal.get("id") or "").strip(),
+        ]
+        metadata = {
+            "goal_id": goal.get("id") or "",
+            "goal_name": goal.get("name") or "",
+            "file_name": goal.get("fileName") or "",
+            "step_count": len(steps),
+            "steps": steps,
+            "final_explanation_line": _pcex_final_explanation_line(goal),
+        }
+        for goal_name in goal_names:
+            if goal_name:
+                worked_examples[goal_name] = metadata
+    return worked_examples
+
+
+def _pcex_explanation_steps_for_goal(goal: dict) -> list[str]:
+    steps = []
+    for line in goal.get("lineList") or []:
+        if not isinstance(line, dict):
+            continue
+        line_number = line.get("number")
+        comments = line.get("commentList") or []
+        if not isinstance(comments, list):
+            comments = [comments]
+        non_empty_comments = [comment for comment in comments if str(comment or "").strip()]
+        for index, _comment in enumerate(non_empty_comments, start=1):
+            steps.append(_pcex_explanation_step_key(line_number, index))
+    return steps
+
+
+def _pcex_final_explanation_line(goal: dict):
+    final_line = None
+    for line in goal.get("lineList") or []:
+        if not isinstance(line, dict):
+            continue
+        comments = line.get("commentList") or []
+        if not isinstance(comments, list):
+            comments = [comments]
+        if not any(str(comment or "").strip() for comment in comments):
+            continue
+        try:
+            line_number = int(line.get("number"))
+        except (TypeError, ValueError):
+            continue
+        final_line = line_number if final_line is None else max(final_line, line_number)
+    return final_line
+
+
+def _pcex_explanation_step_key(line_number, explanation_level) -> str:
+    try:
+        normalized_line = int(line_number)
+    except (TypeError, ValueError):
+        normalized_line = str(line_number or "").strip()
+    try:
+        normalized_level = int(explanation_level)
+    except (TypeError, ValueError):
+        normalized_level = str(explanation_level or "").strip() or 1
+    return f"{normalized_line}:{normalized_level}"
 
 
 def _pcex_result_state(request, params: dict, payload: dict) -> tuple[int, int, float, bool]:
@@ -928,6 +1009,241 @@ def _infer_pcex_goal_count_from_remote(params: dict) -> int | None:
     return student_goal_count or len(goals) or None
 
 
+def _infer_pcex_worked_examples_from_remote(params: dict) -> dict:
+    set_id = _first_query_value(params, "set")
+    language = _first_query_value(params, "lang", "PYTHON") or "PYTHON"
+    if not set_id:
+        return {}
+
+    candidate_urls = [
+        f"http://pawscomp2.sis.pitt.edu/pcex/pcex_v2/data/{language}_{set_id}.json",
+        f"http://pawscomp2.sis.pitt.edu/pcex/pcex_v1/data/{language}_{set_id}.json",
+    ]
+    for target_url in candidate_urls:
+        try:
+            response = requests.get(target_url, timeout=4)
+            response.raise_for_status()
+            payload = response.json()
+        except Exception:
+            logger.debug("[PCEX Tracking] Could not infer worked examples from %s", target_url, exc_info=True)
+            continue
+        goals = payload.get("activityGoals") if isinstance(payload, dict) else None
+        if isinstance(goals, list):
+            worked_examples = _pcex_worked_example_metadata(goals)
+            if worked_examples:
+                return worked_examples
+    return {}
+
+
+def _pcex_local_progress_context(params: dict):
+    course_id = _first_query_value(params, "cid")
+    username = _first_query_value(params, "usr")
+    group_name = _first_query_value(params, "grp")
+    if not (course_id and username):
+        logger.warning("[PCEX Tracking] Missing cid/usr in referer; cannot map local progress")
+        return None
+
+    from django.contrib.auth import get_user_model
+    from courses.models import Course, CourseInstance
+
+    course = Course.objects.filter(id=course_id).first()
+    user = get_user_model().objects.filter(username=username).first()
+    if not course or not user:
+        logger.warning("[PCEX Tracking] Could not find course/user for cid=%s usr=%s", course_id, username)
+        return None
+
+    instance_qs = CourseInstance.objects.filter(course=course, enrollments__student=user)
+    if group_name:
+        instance_qs = instance_qs.filter(group_name=group_name)
+    course_instance = instance_qs.order_by("-active", "-id").first()
+    module = _find_pcex_module(course, params)
+    if not course_instance or not module:
+        logger.warning(
+            "[PCEX Tracking] Could not map course session/module for cid=%s grp=%s module_id=%s",
+            course_id,
+            group_name,
+            _first_query_value(params, "module_id"),
+        )
+        return None
+    return course, user, course_instance, module
+
+
+def _capture_pcex_activity_if_possible(request, rest: str, response: HttpResponse):
+    if request.method != "POST" or rest.rstrip("/") != "api/track/activity":
+        return
+    if getattr(response, "status_code", 500) >= 400:
+        return
+
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+    except (TypeError, ValueError, UnicodeDecodeError):
+        logger.warning("[PCEX Tracking] Could not parse activity payload as JSON")
+        return
+
+    tracking_payload = _pcex_tracking_payload(payload)
+    goal_name = str(tracking_payload.get("goal_name") or "").strip()
+    if not goal_name:
+        return
+
+    params = _referer_query_params(request)
+    context_key = _pcex_context_key(params)
+    if not context_key.strip(":"):
+        return
+
+    state = _session_pcex_state(request)
+    entry = state.get(context_key, {})
+    if not isinstance(entry, dict):
+        entry = {}
+    if not entry.get("worked_examples"):
+        worked_examples = _infer_pcex_worked_examples_from_remote(params)
+        if worked_examples:
+            entry["worked_examples"] = worked_examples
+    entry["active_worked_goal_name"] = goal_name
+    entry["last_activity_payload"] = tracking_payload
+    entry.setdefault("viewed_explanation_steps", [])
+    state[context_key] = entry
+    if hasattr(request, "session"):
+        request.session["pcex_tracking_state"] = state
+        request.session.modified = True
+    logger.info("[PCEX Tracking] Active worked example set to %s for %s", goal_name, context_key)
+
+
+def _pcex_worked_example_state(request, params: dict, payload: dict) -> tuple[int, int, float, bool, str, list[str]]:
+    tracking_payload = _pcex_tracking_payload(payload)
+    state = _session_pcex_state(request)
+    context_key = _pcex_context_key(params)
+    entry = state.get(context_key, {})
+    if not isinstance(entry, dict):
+        entry = {}
+
+    worked_examples = entry.get("worked_examples")
+    if not isinstance(worked_examples, dict) or not worked_examples:
+        worked_examples = _infer_pcex_worked_examples_from_remote(params)
+        if worked_examples:
+            entry["worked_examples"] = worked_examples
+
+    active_goal_name = str(entry.get("active_worked_goal_name") or "").strip()
+    if active_goal_name not in worked_examples and len(worked_examples) == 1:
+        active_goal_name = next(iter(worked_examples))
+        entry["active_worked_goal_name"] = active_goal_name
+
+    metadata = worked_examples.get(active_goal_name, {}) if isinstance(worked_examples, dict) else {}
+    known_steps = metadata.get("steps") if isinstance(metadata, dict) else []
+    if not isinstance(known_steps, list):
+        known_steps = []
+    known_step_set = set(str(step) for step in known_steps if str(step or "").strip())
+
+    viewed_steps = entry.get("viewed_explanation_steps") or []
+    if not isinstance(viewed_steps, list):
+        viewed_steps = []
+
+    step_key = _pcex_explanation_step_key(
+        tracking_payload.get("line_number"),
+        tracking_payload.get("explanation_level") or 1,
+    )
+    if step_key and step_key not in viewed_steps:
+        viewed_steps.append(step_key)
+
+    try:
+        current_line = int(tracking_payload.get("line_number"))
+    except (TypeError, ValueError):
+        current_line = None
+    try:
+        final_explanation_line = int(metadata.get("final_explanation_line"))
+    except (TypeError, ValueError, AttributeError):
+        final_explanation_line = None
+    reached_final_line = (
+        current_line is not None
+        and final_explanation_line is not None
+        and current_line >= final_explanation_line
+    )
+
+    if known_step_set:
+        completed = len([step for step in viewed_steps if step in known_step_set])
+        total = len(known_step_set)
+        is_complete = completed >= total or reached_final_line
+        if is_complete:
+            completed = total
+        progress = 1.0 if is_complete else (completed / total if total else 0.0)
+    else:
+        completed = len(viewed_steps)
+        total = max(completed, 1)
+        is_complete = reached_final_line
+        progress = 1.0 if is_complete else min(completed / total, 0.95)
+
+    entry["viewed_explanation_steps"] = viewed_steps
+    state[context_key] = entry
+    if hasattr(request, "session"):
+        request.session["pcex_tracking_state"] = state
+        request.session.modified = True
+
+    return completed, total, progress, is_complete, active_goal_name, viewed_steps
+
+
+def _capture_pcex_explanation_if_possible(request, rest: str, response: HttpResponse):
+    if request.method != "POST" or rest.rstrip("/") != "api/track/explanation":
+        return
+    if getattr(response, "status_code", 500) >= 400:
+        return
+
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+    except (TypeError, ValueError, UnicodeDecodeError):
+        logger.warning("[PCEX Tracking] Could not parse explanation payload as JSON")
+        return
+
+    params = _referer_query_params(request)
+    local_context = _pcex_local_progress_context(params)
+    if not local_context:
+        return
+
+    try:
+        from courses.models import ModuleProgress
+        from modulearn.learning.services.progress import apply_progress_snapshot
+
+        _course, user, course_instance, module = local_context
+        completed, total, progress, is_complete, goal_name, viewed_steps = _pcex_worked_example_state(
+            request,
+            params,
+            payload,
+        )
+        score = progress * 100.0
+        module_progress, _ = ModuleProgress.get_or_create_progress(
+            user=user,
+            module=module,
+            course_instance=course_instance,
+        )
+        progress = max(progress, module_progress.progress or 0.0)
+        score = max(score, module_progress.score or 0.0)
+        is_complete = bool(module_progress.is_complete or is_complete)
+        apply_progress_snapshot(
+            module_progress,
+            source="pcex_worked_example",
+            progress=progress,
+            score=score,
+            success=is_complete,
+            is_complete=is_complete,
+            payload={
+                "pcex_explanation": payload,
+                "worked_example_goal": goal_name,
+                "viewed_explanation_steps": viewed_steps,
+                "completed_explanation_steps": completed,
+                "explanation_step_count": total,
+                "progress_percent": score,
+            },
+            event_type="progress",
+        )
+        logger.info(
+            "[PCEX Tracking] Recorded worked-example explanation for user=%s module=%s progress=%s/%s",
+            user.username,
+            module.id,
+            completed,
+            total,
+        )
+    except Exception:
+        logger.exception("[PCEX Tracking] Failed to record worked-example progress")
+
+
 def _pcex_payload_is_correct(payload: dict) -> bool:
     return (
         str(payload.get("result", "")).lower() in {"1", "true"}
@@ -979,7 +1295,7 @@ def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse)
         module = _find_pcex_module(course, params)
         if not course_instance or not module:
             logger.warning(
-                "[PCEX Tracking] Could not map course instance/module for cid=%s grp=%s module_id=%s",
+                "[PCEX Tracking] Could not map course session/module for cid=%s grp=%s module_id=%s",
                 course_id,
                 group_name,
                 _first_query_value(params, "module_id"),
@@ -1091,6 +1407,8 @@ def forward_to_adapt2(request, rest: str):
         
         proxy_request = ProxyRequest(request, proxy_path)
         response = http_get_proxy(proxy_request, _redirect_depth=0)
+        _capture_pcex_activity_if_possible(request, rest, response)
+        _capture_pcex_explanation_if_possible(request, rest, response)
         _capture_pcex_result_if_possible(request, rest, response)
         return response
     else:
@@ -1214,7 +1532,10 @@ def http_get_proxy_path(request, rest: str):
             if result is None:
                 return HttpResponseServerError("Proxy request returned None")
             if host in {"pawscomp2.sis.pitt.edu", "adapt2.sis.pitt.edu"} and path_rest.startswith("pcex/"):
-                _capture_pcex_result_if_possible(request, path_rest[len("pcex/"):], result)
+                pcex_rest = path_rest[len("pcex/"):]
+                _capture_pcex_activity_if_possible(request, pcex_rest, result)
+                _capture_pcex_explanation_if_possible(request, pcex_rest, result)
+                _capture_pcex_result_if_possible(request, pcex_rest, result)
             capture_pcrs_result_if_possible(request, host, path_rest, result)
             return result
         else:

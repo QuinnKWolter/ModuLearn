@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 import json
+from urllib.parse import urlparse
 
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase, override_settings
@@ -28,7 +29,12 @@ from modulearn.learning.services.progress import apply_progress_snapshot
 from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
 from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_possible
 from modulearn.learning.selectors.courses import build_course_detail_context
-from modulearn.views_proxy import http_get_proxy_path
+from modulearn.views_proxy import (
+    _cache_pcex_activity_metadata,
+    _capture_pcex_activity_if_possible,
+    _capture_pcex_explanation_if_possible,
+    http_get_proxy_path,
+)
 from courses.demo_courses import create_adaptive_branching_demo_course, create_intro_python_demo_course
 from courses.utils import create_course_from_json
 
@@ -42,8 +48,13 @@ MODERN_SLC_SPLICE_URL = (
 )
 
 
+class DummySession(dict):
+    modified = False
+
+
 class CourseProgressTests(TestCase):
     def setUp(self):
+        self.factory = RequestFactory()
         self.student = User.objects.create_user(
             username='student-course',
             email='student-course@example.com',
@@ -105,6 +116,148 @@ class CourseProgressTests(TestCase):
             .values_list('event_type', flat=True)
         )
         self.assertEqual(event_types, ['completion'])
+
+    def _pcex_worked_example_referer(self):
+        return (
+            'http://testserver/proxy/http/pawscomp2.sis.pitt.edu/pcex/pcex_v2/index.html?'
+            f'lang=JAVA&set=artithmetic.inc_dec_operators&grp={self.instance.group_name}'
+            f'&usr={self.student.username}&sid=test-session&cid={self.course.id}&module_id={self.module_a.id}'
+        )
+
+    def _cache_sample_pcex_worked_example(self, session, referer):
+        request = self.factory.get(
+            '/proxy/http/pawscomp2.sis.pitt.edu/pcex/pcex_v2/data/JAVA_artithmetic.inc_dec_operators.json',
+            HTTP_REFERER=referer,
+        )
+        request.session = session
+        _cache_pcex_activity_metadata(
+            request,
+            urlparse('http://pawscomp2.sis.pitt.edu/pcex/pcex_v2/data/JAVA_artithmetic.inc_dec_operators.json'),
+            json.dumps({
+                'activityName': 'artithmetic.inc_dec_operators',
+                'activityGoals': [{
+                    'id': 'worked-1',
+                    'name': 'Increment/Decrement Operators (Case 1)',
+                    'fileName': 'JDecInc1.java',
+                    'fullyWorkedOut': True,
+                    'lineList': [
+                        {'number': 4, 'commentList': ['Define a.']},
+                        {'number': 5, 'commentList': ['Define b.']},
+                        {'number': 7, 'commentList': ['First output.', 'Post increment.', 'Rule note.']},
+                        {'number': 9, 'commentList': ['Second output.', 'Pre increment.', 'Rule note.']},
+                    ],
+                }],
+            }).encode('utf-8'),
+        )
+
+    def _mark_sample_pcex_activity_started(self, session, referer):
+        activity_request = self.factory.post(
+            '/pcex/api/track/activity',
+            data=json.dumps({
+                'trackingData': {
+                    'user_id': self.student.username,
+                    'group_id': self.instance.group_name,
+                    'session_id': 'test-session',
+                    'activity_set_name': 'artithmetic.inc_dec_operators',
+                    'activity_type': 'ex',
+                    'goal_name': 'JDecInc1.java',
+                }
+            }),
+            content_type='application/json',
+            HTTP_REFERER=referer,
+        )
+        activity_request.session = session
+        _capture_pcex_activity_if_possible(activity_request, 'api/track/activity', HttpResponse('{}'))
+
+    def _post_pcex_explanation(self, session, referer, line_number, explanation_level):
+        explanation_request = self.factory.post(
+            '/pcex/api/track/explanation',
+            data=json.dumps({
+                'trackingData': {
+                    'tracking_id': f'{line_number}-{explanation_level}',
+                    'explanation_type': 'sequential',
+                    'explanation_level': explanation_level,
+                    'line_number': line_number,
+                }
+            }),
+            content_type='application/json',
+            HTTP_REFERER=referer,
+        )
+        explanation_request.session = session
+        _capture_pcex_explanation_if_possible(
+            explanation_request,
+            'api/track/explanation',
+            HttpResponse('{}'),
+        )
+
+    def test_pcex_worked_example_explanation_clicks_update_progress(self):
+        self.module_a.content_url = (
+            'http://pawscomp2.sis.pitt.edu/pcex/pcex_v2/index.html?'
+            'lang=JAVA&set=artithmetic.inc_dec_operators'
+        )
+        self.module_a.provider_id = 'pcex'
+        self.module_a.save(update_fields=['content_url', 'provider_id'])
+        session = DummySession()
+        referer = self._pcex_worked_example_referer()
+        self._cache_sample_pcex_worked_example(session, referer)
+        self._mark_sample_pcex_activity_started(session, referer)
+
+        self._post_pcex_explanation(session, referer, 5, 1)
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertAlmostEqual(module_progress.progress, 1 / 8)
+        self.assertFalse(module_progress.is_complete)
+        self.assertEqual(module_progress.state_data['completed_explanation_steps'], 1)
+        self.assertEqual(module_progress.state_data['explanation_step_count'], 8)
+
+    def test_pcex_worked_example_completes_after_all_known_explanations(self):
+        self.module_a.content_url = (
+            'http://pawscomp2.sis.pitt.edu/pcex/pcex_v2/index.html?'
+            'lang=JAVA&set=artithmetic.inc_dec_operators'
+        )
+        self.module_a.provider_id = 'pcex'
+        self.module_a.save(update_fields=['content_url', 'provider_id'])
+        session = DummySession()
+        referer = self._pcex_worked_example_referer()
+        self._cache_sample_pcex_worked_example(session, referer)
+        self._mark_sample_pcex_activity_started(session, referer)
+
+        for line_number, explanation_level in [
+            (4, 1), (5, 1), (7, 1), (7, 2), (7, 3), (9, 1), (9, 2), (9, 3),
+        ]:
+            self._post_pcex_explanation(session, referer, line_number, explanation_level)
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(module_progress.progress, 1.0)
+        self.assertEqual(module_progress.score, 100.0)
+        self.assertTrue(module_progress.is_complete)
+        self.assertTrue(
+            ModuleProgressEvent.objects.filter(module_progress=module_progress, event_type='completion').exists()
+        )
+
+    def test_pcex_worked_example_final_line_marks_complete_even_if_last_detail_not_emitted(self):
+        self.module_a.content_url = (
+            'http://pawscomp2.sis.pitt.edu/pcex/pcex_v2/index.html?'
+            'lang=JAVA&set=artithmetic.inc_dec_operators'
+        )
+        self.module_a.provider_id = 'pcex'
+        self.module_a.save(update_fields=['content_url', 'provider_id'])
+        session = DummySession()
+        referer = self._pcex_worked_example_referer()
+        self._cache_sample_pcex_worked_example(session, referer)
+        self._mark_sample_pcex_activity_started(session, referer)
+
+        for line_number, explanation_level in [
+            (4, 1), (5, 1), (7, 1), (7, 2), (7, 3), (9, 1), (9, 2),
+        ]:
+            self._post_pcex_explanation(session, referer, line_number, explanation_level)
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(module_progress.progress, 1.0)
+        self.assertEqual(module_progress.score, 100.0)
+        self.assertTrue(module_progress.is_complete)
+        self.assertEqual(module_progress.state_data['completed_explanation_steps'], 8)
+        self.assertEqual(module_progress.state_data['explanation_step_count'], 8)
 
     def test_pcrs_legacy_feedback_image_paths_redirect_to_local_assets(self):
         red_response = self.client.get('/mgrids/static/problems/img/red-sad-face.jpg')

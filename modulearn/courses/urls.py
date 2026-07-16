@@ -20,7 +20,7 @@ urlpatterns = [
     path('<str:course_instance_id>/enrollments/', views.get_course_enrollments, name='get_course_enrollments'),
     path('<str:course_instance_id>/bulk-enroll/', views.bulk_enroll_students, name='bulk_enroll_students'),
     path('enrollment/<int:enrollment_id>/remove/', views.remove_enrollment, name='remove_enrollment'),
-    # Create enrollment code for a specific course instance
+    # Create enrollment code for a specific course session
     path('instance/<int:course_instance_id>/create_enrollment_code/', views.create_enrollment_code, name='create_enrollment_code'),
     path('<str:course_id>/create-instance/', views.create_course_instance, name='create_course_instance'),
     path('<str:course_id>/details/', views.course_details, name='course_details'),

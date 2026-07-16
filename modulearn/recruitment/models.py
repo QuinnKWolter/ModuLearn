@@ -6,9 +6,86 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.text import slugify
 
 from courses.models import CourseInstance, Enrollment
 from .fields import EncryptedCharField
+
+
+class Study(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_ACTIVE = "active"
+    STATUS_ARCHIVED = "archived"
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_ARCHIVED, "Archived"),
+    ]
+
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=140, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    version_label = models.CharField(max_length=64, default="v1.0", blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    course_instance = models.OneToOneField(
+        CourseInstance,
+        on_delete=models.CASCADE,
+        related_name="study",
+    )
+    instructors = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="studies_led",
+        limit_choices_to={"is_instructor": True},
+        blank=True,
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "title"]
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="study_status_created_idx"),
+        ]
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self._unique_slug()
+        super().save(*args, **kwargs)
+
+    def _unique_slug(self):
+        base = slugify(self.title)[:120] or "study"
+        candidate = base
+        suffix = 2
+        while Study.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+            candidate = f"{base[:112]}-{suffix}"
+            suffix += 1
+        return candidate
+
+    @property
+    def active_conditions(self):
+        return self.conditions.filter(is_active=True).order_by("order", "id")
+
+
+class StudyCondition(models.Model):
+    study = models.ForeignKey(Study, on_delete=models.CASCADE, related_name="conditions")
+    label = models.CharField(max_length=32)
+    name = models.CharField(max_length=120, blank=True)
+    description = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["study", "label"], name="uniq_study_condition_label"),
+        ]
+
+    def __str__(self):
+        return self.name or self.label
 
 
 class RecruitmentSource(models.Model):
@@ -28,10 +105,19 @@ class RecruitmentSource(models.Model):
         (CONDITION_SCHEDULE, "Preallocated schedule"),
     ]
 
-    course_instance = models.ForeignKey(
-        CourseInstance,
+    study = models.ForeignKey(
+        Study,
         on_delete=models.CASCADE,
         related_name="recruitment_sources",
+        null=True,
+        blank=True,
+    )
+    course_instance = models.ForeignKey(
+        CourseInstance,
+        on_delete=models.SET_NULL,
+        related_name="recruitment_sources",
+        null=True,
+        blank=True,
     )
     platform = models.CharField(max_length=16, choices=PLATFORM_CHOICES)
     label = models.CharField(max_length=120, blank=True)
@@ -71,19 +157,33 @@ class RecruitmentSource(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["course_instance", "platform"],
+                condition=Q(study__isnull=True),
                 name="uniq_recruitment_source_per_instance_platform",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["study", "platform"],
+                condition=Q(study__isnull=False),
+                name="uniq_recruitment_source_per_study_platform",
+            ),
         ]
-        ordering = ["course_instance_id", "platform", "id"]
+        ordering = ["study_id", "course_instance_id", "platform", "id"]
 
     def __str__(self):
         label = self.label or self.get_platform_display()
-        return f"{label} for {self.course_instance}"
+        return f"{label} for {self.study or self.course_instance}"
 
     @property
     def conditions(self) -> list[str]:
+        if self.study_id:
+            labels = list(
+                self.study.conditions.filter(is_active=True)
+                .order_by("order", "id")
+                .values_list("label", flat=True)
+            )
+            if labels:
+                return labels
         labels = [item.strip() for item in (self.condition_labels or "").split(",") if item.strip()]
-        return labels[:1] or ["default"]
+        return labels or ["default"]
 
     @property
     def session_condition(self) -> str:
@@ -94,6 +194,12 @@ class RecruitmentSource(models.Model):
 
     def has_capacity(self) -> bool:
         return self.max_participants is None or self.participant_count() < self.max_participants
+
+    @property
+    def resolved_course_instance(self):
+        if self.study_id:
+            return self.study.course_instance
+        return self.course_instance
 
 
 class RecruitmentAssignmentSlot(models.Model):

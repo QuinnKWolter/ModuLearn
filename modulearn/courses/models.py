@@ -61,7 +61,7 @@ class CourseInstance(models.Model):
     def duplicate(self, new_group_name):
         """Create a new instance of this course with a different group name"""
         if CourseInstance.objects.filter(course=self.course, group_name=new_group_name).exists():
-            raise ValueError("A course instance with this group name already exists")
+            raise ValueError("A course session with this group name already exists")
         
         new_instance = CourseInstance.objects.create(
             course=self.course,
@@ -105,13 +105,31 @@ class Module(models.Model):
     MODULE_TYPE_SPLICE_SMART_CONTENT = 'splice_smart_content'
     MODULE_TYPE_FILE = 'file'
     MODULE_TYPE_FORM = 'form'
+    MODULE_TYPE_STUDY_CONSENT = 'study_consent'
+    MODULE_TYPE_STUDY_INSTRUCTIONS = 'study_instructions'
+    MODULE_TYPE_STUDY_PRETEST = 'study_pretest'
+    MODULE_TYPE_STUDY_POSTTEST = 'study_posttest'
+    MODULE_TYPE_STUDY_DEBRIEF = 'study_debrief'
     MODULE_TYPE_CHOICES = [
         (MODULE_TYPE_IMPORTED, 'Imported Activity'),
         (MODULE_TYPE_EXTERNAL_LINK, 'External Link'),
         (MODULE_TYPE_SPLICE_SMART_CONTENT, 'SPLICE Smart Learning Content'),
         (MODULE_TYPE_FILE, 'Uploaded File'),
         (MODULE_TYPE_FORM, 'Form / Survey'),
+        (MODULE_TYPE_STUDY_CONSENT, 'Study Consent'),
+        (MODULE_TYPE_STUDY_INSTRUCTIONS, 'Study Instructions'),
+        (MODULE_TYPE_STUDY_PRETEST, 'Study Pretest'),
+        (MODULE_TYPE_STUDY_POSTTEST, 'Study Posttest'),
+        (MODULE_TYPE_STUDY_DEBRIEF, 'Study Debrief'),
     ]
+    FORM_LIKE_TYPES = {
+        MODULE_TYPE_FORM,
+        MODULE_TYPE_STUDY_CONSENT,
+        MODULE_TYPE_STUDY_INSTRUCTIONS,
+        MODULE_TYPE_STUDY_PRETEST,
+        MODULE_TYPE_STUDY_POSTTEST,
+        MODULE_TYPE_STUDY_DEBRIEF,
+    }
 
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='modules', null=True, blank=True)
     title = models.CharField(max_length=255)
@@ -289,6 +307,14 @@ class ModuleProgress(models.Model):
     # State data
     state_data = models.JSONField(blank=True, null=True)
     last_response = models.TextField(blank=True)
+    study_participant_session = models.ForeignKey(
+        "recruitment.ParticipantSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="module_progress",
+    )
+    study_condition = models.CharField(max_length=32, blank=True)
     
     # LTI fields
     lis_result_sourcedid = models.CharField(max_length=255, null=True, blank=True)
@@ -297,13 +323,47 @@ class ModuleProgress(models.Model):
     class Meta:
         unique_together = [('user', 'module', 'enrollment')]
 
+    @staticmethod
+    def participant_session_for_enrollment(enrollment):
+        if not enrollment:
+            return None
+        try:
+            from django.db.models import Q
+
+            return (
+                enrollment.participant_sessions.filter(
+                    Q(recruitment_source__course_instance=enrollment.course_instance)
+                    | Q(recruitment_source__study__course_instance=enrollment.course_instance)
+                )
+                .order_by("-entered_at", "-id")
+                .first()
+            )
+        except Exception:
+            return None
+
+    def attach_participant_session(self, participant_session=None, *, save=True):
+        participant_session = participant_session or self.participant_session_for_enrollment(self.enrollment)
+        if not participant_session:
+            return False
+        changed = False
+        if self.study_participant_session_id != participant_session.id:
+            self.study_participant_session = participant_session
+            changed = True
+        condition = participant_session.condition or ""
+        if self.study_condition != condition:
+            self.study_condition = condition
+            changed = True
+        if changed and save:
+            self.save(update_fields=["study_participant_session", "study_condition", "last_accessed"])
+        return changed
+
     def __str__(self):
         return f"{self.user.username}'s progress in {self.module.title}"
 
     @classmethod
     def get_or_create_progress(cls, user, module, course_instance):
-        """Get or create progress record based on user role in this specific course instance"""
-        # First, check if user is instructor for this course instance
+        """Get or create progress record based on user role in this specific course session"""
+        # First, check if user is instructor for this course session
         is_instructor = course_instance.instructors.filter(id=user.id).exists()
         
         if is_instructor:
@@ -322,11 +382,13 @@ class ModuleProgress(models.Model):
             except Enrollment.DoesNotExist:
                 enrollment = Enrollment.objects.create(student=user, course_instance=course_instance)
             
-            return cls.objects.get_or_create(
+            module_progress, created = cls.objects.get_or_create(
                 user=user,
                 module=module,
                 enrollment=enrollment
             )
+            module_progress.attach_participant_session()
+            return module_progress, created
 
     def update_progress(self, new_progress):
         """Update module progress and potentially submit course grade"""
@@ -796,6 +858,14 @@ class ModuleProgressEvent(models.Model):
     score = models.FloatField(null=True, blank=True)
     success = models.BooleanField(default=False)
     payload = models.JSONField(default=dict, blank=True)
+    study_participant_session = models.ForeignKey(
+        "recruitment.ParticipantSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="module_progress_events",
+    )
+    study_condition = models.CharField(max_length=32, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -831,12 +901,15 @@ def create_module_progress_records(sender, instance, created, **kwargs):
         module_progress_list = []
         modules = Module.objects.filter(unit__course=instance.course_instance.course)
         
+        participant_session = ModuleProgress.participant_session_for_enrollment(instance)
         for module in modules:
             module_progress_list.append(
                 ModuleProgress(
                     user=instance.student,
                     module=module,
-                    enrollment=instance
+                    enrollment=instance,
+                    study_participant_session=participant_session,
+                    study_condition=getattr(participant_session, "condition", "") or "",
                 )
             )
         ModuleProgress.objects.bulk_create(module_progress_list)

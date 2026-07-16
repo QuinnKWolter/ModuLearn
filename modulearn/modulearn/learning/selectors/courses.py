@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from courses.models import CourseProgress, Enrollment, ModuleProgress
+from django.db.models import Q
 
 from .timelines import get_course_timeline_for_student
 from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
@@ -40,7 +41,8 @@ def build_course_detail_context(user, course_instance):
             timeline = get_course_timeline_for_student(course_instance, user, limit=12)
             if getattr(user, "is_anonymous_participant", False):
                 participant_session = enrollment.participant_sessions.filter(
-                    recruitment_source__course_instance=course_instance
+                    Q(recruitment_source__course_instance=course_instance)
+                    | Q(recruitment_source__study__course_instance=course_instance)
                 ).select_related("recruitment_source").first()
 
     units = list(course.units.prefetch_related("modules", "modules__form").all())

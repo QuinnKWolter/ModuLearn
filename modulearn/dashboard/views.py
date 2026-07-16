@@ -43,7 +43,7 @@ def student_dashboard(request):
 @login_required
 def instructor_dashboard(request):
     """
-    Displays the instructor's dashboard with their courses and course instances.
+    Displays the instructor's dashboard with their courses and course sessions.
     """
     redirect_response = participant_course_redirect(request.user)
     if redirect_response:
@@ -333,7 +333,7 @@ def fetch_modulearn_instance_analytics(request):
 
         return JsonResponse(response_data)
     except CourseInstance.DoesNotExist:
-        return JsonResponse({'error': 'CourseInstance not found'}, status=404)
+        return JsonResponse({'error': 'Course session not found'}, status=404)
     except Exception as e:
         logger.error(f"Error building ModuLearn analytics: {str(e)}", exc_info=True)
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)

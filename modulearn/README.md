@@ -5,7 +5,7 @@ ModuLearn is a Django learning platform that blends native course delivery with 
 ## Project layout
 
 - `accounts/`: authentication, profile management, KnowledgeTree account linking, password sync.
-- `courses/`: native course structures, course instances, enrollments, progress, invite-code enrollment, module launching.
+- `courses/`: native course structures, course sessions, enrollments, progress, invite-code enrollment, module launching.
 - `dashboard/`: student and instructor dashboards, native analytics, legacy MasteryGrids analytics, KnowledgeTree helper views.
 - `lti/`: inbound ModuLearn-as-tool provider for LMS launches.
 - `main/`: marketing/static pages.

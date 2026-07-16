@@ -40,6 +40,11 @@ def log_module_progress_event(
 ):
     from courses.models import ModuleProgressEvent
 
+    participant_session = getattr(module_progress, "study_participant_session", None)
+    if not participant_session and getattr(module_progress, "enrollment_id", None):
+        module_progress.attach_participant_session()
+        participant_session = getattr(module_progress, "study_participant_session", None)
+
     return ModuleProgressEvent.objects.create(
         module_progress=module_progress,
         user=module_progress.user,
@@ -51,6 +56,8 @@ def log_module_progress_event(
         score=_coerce_score(score if score is not None else module_progress.score),
         success=module_progress.success if success is None else bool(success),
         payload=payload if payload is not None else {},
+        study_participant_session=participant_session,
+        study_condition=getattr(module_progress, "study_condition", "") or getattr(participant_session, "condition", "") or "",
     )
 
 
@@ -161,6 +168,8 @@ def apply_progress_snapshot(
         event_types.append("progress")
 
     if changed or payload is not None:
+        if module_progress.enrollment_id:
+            module_progress.attach_participant_session(save=False)
         module_progress.save()
         if module_progress.enrollment_id:
             course_progress = recompute_course_progress(module_progress.enrollment)

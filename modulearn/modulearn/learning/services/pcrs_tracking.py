@@ -76,7 +76,7 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
         module = _find_pcrs_module(course, params, path_rest)
         if not course_instance or not module:
             logger.warning(
-                "[PCRS Tracking] Could not map course instance/module for cid=%s grp=%s module_id=%s sub=%s",
+                "[PCRS Tracking] Could not map course session/module for cid=%s grp=%s module_id=%s sub=%s",
                 course_id,
                 group_name,
                 _first_query_value(params, "module_id"),

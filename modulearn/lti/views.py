@@ -215,7 +215,7 @@ def process_launch_data(request, launch_data):
     request.session['canvas_user_id'] = user_id
     request.session['is_lti_launch'] = True
     
-    # Get the course instance ID
+    # Get the course session ID
     instance_id = (
         launch_data.get('custom_course_id') or
         request.GET.get('course_id')

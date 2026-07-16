@@ -114,14 +114,14 @@ def _update_module_progress(user_id: int, module_id: int, course_instance_id: in
                 )
             except CourseInstance.DoesNotExist:
                 logger.warning(f"[LTI→Progress] CourseInstance {course_instance_id} not found for {source_id}")
-                # Try without course instance
+                # Try without course session
                 progress = ModuleProgress.objects.filter(user=user, module=module).first()
                 if not progress:
                     logger.warning(f"[LTI→Progress] No existing progress record for user={user_id}, module={module_id}")
                     return False
                 created = False
         else:
-            # No course instance (preview mode or external launch)
+            # No course session (preview mode or external launch)
             progress = ModuleProgress.objects.filter(user=user, module=module).first()
             if not progress:
                 logger.info(f"[LTI→Progress] No progress record for preview/external launch: {source_id}")

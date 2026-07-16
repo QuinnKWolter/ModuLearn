@@ -13,6 +13,9 @@ def get_current_participant_session(user):
     return (
         ParticipantSession.objects.select_related(
             "recruitment_source",
+            "recruitment_source__study",
+            "recruitment_source__study__course_instance",
+            "recruitment_source__study__course_instance__course",
             "recruitment_source__course_instance",
             "recruitment_source__course_instance__course",
             "enrollment",
@@ -35,6 +38,9 @@ def get_participant_sessions(user):
     return list(
         ParticipantSession.objects.select_related(
             "recruitment_source",
+            "recruitment_source__study",
+            "recruitment_source__study__course_instance",
+            "recruitment_source__study__course_instance__course",
             "recruitment_source__course_instance",
             "recruitment_source__course_instance__course",
             "enrollment",
@@ -59,9 +65,11 @@ def user_can_access_participant_course(user, course_instance_id) -> bool:
     if not getattr(user, "is_anonymous_participant", False):
         return True
     participant_session = get_current_participant_session(user)
+    course_instance = participant_session.recruitment_source.resolved_course_instance if participant_session else None
     return bool(
         participant_session
-        and participant_session.recruitment_source.course_instance_id == course_instance_id
+        and course_instance
+        and course_instance.id == course_instance_id
     )
 
 
@@ -73,7 +81,8 @@ def get_participant_resume_module(participant_session):
     from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
 
     enrollment = participant_session.enrollment
-    course = participant_session.recruitment_source.course_instance.course
+    course_instance = participant_session.recruitment_source.resolved_course_instance
+    course = course_instance.course if course_instance else None
     if not course:
         return None
 
