@@ -531,7 +531,12 @@ class RecruitmentEntryFlowTests(TestCase):
             {f"question_{first_question.id}": first_question.options[0]},
         )
 
-        self.assertEqual(response.status_code, 302)
+        second_module = study.course_instance.course.units.first().modules.order_by("order", "id")[1]
+        self.assertRedirects(
+            response,
+            reverse("courses:launch_iframe_module", args=[study.course_instance.id, second_module.id]),
+            fetch_redirect_response=False,
+        )
         module_progress = ModuleProgress.objects.get(enrollment=session.enrollment, module=first_module)
         self.assertTrue(module_progress.is_complete)
         self.assertEqual(module_progress.study_participant_session, session)

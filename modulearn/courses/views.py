@@ -195,6 +195,19 @@ def _get_next_accessible_module(user, course_instance, current_module):
     return None
 
 
+def _redirect_after_module_completion(user, course_instance, module):
+    next_module = _get_next_accessible_module(user, course_instance, module)
+    if next_module:
+        return redirect(
+            "courses:launch_iframe_module",
+            instance_id=course_instance.id,
+            module_id=next_module.id,
+        )
+    if getattr(user, "is_anonymous_participant", False):
+        return redirect("recruitment:sessions")
+    return redirect("courses:course_detail", instance_id=course_instance.id)
+
+
 def _module_rule_context(course):
     unit_groups = []
     prior_modules = []
@@ -1207,7 +1220,7 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
     if request.method == "POST" and not is_instructor:
         if existing_submission and not module_form.allow_resubmission:
             messages.info(request, "This form has already been submitted.")
-            return redirect("courses:course_detail", instance_id=course_instance.id)
+            return _redirect_after_module_completion(request.user, course_instance, module)
 
         answers_payload = {}
         missing_required = []
@@ -1265,7 +1278,7 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
                 metadata={"submission_id": submission.id},
             )
             messages.success(request, "Your response was submitted.")
-            return redirect("courses:course_detail", instance_id=course_instance.id)
+            return _redirect_after_module_completion(request.user, course_instance, module)
 
     return render(request, "courses/module_form.html", {
         "module": module,
