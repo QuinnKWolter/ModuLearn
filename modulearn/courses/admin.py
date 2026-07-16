@@ -63,9 +63,9 @@ class ModuleAccessLogAdmin(admin.ModelAdmin):
 
 
 class ModuleBranchRuleAdmin(admin.ModelAdmin):
-    list_display = ('course', 'source_module', 'condition_type', 'target_module', 'active', 'priority')
-    list_filter = ('condition_type', 'active')
-    search_fields = ('course__title', 'source_module__title', 'target_module__title')
+    list_display = ('course', 'source_module', 'condition_type', 'required_study_condition', 'target_module', 'active', 'priority')
+    list_filter = ('condition_type', 'required_study_condition', 'active')
+    search_fields = ('course__title', 'source_module__title', 'target_module__title', 'required_study_condition')
 
 
 class EnrollmentModuleUnlockAdmin(admin.ModelAdmin):

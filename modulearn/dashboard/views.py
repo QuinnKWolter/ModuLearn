@@ -1,9 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from courses.models import Enrollment, Course, CourseInstance
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import requests
-from django.http import JsonResponse
+import csv
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from courses.utils import get_course_auth_token, reset_course_authoring_password
 from courses.demo_courses import create_demo_course_for_key
@@ -23,6 +25,8 @@ from modulearn.core.roles import (
     get_user_role_snapshot,
 )
 from recruitment.services.participants import participant_course_redirect
+from recruitment.models import Study
+from recruitment.services.study_analytics import build_study_analytics_context, study_analytics_csv_rows
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +109,66 @@ def modulearn_analytics_dashboard(request):
         'course_instances': course_instances,
         'preselected_instance_id': preselected_instance_id,
     })
+
+
+@login_required
+def study_analytics_dashboard(request, study_id):
+    redirect_response = participant_course_redirect(request.user)
+    if redirect_response:
+        return redirect_response
+
+    study = get_object_or_404(
+        Study.objects.select_related("course_instance", "course_instance__course"),
+        id=study_id,
+    )
+    if not (request.user.is_staff or study.instructors.filter(id=request.user.id).exists()):
+        raise PermissionDenied("Only this study's instructors can view study analytics.")
+
+    context = build_study_analytics_context(study)
+    return render(request, "dashboard/study_analytics_dashboard.html", context)
+
+
+@login_required
+def export_study_analytics_csv(request, study_id):
+    study = get_object_or_404(
+        Study.objects.select_related("course_instance", "course_instance__course"),
+        id=study_id,
+    )
+    if not (request.user.is_staff or study.instructors.filter(id=request.user.id).exists()):
+        raise PermissionDenied("Only this study's instructors can export study analytics.")
+
+    context = build_study_analytics_context(study)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="study-{study.slug}-analytics.csv"'
+    fieldnames = [
+        "participant_uuid",
+        "participant_label",
+        "external_pid",
+        "external_study_id",
+        "external_session_id",
+        "condition",
+        "status",
+        "entered_at",
+        "completed_at",
+        "unit",
+        "module",
+        "module_type",
+        "progress_percent",
+        "is_complete",
+        "score",
+        "attempts",
+        "success",
+        "first_accessed",
+        "last_accessed",
+        "overall_progress_percent",
+        "modules_completed",
+        "total_modules",
+    ]
+    writer = csv.DictWriter(response, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in study_analytics_csv_rows(context):
+        writer.writerow(row)
+    return response
 
 
 @login_required

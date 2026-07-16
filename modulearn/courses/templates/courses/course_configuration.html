@@ -1605,14 +1605,23 @@
                     <strong>{{ rule.source_module.title }}</strong>
                     <span class="text-slate-500 dark:text-slate-400">if</span>
                     <span class="badge badge-primary">{{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}</span>
+                    {% if rule.required_study_condition %}
+                      <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200">Condition {{ rule.required_study_condition }}</span>
+                    {% endif %}
                     <span class="text-slate-500 dark:text-slate-400">unlock</span>
                     <strong>{{ rule.target_module.title }}</strong>
                   </div>
-                  <label class="cfg-toggle">
-                    <input type="checkbox" name="branch_rule_{{ rule.id }}_active" {% if rule.active %}checked{% endif %}>
-                    Active
-                  </label>
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <label class="cfg-toggle">
+                      <input type="checkbox" name="branch_rule_{{ rule.id }}_active" {% if rule.active %}checked{% endif %}>
+                      Active
+                    </label>
+                    <select class="form-control form-control-sm" name="branch_rule_{{ rule.id }}_required_study_condition" style="width: 10.5rem;" aria-label="Participant condition">
+                      <option value="">Any condition</option>
+                      {% for condition in research_conditions %}
+                        <option value="{{ condition }}" {% if rule.required_study_condition == condition %}selected{% endif %}>{{ condition }}</option>
+                      {% endfor %}
+                    </select>
                     <input type="number" name="branch_rule_{{ rule.id }}_priority" value="{{ rule.priority }}" class="form-control" style="width: 4.75rem;" aria-label="Rule priority">
                     <label class="cfg-toggle">
                       <input type="checkbox" name="branch_rule_{{ rule.id }}_delete">
@@ -1652,12 +1661,21 @@
                     {% endfor %}
                   </select>
                 </label>
+                <label class="text-sm font-semibold">Participants
+                  <select class="form-control mt-1" name="branch_required_study_condition">
+                    <option value="">Any condition</option>
+                    {% for condition in research_conditions %}
+                      <option value="{{ condition }}">{{ condition }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
                 <label class="text-sm font-semibold">Score
                   <input class="form-control mt-1" type="number" name="branch_threshold" min="0" max="100" step="1" placeholder="70" data-branch-threshold disabled>
                 </label>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-300 mt-2">
-                Correct/incorrect rules use the success flag from the activity outcome. Score rules use a 0-100 threshold.
+                Correct/incorrect rules use the success flag from the activity outcome. Score rules use a 0-100 threshold; use Score Below 100 to branch on any non-perfect submission.
+                {% if research_conditions %}Participant conditions come from study assignment and can scope a branch to C1, C2, C3, or any condition.{% endif %}
               </p>
             </div>
 

@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ study.title }} Analytics - ModuLearn{% endblock %}
+
+{% block breadcrumbs %}
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li>/</li>
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">Instructor Dashboard</a></li>
+  <li>/</li>
+  <li class="text-slate-500 dark:text-slate-300">{{ study.title }} Analytics</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .study-analytics-shell {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .study-analytics-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 1rem;
+  }
+
+  .study-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.65rem;
+  }
+
+  .study-kpi {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    padding: 0.85rem;
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  .dark .study-kpi {
+    border-color: rgba(71, 85, 105, 0.68);
+    background: rgba(15, 23, 42, 0.52);
+  }
+
+  .study-kpi strong {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 1.65rem;
+    line-height: 1;
+  }
+
+  .study-condition-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.65rem;
+  }
+
+  .study-condition {
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.85rem;
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.75), rgba(248, 250, 252, 0.8));
+  }
+
+  .dark .study-condition {
+    border-color: rgba(96, 165, 250, 0.22);
+    background: linear-gradient(180deg, rgba(30, 58, 138, 0.22), rgba(15, 23, 42, 0.5));
+  }
+
+  .study-progress {
+    height: 0.42rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.22);
+  }
+
+  .study-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+  }
+
+  .study-participant-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .study-participant {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.84);
+    overflow: hidden;
+  }
+
+  .dark .study-participant {
+    border-color: rgba(71, 85, 105, 0.68);
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  .study-participant summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.72rem 0.85rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .study-participant summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .study-participant-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 0.75rem 0.85rem 0.9rem;
+  }
+
+  .study-module-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.82rem;
+  }
+
+  .study-module-table th,
+  .study-module-table td {
+    padding: 0.45rem 0.5rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .study-module-table th {
+    color: #64748b;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .dark .study-module-table th,
+  .dark .study-module-table td {
+    border-bottom-color: rgba(71, 85, 105, 0.5);
+  }
+
+  @media (max-width: 760px) {
+    .study-analytics-toolbar,
+    .study-participant summary {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  {% include 'includes/page_header.html' with eyebrow='Study Analytics' title=study.title description='Condition assignment, participant progress, and module-level study activity.' %}
+
+  <section class="study-analytics-shell">
+    <div class="study-analytics-toolbar">
+      <div class="text-sm text-slate-600 dark:text-slate-300">
+        <strong class="text-slate-900 dark:text-white">{{ course.title }}</strong>
+        <span class="mx-1">&middot;</span>
+        <span>{{ course_instance.group_name|default:'Study session' }}</span>
+      </div>
+      <div class="flex flex-wrap gap-2 justify-start md:justify-end">
+        <a href="{% url 'dashboard:export_study_analytics_csv' study.id %}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-download mr-1" aria-hidden="true"></i>Export CSV
+        </a>
+        <a href="{% url 'courses:course_configuration' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-sliders mr-1" aria-hidden="true"></i>Configure
+        </a>
+        <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-speedometer2 mr-1" aria-hidden="true"></i>Dashboard
+        </a>
+      </div>
+    </div>
+
+    <div class="study-kpi-grid">
+      <article class="study-kpi">
+        <div class="stat-kicker">Participants</div>
+        <strong>{{ summary.participant_count }}</strong>
+      </article>
+      <article class="study-kpi">
+        <div class="stat-kicker">Conditions</div>
+        <strong>{{ summary.condition_count }}</strong>
+      </article>
+      <article class="study-kpi">
+        <div class="stat-kicker">Average Progress</div>
+        <strong>{{ summary.avg_progress|floatformat:0 }}%</strong>
+      </article>
+      <article class="study-kpi">
+        <div class="stat-kicker">Finished</div>
+        <strong>{{ summary.finished_count }}</strong>
+      </article>
+    </div>
+
+    <section class="card p-4">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+        <div>
+          <div class="stat-kicker">Condition Overview</div>
+          <h2 class="text-lg font-bold mt-1 mb-0">Assignment and progress by condition</h2>
+        </div>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-300">{{ summary.module_count }} module{{ summary.module_count|pluralize }} tracked</span>
+      </div>
+      <div class="study-condition-grid">
+        {% for condition in conditions %}
+          <article class="study-condition">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="stat-kicker">Condition</div>
+                <h3 class="text-base font-bold mt-1 mb-0">{{ condition.label }}</h3>
+              </div>
+              <span class="badge badge-secondary">{{ condition.count }}</span>
+            </div>
+            <div class="mt-3 study-progress" aria-label="{{ condition.avg_progress_percent }} percent average progress">
+              <span style="width: {{ condition.avg_progress_percent }}%"></span>
+            </div>
+            <div class="mt-2 flex flex-wrap justify-between gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <span>{{ condition.avg_progress|floatformat:0 }}% average</span>
+              <span>{{ condition.finished }} finished</span>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card p-4">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+        <div>
+          <div class="stat-kicker">Participants</div>
+          <h2 class="text-lg font-bold mt-1 mb-0">Condition roster and drilldown</h2>
+        </div>
+        <span class="text-xs text-slate-500 dark:text-slate-300">Expand a participant to inspect every module.</span>
+      </div>
+
+      {% if participants %}
+        <div class="grid gap-4">
+          {% for condition in conditions %}
+            <section>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-0">{{ condition.label }}</h3>
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-300">{{ condition.count }} participant{{ condition.count|pluralize }}</span>
+              </div>
+              <div class="study-participant-list">
+                {% for participant in condition.participants %}
+                  <details class="study-participant">
+                    <summary>
+                      <span class="min-w-0">
+                        <span class="flex flex-wrap items-center gap-2">
+                          <strong class="text-slate-900 dark:text-white">{{ participant.participant_label }}</strong>
+                          <span class="badge badge-secondary">{{ participant.status_label }}</span>
+                          <span class="badge bg-blue-100 text-blue-800 dark:bg-blue-400/15 dark:text-blue-200">{{ participant.condition }}</span>
+                        </span>
+                        <span class="block mt-1 text-xs text-slate-500 dark:text-slate-300">
+                          Entered {{ participant.entered_at|date:"M d, Y g:i A" }}
+                          {% if participant.latest_activity %}&middot; Last activity {{ participant.latest_activity|date:"M d, Y g:i A" }}{% endif %}
+                        </span>
+                      </span>
+                      <span class="min-w-[10rem]">
+                        <span class="block text-right text-sm font-bold">{{ participant.overall_progress_percent }}%</span>
+                        <span class="study-progress mt-1"><span style="width: {{ participant.overall_progress_percent }}%"></span></span>
+                        <span class="block text-right text-xs text-slate-500 dark:text-slate-300 mt-1">{{ participant.modules_completed }}/{{ participant.total_modules }} modules</span>
+                      </span>
+                    </summary>
+                    <div class="study-participant-body">
+                      <div class="grid gap-2 md:grid-cols-3 mb-3 text-xs text-slate-600 dark:text-slate-300">
+                        <div><strong class="text-slate-900 dark:text-white">Prolific PID:</strong> {{ participant.external_pid|default:"-" }}</div>
+                        <div><strong class="text-slate-900 dark:text-white">Submission:</strong> {{ participant.external_session_id|default:"-" }}</div>
+                        <div><strong class="text-slate-900 dark:text-white">Completed:</strong> {% if participant.completed_at %}{{ participant.completed_at|date:"M d, Y g:i A" }}{% else %}-{% endif %}</div>
+                      </div>
+                      <div class="overflow-x-auto">
+                        <table class="study-module-table">
+                          <thead>
+                            <tr>
+                              <th>Unit</th>
+                              <th>Activity</th>
+                              <th>Type</th>
+                              <th>Progress</th>
+                              <th>Score</th>
+                              <th>Attempts</th>
+                              <th>Last Access</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for module in participant.module_rows %}
+                              <tr>
+                                <td>{{ module.unit_title }}</td>
+                                <td>
+                                  <strong>{{ module.module_title }}</strong>
+                                  {% if module.is_complete %}
+                                    <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200 ml-1">Done</span>
+                                  {% endif %}
+                                </td>
+                                <td>{{ module.module_type }}</td>
+                                <td>{{ module.progress_percent }}%</td>
+                                <td>{% if module.score is not None %}{{ module.score|floatformat:0 }}{% else %}-{% endif %}</td>
+                                <td>{{ module.attempts }}</td>
+                                <td>{% if module.last_accessed %}{{ module.last_accessed|date:"M d, g:i A" }}{% else %}-{% endif %}</td>
+                              </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </details>
+                {% empty %}
+                  <div class="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-300">
+                    No participants have been assigned to this condition yet.
+                  </div>
+                {% endfor %}
+              </div>
+            </section>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-300">
+          No participant entries yet. Once participants launch from Prolific, this dashboard will populate automatically.
+        </div>
+      {% endif %}
+    </section>
+  </section>
+{% endblock %}

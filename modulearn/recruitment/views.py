@@ -199,6 +199,14 @@ def _enter_source(request, source: RecruitmentSource):
 
     session_external_study_id = request.GET.get("STUDY_ID", "")
     session_external_session_id = request.GET.get("SESSION_ID", "")
+    if (
+        platform == RecruitmentSource.PLATFORM_PROLIFIC
+        and session_external_study_id
+        and not source.prolific_study_id
+    ):
+        source.prolific_study_id = session_external_study_id
+        source.save(update_fields=["prolific_study_id", "updated_at"])
+
     lookup = {
         "recruitment_source": source,
         "external_session_id": session_external_session_id,

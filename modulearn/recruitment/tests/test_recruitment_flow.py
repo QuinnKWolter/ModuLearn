@@ -2,7 +2,19 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from courses.models import Course, CourseInstance, Enrollment, ModuleFormSubmission, ModuleProgress, ModuleProgressEvent
+from courses.models import (
+    Course,
+    CourseInstance,
+    Enrollment,
+    EnrollmentModuleUnlock,
+    Module,
+    ModuleBranchRule,
+    ModuleFormSubmission,
+    ModuleProgress,
+    ModuleProgressEvent,
+    Unit,
+)
+from modulearn.learning.services.progress import apply_progress_snapshot
 from recruitment.models import ParticipantSession, RecruitmentEntryLog, RecruitmentSource, Study, StudyCondition
 from recruitment.services.studies import create_study_for_instructor
 
@@ -95,6 +107,23 @@ class RecruitmentEntryFlowTests(TestCase):
         session = ParticipantSession.objects.get(recruitment_source=source)
         self.assertEqual(session.external_session_id, "0jfggbb63i5q")
         self.assertEqual(session.external_study_id, "6a584b56ace9629c9093ace6")
+
+    def test_prolific_study_launch_backfills_source_study_id(self):
+        study = self.make_study(title="Auto Captured Study")
+        source = RecruitmentSource.objects.create(
+            study=study,
+            platform=RecruitmentSource.PLATFORM_PROLIFIC,
+        )
+
+        response = self.client.get(reverse("recruitment:study_launch", args=[study.slug]), {
+            "PROLIFIC_PID": "6a3951b4b326f99b82331661",
+            "STUDY_ID": "6a584b56ace9629c9093ace6",
+            "SESSION_ID": "0jfggbb63i5q",
+        })
+
+        self.assertRedirects(response, reverse("recruitment:sessions"))
+        source.refresh_from_db()
+        self.assertEqual(source.prolific_study_id, "6a584b56ace9629c9093ace6")
 
     def test_prolific_entry_resumes_by_session_id(self):
         source = RecruitmentSource.objects.create(
@@ -491,6 +520,149 @@ class RecruitmentEntryFlowTests(TestCase):
         self.assertIsNotNone(event)
         self.assertEqual(event.study_participant_session, session)
         self.assertEqual(event.study_condition, session.condition)
+
+    def test_adaptive_branching_can_scope_failure_path_by_study_condition(self):
+        study = self.make_study(title="Condition Branching Study")
+        StudyCondition.objects.create(study=study, label="c3", name="Condition 3", order=30)
+        source = RecruitmentSource.objects.create(
+            study=study,
+            platform=RecruitmentSource.PLATFORM_PROLIFIC,
+            condition_strategy=RecruitmentSource.CONDITION_BALANCED,
+        )
+        self.course.plugin_config = {
+            "plugins": {
+                "adaptive_branching": {"enabled": True, "settings": {}},
+            },
+        }
+        self.course.save(update_fields=["plugin_config"])
+        unit = Unit.objects.create(course=self.course, title="Main Study", order=10)
+        source_module = Module.objects.create(unit=unit, title="Problem A", order=10)
+        c1_remediation = Module.objects.create(unit=unit, title="C1 Remediation", order=20, is_locked=True)
+        c2_remediation = Module.objects.create(unit=unit, title="C2 Remediation", order=30, is_locked=True)
+        c1_retry = Module.objects.create(unit=unit, title="Problem A Retry - C1", order=50, is_locked=True)
+        c2_retry = Module.objects.create(unit=unit, title="Problem A Retry - C2", order=60, is_locked=True)
+        ModuleBranchRule.objects.create(
+            course=self.course,
+            source_module=source_module,
+            target_module=c1_remediation,
+            condition_type=ModuleBranchRule.CONDITION_SCORE_LT,
+            threshold=100,
+            required_study_condition="control",
+            priority=10,
+        )
+        ModuleBranchRule.objects.create(
+            course=self.course,
+            source_module=source_module,
+            target_module=c2_remediation,
+            condition_type=ModuleBranchRule.CONDITION_SCORE_LT,
+            threshold=100,
+            required_study_condition="treatment",
+            priority=20,
+        )
+        ModuleBranchRule.objects.create(
+            course=self.course,
+            source_module=c1_remediation,
+            target_module=c1_retry,
+            condition_type=ModuleBranchRule.CONDITION_COMPLETED,
+            required_study_condition="control",
+            priority=30,
+        )
+        ModuleBranchRule.objects.create(
+            course=self.course,
+            source_module=c2_remediation,
+            target_module=c2_retry,
+            condition_type=ModuleBranchRule.CONDITION_COMPLETED,
+            required_study_condition="treatment",
+            priority=40,
+        )
+
+        self.client.get(reverse("recruitment:study_launch", args=[study.slug]), {
+            "PROLIFIC_PID": "6a3951b4b326f99b82331661",
+            "STUDY_ID": "6a584b56ace9629c9093ace6",
+            "SESSION_ID": "0jfggbb63i5q",
+        })
+        session = ParticipantSession.objects.get(recruitment_source=source)
+        self.assertEqual(session.condition, "control")
+        progress, _created = ModuleProgress.get_or_create_progress(session.user, source_module, self.instance)
+
+        apply_progress_snapshot(
+            progress,
+            source="test",
+            progress=0.8,
+            score=80,
+            success=True,
+            is_complete=False,
+            event_type="outcome",
+        )
+
+        self.assertTrue(EnrollmentModuleUnlock.objects.filter(
+            enrollment=session.enrollment,
+            module=c1_remediation,
+        ).exists())
+        self.assertFalse(EnrollmentModuleUnlock.objects.filter(
+            enrollment=session.enrollment,
+            module=c2_remediation,
+        ).exists())
+        next_response = self.client.get(reverse("courses:next_accessible_module", args=[self.instance.id, source_module.id]))
+        self.assertEqual(next_response.status_code, 200)
+        self.assertEqual(next_response.json()["id"], c1_remediation.id)
+
+        remediation_progress, _created = ModuleProgress.get_or_create_progress(session.user, c1_remediation, self.instance)
+        apply_progress_snapshot(
+            remediation_progress,
+            source="test",
+            progress=1.0,
+            score=100,
+            success=True,
+            is_complete=True,
+            event_type="completion",
+        )
+
+        self.assertTrue(EnrollmentModuleUnlock.objects.filter(
+            enrollment=session.enrollment,
+            module=c1_retry,
+        ).exists())
+        self.assertFalse(EnrollmentModuleUnlock.objects.filter(
+            enrollment=session.enrollment,
+            module=source_module,
+        ).exists())
+
+    def test_instructor_can_view_study_analytics_dashboard_and_export_csv(self):
+        study = create_study_for_instructor(
+            self.instructor,
+            title="Analytics Study",
+            condition_labels="control,treatment",
+        )
+        source = RecruitmentSource.objects.get(study=study, platform=RecruitmentSource.PLATFORM_PROLIFIC)
+
+        self.client.get(reverse("recruitment:study_launch", args=[study.slug]), {
+            "PROLIFIC_PID": "6a3951b4b326f99b82331661",
+            "STUDY_ID": "6a584b56ace9629c9093ace6",
+            "SESSION_ID": "0jfggbb63i5q",
+        })
+        session = ParticipantSession.objects.get(recruitment_source=source)
+        first_module = study.course_instance.course.units.first().modules.first()
+        first_question = first_module.form.questions.first()
+        self.client.post(
+            reverse("courses:launch_iframe_module", args=[study.course_instance.id, first_module.id]),
+            {f"question_{first_question.id}": first_question.options[0]},
+        )
+
+        self.client.force_login(self.instructor)
+        dashboard_response = self.client.get(reverse("dashboard:study_analytics_dashboard", args=[study.id]))
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(dashboard_response, "Analytics Study")
+        self.assertContains(dashboard_response, session.condition)
+        self.assertContains(dashboard_response, "Consent")
+        self.assertContains(dashboard_response, "Export CSV")
+
+        csv_response = self.client.get(reverse("dashboard:export_study_analytics_csv", args=[study.id]))
+        self.assertEqual(csv_response.status_code, 200)
+        self.assertEqual(csv_response["Content-Type"], "text/csv")
+        csv_body = csv_response.content.decode()
+        self.assertIn("participant_uuid,participant_label,external_pid", csv_body)
+        self.assertIn("Consent", csv_body)
+        self.assertIn("6a3951b4b326f99b82331661", csv_body)
 
     def test_instructor_can_clear_study_participants_and_progress(self):
         study = create_study_for_instructor(

@@ -221,6 +221,17 @@ def _module_rule_context(course):
             prior_modules.append(module)
     return unit_groups
 
+
+def _course_research_conditions(course):
+    conditions = set()
+    for instance in course.instances.all():
+        for source in instance.recruitment_sources.all():
+            conditions.update(source.conditions)
+        study = getattr(instance, "study", None)
+        if study:
+            conditions.update(study.conditions.values_list("label", flat=True))
+    return sorted(condition for condition in conditions if condition)
+
 @login_required
 def course_list(request):
     """
@@ -315,9 +326,7 @@ def course_configuration(request, instance_id):
         "module_types": Module.MODULE_TYPE_CHOICES[1:],
         "branch_condition_types": ModuleBranchRule.CONDITION_CHOICES,
         "question_types": ModuleFormQuestion.TYPE_CHOICES,
-        "research_conditions": sorted(
-            {condition.label for condition in study.conditions.all()}
-        ) if study else [],
+        "research_conditions": _course_research_conditions(course),
         "is_locked_for_research": course.is_locked_for_research,
         "research_has_participants": research_has_participants,
         "adaptive_branching_enabled": plugin_flags.get("adaptive_branching", False),
@@ -349,16 +358,7 @@ def export_course(request, instance_id):
 
 def _update_course_structure_controls(request, course):
     rule_context = _module_rule_context(course)
-    valid_conditions = set(
-        condition
-        for instance in course.instances.all()
-        for source in instance.recruitment_sources.all()
-        for condition in source.conditions
-    )
-    for instance in course.instances.all():
-        study = getattr(instance, "study", None)
-        if study:
-            valid_conditions.update(study.conditions.values_list("label", flat=True))
+    valid_conditions = set(_course_research_conditions(course))
 
     for group in rule_context:
         unit = group["unit"]
@@ -547,6 +547,7 @@ def _update_branching_rules(request, course):
         module.id: module
         for module in _branch_module_options(course)
     }
+    valid_conditions = set(_course_research_conditions(course))
 
     for rule in ModuleBranchRule.objects.filter(course=course):
         prefix = f"branch_rule_{rule.id}"
@@ -558,14 +559,17 @@ def _update_branching_rules(request, course):
             rule.priority = int(request.POST.get(f"{prefix}_priority") or rule.priority or 0)
         except (TypeError, ValueError):
             rule.priority = 0
-        rule.save(update_fields=["active", "priority", "updated_at"])
+        requested_condition = (request.POST.get(f"{prefix}_required_study_condition") or "").strip()
+        rule.required_study_condition = requested_condition if requested_condition in valid_conditions else ""
+        rule.save(update_fields=["active", "priority", "required_study_condition", "updated_at"])
 
     source_id = request.POST.get("branch_source_module")
     target_id = request.POST.get("branch_target_module")
     condition_type = (request.POST.get("branch_condition_type") or "").strip()
     threshold_value = request.POST.get("branch_threshold")
+    required_study_condition = (request.POST.get("branch_required_study_condition") or "").strip()
 
-    if not any([source_id, target_id, condition_type, threshold_value]):
+    if not any([source_id, target_id, condition_type, threshold_value, required_study_condition]):
         return
 
     try:
@@ -580,6 +584,9 @@ def _update_branching_rules(request, course):
     valid_condition_types = {value for value, _label in ModuleBranchRule.CONDITION_CHOICES}
     if condition_type not in valid_condition_types:
         raise ValueError("Choose a valid branch condition.")
+
+    if required_study_condition and required_study_condition not in valid_conditions:
+        raise ValueError("Choose a valid study condition for the branch rule.")
 
     threshold = None
     if condition_type in {ModuleBranchRule.CONDITION_SCORE_GTE, ModuleBranchRule.CONDITION_SCORE_LT}:
@@ -600,6 +607,7 @@ def _update_branching_rules(request, course):
         target_module=target_module,
         condition_type=condition_type,
         threshold=threshold,
+        required_study_condition=required_study_condition,
         defaults={"priority": priority, "active": True},
     )
 

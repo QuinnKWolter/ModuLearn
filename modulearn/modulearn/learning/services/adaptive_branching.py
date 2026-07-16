@@ -49,7 +49,7 @@ def handle_progress_event(event) -> list:
     created_unlocks = []
     with transaction.atomic():
         for rule in rules:
-            if not _rule_matches(rule, event, module_progress):
+            if not _rule_matches(rule, event, module_progress, enrollment):
                 continue
 
             unlock, created = EnrollmentModuleUnlock.objects.get_or_create(
@@ -58,7 +58,7 @@ def handle_progress_event(event) -> list:
                 source_rule=rule,
                 defaults={
                     "source_module": source_module,
-                    "reason": rule.condition_type,
+                    "reason": _unlock_reason(rule),
                 },
             )
             if created:
@@ -66,7 +66,11 @@ def handle_progress_event(event) -> list:
     return created_unlocks
 
 
-def _rule_matches(rule, event, module_progress) -> bool:
+def _rule_matches(rule, event, module_progress, enrollment) -> bool:
+    required_condition = (rule.required_study_condition or "").strip()
+    if required_condition and _participant_condition(module_progress, enrollment) != required_condition:
+        return False
+
     condition_type = rule.condition_type
     score = event.score if event.score is not None else module_progress.score
     success = bool(event.success)
@@ -86,3 +90,28 @@ def _rule_matches(rule, event, module_progress) -> bool:
 
 def _threshold(rule, default: float) -> float:
     return float(rule.threshold if rule.threshold is not None else default)
+
+
+def _participant_condition(module_progress, enrollment) -> str:
+    direct_condition = (getattr(module_progress, "study_condition", "") or "").strip()
+    if direct_condition:
+        return direct_condition
+
+    participant_session = getattr(module_progress, "study_participant_session", None)
+    if participant_session and getattr(participant_session, "condition", ""):
+        return participant_session.condition.strip()
+
+    if not enrollment:
+        return ""
+
+    try:
+        participant_session = module_progress.participant_session_for_enrollment(enrollment)
+    except Exception:
+        participant_session = None
+    return (getattr(participant_session, "condition", "") or "").strip()
+
+
+def _unlock_reason(rule) -> str:
+    if rule.required_study_condition:
+        return f"{rule.condition_type}:{rule.required_study_condition}"
+    return rule.condition_type

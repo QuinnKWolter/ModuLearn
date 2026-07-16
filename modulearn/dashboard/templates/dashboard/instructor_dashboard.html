@@ -882,6 +882,9 @@
                       <a class="btn btn-sm btn-outline-secondary" href="{% url 'courses:course_detail' study.course_instance.id %}">
                         <i class="bi bi-eye mr-1"></i>Preview
                       </a>
+                      <a class="btn btn-sm btn-outline-info" href="{% url 'dashboard:study_analytics_dashboard' study.id %}">
+                        <i class="bi bi-bar-chart-line mr-1" aria-hidden="true"></i>Analytics
+                      </a>
                       <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#studyProlific{{ study.id }}" aria-expanded="false" aria-controls="studyProlific{{ study.id }}">
                         <i class="bi bi-person-badge mr-1" aria-hidden="true"></i>Prolific Settings
                       </button>
@@ -943,10 +946,7 @@
                               <option value="schedule" {% if source.condition_strategy == 'schedule' %}selected{% endif %}>Schedule</option>
                             </select>
                           </label>
-                          <label class="study-field">
-                            <span class="study-field-label">Prolific Study ID</span>
-                            <input class="form-control" type="text" name="prolific_study_id" placeholder="From Prolific after setup" value="{{ source.prolific_study_id|default:'' }}">
-                          </label>
+                          <input type="hidden" name="prolific_study_id" value="{{ source.prolific_study_id|default:'' }}">
                           <label class="study-field">
                             <span class="study-field-label">Completion Code</span>
                             <input class="form-control" type="text" name="prolific_completion_code_complete" placeholder="Complete code" value="{{ source.prolific_completion_code_complete|default:'' }}">

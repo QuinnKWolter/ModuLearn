@@ -233,6 +233,11 @@ class ModuleBranchRule(models.Model):
     target_module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='branch_target_rules')
     condition_type = models.CharField(max_length=32, choices=CONDITION_CHOICES)
     threshold = models.FloatField(null=True, blank=True)
+    required_study_condition = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="Optional participant condition label required for this branch rule.",
+    )
     priority = models.PositiveIntegerField(default=0)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -243,11 +248,13 @@ class ModuleBranchRule(models.Model):
             models.Index(fields=['course', 'active'], name='branch_course_active_idx'),
             models.Index(fields=['source_module', 'active'], name='branch_source_active_idx'),
             models.Index(fields=['target_module', 'active'], name='branch_target_active_idx'),
+            models.Index(fields=['required_study_condition', 'active'], name='branch_study_cond_idx'),
         ]
         ordering = ['source_module_id', 'priority', 'id']
 
     def __str__(self):
-        return f"If {self.source_module.title} {self.get_condition_type_display()} unlock {self.target_module.title}"
+        condition = f" for {self.required_study_condition}" if self.required_study_condition else ""
+        return f"If {self.source_module.title} {self.get_condition_type_display()}{condition} unlock {self.target_module.title}"
 
 
 class Enrollment(models.Model):

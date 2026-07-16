@@ -290,6 +290,7 @@ def create_course_from_json(course_data, current_user):
                 target_module=target_module,
                 condition_type=condition_type,
                 threshold=rule_data.get('threshold'),
+                required_study_condition=(rule_data.get('required_study_condition') or '').strip(),
                 priority=rule_data.get('priority') or 0,
                 active=rule_data.get('active', True),
             )
@@ -351,6 +352,7 @@ def export_course_to_json(course):
                 'target_module': rule.target_module.title,
                 'condition_type': rule.condition_type,
                 'threshold': rule.threshold,
+                'required_study_condition': rule.required_study_condition,
                 'priority': rule.priority,
                 'active': rule.active,
             }
