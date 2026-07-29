@@ -4,8 +4,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import requests
 import csv
+import time
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
+from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST
 from courses.utils import get_course_auth_token, reset_course_authoring_password
 from courses.demo_courses import create_demo_course_for_key
@@ -29,6 +31,29 @@ from recruitment.models import Study
 from recruitment.services.study_analytics import build_study_analytics_context, study_analytics_csv_rows
 
 logger = logging.getLogger(__name__)
+
+
+def _analytics_json_response(response_data, *, status=200, label='analytics'):
+    """Serialize analytics JSON before returning so production logs include size/timing."""
+    started = time.monotonic()
+    try:
+        payload = json.dumps(response_data, cls=DjangoJSONEncoder, ensure_ascii=False)
+    except Exception as exc:
+        logger.error(f"Failed to serialize {label} JSON response: {exc}", exc_info=True)
+        return JsonResponse({
+            'error': f'Failed to serialize analytics response: {exc}',
+            'learners': [],
+            'topics': [],
+        }, status=500)
+
+    elapsed = time.monotonic() - started
+    logger.info(
+        "%s JSON response serialized: %.2f MiB in %.3fs",
+        label,
+        len(payload.encode('utf-8')) / (1024 * 1024),
+        elapsed,
+    )
+    return HttpResponse(payload, content_type='application/json', status=status)
 
 @login_required
 def student_dashboard(request):
@@ -871,16 +896,14 @@ def fetch_analytics_data(request):
                 # Build activities structure with progress data (object keyed by activity IDs)
                 learner_state['activities'][topic_name] = {}
                 for resource_name, activities in topic.get('activities', {}).items():
-                    # Convert array to object keyed by activity ID, including progress
+                    # Convert array to object keyed by activity ID. Activity definitions
+                    # are already present in topics[].activities, so only send progress here.
                     activities_obj = {}
                     for activity in activities:
                         activity_id = activity['id']
                         # Get activity progress from content_data (keyed by content_name/activity_id)
                         activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
                         activities_obj[activity_id] = {
-                            'id': activity_id,
-                            'name': activity['name'],
-                            'url': activity.get('url', ''),
                             'values': {
                                 'k': activity_progress.get('k', 0.0),
                                 'p': activity_progress.get('p', 0.0),
@@ -984,9 +1007,27 @@ def fetch_all_students_analytics(request):
                 'learners': [],
                 'topics': []
             }, status=404)
+
+        if (request.GET.get('diagnostics') or '').strip().lower() in {'1', 'true', 'yes'}:
+            topics = response_data.get('topics') or []
+            activity_count = sum(
+                len(activities or [])
+                for topic in topics
+                for activities in (topic.get('activities') or {}).values()
+            )
+            return JsonResponse({
+                'success': True,
+                'group_login': group_login,
+                'course_id': course_id,
+                'learner_count': len(response_data.get('learners') or []),
+                'topic_count': len(topics),
+                'resource_count': len(response_data.get('resources') or []),
+                'activity_count': activity_count,
+                'has_class_average': bool(response_data.get('groups')),
+            })
         
         logger.info(f"Successfully fetched analytics for {len(response_data['learners'])} students")
-        return JsonResponse(response_data)
+        return _analytics_json_response(response_data, label='legacy batch analytics')
 
     except Exception as e:
         logger.error(f"Error in fetch_all_students_analytics: {str(e)}", exc_info=True)

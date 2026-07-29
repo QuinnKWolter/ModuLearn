@@ -2065,6 +2065,10 @@
 {% block extra_js %}
 <script>
   (function() {
+    const t = value => window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
+      ? window.ModuLearnI18n.t(value)
+      : value;
+
     const addTabButtons = Array.from(document.querySelectorAll('[data-add-tab]'));
     const addPanels = Array.from(document.querySelectorAll('[data-add-panel]'));
     const typeSelect = document.getElementById('moduleTypeSelect');
@@ -2087,7 +2091,7 @@
       if (!branchConditionSelect || !branchThresholdInput) return;
       const needsThreshold = ['score_gte', 'score_lt'].includes(branchConditionSelect.value);
       branchThresholdInput.disabled = !needsThreshold;
-      branchThresholdInput.placeholder = needsThreshold ? '70' : 'N/A';
+      branchThresholdInput.placeholder = needsThreshold ? '70' : t('N/A');
       if (!needsThreshold) {
         branchThresholdInput.value = '';
       }
@@ -2169,13 +2173,13 @@
       }
       if (wizardNote) {
         if (currentModuleStep === 1) {
-          wizardNote.textContent = 'Pick a unit and module type.';
+          wizardNote.textContent = t('Pick a unit and module type.');
         } else if (currentModuleStep === 2 && maxStep === 2) {
-          wizardNote.textContent = 'Add the module details, then save.';
+          wizardNote.textContent = t('Add the module details, then save.');
         } else if (currentModuleStep === 2) {
-          wizardNote.textContent = 'Add the module details before building questions.';
+          wizardNote.textContent = t('Add the module details before building questions.');
         } else {
-          wizardNote.textContent = 'Only Form / Survey modules collect questions.';
+          wizardNote.textContent = t('Only Form / Survey modules collect questions.');
         }
       }
     }
@@ -2188,7 +2192,7 @@
           const select = wrapper.querySelector('[data-question-type]');
           const typeLabel = select && select.selectedOptions.length
             ? select.selectedOptions[0].textContent
-            : 'Question';
+            : t('Question');
           label.textContent = `Q${index + 1}: ${typeLabel}`;
         }
       });
@@ -2388,22 +2392,22 @@
       if (help) {
         if (!hasAutomaticRules) {
           help.textContent = isToggleOn(lock)
-            ? 'No automatic unlock rules are available here yet. This item will stay manually locked until you open it.'
-            : 'No automatic unlock rules are available yet for this position in the course.';
+            ? t('No automatic unlock rules are available here yet. This item will stay manually locked until you open it.')
+            : t('No automatic unlock rules are available yet for this position in the course.');
         } else if (value === 'none') {
           help.textContent = lock && isToggleOn(lock)
-            ? 'This item is manually locked until you choose a rule or unlock it.'
-            : 'No automatic unlock rule is applied.';
+            ? t('This item is manually locked until you choose a rule or unlock it.')
+            : t('No automatic unlock rule is applied.');
         } else if (needsModule) {
           help.textContent = target && target.disabled
-            ? 'No earlier modules are available as valid targets.'
-            : 'Only earlier modules are listed so unlocks cannot depend on future work.';
+            ? t('No earlier modules are available as valid targets.')
+            : t('Only earlier modules are listed so unlocks cannot depend on future work.');
         } else if (needsCondition) {
           help.textContent = target && target.disabled
-            ? 'No research conditions are configured for this course session.'
-            : 'This unlock uses the participant condition assigned through study recruitment.';
+            ? t('No research conditions are configured for this course session.')
+            : t('This unlock uses the participant condition assigned through study recruitment.');
         } else {
-          help.textContent = 'This unlock uses the previous unit and does not need a target.';
+          help.textContent = t('This unlock uses the previous unit and does not need a target.');
         }
       }
     }
@@ -2429,22 +2433,22 @@
       button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
 
       if (kind === 'visible') {
-        if (label) label.textContent = enabled ? 'Visible' : 'Hidden';
+        if (label) label.textContent = enabled ? t('Visible') : t('Hidden');
         if (icon) {
           icon.classList.toggle('fa-eye', enabled);
           icon.classList.toggle('fa-eye-slash', !enabled);
         }
-        button.title = enabled ? 'Click to hide from students' : 'Click to show to students';
+        button.title = enabled ? t('Click to hide from students') : t('Click to show to students');
         button.setAttribute('aria-label', button.title);
       }
 
       if (kind === 'lock') {
-        if (label) label.textContent = enabled ? 'Locked' : 'Open';
+        if (label) label.textContent = enabled ? t('Locked') : t('Open');
         if (icon) {
           icon.classList.toggle('fa-lock', enabled);
           icon.classList.toggle('fa-unlock', !enabled);
         }
-        button.title = enabled ? 'Click to unlock' : 'Click to lock';
+        button.title = enabled ? t('Click to unlock') : t('Click to lock');
         button.setAttribute('aria-label', button.title);
       }
     }
@@ -2518,14 +2522,14 @@
             target.select();
             document.execCommand('copy');
           }
-          button.textContent = 'Copied';
+          button.textContent = t('Copied');
           setTimeout(() => {
-            button.innerHTML = '<i class="bi bi-clipboard mr-1" aria-hidden="true"></i>Copy';
+            button.innerHTML = `<i class="bi bi-clipboard mr-1" aria-hidden="true"></i>${t('Copy')}`;
           }, 1400);
         } catch (error) {
           target.focus();
           target.select();
-          button.textContent = originalText || 'Copy';
+          button.textContent = originalText || t('Copy');
         }
       });
     });

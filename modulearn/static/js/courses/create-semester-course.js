@@ -1,4 +1,10 @@
 (function () {
+  function t(value) {
+    return window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
+      ? window.ModuLearnI18n.t(value)
+      : value;
+  }
+
   function isUsableCsrfToken(token) {
     var normalized = token ? String(token).trim() : '';
     return Boolean(normalized && normalized !== 'NOTPROVIDED' && normalized !== 'csrf_token');
@@ -42,7 +48,7 @@
     if (manualState) manualState.classList.add('hidden');
     if (errorState) errorState.classList.remove('hidden');
     if (errorMessage) {
-      errorMessage.textContent = message || 'An unexpected error occurred while creating your course.';
+      errorMessage.textContent = t(message || 'An unexpected error occurred while creating your course.');
     }
   }
 
@@ -56,7 +62,7 @@
   function showManualError(message) {
     var manualError = document.getElementById('manualError');
     if (!manualError) return;
-    manualError.textContent = message || 'Unable to create custom session.';
+    manualError.textContent = t(message || 'Unable to create custom session.');
     manualError.classList.remove('hidden');
   }
 
@@ -68,7 +74,7 @@
       });
 
       if (!exportResponse.ok) {
-        throw new Error('Failed to fetch course details: ' + exportResponse.statusText);
+        throw new Error(`${t('Failed to fetch course details:')} ${exportResponse.statusText}`);
       }
 
       var courseData = await exportResponse.json();
@@ -79,18 +85,18 @@
       });
 
       if (!backendResponse.ok) {
-        throw new Error('Failed to send course data to ModuLearn: ' + backendResponse.statusText);
+        throw new Error(`${t('Failed to send course data to ModuLearn:')} ${backendResponse.statusText}`);
       }
 
       var result = await backendResponse.json();
       if (!result.success) {
-        throw new Error(result.error || 'Unknown error occurred while creating the course.');
+        throw new Error(result.error || t('Unknown error occurred while creating the course.'));
       }
 
       window.location.href = config.redirectUrl;
     } catch (error) {
       console.error('Error during course import:', error);
-      showError(error.message || 'An unexpected error occurred while importing your course.');
+      showError(error.message || t('An unexpected error occurred while importing your course.'));
     }
   }
 
@@ -118,9 +124,9 @@
     if (!response.ok || !result.success) {
       var message = result.error || result.message || '';
       if (!message && /csrf/i.test(responseBody || '')) {
-        message = 'Security check failed. Refresh this page and try again.';
+        message = t('Security check failed. Refresh this page and try again.');
       }
-      throw new Error(message || 'Custom session creation failed.');
+      throw new Error(message || t('Custom session creation failed.'));
     }
     window.location.href = result.redirect_url || config.redirectUrl;
   }
@@ -162,16 +168,16 @@
 
         hideManualError();
         createButton.disabled = true;
-        createButton.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" aria-hidden="true"></span>Creating...';
+        createButton.innerHTML = `<span class="spinner-border spinner-border-sm mr-2" aria-hidden="true"></span>${t('Creating...')}`;
 
         try {
           await createRawSession(config, payload);
         } catch (error) {
           console.error('Error creating custom session:', error);
-          showManualError(error.message || 'Unable to create custom session.');
+          showManualError(error.message || t('Unable to create custom session.'));
         } finally {
           createButton.disabled = false;
-          createButton.innerHTML = '<i class="bi bi-plus-circle mr-2"></i>Create Custom Session';
+          createButton.innerHTML = `<i class="bi bi-plus-circle mr-2"></i>${t('Create Custom Session')}`;
         }
       });
     }

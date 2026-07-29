@@ -509,16 +509,14 @@ def fetch_all_students_analytics(group_login: str, course_id: int) -> Dict[str, 
                 # Build activities structure with progress data
                 state['activities'][topic_name] = {}
                 for resource_name, activities in topic.get('activities', {}).items():
-                    # Convert array to object keyed by activity ID, including progress
+                    # Convert array to object keyed by activity ID. Activity names and URLs
+                    # already live in topics[].activities, so keep learner payloads compact.
                     activities_obj = {}
                     for activity in activities:
                         activity_id = activity['id']
                         activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
                         
                         activities_obj[activity_id] = {
-                            'id': activity_id,
-                            'name': activity['name'],
-                            'url': activity.get('url', ''),
                             'values': {
                                 'k': activity_progress.get('k', 0.0),
                                 'p': activity_progress.get('p', 0.0),

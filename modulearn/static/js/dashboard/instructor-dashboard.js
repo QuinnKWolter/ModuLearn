@@ -1,4 +1,10 @@
 (function () {
+  function t(value) {
+    return window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
+      ? window.ModuLearnI18n.t(value)
+      : value;
+  }
+
   function debounce(fn, wait) {
     let timeoutId = null;
     return function debounced(...args) {
@@ -70,7 +76,7 @@
       const originalText = button.textContent;
       try {
         await navigator.clipboard.writeText(target.value || target.textContent || '');
-        button.textContent = 'Copied';
+        button.textContent = t('Copied');
         window.setTimeout(() => {
           button.textContent = originalText;
         }, 1200);
@@ -114,7 +120,7 @@
       const courseInstancesList = document.getElementById('courseInstancesList');
 
       modal.show();
-      document.getElementById('courseToDelete').textContent = 'Loading...';
+      document.getElementById('courseToDelete').textContent = t('Loading...');
       confirmButton.disabled = true;
       instancesList.innerHTML = '';
       noInstancesMessage.classList.add('hidden');
@@ -124,7 +130,7 @@
         const response = await fetch(replacePattern(config.courseDetailsPattern, '__COURSE_ID__', courseId));
         const data = await parseJsonResponse(response);
         if (!response.ok || data.error) {
-          throw new Error(data.error || `Failed to load course details (${response.status})`);
+          throw new Error(data.error || `${t('Failed to load course details')} (${response.status})`);
         }
 
         document.getElementById('courseToDelete').textContent = data.course.title;
@@ -132,7 +138,7 @@
           data.instances.forEach((instance) => {
             const li = document.createElement('li');
             li.className = 'list-group-item';
-            li.textContent = `${instance.group_name} (${instance.enrollment_count} students enrolled)`;
+            li.textContent = `${instance.group_name} (${t('Enrolled')}: ${instance.enrollment_count})`;
             instancesList.appendChild(li);
           });
           courseInstancesList.classList.remove('hidden');
@@ -140,24 +146,24 @@
         } else {
           courseInstancesList.classList.add('hidden');
           noInstancesMessage.classList.remove('hidden');
-          noInstancesMessage.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400">This course has no active sessions.</p>';
+          noInstancesMessage.innerHTML = `<p class="text-sm text-gray-500 dark:text-gray-400">${t('This course has no active sessions.')}</p>`;
         }
 
         confirmButton.disabled = false;
         confirmButton.onclick = () => deleteCourse(courseId);
       } catch (error) {
         console.error('Error fetching course details:', error);
-        document.getElementById('courseToDelete').textContent = 'Error loading course details';
+        document.getElementById('courseToDelete').textContent = t('Error loading course details');
         courseInstancesList.classList.add('hidden');
         noInstancesMessage.classList.remove('hidden');
-        noInstancesMessage.innerHTML = `<div class="alert alert-danger">Error: ${error.message || 'Failed to load course details'}</div>`;
+        noInstancesMessage.innerHTML = `<div class="alert alert-danger">${t('Error:')} ${error.message || t('Failed to load course details')}</div>`;
       }
     }
 
     async function deleteCourse(courseId) {
       const confirmButton = document.getElementById('confirmDeleteButton');
       confirmButton.disabled = true;
-      confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+      confirmButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${t('Deleting...')}`;
 
       try {
         const response = await fetch(replacePattern(config.courseDeletePattern, '__COURSE_ID__', courseId), {
@@ -167,15 +173,15 @@
         const data = await parseJsonResponse(response);
 
         if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Failed to delete course');
+          throw new Error(data.error || t('Failed to delete course'));
         }
 
         window.location.reload();
       } catch (error) {
         console.error('Error deleting course:', error);
-        alert(`Error: ${error.message || 'Failed to delete course'}`);
+        alert(`${t('Error:')} ${t(error.message || 'Failed to delete course')}`);
         confirmButton.disabled = false;
-        confirmButton.innerHTML = '<i class="bi bi-trash mr-1"></i>Delete Course';
+        confirmButton.innerHTML = `<i class="bi bi-trash mr-1"></i>${t('Delete Course')}`;
       }
     }
 
@@ -186,7 +192,7 @@
       tableBody.innerHTML = `
         <tr>
           <td colspan="4" class="text-center text-gray-400 py-4">
-            <span class="spinner-border mr-2"></span>Loading...
+            <span class="spinner-border mr-2"></span>${t('Loading...')}
           </td>
         </tr>
       `;
@@ -196,7 +202,7 @@
         const data = await parseJsonResponse(response);
 
         if (!response.ok) {
-          throw new Error(data.error || `Failed to load enrollments (${response.status})`);
+          throw new Error(data.error || `${t('Failed to load enrollments')} (${response.status})`);
         }
 
         tableBody.innerHTML = '';
@@ -220,7 +226,7 @@
           tableBody.innerHTML = `
             <tr>
               <td colspan="4" class="text-center text-gray-500 py-4">
-                <em>No students are currently enrolled in this course session.</em>
+                <em>${t('No students are currently enrolled in this course session.')}</em>
               </td>
             </tr>
           `;
@@ -230,7 +236,7 @@
         tableBody.innerHTML = `
           <tr>
             <td colspan="4" class="text-center text-red-500 py-4">
-              <em>Error loading enrollments. Please try again.</em>
+              <em>${t('Error loading enrollments. Please try again.')}</em>
             </td>
           </tr>
         `;
@@ -240,7 +246,7 @@
     function attachRemoveListeners() {
       document.querySelectorAll('.remove-enrollment').forEach((button) => {
         button.addEventListener('click', async function () {
-          if (!window.confirm('Are you sure you want to remove this student?')) {
+          if (!window.confirm(t('Are you sure you want to remove this student?'))) {
             return;
           }
 
@@ -251,12 +257,12 @@
             );
             const data = await parseJsonResponse(response);
             if (!response.ok || !data.success) {
-              throw new Error(data.error || 'Failed to remove enrollment');
+              throw new Error(data.error || t('Failed to remove enrollment'));
             }
             this.closest('tr').remove();
           } catch (error) {
             console.error('Error removing enrollment:', error);
-            alert(error.message || 'An error occurred while removing the student.');
+            alert(t(error.message || 'An error occurred while removing the student.'));
           }
         });
       });
@@ -282,19 +288,19 @@
         const data = await parseJsonResponse(response);
 
         if (!response.ok) {
-          throw new Error(data.error || `Failed to validate session name (${response.status})`);
+          throw new Error(data.error || `${t('Failed to validate session name')} (${response.status})`);
         }
 
         if (data.available) {
           groupNameInput.classList.remove('is-invalid');
           groupNameInput.classList.add('is-valid');
-          groupNameFeedback.textContent = 'Session name is available';
+          groupNameFeedback.textContent = t('Session name is available');
           groupNameFeedback.className = 'valid-feedback text-sm';
           submitButton.disabled = false;
         } else {
           groupNameInput.classList.remove('is-valid');
           groupNameInput.classList.add('is-invalid');
-          groupNameFeedback.textContent = data.error || 'This session name already exists for this course';
+          groupNameFeedback.textContent = data.error || t('This session name already exists for this course');
           groupNameFeedback.className = 'invalid-feedback text-sm';
           submitButton.disabled = true;
         }
@@ -315,7 +321,7 @@
         const submitButton = this.querySelector('button[type="submit"]');
 
         submitButton.disabled = true;
-        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+        submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${t('Creating...')}`;
 
         try {
           const response = await fetch(
@@ -328,15 +334,15 @@
           );
           const data = await parseJsonResponse(response);
           if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Failed to create session');
+            throw new Error(data.error || t('Failed to create session'));
           }
           window.location.reload();
         } catch (error) {
           console.error('Error creating course session:', error);
-          alert(error.message || 'An error occurred while creating the course session.');
+          alert(t(error.message || 'An error occurred while creating the course session.'));
         } finally {
           submitButton.disabled = false;
-          submitButton.innerHTML = 'Create Session';
+          submitButton.innerHTML = t('Create Session');
         }
       });
     }
@@ -355,13 +361,13 @@
         const emails = emailList.value.split(',').map((email) => email.trim()).filter(Boolean);
 
         if (!emails.length) {
-          alert('Please enter at least one email address.');
+          alert(t('Please enter at least one email address.'));
           return;
         }
 
         const submitButton = this.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+        submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${t('Adding...')}`;
 
         try {
           const response = await fetch(replacePattern(config.bulkEnrollPattern, '__COURSE_INSTANCE_ID__', courseInstanceId), {
@@ -372,23 +378,23 @@
           const data = await parseJsonResponse(response);
 
           if (!response.ok || !data.success) {
-            throw new Error(data.error || 'Failed to enroll students');
+            throw new Error(data.error || t('Failed to enroll students'));
           }
 
           emailList.value = '';
           await loadEnrollments(courseInstanceId);
 
-          let message = `Successfully enrolled ${data.success_count} students.`;
+          let message = t(`Successfully enrolled ${data.success_count} students.`);
           if (data.error_count > 0) {
-            message += `\n\nErrors:\n${data.error_details.join('\n')}`;
+            message += `\n\n${t('Errors:')}\n${data.error_details.join('\n')}`;
           }
           alert(message);
         } catch (error) {
           console.error('Error enrolling students:', error);
-          alert(error.message || 'An error occurred while enrolling students.');
+          alert(t(error.message || 'An error occurred while enrolling students.'));
         } finally {
           submitButton.disabled = false;
-          submitButton.innerHTML = '<i class="bi bi-person-plus mr-1"></i>Add Students';
+          submitButton.innerHTML = `<i class="bi bi-person-plus mr-1"></i>${t('Add Students')}`;
         }
       });
     }
@@ -423,14 +429,14 @@
 
         navigator.clipboard.writeText(ltiUrl.toString()).then(() => {
           const tooltip = new bootstrap.Tooltip(button, {
-            title: 'URL Copied!',
+            title: t('URL Copied!'),
             trigger: 'manual',
           });
           tooltip.show();
           window.setTimeout(() => tooltip.dispose(), 1500);
         }).catch((error) => {
           console.error('Failed to copy URL:', error);
-          alert('Failed to copy URL to clipboard.');
+          alert(t('Failed to copy URL to clipboard.'));
         });
       });
     });
@@ -479,8 +485,8 @@
 
       if (legacyMeta) {
         legacyMeta.textContent = normalizedGroups.length
-          ? `${normalizedGroups.length} course${normalizedGroups.length === 1 ? '' : 's'} available`
-          : 'No linked legacy courses were found.';
+          ? t(`${normalizedGroups.length} course${normalizedGroups.length === 1 ? '' : 's'} available`)
+          : t('No linked legacy courses were found.');
       }
 
       if (legacyCount) {
@@ -558,7 +564,7 @@
       }
 
       if (legacyLoading) legacyLoading.classList.remove('hidden');
-      if (legacyMeta) legacyMeta.textContent = 'Loading linked legacy courses...';
+      if (legacyMeta) legacyMeta.textContent = t('Loading linked legacy courses...');
       if (legacySearchInput) legacySearchInput.disabled = true;
 
       console.info('[ModuLearn Legacy] Loading instructor legacy groups', {
@@ -576,7 +582,7 @@
         });
 
         if (!response.ok || !data.success) {
-          throw new Error(data.error || `Failed to load legacy groups (${response.status})`);
+          throw new Error(data.error || `${t('Failed to load legacy groups')} (${response.status})`);
         }
 
         renderLegacyGroups(data.groups || []);
@@ -584,10 +590,10 @@
         console.error('Error loading instructor legacy groups:', error);
         if (legacyLoading) legacyLoading.classList.add('hidden');
         if (legacyContainer) legacyContainer.classList.add('hidden');
-        if (legacyMeta) legacyMeta.textContent = error.message || 'Failed to load linked legacy courses.';
+        if (legacyMeta) legacyMeta.textContent = error.message || t('Failed to load linked legacy courses.');
         if (legacyEmptyMsg) {
           legacyEmptyMsg.classList.remove('hidden');
-          legacyEmptyMsg.querySelector('p').textContent = error.message || 'Failed to load linked legacy courses.';
+          legacyEmptyMsg.querySelector('p').textContent = error.message || t('Failed to load linked legacy courses.');
         }
         if (legacyCount) legacyCount.textContent = '0';
       }
@@ -624,7 +630,7 @@
       if (filePreview) filePreview.classList.add('hidden');
       if (importJsonSubmitBtn) {
         importJsonSubmitBtn.disabled = false;
-        importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload mr-1"></i>Import Course';
+        importJsonSubmitBtn.innerHTML = `<i class="bi bi-upload mr-1"></i>${t('Import Course')}`;
       }
     }
 
@@ -641,7 +647,7 @@
         }
 
         if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
-          jsonImportError.textContent = 'Please select a valid JSON file.';
+          jsonImportError.textContent = t('Please select a valid JSON file.');
           jsonImportError.classList.remove('hidden');
           jsonFileInput.value = '';
           filePreview.classList.add('hidden');
@@ -656,7 +662,7 @@
             filePreview.classList.remove('hidden');
             jsonImportError.classList.add('hidden');
           } catch (error) {
-            jsonImportError.textContent = `Invalid JSON file: ${error.message}`;
+            jsonImportError.textContent = `${t('Invalid JSON file:')} ${error.message}`;
             jsonImportError.classList.remove('hidden');
             filePreview.classList.add('hidden');
           }
@@ -673,7 +679,7 @@
           jsonTextInput.value = JSON.stringify(parsed, null, 2);
           jsonImportError.classList.add('hidden');
         } catch (error) {
-          jsonImportError.textContent = `Invalid JSON: ${error.message}`;
+          jsonImportError.textContent = `${t('Invalid JSON:')} ${error.message}`;
           jsonImportError.classList.remove('hidden');
         }
       });
@@ -697,7 +703,7 @@
         if (activeTab && activeTab.id === 'upload-tab') {
           const file = jsonFileInput.files[0];
           if (!file) {
-            jsonImportError.textContent = 'Please select a JSON file.';
+            jsonImportError.textContent = t('Please select a JSON file.');
             jsonImportError.classList.remove('hidden');
             return;
           }
@@ -705,7 +711,7 @@
           try {
             courseData = JSON.parse(await file.text());
           } catch (error) {
-            jsonImportError.textContent = `Error reading file: ${error.message}`;
+            jsonImportError.textContent = `${t('Error reading file:')} ${error.message}`;
             jsonImportError.classList.remove('hidden');
             return;
           }
@@ -713,20 +719,20 @@
           try {
             courseData = JSON.parse(jsonTextInput.value.trim());
           } catch (error) {
-            jsonImportError.textContent = `Invalid JSON format: ${error.message}`;
+            jsonImportError.textContent = `${t('Invalid JSON format:')} ${error.message}`;
             jsonImportError.classList.remove('hidden');
             return;
           }
         }
 
         if (!courseData.id && !courseData.name) {
-          jsonImportError.textContent = 'Invalid course structure: missing required fields (id or name).';
+          jsonImportError.textContent = t('Invalid course structure: missing required fields (id or name).');
           jsonImportError.classList.remove('hidden');
           return;
         }
 
         importJsonSubmitBtn.disabled = true;
-        importJsonSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing...';
+        importJsonSubmitBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${t('Importing...')}`;
 
         try {
           const response = await fetch(config.createCourseUrl, {
@@ -743,10 +749,10 @@
           window.setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
           console.error('Error importing course:', error);
-          jsonImportError.textContent = `Error: ${error.message}`;
+          jsonImportError.textContent = `${t('Error:')} ${error.message}`;
           jsonImportError.classList.remove('hidden');
           importJsonSubmitBtn.disabled = false;
-          importJsonSubmitBtn.innerHTML = '<i class="bi bi-upload mr-1"></i>Import Course';
+          importJsonSubmitBtn.innerHTML = `<i class="bi bi-upload mr-1"></i>${t('Import Course')}`;
         }
       });
     }
@@ -757,7 +763,7 @@
         const button = this;
         const originalText = button.innerHTML;
         button.disabled = true;
-        button.innerHTML = 'Connecting...';
+        button.innerHTML = t('Connecting...');
 
         try {
           const tokenResponse = await fetch(config.generateCourseAuthUrl, {
@@ -767,10 +773,10 @@
           const tokenData = await parseJsonResponse(tokenResponse);
 
           if (!tokenResponse.ok || tokenData.error) {
-            const errorMessage = tokenData.error || 'Failed to authenticate with course-authoring';
+            const errorMessage = tokenData.error || t('Failed to authenticate with course-authoring');
             if (tokenData.password_mismatch) {
               const shouldReset = window.confirm(
-                'Password mismatch detected in course-authoring.\n\nWould you like ModuLearn to generate a new password so you can sync the external account?'
+                t('Password mismatch detected in course-authoring.\n\nWould you like ModuLearn to generate a new password so you can sync the external account?')
               );
               if (shouldReset) {
                 const resetResponse = await fetch(config.resetCourseAuthoringPasswordUrl, {
@@ -779,20 +785,20 @@
                 });
                 const resetData = await parseJsonResponse(resetResponse);
                 if (resetResponse.ok && resetData.success) {
-                  alert(`Password reset successful.\n\nNew password:\n${resetData.new_password}\n\nShare this with the course-authoring administrator so the accounts can be synced.`);
+                  alert(`${t('Password reset successful.\n\nNew password:')}\n${resetData.new_password}\n\n${t('Share this with the course-authoring administrator so the accounts can be synced.')}`);
                 } else {
-                  alert(resetData.error || 'Failed to reset course-authoring password.');
+                  alert(t(resetData.error || 'Failed to reset course-authoring password.'));
                 }
               }
             } else {
-              alert(errorMessage);
+              alert(t(errorMessage));
             }
             button.disabled = false;
             button.innerHTML = originalText;
             return;
           }
 
-          button.innerHTML = 'Logging in...';
+          button.innerHTML = t('Logging in...');
 
           try {
             const loginResponse = await fetch(config.courseAuthoringXLoginUrl, {
@@ -803,7 +809,7 @@
             });
 
             if (!loginResponse.ok) {
-              throw new Error('Direct x-login failed');
+              throw new Error(t('Direct x-login failed'));
             }
 
             window.setTimeout(() => {
@@ -818,15 +824,15 @@
             });
             const proxyData = await parseJsonResponse(proxyResponse);
             if (!proxyResponse.ok || proxyData.error) {
-              throw new Error(proxyData.error || 'Failed to establish a course-authoring session.');
+              throw new Error(proxyData.error || t('Failed to establish a course-authoring session.'));
             }
 
-            alert('Course-authoring session was prepared through the ModuLearn proxy. Redirecting now.');
+            alert(t('Course-authoring session was prepared through the ModuLearn proxy. Redirecting now.'));
             window.location.href = config.courseAuthoringAppUrl;
           }
         } catch (error) {
           console.error('Error connecting to course-authoring:', error);
-          alert(error.message || 'An error occurred while connecting to course-authoring.');
+          alert(t(error.message || 'An error occurred while connecting to course-authoring.'));
           button.disabled = false;
           button.innerHTML = originalText;
         }

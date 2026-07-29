@@ -1042,7 +1042,7 @@
                 <form
                   method="post"
                   action="{% url 'dashboard:create_demo_course' %}"
-                  onsubmit="return confirm('Create {{ option.title|escapejs }} for your instructor account?');"
+                  onsubmit="return confirm((window.ModuLearnI18n && window.ModuLearnI18n.t ? window.ModuLearnI18n.t('Create {title} for your instructor account?') : 'Create {title} for your instructor account?').replace('{title}', '{{ option.title|escapejs }}'));"
                 >
                   {% csrf_token %}
                   <input type="hidden" name="demo_type" value="{{ option.key }}">
