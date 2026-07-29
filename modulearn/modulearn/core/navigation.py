@@ -1,11 +1,14 @@
 from django.urls import reverse
+from django.utils.translation import gettext as _
 
 from .roles import get_user_role_snapshot
 
 
-def _nav_item(label, url, *, section="primary", requires_auth=False, requires_guest=False, match_prefix=False):
+def _nav_item(key, label, url, *, section="primary", requires_auth=False, requires_guest=False, match_prefix=False):
     return {
+        "key": key,
         "label": label,
+        "display_label": _(label),
         "url": url,
         "section": section,
         "requires_auth": requires_auth,
@@ -21,14 +24,14 @@ def build_navigation(request):
     role_snapshot = get_user_role_snapshot(user)
 
     items = [
-        _nav_item("Home", reverse("main:home")),
-        _nav_item("Student", reverse("dashboard:student_dashboard"), requires_auth=True),
-        _nav_item("Instructor", reverse("dashboard:instructor_dashboard"), requires_auth=True),
-        _nav_item("Analytics", reverse("dashboard:modulearn_analytics_dashboard"), requires_auth=True, match_prefix=True),
-        _nav_item("Profile", reverse("accounts:profile"), requires_auth=True, match_prefix=True),
-        _nav_item("Login", reverse("accounts:login"), requires_guest=True),
-        _nav_item("Sign Up", reverse("accounts:signup"), requires_guest=True),
-        _nav_item("Info", reverse("main:info"), match_prefix=True),
+        _nav_item("home", "Home", reverse("main:home")),
+        _nav_item("student", "Student", reverse("dashboard:student_dashboard"), requires_auth=True),
+        _nav_item("instructor", "Instructor", reverse("dashboard:instructor_dashboard"), requires_auth=True),
+        _nav_item("analytics", "Analytics", reverse("dashboard:modulearn_analytics_dashboard"), requires_auth=True, match_prefix=True),
+        _nav_item("profile", "Profile", reverse("accounts:profile"), requires_auth=True, match_prefix=True),
+        _nav_item("login", "Login", reverse("accounts:login"), requires_guest=True),
+        _nav_item("signup", "Sign Up", reverse("accounts:signup"), requires_guest=True),
+        _nav_item("info", "Info", reverse("main:info"), match_prefix=True),
     ]
 
     if not is_authenticated:
@@ -47,9 +50,9 @@ def build_navigation(request):
     for item in items:
         if item["requires_guest"]:
             continue
-        if item["label"] == "Student" and not role_snapshot["effective_is_student"]:
+        if item["key"] == "student" and not role_snapshot["effective_is_student"]:
             continue
-        if item["label"] in {"Instructor", "Analytics"} and not role_snapshot["effective_is_instructor"]:
+        if item["key"] in {"instructor", "analytics"} and not role_snapshot["effective_is_instructor"]:
             continue
         item["is_active"] = (
             current_path == item["url"] or

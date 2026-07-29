@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from unittest.mock import patch
 
 from courses.models import (
     Course,
@@ -107,6 +108,29 @@ class RecruitmentEntryFlowTests(TestCase):
         session = ParticipantSession.objects.get(recruitment_source=source)
         self.assertEqual(session.external_pid, "test-participant-01")
         self.assertEqual(session.external_session_id, "testsession01")
+
+    @override_settings(PROLIFIC_API_TOKEN="configured-token")
+    def test_synthetic_prolific_ids_skip_remote_submission_verification(self):
+        study = self.make_study(title="Synthetic Verified Study")
+        RecruitmentSource.objects.create(
+            study=study,
+            platform=RecruitmentSource.PLATFORM_PROLIFIC,
+            prolific_study_id="bbbbbbbbbbbbbbbbbbbbbbbb",
+        )
+
+        with patch("recruitment.services.prolific.requests.get") as mocked_get:
+            response = self.client.get(reverse("recruitment:study_launch", args=[study.slug]), {
+                "PROLIFIC_PID": "demo-participant-02",
+                "STUDY_ID": "bbbbbbbbbbbbbbbbbbbbbbbb",
+                "SESSION_ID": "demosession02",
+            })
+
+        self.assertRedirects(response, reverse("recruitment:sessions"))
+        self.assertFalse(mocked_get.called)
+        self.assertTrue(ParticipantSession.objects.filter(
+            external_pid="demo-participant-02",
+            external_session_id="demosession02",
+        ).exists())
 
     def test_prolific_study_launch_accepts_short_session_identifier(self):
         study = self.make_study(title="RITEL Demo Study")

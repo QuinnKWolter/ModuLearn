@@ -9,6 +9,9 @@ urlpatterns = [
     # Admin site
     path('admin/', admin.site.urls),
 
+    # Language selection
+    path('i18n/', include('django.conf.urls.i18n')),
+
     # Custom Authentication URLs
     path('accounts/', include('accounts.urls', namespace='accounts')),
 

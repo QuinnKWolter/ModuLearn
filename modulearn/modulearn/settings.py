@@ -44,7 +44,8 @@ DEBUG = debug_env if debug_env is not None else False
 if os.getenv('DJANGO_PRODUCTION') and parse_boolish(os.getenv('DJANGO_PRODUCTION')):
     DEBUG = False
 
-IS_PRODUCTION = not DEBUG
+IS_TESTING = 'test' in sys.argv
+IS_PRODUCTION = not DEBUG and not IS_TESTING
 
 import logging
 logger = logging.getLogger(__name__)
@@ -81,6 +82,8 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'modulearn.core.middleware.QueryStringLanguageMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -100,6 +103,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'modulearn.core.context_processors.app_shell',
@@ -127,7 +131,13 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
+LANGUAGES = [
+    ('en', 'English'),
+    ('es', 'Español'),
+]
+LOCALE_PATHS = [BASE_DIR / 'locale']
+LANGUAGE_COOKIE_NAME = 'modulearn_language'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
@@ -143,7 +153,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Pure Django engine—completely sequential, zero background threads
-if DEBUG:
+if DEBUG or IS_TESTING:
     STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 else:
     STATICFILES_BACKEND = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'

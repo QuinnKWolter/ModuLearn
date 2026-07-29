@@ -43,7 +43,7 @@ def validate_prolific_ids(ids: ProlificIds):
         raise ProlificVerificationError(f"Missing Prolific parameter: {', '.join(missing)}.")
 
     invalid = []
-    if not _valid_prolific_pid(ids.pid):
+    if not valid_prolific_pid(ids.pid):
         invalid.append("PROLIFIC_PID")
     if not PROLIFIC_OBJECT_ID_PATTERN.match(ids.study_id):
         invalid.append("STUDY_ID")
@@ -53,11 +53,15 @@ def validate_prolific_ids(ids: ProlificIds):
         raise ProlificVerificationError(f"Invalid Prolific identifier format: {', '.join(invalid)}.")
 
 
-def _valid_prolific_pid(value: str) -> bool:
+def valid_prolific_pid(value: str) -> bool:
     return bool(
         PROLIFIC_OBJECT_ID_PATTERN.match(value)
         or PROLIFIC_SYNTHETIC_PID_PATTERN.match(value)
     )
+
+
+def is_synthetic_prolific_pid(value: str) -> bool:
+    return bool(PROLIFIC_SYNTHETIC_PID_PATTERN.match(value or ""))
 
 
 def verify_secured_url(token: str, expected: ProlificIds) -> dict:
@@ -92,6 +96,9 @@ def verify_secured_url(token: str, expected: ProlificIds) -> dict:
 
 
 def verify_submission_api(expected: ProlificIds) -> dict:
+    if is_synthetic_prolific_pid(expected.pid):
+        return {"verified": False, "reason": "synthetic_participant_id"}
+
     token = getattr(settings, "PROLIFIC_API_TOKEN", "")
     if not token or not expected.session_id:
         return {"verified": False, "reason": "submission_api_not_configured"}

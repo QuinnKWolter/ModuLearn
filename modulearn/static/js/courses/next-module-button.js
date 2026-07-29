@@ -1,20 +1,26 @@
 (function () {
+  function t(value) {
+    return window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
+      ? window.ModuLearnI18n.t(value)
+      : value;
+  }
+
   function setButtonState(button, state) {
     var label = button.querySelector('[data-next-label]');
     var icon = button.querySelector('[data-next-icon]');
-    var text = button.dataset.readyLabel || 'Next Module';
+    var text = button.dataset.readyLabel || t('Next Module');
 
     button.classList.remove('btn-primary', 'btn-outline-secondary', 'opacity-75');
     if (state === 'checking') {
-      text = button.dataset.checkingLabel || 'Checking...';
+      text = button.dataset.checkingLabel || t('Checking...');
       button.classList.add('btn-outline-secondary');
       if (icon) icon.className = 'bi bi-arrow-repeat';
     } else if (state === 'empty') {
-      text = button.dataset.emptyLabel || 'No Unlocked Module';
+      text = button.dataset.emptyLabel || t('No Unlocked Module');
       button.classList.add('btn-outline-secondary', 'opacity-75');
       if (icon) icon.className = 'bi bi-lock';
     } else if (state === 'error') {
-      text = button.dataset.errorLabel || 'Try Again';
+      text = button.dataset.errorLabel || t('Try Again');
       button.classList.add('btn-outline-secondary');
       if (icon) icon.className = 'bi bi-exclamation-circle';
     } else {
@@ -44,20 +50,20 @@
         button.dataset.resolved = '1';
         if (data && data.available && data.url) {
           button.href = data.url;
-          button.title = data.title ? 'Open ' + data.title : 'Open the next module';
+          button.title = data.title ? t('Open') + ' ' + data.title : t('Open the next module');
           setButtonState(button, 'ready');
           return data;
         }
         button.removeAttribute('data-resolved-url');
         button.href = '#';
-        button.title = (data && data.message) || 'No visible unlocked module is available yet';
+        button.title = (data && data.message) || t('No visible unlocked module is available yet');
         setButtonState(button, 'empty');
         return data || null;
       })
       .catch(function () {
         button.href = '#';
         button.removeAttribute('data-resolved');
-        button.title = 'Could not check the next module. Try again.';
+        button.title = t('Could not check the next module. Try again.');
         setButtonState(button, 'error');
         return null;
       });

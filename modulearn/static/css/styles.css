@@ -9,6 +9,47 @@ body {
   transition: background-color 0.3s, color 0.3s;
 }
 
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.18rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.language-toggle.compact {
+  transform: scale(0.96);
+  transform-origin: center;
+}
+
+.language-toggle-option {
+  min-width: 2.15rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.34rem 0.52rem;
+  background: transparent;
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.language-toggle-option:hover {
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.language-toggle-option.is-active {
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f2f5d;
+  box-shadow: 0 6px 18px rgba(3, 17, 35, 0.18);
+}
+
 /* Breadcrumb links */
 .breadcrumb-item a {
   text-decoration: none;

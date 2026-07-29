@@ -3,6 +3,12 @@
   const storageKey = 'theme';
   const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 
+  function t(value) {
+    return window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
+      ? window.ModuLearnI18n.t(value)
+      : value;
+  }
+
   function getStoredTheme() {
     const saved = window.localStorage.getItem(storageKey);
     if (saved) {
@@ -24,8 +30,8 @@
     document.querySelectorAll('[data-theme-toggle]').forEach(function (trigger) {
       const nextTheme = theme === 'dark' ? 'light' : 'dark';
       trigger.setAttribute('aria-pressed', String(theme === 'dark'));
-      trigger.setAttribute('aria-label', 'Switch to ' + nextTheme + ' mode');
-      trigger.setAttribute('title', 'Switch to ' + nextTheme + ' mode');
+      trigger.setAttribute('aria-label', t('Switch to ' + nextTheme + ' mode'));
+      trigger.setAttribute('title', t('Switch to ' + nextTheme + ' mode'));
     });
   }
 
@@ -46,7 +52,7 @@
     if (toggle) {
       const isOpen = !menu.classList.contains('hidden');
       toggle.setAttribute('aria-expanded', String(isOpen));
-      toggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+      toggle.setAttribute('aria-label', isOpen ? t('Close navigation') : t('Open navigation'));
       if (icon) {
         icon.classList.toggle('bi-list', !isOpen);
         icon.classList.toggle('bi-x-lg', isOpen);
@@ -83,7 +89,7 @@
     const mobileToggle = document.querySelector('[data-mobile-toggle]');
     if (mobileToggle) {
       mobileToggle.addEventListener('click', toggleMobileNav);
-      mobileToggle.setAttribute('aria-label', 'Open navigation');
+      mobileToggle.setAttribute('aria-label', t('Open navigation'));
     }
 
     window.addEventListener('scroll', handleHeaderScroll, { passive: true });

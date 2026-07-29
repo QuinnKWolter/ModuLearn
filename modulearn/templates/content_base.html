@@ -1,7 +1,7 @@
+{% load static i18n %}
 <!doctype html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
   <head>
-    {% load static %}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
@@ -32,6 +32,10 @@
       {% block content %}{% endblock %}
     </main>
     {% include 'includes/app_footer.html' %}
+    <script>
+      window.ModuLearnLanguage = "{{ LANGUAGE_CODE|default:'en'|escapejs }}";
+    </script>
+    <script src="{% static 'js/i18n.js' %}"></script>
     <script src="{% static 'js/bootstrap-compat.js' %}"></script>
     <script src="{% static 'js/app-shell.js' %}"></script>
     {% block extra_js %}{% endblock %}

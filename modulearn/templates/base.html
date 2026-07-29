@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en">
+{% load i18n %}
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
   <head>
     {% load static %}
     <meta charset="utf-8">
@@ -36,7 +37,7 @@
         {% for message in messages %}
           <div class="alert flex items-start justify-between gap-4 {% if message.tags == 'error' or message.tags == 'danger' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}" role="alert">
             <span>{{ message }}</span>
-            <button type="button" class="text-current/70 hover:text-current" onclick="this.parentElement.remove()">&times;</button>
+            <button type="button" class="text-current/70 hover:text-current" onclick="this.parentElement.remove()" aria-label="{% trans 'Dismiss message' %}" title="{% trans 'Dismiss message' %}">&times;</button>
           </div>
         {% endfor %}
       </div>
@@ -45,7 +46,7 @@
     <main class="shell-section">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {% block breadcrumbs_wrapper %}
-          <nav aria-label="Breadcrumb" class="breadcrumb-nav mb-6">
+          <nav aria-label="{% trans 'Breadcrumb' %}" class="breadcrumb-nav mb-6">
             <ol class="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
               {% block breadcrumbs %}{% endblock %}
             </ol>
@@ -57,6 +58,10 @@
 
     {% include 'includes/app_footer.html' %}
 
+    <script>
+      window.ModuLearnLanguage = "{{ LANGUAGE_CODE|default:'en'|escapejs }}";
+    </script>
+    <script src="{% static 'js/i18n.js' %}"></script>
     <script src="{% static 'js/bootstrap-compat.js' %}"></script>
     <script src="{% static 'js/app-shell.js' %}"></script>
     {% block extra_js %}{% endblock %}
