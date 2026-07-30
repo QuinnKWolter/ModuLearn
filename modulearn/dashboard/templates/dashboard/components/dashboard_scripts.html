@@ -589,6 +589,9 @@ let currentViewMode = 'classAverage';
 let studentTableSort = { key: 'progress', direction: 'desc' };
 let studentTableFilter = '';
 let showAllBreakdowns = false;
+let legacyAnalyticsFetchInFlight = false;
+const learnerActivityDetailsLoaded = new Set();
+const cellActivityDetailsLoaded = new Set();
 
 function updateButtonStates() {
     // Update all radio buttons to reflect the current selection
@@ -597,7 +600,101 @@ function updateButtonStates() {
     });
 }
 
-function handleFetch() {
+async function parseDashboardJsonResponse(response, label) {
+    const contentType = response.headers.get('content-type') || '';
+    const rawText = await response.text();
+
+    if (!rawText) {
+        throw new Error(`${label} returned an empty response (${response.status} ${response.statusText || 'Unknown status'}).`);
+    }
+
+    if (!contentType.toLowerCase().includes('application/json')) {
+        const preview = rawText.replace(/\s+/g, ' ').slice(0, 180);
+        throw new Error(`${label} returned ${response.status} ${response.statusText || ''} instead of JSON: ${preview}`);
+    }
+
+    try {
+        return JSON.parse(rawText);
+    } catch (error) {
+        throw new Error(`${label} returned incomplete or invalid JSON (${response.status}): ${error.message}`);
+    }
+}
+
+function getCurrentAnalyticsParams() {
+    return {
+        grp: (document.getElementById('grp')?.value || '').trim(),
+        cid: (document.getElementById('cid')?.value || '').trim()
+    };
+}
+
+async function ensureLearnerActivityDetails(learnerId) {
+    if (!responseData) return;
+    const cacheKey = String(learnerId);
+    if (responseData?.context?.activity_details_included || learnerActivityDetailsLoaded.has(cacheKey)) {
+        return;
+    }
+
+    const { grp, cid } = getCurrentAnalyticsParams();
+    if (!grp || !cid) return;
+
+    const detailParams = new URLSearchParams({ usr: learnerId, grp, cid });
+    const detailUrl = `{% url 'dashboard:fetch_analytics_data' %}?${detailParams}`;
+    const response = await fetch(detailUrl, { headers: { 'Accept': 'application/json' } });
+    const data = await parseDashboardJsonResponse(response, 'Student activity details');
+
+    if (!response.ok || data.error) {
+        throw new Error(data.error || `Student activity details failed: ${response.statusText}`);
+    }
+
+    const detailLearner = (data.learners || [])[0];
+    const learner = (responseData.learners || []).find(l => String(l.id) === cacheKey);
+    if (learner && detailLearner) {
+        learner.state = learner.state || {};
+        learner.state.activities = detailLearner.state?.activities || {};
+        learner.lastActive = detailLearner.lastActive || detailLearner.last_update || learner.lastActive;
+    }
+    learnerActivityDetailsLoaded.add(cacheKey);
+}
+
+async function ensureCellActivityDetails(topicId, resourceId) {
+    if (!responseData) return;
+    const cacheKey = `${topicId}::${resourceId}`;
+    if (responseData?.context?.activity_details_included || cellActivityDetailsLoaded.has(cacheKey)) {
+        return;
+    }
+
+    const { grp, cid } = getCurrentAnalyticsParams();
+    if (!grp || !cid) return;
+
+    const detailParams = new URLSearchParams({ grp, cid, topic: topicId, resource: resourceId });
+    const detailUrl = `{% url 'dashboard:fetch_cell_activity_analytics' %}?${detailParams}`;
+    const response = await fetch(detailUrl, { headers: { 'Accept': 'application/json' } });
+    const data = await parseDashboardJsonResponse(response, 'Cell activity details');
+
+    if (!response.ok || data.error) {
+        throw new Error(data.error || `Cell activity details failed: ${response.statusText}`);
+    }
+
+    const topicDef = (responseData.topics || []).find(t => String(t.id) === String(topicId));
+    if (topicDef && Array.isArray(data.activities)) {
+        topicDef.activities = topicDef.activities || {};
+        topicDef.activities[resourceId] = data.activities;
+    }
+
+    const learnerById = new Map((responseData.learners || []).map(learner => [String(learner.id), learner]));
+    (data.learners || []).forEach(row => {
+        const learner = learnerById.get(String(row.id));
+        if (!learner) return;
+        learner.state = learner.state || {};
+        learner.state.activities = learner.state.activities || {};
+        learner.state.activities[topicId] = learner.state.activities[topicId] || {};
+        learner.state.activities[topicId][resourceId] = row.activities || {};
+    });
+
+    cellActivityDetailsLoaded.add(cacheKey);
+}
+
+async function handleFetch() {
     const btn = document.getElementById('fetchDataBtn');
     const btnText = document.getElementById('fetchBtnText');
     const spinner = document.getElementById('fetchSpinner');
@@ -610,12 +707,19 @@ function handleFetch() {
     if (!grpVal || !cidVal) {
         return; // Guard: do nothing if required fields are empty
     }
+
+    if (legacyAnalyticsFetchInFlight) {
+        console.info('[ModuLearn Legacy] Analytics fetch already in progress');
+        return;
+    }
     
     // Guard: exit if required elements don't exist
     if (!btn || !progressContainer || !progressBar || !progressText || !progressPercent) {
         console.warn('Dashboard fetch elements not found');
         return;
     }
+
+    legacyAnalyticsFetchInFlight = true;
     
     if (btn) btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
@@ -648,88 +752,88 @@ function handleFetch() {
     
     // Clear any previous error states
     clearFormErrors();
-    
-    fetch(batchAnalyticsUrl)
-        .then(async response => {
-            const data = await response.json();
-            console.info('[ModuLearn Legacy] Analytics response', {
-                groupLogin: batchAnalyticsParams.grp,
-                courseId: batchAnalyticsParams.cid,
-                endpoint: batchAnalyticsUrl,
-                status: response.status,
-                data,
-            });
-            
-            if (!response.ok) {
-                // Extract error message from response
-                const errorMessage = data.error || `Batch Analytics API Error: ${response.statusText}`;
-                const statusCode = response.status;
-                
-                // Show form field errors based on status code
-                if (statusCode === 400) {
-                    // Bad Request - likely invalid Group ID or Course ID
-                    showFormFieldError('grp', 'Invalid Group ID or Course ID');
-                    showFormFieldError('cid', 'Invalid Group ID or Course ID');
-                } else if (statusCode === 404) {
-                    // Not Found - Group/Course combination doesn't exist
-                    showFormFieldError('grp', 'Group/Course combination not found');
-                    showFormFieldError('cid', 'Group/Course combination not found');
-                } else {
-                    // Other errors
-                    showFormFieldError('grp', errorMessage);
-                    showFormFieldError('cid', errorMessage);
-                }
-                
-                throw new Error(errorMessage);
-            }
-            
-            if (data.error) {
-                showFormFieldError('grp', data.error);
-                showFormFieldError('cid', data.error);
-                throw new Error(data.error);
-            }
-            
-            // Clear any error states on success
-            clearFormErrors();
-            
-            progressBar.style.width = '50%';
-            progressPercent.textContent = '50%';
-            progressText.textContent = 'Processing data...';
-            
-            progressBar.style.width = '90%';
-            progressPercent.textContent = '90%';
-            progressText.textContent = 'Building dashboard...';
-            
-            // The batch endpoint returns the complete response structure
-            responseData = data;
-            
-            progressBar.style.width = '100%';
-            progressPercent.textContent = '100%';
-            progressText.textContent = 'Complete!';
-                
-                // Hide progress bar and show dashboard
-            setTimeout(() => {
-                progressContainer.classList.add('hidden');
-                const dashboardContent = document.getElementById('dashboardContent');
-                dashboardContent.classList.remove('hidden');
-                dashboardContent.classList.add('fade-in');
-                renderDashboard();
-            }, 300);
-        })
-        .catch(error => {
-            console.error('Fetch error:', error);
-            showError(`Failed to load data: ${error.message}`);
-            progressContainer.classList.add('hidden');
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.removeAttribute('aria-busy');
-            btnText.textContent = 'Launch Analytics';
-            if (spinner) {
-                spinner.classList.add('hidden');
-                spinner.style.display = 'none';
-            }
+
+    try {
+        const response = await fetch(batchAnalyticsUrl, {
+            headers: { 'Accept': 'application/json' }
         });
+        const data = await parseDashboardJsonResponse(response, 'Batch analytics');
+        console.info('[ModuLearn Legacy] Analytics response', {
+            groupLogin: batchAnalyticsParams.grp,
+            courseId: batchAnalyticsParams.cid,
+            endpoint: batchAnalyticsUrl,
+            status: response.status,
+            learners: data.learners?.length || 0,
+            topics: data.topics?.length || 0,
+            activityDetailsIncluded: data.context?.activity_details_included,
+        });
+
+        if (!response.ok) {
+            const errorMessage = data.error || `Batch Analytics API Error: ${response.statusText}`;
+            const statusCode = response.status;
+
+            if (statusCode === 400) {
+                showFormFieldError('grp', 'Invalid Group ID or Course ID');
+                showFormFieldError('cid', 'Invalid Group ID or Course ID');
+            } else if (statusCode === 404) {
+                showFormFieldError('grp', 'Group/Course combination not found');
+                showFormFieldError('cid', 'Group/Course combination not found');
+            } else {
+                showFormFieldError('grp', errorMessage);
+                showFormFieldError('cid', errorMessage);
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        if (data.error) {
+            showFormFieldError('grp', data.error);
+            showFormFieldError('cid', data.error);
+            throw new Error(data.error);
+        }
+
+        clearFormErrors();
+
+        progressBar.style.width = '50%';
+        progressPercent.textContent = '50%';
+        progressText.textContent = 'Processing data...';
+
+        progressBar.style.width = '90%';
+        progressPercent.textContent = '90%';
+        progressText.textContent = 'Building dashboard...';
+
+        responseData = data;
+        learnerActivityDetailsLoaded.clear();
+        cellActivityDetailsLoaded.clear();
+
+        progressBar.style.width = '100%';
+        progressPercent.textContent = '100%';
+        progressText.textContent = 'Complete!';
+
+        setTimeout(() => {
+            progressContainer.classList.add('hidden');
+            const dashboardContent = document.getElementById('dashboardContent');
+            dashboardContent.classList.remove('hidden');
+            dashboardContent.classList.add('fade-in');
+            renderDashboard();
+        }, 300);
+    } catch (error) {
+        console.error('Fetch error:', error);
+        showError(`Failed to load data: ${error.message}`);
+        progressContainer.classList.add('hidden');
+    } finally {
+        legacyAnalyticsFetchInFlight = false;
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        btnText.textContent = 'Launch Analytics';
+        if (spinner) {
+            spinner.classList.add('hidden');
+            spinner.style.display = '';
+        }
+        if (typeof window.updateFetchButtonState === 'function') {
+            window.updateFetchButtonState();
+        }
+    }
 }
 
 function mapLearnerIds(analyticsData, classListData) {
@@ -1563,9 +1667,19 @@ function getBadgeStyle(percent) {
     return { backgroundColor: color, color: '#ffffff' };
 }
 
-function showStudentDetails(learnerId) {
+async function showStudentDetails(learnerId) {
     const learner = responseData.learners.find(l => l.id === learnerId);
     if (!learner) return;
+
+    document.body.style.cursor = 'progress';
+    try {
+        await ensureLearnerActivityDetails(learnerId);
+    } catch (error) {
+        console.warn('[ModuLearn Legacy] Could not load student activity details', error);
+        showError(`Could not load activity details for ${learnerId}: ${error.message}`);
+    } finally {
+        document.body.style.cursor = '';
+    }
 
     const summary = computeLearnerSummary(learner);
     const sortedTopics = (responseData.topics || []).slice().sort((a,b) => (a.order || 0) - (b.order || 0));
@@ -1830,8 +1944,17 @@ function renderCellModalRows(studentData, learnerById, activitiesList, topicId, 
         }).join('');
 }
 
-function handleCellClick(topicId, resourceId, topicName, resourceName) {
-    
+async function handleCellClick(topicId, resourceId, topicName, resourceName) {
+    document.body.style.cursor = 'progress';
+    try {
+        await ensureCellActivityDetails(topicId, resourceId);
+    } catch (error) {
+        console.warn('[ModuLearn Legacy] Could not load cell activity details', error);
+        showError(`Could not load activity details for ${topicName} / ${resourceName}: ${error.message}`);
+    } finally {
+        document.body.style.cursor = '';
+    }
+
     // Get class average data for this topic/resource
     const classAvgData = responseData.groups.find(g => g.name === 'Class Average');
     const classProgress = classAvgData?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;

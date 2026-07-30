@@ -37,7 +37,12 @@ def _analytics_json_response(response_data, *, status=200, label='analytics'):
     """Serialize analytics JSON before returning so production logs include size/timing."""
     started = time.monotonic()
     try:
-        payload = json.dumps(response_data, cls=DjangoJSONEncoder, ensure_ascii=False)
+        payload = json.dumps(
+            response_data,
+            cls=DjangoJSONEncoder,
+            ensure_ascii=False,
+            separators=(',', ':'),
+        )
     except Exception as exc:
         logger.error(f"Failed to serialize {label} JSON response: {exc}", exc_info=True)
         return JsonResponse({
@@ -835,9 +840,11 @@ def fetch_analytics_data(request):
         
         # Import database query functions
         from .db_queries import (
+            activity_progress_has_signal,
             get_course_structure_from_db,
             get_student_progress_from_db,
-            get_class_list_from_db
+            get_class_list_from_db,
+            serialize_activity_progress_values,
         )
         
         # Get class list (for learner info and group name)
@@ -893,28 +900,23 @@ def fetch_analytics_data(request):
                     resource_values = topic_progress.get('values', {}).get(resource_name, {'k': 0.0, 'p': 0.0})
                     learner_state['topics'][topic_name]['values'][resource_name] = resource_values
                 
-                # Build activities structure with progress data (object keyed by activity IDs)
-                learner_state['activities'][topic_name] = {}
+                # Build activity details only where there is real progress/attempt signal.
+                # Activity definitions remain in topics[].activities.
+                topic_activities = {}
                 for resource_name, activities in topic.get('activities', {}).items():
-                    # Convert array to object keyed by activity ID. Activity definitions
-                    # are already present in topics[].activities, so only send progress here.
                     activities_obj = {}
                     for activity in activities:
                         activity_id = activity['id']
                         # Get activity progress from content_data (keyed by content_name/activity_id)
                         activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
-                        activities_obj[activity_id] = {
-                            'values': {
-                                'k': activity_progress.get('k', 0.0),
-                                'p': activity_progress.get('p', 0.0),
-                                **{
-                                    key: activity_progress.get(key)
-                                    for key in ('a', 's', 'aSeq')
-                                    if activity_progress.get(key) not in (None, '')
-                                }
+                        if activity_progress_has_signal(activity_progress):
+                            activities_obj[activity_id] = {
+                                'values': serialize_activity_progress_values(activity_progress)
                             }
-                        }
-                    learner_state['activities'][topic_name][resource_name] = activities_obj
+                    if activities_obj:
+                        topic_activities[resource_name] = activities_obj
+                if topic_activities:
+                    learner_state['activities'][topic_name] = topic_activities
         else:
             # No progress data - initialize empty structure
             for topic in topics:
@@ -922,9 +924,6 @@ def fetch_analytics_data(request):
                 learner_state['topics'][topic_name] = {
                     'values': {r['id']: {'k': 0.0, 'p': 0.0} for r in resources},
                     'overall': {'k': 0.0, 'p': 0.0}
-                }
-                learner_state['activities'][topic_name] = {
-                    r['id']: {} for r in resources
                 }
         
         # Find learner info
@@ -957,7 +956,7 @@ def fetch_analytics_data(request):
         }
         
         logger.info(f"Successfully built analytics response for learner {learner_id}")
-        return JsonResponse(response_data)
+        return _analytics_json_response(response_data, label='legacy single analytics')
         
     except Exception as e:
         logger.error(f"Error in fetch_analytics_data: {str(e)}", exc_info=True)
@@ -992,6 +991,8 @@ def fetch_all_students_analytics(request):
             return JsonResponse({
                 'error': f'Invalid Course ID: {course_id_str}'
             }, status=400)
+
+        include_activities = (request.GET.get('include_activities') or '').strip().lower() in {'1', 'true', 'yes'}
         
         logger.info(f"Batch fetching analytics for group: {group_login}, course: {course_id}")
         
@@ -999,7 +1000,11 @@ def fetch_all_students_analytics(request):
         from .db_queries import fetch_all_students_analytics
         
         # Fetch all students' data in one go
-        response_data = fetch_all_students_analytics(group_login, course_id)
+        response_data = fetch_all_students_analytics(
+            group_login,
+            course_id,
+            include_activities=include_activities,
+        )
         
         if not response_data.get('learners'):
             return JsonResponse({
@@ -1026,7 +1031,13 @@ def fetch_all_students_analytics(request):
                 'has_class_average': bool(response_data.get('groups')),
             })
         
-        logger.info(f"Successfully fetched analytics for {len(response_data['learners'])} students")
+        response_data.setdefault('context', {})['activity_details_included'] = include_activities
+
+        logger.info(
+            "Successfully fetched analytics for %s students (activity_details_included=%s)",
+            len(response_data['learners']),
+            include_activities,
+        )
         return _analytics_json_response(response_data, label='legacy batch analytics')
 
     except Exception as e:
@@ -1035,4 +1046,108 @@ def fetch_all_students_analytics(request):
             'error': f'An unexpected error occurred: {str(e)}',
             'learners': [],
             'topics': []
+        }, status=500)
+
+
+@login_required
+def fetch_cell_activity_analytics(request):
+    """
+    Fetch one topic/resource activity drilldown for all learners.
+    Keeps the initial legacy analytics payload small while preserving modal detail.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        group_login = request.GET.get('grp', '').strip()
+        course_id_str = request.GET.get('cid', '').strip()
+        topic_id = request.GET.get('topic', '').strip()
+        resource_id = request.GET.get('resource', '').strip()
+
+        if not group_login or not course_id_str or not topic_id or not resource_id:
+            return JsonResponse({
+                'error': 'Group ID (grp), Course ID (cid), topic, and resource are required'
+            }, status=400)
+
+        try:
+            course_id = int(course_id_str)
+        except ValueError:
+            return JsonResponse({'error': f'Invalid Course ID: {course_id_str}'}, status=400)
+
+        from .db_queries import (
+            activity_progress_has_signal,
+            get_all_students_progress_from_db,
+            get_class_list_from_db,
+            get_course_structure_from_db,
+            serialize_activity_progress_values,
+        )
+
+        class_list_data = get_class_list_from_db(group_login)
+        learners = class_list_data.get('learners') if class_list_data else []
+        if not learners:
+            return JsonResponse({
+                'error': f'No students found for group: {group_login}',
+                'learners': [],
+                'activities': [],
+            }, status=404)
+
+        course_structure = get_course_structure_from_db(group_login, course_id)
+        topics = course_structure.get('topics', []) if course_structure else []
+        resources = course_structure.get('resources', []) if course_structure else []
+        topic = next((t for t in topics if str(t.get('id')) == topic_id), None)
+        if not topic:
+            return JsonResponse({
+                'error': f'Topic not found: {topic_id}',
+                'learners': [],
+                'activities': [],
+            }, status=404)
+
+        activities = topic.get('activities', {}).get(resource_id, [])
+        resource_names = [resource['id'] for resource in resources] if resources else None
+        learner_ids = [learner['learnerId'] for learner in learners]
+        all_progress = get_all_students_progress_from_db(
+            learner_ids,
+            course_id,
+            resource_names=resource_names,
+        )
+
+        learner_rows = []
+        for learner in learners:
+            learner_id = learner['learnerId']
+            progress_data = all_progress.get(learner_id, {})
+            content_data = progress_data.get('content', {})
+            activity_values = {}
+
+            for activity in activities:
+                activity_id = activity['id']
+                activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
+                if activity_progress_has_signal(activity_progress):
+                    activity_values[activity_id] = {
+                        'values': serialize_activity_progress_values(activity_progress)
+                    }
+
+            learner_rows.append({
+                'id': learner_id,
+                'name': learner.get('name', learner_id),
+                'email': learner.get('email', ''),
+                'activities': activity_values,
+            })
+
+        response_data = {
+            'success': True,
+            'group_login': group_login,
+            'course_id': course_id,
+            'topic_id': topic_id,
+            'resource_id': resource_id,
+            'activities': activities,
+            'learners': learner_rows,
+        }
+        return _analytics_json_response(response_data, label='legacy cell activity analytics')
+
+    except Exception as e:
+        logger.error(f"Error in fetch_cell_activity_analytics: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'error': f'An unexpected error occurred: {str(e)}',
+            'learners': [],
+            'activities': [],
         }, status=500)

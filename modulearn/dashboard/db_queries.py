@@ -13,6 +13,53 @@ from .kt_db_connection import get_paws_db_connection
 logger = logging.getLogger(__name__)
 
 
+_EMPTY_ACTIVITY_SEQUENCES = {'', '""', "''", '0,0,0,0,0,""', "0,0,0,0,0,''"}
+
+
+def _float_or_zero(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _int_or_zero(value: Any) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def activity_progress_has_signal(progress: Dict[str, Any]) -> bool:
+    """Return true when activity values represent a real attempt/progress signal."""
+    if _float_or_zero(progress.get('k')) or _float_or_zero(progress.get('p')):
+        return True
+    if _int_or_zero(progress.get('a')) or _float_or_zero(progress.get('s')):
+        return True
+
+    sequence = str(progress.get('aSeq') or '').strip()
+    return sequence not in _EMPTY_ACTIVITY_SEQUENCES
+
+
+def serialize_activity_progress_values(progress: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep analytics activity values compact while preserving attempt metadata."""
+    values = {
+        'k': _float_or_zero(progress.get('k')),
+        'p': _float_or_zero(progress.get('p')),
+    }
+
+    if 'a' in progress:
+        values['a'] = _int_or_zero(progress.get('a'))
+    if 's' in progress:
+        values['s'] = _float_or_zero(progress.get('s'))
+
+    sequence = str(progress.get('aSeq') or '').strip()
+    if sequence and sequence not in _EMPTY_ACTIVITY_SEQUENCES:
+        values['aSeq'] = sequence
+
+    return values
+
+
 def get_class_list_from_db(group_login: str) -> Dict[str, Any]:
     """
     Get all students in a group from KnowledgeTree database.
@@ -378,21 +425,15 @@ def parse_computed_model(model_string: str, is_topics: bool = True, resource_nam
                 # Additional values may include attempts, success, and aSeq.
                 if len(values) >= 2:
                     try:
-                        k = float(values[0]) if values[0] else 0.0
-                        p = float(values[1]) if values[1] else 0.0
+                        k = _float_or_zero(values[0])
+                        p = _float_or_zero(values[1])
                         activity_data = {'k': k, 'p': p}
 
                         if len(values) >= 3 and values[2] != '':
-                            try:
-                                activity_data['a'] = int(float(values[2]))
-                            except (TypeError, ValueError):
-                                activity_data['a'] = values[2]
+                            activity_data['a'] = _int_or_zero(values[2])
 
                         if len(values) >= 4 and values[3] != '':
-                            try:
-                                activity_data['s'] = float(values[3])
-                            except (TypeError, ValueError):
-                                activity_data['s'] = values[3]
+                            activity_data['s'] = _float_or_zero(values[3])
 
                         if len(values) >= 5:
                             activity_data['aSeq'] = ','.join(values[4:]).strip()
@@ -417,7 +458,11 @@ def parse_computed_model(model_string: str, is_topics: bool = True, resource_nam
     return result
 
 
-def fetch_all_students_analytics(group_login: str, course_id: int) -> Dict[str, Any]:
+def fetch_all_students_analytics(
+    group_login: str,
+    course_id: int,
+    include_activities: bool = True,
+) -> Dict[str, Any]:
     """
     Fetch analytics data for ALL students in a course in a single batch operation.
     This is much more efficient than fetching students one-by-one.
@@ -425,6 +470,7 @@ def fetch_all_students_analytics(group_login: str, course_id: int) -> Dict[str, 
     Args:
         group_login: KnowledgeTree group login
         course_id: Course ID
+        include_activities: Include per-learner activity drilldown details
         
     Returns:
         Complete analytics response with all students' data
@@ -506,28 +552,24 @@ def fetch_all_students_analytics(group_login: str, course_id: int) -> Dict[str, 
                     resource_values = topic_progress.get('values', {}).get(resource_name, {'k': 0.0, 'p': 0.0})
                     state['topics'][topic_name]['values'][resource_name] = resource_values
                 
-                # Build activities structure with progress data
-                state['activities'][topic_name] = {}
-                for resource_name, activities in topic.get('activities', {}).items():
-                    # Convert array to object keyed by activity ID. Activity names and URLs
-                    # already live in topics[].activities, so keep learner payloads compact.
-                    activities_obj = {}
-                    for activity in activities:
-                        activity_id = activity['id']
-                        activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
-                        
-                        activities_obj[activity_id] = {
-                            'values': {
-                                'k': activity_progress.get('k', 0.0),
-                                'p': activity_progress.get('p', 0.0),
-                                **{
-                                    key: activity_progress.get(key)
-                                    for key in ('a', 's', 'aSeq')
-                                    if activity_progress.get(key) not in (None, '')
+                if include_activities:
+                    # Build activities structure with non-zero progress data.
+                    # Activity names and URLs already live in topics[].activities,
+                    # and the frontend treats missing activity values as 0%.
+                    topic_activities = {}
+                    for resource_name, activities in topic.get('activities', {}).items():
+                        activities_obj = {}
+                        for activity in activities:
+                            activity_id = activity['id']
+                            activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
+                            if activity_progress_has_signal(activity_progress):
+                                activities_obj[activity_id] = {
+                                    'values': serialize_activity_progress_values(activity_progress)
                                 }
-                            }
-                        }
-                    state['activities'][topic_name][resource_name] = activities_obj
+                        if activities_obj:
+                            topic_activities[resource_name] = activities_obj
+                    if topic_activities:
+                        state['activities'][topic_name] = topic_activities
             
             learners.append({
                 'id': learner_id,
@@ -699,9 +741,10 @@ def build_analytics_response(group_login: str, course_id: int, learner_ids: List
         
         topics = course_structure.get('topics', [])
         resources = course_structure.get('resources', [])
+        resource_names = [r['id'] for r in resources] if resources else None
         
         # Batch fetch all students' progress
-        all_progress = get_all_students_progress_from_db(learner_ids, course_id)
+        all_progress = get_all_students_progress_from_db(learner_ids, course_id, resource_names=resource_names)
         
         # Build learners array with progress data
         learners = []
@@ -740,26 +783,20 @@ def build_analytics_response(group_login: str, course_id: int, learner_ids: List
                     resource_values = topic_progress.get('values', {}).get(resource_name, {'k': 0.0, 'p': 0.0})
                     state['topics'][topic_name]['values'][resource_name] = resource_values
                 
-                # Build activities structure with progress data
-                state['activities'][topic_name] = {}
+                topic_activities = {}
                 for resource_name, activities in topic.get('activities', {}).items():
-                    state['activities'][topic_name][resource_name] = {
-                        activity['id']: {
-                            'id': activity['id'],
-                            'name': activity['name'],
-                            'url': activity.get('url', ''),
-                            'values': {
-                                'k': content_data.get(activity['id'], {}).get('k', 0.0),
-                                'p': content_data.get(activity['id'], {}).get('p', 0.0),
-                                **{
-                                    key: content_data.get(activity['id'], {}).get(key)
-                                    for key in ('a', 's', 'aSeq')
-                                    if content_data.get(activity['id'], {}).get(key) not in (None, '')
-                                }
+                    activities_obj = {}
+                    for activity in activities:
+                        activity_id = activity['id']
+                        activity_progress = content_data.get(activity_id, {'k': 0.0, 'p': 0.0})
+                        if activity_progress_has_signal(activity_progress):
+                            activities_obj[activity_id] = {
+                                'values': serialize_activity_progress_values(activity_progress)
                             }
-                        }
-                        for activity in activities
-                    }
+                    if activities_obj:
+                        topic_activities[resource_name] = activities_obj
+                if topic_activities:
+                    state['activities'][topic_name] = topic_activities
             
             learners.append({
                 'id': learner_id,

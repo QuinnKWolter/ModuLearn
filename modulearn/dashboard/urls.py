@@ -17,6 +17,7 @@ urlpatterns = [
     path("api/reset_course_authoring_password/", reset_course_authoring_password_view, name="reset_course_authoring_password"),
     path("api/fetch_analytics_data/", views.fetch_analytics_data, name="fetch_analytics_data"),
     path("api/fetch_all_students_analytics/", views.fetch_all_students_analytics, name="fetch_all_students_analytics"),
+    path("api/fetch_cell_activity_analytics/", views.fetch_cell_activity_analytics, name="fetch_cell_activity_analytics"),
     path("api/fetch_class_list/", views.fetch_class_list, name="fetch_class_list"),
     path("api/legacy_groups/", views.get_legacy_groups_api, name="get_legacy_groups_api"),
     path("api/discover_course_ids/", views.discover_course_ids, name="discover_course_ids"),
