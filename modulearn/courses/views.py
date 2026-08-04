@@ -70,7 +70,7 @@ from modulearn.learning.services.course_plugins import (
     enabled_course_plugins,
     normalize_course_plugin_config,
 )
-from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch
+from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch, record_module_session_event
 from modulearn.learning.services.pcrs_tracking import is_pcrs_url
 from modulearn.learning.services.slc_replacements import (
     apply_replacement_metadata,
@@ -1319,6 +1319,64 @@ def next_accessible_module(request, instance_id, module_id):
         "title": next_module.title,
         "url": reverse("courses:launch_iframe_module", args=[course_instance.id, next_module.id]),
     })
+
+
+@login_required
+@require_POST
+def record_module_session_event_view(request, instance_id, module_id):
+    course_instance = get_object_or_404(CourseInstance, id=instance_id)
+    if not user_can_access_participant_course(request.user, course_instance.id):
+        raise PermissionDenied("Research participants can only access their assigned course session.")
+
+    module = get_object_or_404(Module, id=module_id, unit__course=course_instance.course)
+    is_instructor = _is_course_instructor(request.user, course_instance)
+    enrollment = _get_active_enrollment(request.user, course_instance)
+    if not (is_instructor or enrollment):
+        return JsonResponse({"success": False, "error": "You are not enrolled in this course session."}, status=403)
+
+    if is_instructor:
+        return JsonResponse({"success": True, "tracked": False, "message": "Session events are not tracked for instructors."})
+
+    allowed, reason = _user_can_access_module(request.user, course_instance, module)
+    if not allowed:
+        return JsonResponse({"success": False, "error": reason or "Module is locked."}, status=403)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    event_type = (data.get("event_type") or "").strip()
+    payload = data.get("payload") if isinstance(data.get("payload"), dict) else {}
+    payload = {
+        **payload,
+        "server_path": request.path,
+        "user_agent": (request.META.get("HTTP_USER_AGENT") or "")[:500],
+    }
+
+    try:
+        module_progress, _created = ModuleProgress.get_or_create_progress(
+            user=request.user,
+            module=module,
+            course_instance=course_instance,
+        )
+        event = record_module_session_event(
+            module_progress,
+            event_type=event_type,
+            source="module_frame",
+            payload=payload,
+        )
+    except ValueError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+
+    return JsonResponse({
+        "success": True,
+        "tracked": True,
+        "event_id": event.id,
+        "event_type": event.event_type,
+        "created_at": event.created_at.isoformat(),
+    })
+
 
 @login_required
 def preview_iframe_module(request, module_id):

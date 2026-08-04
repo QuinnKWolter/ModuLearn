@@ -6,7 +6,7 @@ class MainPageTests(TestCase):
     def test_home_page_renders(self):
         response = self.client.get(reverse('main:home'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Run modules, launches, enrollment, and progress from one workspace.')
+        self.assertContains(response, 'Organize course sessions, study flows, embedded smart-learning content')
         self.assertContains(response, 'name="language" value="es"')
         self.assertContains(response, 'src="/static/js/i18n.js"')
 
@@ -35,9 +35,9 @@ class MainPageTests(TestCase):
     def test_about_page_renders(self):
         response = self.client.get(reverse('main:about'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'What ModuLearn does, how it is built, and how to reach the maintainer.')
+        self.assertContains(response, 'ModuLearn is a Django-based portal')
 
     def test_contact_page_renders(self):
         response = self.client.get(reverse('main:contact'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Problems or feedback?')
+        self.assertContains(response, 'Questions, bugs, or deployment notes?')

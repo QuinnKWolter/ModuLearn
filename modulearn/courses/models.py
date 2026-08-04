@@ -843,6 +843,9 @@ class ModuleAccessLog(models.Model):
 class ModuleProgressEvent(models.Model):
     EVENT_TYPE_CHOICES = [
         ('launch', 'Launch'),
+        ('iframe_load', 'Iframe Load'),
+        ('tab_blur', 'Tab Blur'),
+        ('tab_focus', 'Tab Focus'),
         ('progress', 'Progress'),
         ('completion', 'Completion'),
         ('outcome', 'Outcome'),

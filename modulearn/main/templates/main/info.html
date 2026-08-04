@@ -5,56 +5,70 @@
 {% block breadcrumbs_wrapper %}{% endblock %}
 
 {% block content %}
-  <div class="public-page public-page-narrow">
-    <header class="public-page-header">
+  <div class="public-page public-info-page">
+    <header class="public-page-header public-info-header">
       <div class="public-title-row">
-        <h1>Info</h1>
-        <span class="badge badge-primary">Active project</span>
+        <p class="public-eyebrow">Project notes</p>
+        <span class="badge badge-primary">Open project</span>
       </div>
-      <p>What ModuLearn does, how it is built, and how to reach the maintainer.</p>
+      <h1>About ModuLearn</h1>
+      <p>ModuLearn is a Django-based portal for arranging interactive learning modules into reusable structures, live sessions, and research studies.</p>
     </header>
 
-    <section class="public-grid public-grid-three" aria-label="ModuLearn overview">
-      <article class="public-card public-card-feature">
-        <div class="public-icon public-icon-blue"><i class="bi bi-window-stack" aria-hidden="true"></i></div>
-        <h2>What it does</h2>
-        <p>Connects course pages, module launches, enrollment, analytics, and progress.</p>
-      </article>
-      <article class="public-card public-card-feature">
-        <div class="public-icon public-icon-cyan"><i class="bi bi-plug" aria-hidden="true"></i></div>
-        <h2>Integrations</h2>
-        <p>Supports LTI, embedded resources, and legacy KnowledgeTree workflows.</p>
-      </article>
-      <article class="public-card public-card-feature">
-        <div class="public-icon public-icon-green"><i class="bi bi-code-square" aria-hidden="true"></i></div>
-        <h2>Core stack</h2>
-        <dl class="public-kv-list">
-          <div><dt>Python</dt><dd>Runtime</dd></div>
-          <div><dt>Django</dt><dd>Framework</dd></div>
-          <div><dt>Static CSS/JS</dt><dd>Frontend</dd></div>
-          <div><dt>SQLite</dt><dd>Local data</dd></div>
-        </dl>
-      </article>
-    </section>
-
-    <section class="public-contact-layout public-contact-layout-balanced" aria-label="Contact">
-      <article class="public-card public-contact-action">
-        <div class="public-icon public-icon-blue"><i class="bi bi-envelope-paper" aria-hidden="true"></i></div>
-        <h2>Problems or feedback?</h2>
-        <h2>Email the maintainer!</h2>
-        <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary btn-lg">QuinnKWolter@pitt.edu</a>
+    <section class="public-info-layout" aria-label="ModuLearn structure">
+      <article class="public-card public-info-primary">
+        <div class="public-icon public-icon-blue"><i class="bi bi-layers" aria-hidden="true"></i></div>
+        <h2>What the platform is responsible for</h2>
+        <p>ModuLearn keeps the local learning record: course structures, session enrollment, module access, progress, form responses, focus events, study conditions, and exports. External tools still do the specialized teaching work; ModuLearn gives them a stable place in a course or study flow.</p>
       </article>
 
       <aside class="public-card public-checklist-card">
-        <div class="public-icon public-icon-cyan"><i class="bi bi-card-checklist" aria-hidden="true"></i></div>
-        <h2>Include in your message</h2>
+        <div class="public-icon public-icon-green"><i class="bi bi-check2-square" aria-hidden="true"></i></div>
+        <h2>Useful today</h2>
         <ul class="public-checklist">
-          <li><strong>Role</strong><span>Student or instructor</span></li>
-          <li><strong>Page</strong><span>Route or screen</span></li>
-          <li><strong>Area</strong><span>LTI, analytics, enrollment, course page</span></li>
-          <li><strong>Evidence</strong><span>Screenshot or exact error</span></li>
+          <li><strong>Course sessions</strong><span>Reusable structures with students, units, modules, locks, and analytics</span></li>
+          <li><strong>Study sessions</strong><span>Participant entry links, condition assignment, consent and survey modules</span></li>
+          <li><strong>Embedded content</strong><span>SPLICE content, PCEX, PCRS, forms, files, and ordinary external links</span></li>
+          <li><strong>Exports</strong><span>Course and study data shaped for review outside the platform</span></li>
         </ul>
       </aside>
+    </section>
+
+    <section class="public-grid public-grid-three" aria-label="System layers">
+      <article class="public-card public-card-feature">
+        <div class="public-icon public-icon-cyan"><i class="bi bi-boxes" aria-hidden="true"></i></div>
+        <h2>Course model</h2>
+        <p>A course structure contains units and modules. A session turns that structure into something students can join and complete.</p>
+      </article>
+      <article class="public-card public-card-feature">
+        <div class="public-icon public-icon-blue"><i class="bi bi-signpost-split" aria-hidden="true"></i></div>
+        <h2>Study model</h2>
+        <p>A study owns participant-facing sessions, experimental conditions, Prolific entry links, and study-specific analytics.</p>
+      </article>
+      <article class="public-card public-card-feature">
+        <div class="public-icon public-icon-green"><i class="bi bi-activity" aria-hidden="true"></i></div>
+        <h2>Progress model</h2>
+        <p>Module progress and event timelines preserve completion, scores, load events, focus changes, and tool callbacks when available.</p>
+      </article>
+    </section>
+
+    <section class="public-info-layout public-info-layout-reversed" aria-label="Practical limits">
+      <article class="public-card public-note-card">
+        <div class="public-icon public-icon-cyan"><i class="bi bi-info-circle" aria-hidden="true"></i></div>
+        <h2>Worth knowing</h2>
+        <ul class="public-status-list">
+          <li><span>External modules may have their own language, login, iframe, or browser restrictions.</span></li>
+          <li><span>Legacy analytics depend on the PAWS and Aggregate database services being reachable.</span></li>
+          <li><span>The English and Spanish toggle covers ModuLearn interface text, not third-party content loaded inside modules.</span></li>
+        </ul>
+      </article>
+
+      <article class="public-card public-contact-action">
+        <div class="public-icon public-icon-blue"><i class="bi bi-envelope-paper" aria-hidden="true"></i></div>
+        <h2>Questions, bugs, or deployment notes?</h2>
+        <p>Send the route, your role, what you expected, and the exact error or screenshot if one exists.</p>
+        <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary btn-lg">QuinnKWolter@pitt.edu</a>
+      </article>
     </section>
   </div>
 {% endblock %}

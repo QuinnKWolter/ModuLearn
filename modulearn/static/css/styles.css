@@ -359,6 +359,280 @@ body {
   background: rgba(15, 159, 99, 0.1);
 }
 
+.public-eyebrow {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.public-lead {
+  max-width: 44rem;
+  color: var(--color-ink-soft);
+  font-size: 1.14rem;
+  line-height: 1.65;
+}
+
+.public-home-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(19rem, 0.8fr);
+  gap: 1.1rem;
+  align-items: stretch;
+  padding: clamp(1.15rem, 4vw, 2.25rem);
+  border: 1px solid rgba(16, 34, 58, 0.08);
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(236, 248, 255, 0.76)),
+    radial-gradient(circle at 10% 10%, rgba(15, 98, 254, 0.14), transparent 28%);
+  box-shadow: var(--shadow-soft);
+}
+
+.dark .public-home-stage {
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.86), rgba(8, 47, 73, 0.62)),
+    radial-gradient(circle at 10% 10%, rgba(96, 165, 250, 0.2), transparent 30%);
+}
+
+.public-home-copy {
+  display: grid;
+  align-content: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.public-home-copy h1 {
+  max-width: 12ch;
+  font-size: 4.2rem;
+  line-height: 0.96;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.public-home-copy .public-actions {
+  justify-content: flex-start;
+  margin-top: 0.35rem;
+}
+
+.public-snapshot {
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(15, 98, 254, 0.12);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 14px 32px rgba(16, 34, 58, 0.08);
+}
+
+.dark .public-snapshot {
+  border-color: rgba(96, 165, 250, 0.18);
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.public-snapshot-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.public-snapshot-header .public-icon {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.public-snapshot-header h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.public-snapshot-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.public-snapshot-list div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(16, 34, 58, 0.07);
+  border-radius: 0.75rem;
+  background: rgba(248, 250, 252, 0.78);
+}
+
+.dark .public-snapshot-list div {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.public-snapshot-list span {
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.public-snapshot-list strong {
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.public-section-heading {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 48rem;
+}
+
+.public-section-heading h2 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.public-section-heading p:not(.public-eyebrow) {
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+}
+
+.public-section-heading-compact {
+  max-width: none;
+}
+
+.public-workflow-card {
+  gap: 0.3rem;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.public-workflow-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(15, 98, 254, 0.18);
+  box-shadow: 0 18px 40px rgba(16, 34, 58, 0.1);
+}
+
+.public-map-section {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(16, 34, 58, 0.07);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.dark .public-map-section {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.public-map {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.public-map-step {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border-radius: 0.8rem;
+  background: rgba(248, 250, 252, 0.84);
+}
+
+.dark .public-map-step {
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.public-map-step > span {
+  width: 1.8rem;
+  height: 1.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--color-accent);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.public-map-step h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.public-map-step p {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.public-info-page {
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.public-info-header {
+  padding-bottom: 0;
+}
+
+.public-info-header h1 {
+  max-width: 16ch;
+}
+
+.public-info-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+  gap: var(--public-gap);
+  align-items: stretch;
+}
+
+.public-info-layout-reversed {
+  grid-template-columns: minmax(18rem, 0.75fr) minmax(0, 1.25fr);
+}
+
+.public-info-primary {
+  display: grid;
+  align-content: center;
+}
+
+.public-info-primary p,
+.public-note-card p {
+  font-size: 1rem;
+}
+
+.public-status-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.public-status-list li {
+  padding: 0.8rem;
+  border: 1px solid rgba(16, 34, 58, 0.07);
+  border-radius: 0.75rem;
+  color: var(--color-ink-soft);
+  background: rgba(248, 250, 252, 0.78);
+  line-height: 1.5;
+}
+
+.dark .public-status-list li {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.28);
+}
+
 .dark .public-icon-blue {
   color: #93c5fd;
   background: rgba(37, 99, 235, 0.2);
@@ -481,9 +755,35 @@ body {
   }
 }
 
+@media (max-width: 980px) {
+  .public-home-stage,
+  .public-info-layout,
+  .public-info-layout-reversed {
+    grid-template-columns: 1fr;
+  }
+
+  .public-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1100px) {
   .public-grid-three {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .public-home-copy h1 {
+    font-size: 3rem;
+  }
+
+  .public-home-copy .public-actions {
+    justify-content: center;
+  }
+
+  .public-snapshot-header {
+    align-items: flex-start;
   }
 }
 
@@ -495,5 +795,18 @@ body {
 
   .public-kv-list {
     grid-template-columns: 1fr;
+  }
+
+  .public-home-copy h1 {
+    font-size: 2.55rem;
+  }
+
+  .public-map {
+    grid-template-columns: 1fr;
+  }
+
+  .public-map-section,
+  .public-home-stage {
+    padding: 0.85rem;
   }
 }

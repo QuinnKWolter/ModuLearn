@@ -110,6 +110,60 @@ class DashboardViewTests(TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]['event_type'], 'completion')
 
+    def test_instructor_can_fetch_modulearn_student_engagement(self):
+        unit = Unit.objects.create(course=self.course, title='Unit 1', order=10)
+        module = Module.objects.create(unit=unit, title='Variable Assignment', order=10)
+        enrollment = Enrollment.objects.get(student=self.student, course_instance=self.instance)
+        module_progress, _created = ModuleProgress.objects.get_or_create(
+            user=self.student,
+            enrollment=enrollment,
+            module=module,
+        )
+        ModuleProgressEvent.objects.create(
+            module_progress=module_progress,
+            user=self.student,
+            module=module,
+            course_instance=self.instance,
+            event_type='launch',
+            source='test',
+            progress=0.0,
+        )
+        ModuleProgressEvent.objects.create(
+            module_progress=module_progress,
+            user=self.student,
+            module=module,
+            course_instance=self.instance,
+            event_type='tab_blur',
+            source='module_frame',
+            progress=0.0,
+            payload={'reason': 'window_blur', 'elapsed_ms': 1500},
+        )
+        ModuleProgressEvent.objects.create(
+            module_progress=module_progress,
+            user=self.student,
+            module=module,
+            course_instance=self.instance,
+            event_type='completion',
+            source='test',
+            progress=1.0,
+            score=100.0,
+            success=True,
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(
+            reverse('dashboard:fetch_modulearn_student_engagement'),
+            {'instance_id': self.instance.id, 'learner_id': self.student.username},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['summary']['event_count'], 3)
+        self.assertEqual(data['summary']['blur_count'], 1)
+        self.assertEqual(data['units'][0]['modules'][0]['events'][1]['event_type'], 'tab_blur')
+        self.assertEqual(data['units'][0]['modules'][0]['events'][1]['payload']['reason'], 'window_blur')
+
     def test_instructor_dashboard_redirects_students(self):
         self.client.force_login(self.student)
         response = self.client.get(reverse('dashboard:instructor_dashboard'))

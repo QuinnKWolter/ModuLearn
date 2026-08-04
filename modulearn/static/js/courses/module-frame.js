@@ -13,6 +13,11 @@
     var blockedNotice = document.getElementById('iframe-blocked-notice');
     var stateNode = document.getElementById('state-data');
     var csrfNode = document.getElementById('module-frame-csrf');
+    var browserSessionId = uuid();
+    var frameStartedAt = Date.now();
+    var attentionState = (document.hidden || (typeof document.hasFocus === 'function' && !document.hasFocus()))
+      ? 'blurred'
+      : 'focused';
 
     if (!iframe) {
       return;
@@ -36,6 +41,68 @@
       }
     }
 
+    function iframeUrlSummary() {
+      var iframeSrc = iframe.getAttribute('src') || '';
+      if (!iframeSrc) {
+        return {};
+      }
+      try {
+        var parsed = new URL(iframeSrc, window.location.origin);
+        return {
+          iframe_origin: parsed.origin,
+          iframe_path: parsed.pathname,
+        };
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function sessionPayload(reason, extra) {
+      return Object.assign({
+        browser_session_id: browserSessionId,
+        client_event_id: uuid(),
+        client_timestamp: new Date().toISOString(),
+        elapsed_ms: Date.now() - frameStartedAt,
+        reason: reason || '',
+        visibility_state: document.visibilityState || '',
+        document_hidden: Boolean(document.hidden),
+        window_focused: typeof document.hasFocus === 'function' ? document.hasFocus() : null,
+      }, iframeUrlSummary(), extra || {});
+    }
+
+    function recordSessionEvent(eventType, reason, extra) {
+      if (config.previewMode || !config.sessionEventUrl) {
+        return;
+      }
+
+      fetch(config.sessionEventUrl, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfNode ? csrfNode.value : '',
+        },
+        body: JSON.stringify({
+          event_type: eventType,
+          payload: sessionPayload(reason, extra),
+        }),
+      }).catch(function (error) {
+        console.warn('Error recording module session event:', error);
+      });
+    }
+
+    function setAttentionState(nextState, reason) {
+      if (nextState === attentionState) {
+        return;
+      }
+      attentionState = nextState;
+      recordSessionEvent(
+        nextState === 'blurred' ? 'tab_blur' : 'tab_focus',
+        reason,
+        { attention_state: nextState }
+      );
+    }
+
     function probeSplice() {
       if (!iframe.contentWindow) {
         return;
@@ -46,9 +113,28 @@
     }
 
     iframe.addEventListener('load', function () {
+      if (iframe.getAttribute('src')) {
+        recordSessionEvent('iframe_load', 'iframe_load');
+      }
       probeSplice();
       setTimeout(probeSplice, 900);
       setTimeout(probeSplice, 2400);
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      setAttentionState(document.hidden ? 'blurred' : 'focused', document.hidden ? 'visibility_hidden' : 'visibility_visible');
+    });
+
+    window.addEventListener('blur', function () {
+      setAttentionState('blurred', 'window_blur');
+    });
+
+    window.addEventListener('focus', function () {
+      setAttentionState('focused', 'window_focus');
+    });
+
+    window.addEventListener('pagehide', function () {
+      setAttentionState('blurred', 'pagehide');
     });
 
     document.addEventListener('securitypolicyviolation', function (event) {

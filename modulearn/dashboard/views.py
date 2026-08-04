@@ -8,7 +8,7 @@ import time
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from courses.utils import get_course_auth_token, reset_course_authoring_password
 from courses.demo_courses import create_demo_course_for_key
 import json
@@ -190,6 +190,15 @@ def export_study_analytics_csv(request, study_id):
         "success",
         "first_accessed",
         "last_accessed",
+        "first_module_event_at",
+        "last_module_event_at",
+        "launch_events",
+        "iframe_load_events",
+        "tab_blur_events",
+        "tab_focus_events",
+        "progress_events",
+        "outcome_events",
+        "completion_events",
         "overall_progress_percent",
         "modules_completed",
         "total_modules",
@@ -431,6 +440,200 @@ def fetch_modulearn_instance_analytics(request):
     except Exception as e:
         logger.error(f"Error building ModuLearn analytics: {str(e)}", exc_info=True)
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
+
+def _compact_module_event_payload(payload):
+    if not isinstance(payload, dict):
+        return {}
+
+    summary_keys = [
+        "browser_session_id",
+        "client_event_id",
+        "client_timestamp",
+        "elapsed_ms",
+        "reason",
+        "visibility_state",
+        "document_hidden",
+        "window_focused",
+        "iframe_origin",
+        "iframe_path",
+        "scoreText",
+        "tracking_id",
+        "result_type",
+        "attempt_count",
+        "activity_set_name",
+        "activity_type",
+        "goal_name",
+    ]
+    compact = {key: payload.get(key) for key in summary_keys if key in payload}
+
+    if "response" in payload and isinstance(payload["response"], dict):
+        response = payload["response"]
+        compact["response_keys"] = sorted(str(key) for key in response.keys())[:12]
+        if "scoreText" in response:
+            compact["scoreText"] = response.get("scoreText")
+    elif payload:
+        compact["payload_keys"] = sorted(str(key) for key in payload.keys())[:12]
+
+    return compact
+
+
+def _serialize_module_progress_event(event):
+    progress = float(event.progress or 0.0)
+    return {
+        "id": event.id,
+        "event_type": event.event_type,
+        "event_label": event.get_event_type_display(),
+        "source": event.source,
+        "created_at": event.created_at,
+        "progress": progress,
+        "progress_percent": round(progress * 100.0),
+        "score": event.score,
+        "success": bool(event.success),
+        "payload": _compact_module_event_payload(event.payload or {}),
+    }
+
+
+@login_required
+@require_GET
+def fetch_modulearn_student_engagement(request):
+    """
+    Return one learner's native ModuLearn engagement stream, grouped by unit and module.
+    """
+    instance_id = (request.GET.get('instance_id') or '').strip()
+    learner_id = (request.GET.get('learner_id') or '').strip()
+    if not instance_id or not learner_id:
+        return JsonResponse({'error': 'instance_id and learner_id are required'}, status=400)
+
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    try:
+        from courses.models import Module, ModuleProgress, ModuleProgressEvent, Unit
+
+        course_instance = CourseInstance.objects.select_related('course').get(id=instance_id)
+        if not course_instance.instructors.filter(id=request.user.id).exists():
+            return JsonResponse({'error': 'Not found'}, status=404)
+
+        enrollment = (
+            Enrollment.objects
+            .select_related('student')
+            .filter(course_instance=course_instance, student__username=learner_id)
+            .first()
+        )
+        if not enrollment:
+            return JsonResponse({'error': 'Learner not found for this course session'}, status=404)
+
+        units = list(Unit.objects.filter(course=course_instance.course).order_by('order', 'id'))
+        modules = list(
+            Module.objects.filter(unit__in=units)
+            .select_related('unit')
+            .order_by('unit__order', 'unit__id', 'order', 'id')
+        )
+        modules_by_unit = {}
+        for module in modules:
+            modules_by_unit.setdefault(module.unit_id, []).append(module)
+
+        progress_rows = list(
+            ModuleProgress.objects.filter(
+                enrollment=enrollment,
+                module_id__in=[module.id for module in modules],
+            ).select_related('module')
+        )
+        progress_by_module = {row.module_id: row for row in progress_rows}
+        events_by_progress = {row.id: [] for row in progress_rows}
+
+        if progress_rows:
+            for event in (
+                ModuleProgressEvent.objects
+                .filter(module_progress_id__in=[row.id for row in progress_rows])
+                .order_by('created_at', 'id')
+            ):
+                events_by_progress.setdefault(event.module_progress_id, []).append(_serialize_module_progress_event(event))
+
+        units_payload = []
+        event_count = 0
+        blur_count = 0
+        focus_count = 0
+        progress_event_count = 0
+        first_event_at = None
+        last_event_at = None
+
+        for unit in units:
+            module_payloads = []
+            for module in modules_by_unit.get(unit.id, []):
+                progress = progress_by_module.get(module.id)
+                events = events_by_progress.get(progress.id, []) if progress else []
+                event_count += len(events)
+                blur_count += sum(1 for event in events if event["event_type"] == "tab_blur")
+                focus_count += sum(1 for event in events if event["event_type"] == "tab_focus")
+                progress_event_count += sum(
+                    1 for event in events
+                    if event["event_type"] in {"progress", "outcome", "completion"}
+                )
+                if events:
+                    first = events[0]["created_at"]
+                    last = events[-1]["created_at"]
+                    first_event_at = first if first_event_at is None or first < first_event_at else first_event_at
+                    last_event_at = last if last_event_at is None or last > last_event_at else last_event_at
+
+                module_payloads.append({
+                    "id": module.id,
+                    "title": module.title,
+                    "module_type": module.display_type_label,
+                    "order": module.order,
+                    "progress": float(progress.progress or 0.0) if progress else 0.0,
+                    "progress_percent": round(float(progress.progress or 0.0) * 100.0) if progress else 0,
+                    "score": progress.score if progress else None,
+                    "success": bool(progress and progress.success),
+                    "is_complete": bool(progress and progress.is_complete),
+                    "first_accessed": progress.first_accessed if progress else None,
+                    "last_accessed": progress.last_accessed if progress else None,
+                    "events": events,
+                    "event_count": len(events),
+                })
+
+            units_payload.append({
+                "id": unit.id,
+                "title": unit.title,
+                "order": unit.order,
+                "modules": module_payloads,
+                "event_count": sum(module["event_count"] for module in module_payloads),
+            })
+
+        learner_name = (
+            getattr(enrollment.student, 'full_name', '')
+            or enrollment.student.get_full_name()
+            or enrollment.student.username
+        )
+        return JsonResponse({
+            "success": True,
+            "learner": {
+                "id": enrollment.student.username,
+                "name": learner_name,
+                "email": enrollment.student.email,
+            },
+            "context": {
+                "course_instance_id": course_instance.id,
+                "course_title": course_instance.course.title,
+                "group_name": course_instance.group_name,
+            },
+            "summary": {
+                "event_count": event_count,
+                "blur_count": blur_count,
+                "focus_count": focus_count,
+                "progress_event_count": progress_event_count,
+                "first_event_at": first_event_at,
+                "last_event_at": last_event_at,
+            },
+            "units": units_payload,
+        })
+    except CourseInstance.DoesNotExist:
+        return JsonResponse({'error': 'Course session not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error building ModuLearn student engagement: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 @login_required
 def generate_course_auth_url(request):

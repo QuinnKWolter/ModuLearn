@@ -5,53 +5,102 @@
 {% block breadcrumbs_wrapper %}{% endblock %}
 
 {% block content %}
-  <div class="public-page">
-    <section class="public-hero public-hero-centered">
-      <h1>ModuLearn</h1>
-      <p>Run modules, launches, enrollment, and progress from one workspace.</p>
-      <div class="public-actions">
-        {% if user.is_authenticated %}
-          {% if effective_is_instructor %}
-            <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}">Open Instructor Dashboard</a>
-          {% elif effective_is_student %}
-            <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}">Open Student Dashboard</a>
+  <div class="public-page public-home-page">
+    <section class="public-home-stage" aria-label="ModuLearn workspace">
+      <div class="public-home-copy">
+        <p class="public-eyebrow">Open learning workspace</p>
+        <h1>ModuLearn</h1>
+        <p class="public-lead">Organize course sessions, study flows, embedded smart-learning content, and progress records without making the learning tools disappear behind the platform.</p>
+        <div class="public-actions">
+          {% if user.is_authenticated %}
+            {% if effective_is_instructor %}
+              <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}">Open Instructor Dashboard</a>
+            {% elif effective_is_student %}
+              <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}">Open Student Dashboard</a>
+            {% endif %}
+          {% else %}
+            <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">Sign In</a>
+            <a class="btn btn-outline-secondary btn-lg" href="{% url 'accounts:signup' %}">Create Account</a>
           {% endif %}
-        {% else %}
-          <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">Sign In</a>
-          <a class="btn btn-outline-secondary btn-lg" href="{% url 'accounts:signup' %}">Create Account</a>
-        {% endif %}
+        </div>
       </div>
+
+      <aside class="public-snapshot" aria-label="What ModuLearn keeps together">
+        <div class="public-snapshot-header">
+          <span class="public-icon public-icon-blue"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
+          <div>
+            <p class="stat-kicker">What stays connected</p>
+            <h2>Structure, launch, progress</h2>
+          </div>
+        </div>
+        <div class="public-snapshot-list">
+          <div>
+            <span>Course sessions</span>
+            <strong>Reusable structure with live enrollments</strong>
+          </div>
+          <div>
+            <span>Study flows</span>
+            <strong>Participant entry, condition assignment, exports</strong>
+          </div>
+          <div>
+            <span>Smart content</span>
+            <strong>SPLICE, PCEX, PCRS, links, files, and forms</strong>
+          </div>
+        </div>
+      </aside>
     </section>
 
-    <section class="public-grid public-grid-two" aria-label="Role paths">
-      <article class="public-card">
-        <p class="stat-kicker">Students</p>
-        <h2>Launch modules</h2>
-        <p>Pick up assignments, open tools, and review course progress.</p>
+    <section class="public-section-heading" aria-label="Primary workflows">
+      <p class="public-eyebrow">Start from the job</p>
+      <h2>Three paths, one course model</h2>
+      <p>ModuLearn is built around units and modules. The same structure can support a class session, a research study, or a small custom demo.</p>
+    </section>
+
+    <section class="public-grid public-grid-three public-workflow-grid" aria-label="Role paths">
+      <article class="public-card public-workflow-card">
+        <div class="public-icon public-icon-green"><i class="bi bi-person-workspace" aria-hidden="true"></i></div>
+        <h2>Teach</h2>
+        <p>Create sessions, tune visibility and unlock rules, enroll students, and review recent activity without digging through separate tools.</p>
       </article>
-      <article class="public-card">
-        <p class="stat-kicker">Instructors</p>
-        <h2>Manage sessions</h2>
-        <p>Create course sessions, enroll learners, and review analytics.</p>
+      <article class="public-card public-workflow-card">
+        <div class="public-icon public-icon-blue"><i class="bi bi-play-circle" aria-hidden="true"></i></div>
+        <h2>Learn</h2>
+        <p>Students see the sessions they belong to, open the next available module, and keep a clear record of progress.</p>
+      </article>
+      <article class="public-card public-workflow-card">
+        <div class="public-icon public-icon-cyan"><i class="bi bi-bezier2" aria-hidden="true"></i></div>
+        <h2>Research</h2>
+        <p>Studies can route participants into conditions, collect form responses, track module events, and export usable CSV data.</p>
       </article>
     </section>
 
-    <section class="public-grid public-grid-three" aria-label="Features">
-      <article class="public-card public-card-feature">
-        <div class="public-icon public-icon-blue"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></div>
-        <h2>Role dashboards</h2>
-        <p>Focused views keep student and instructor work separate.</p>
-      </article>
-      <article class="public-card public-card-feature">
-        <div class="public-icon public-icon-cyan"><i class="bi bi-link-45deg" aria-hidden="true"></i></div>
-        <h2>External tools</h2>
-        <p>LTI and embedded tools launch from course pages.</p>
-      </article>
-      <article class="public-card public-card-feature">
-        <div class="public-icon public-icon-green"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
-        <h2>Progress data</h2>
-        <p>Completion, scores, and timelines stay attached to sessions.</p>
-      </article>
+    <section class="public-map-section" aria-label="How a module moves through ModuLearn">
+      <div class="public-section-heading public-section-heading-compact">
+        <p class="public-eyebrow">How it works</p>
+        <h2>A practical chain of custody for learning content</h2>
+      </div>
+      <div class="public-map">
+        <article class="public-map-step">
+          <span>1</span>
+          <h3>Build or import</h3>
+          <p>Use course-authoring JSON, create a custom session, or add modules by hand.</p>
+        </article>
+        <article class="public-map-step">
+          <span>2</span>
+          <h3>Configure access</h3>
+          <p>Set visibility, locks, sequential flow, branching, and study conditions.</p>
+        </article>
+        <article class="public-map-step">
+          <span>3</span>
+          <h3>Launch content</h3>
+          <p>Open embedded smart-learning content, external links, files, and forms.</p>
+        </article>
+        <article class="public-map-step">
+          <span>4</span>
+          <h3>Read the record</h3>
+          <p>Review progress, completion, focus events, timelines, and exports.</p>
+        </article>
+      </div>
     </section>
   </div>
 {% endblock %}

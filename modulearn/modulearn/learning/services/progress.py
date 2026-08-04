@@ -8,6 +8,7 @@ from django.utils import timezone
 
 PROGRESS_SCALE = (0.0, 1.0)
 SCORE_SCALE = (0.0, 100.0)
+SESSION_EVENT_TYPES = {"iframe_load", "tab_blur", "tab_focus"}
 
 
 def clamp(value: float | None, minimum: float, maximum: float) -> float | None:
@@ -195,3 +196,21 @@ def apply_progress_snapshot(
 
 def record_module_launch(module_progress, *, source: str = "iframe"):
     return log_module_progress_event(module_progress, event_type="launch", source=source)
+
+
+def record_module_session_event(module_progress, *, event_type: str, source: str = "module_frame", payload: Any = None):
+    if event_type not in SESSION_EVENT_TYPES:
+        raise ValueError(f"Unsupported module session event type: {event_type}")
+
+    update_fields = ["last_accessed"]
+    if getattr(module_progress, "enrollment_id", None):
+        if module_progress.attach_participant_session(save=False):
+            update_fields.extend(["study_participant_session", "study_condition"])
+    module_progress.save(update_fields=update_fields)
+
+    return log_module_progress_event(
+        module_progress,
+        event_type=event_type,
+        source=source,
+        payload=payload if payload is not None else {},
+    )

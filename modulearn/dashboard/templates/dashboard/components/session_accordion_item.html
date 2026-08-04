@@ -75,8 +75,10 @@
         {% endif %}
         <button class="btn btn-sm btn-outline-primary copy-lti-url"
                 data-course-instance-id="{{ course_instance.id }}"
-                title="Copy LTI Launch URL">
-          <i class="bi bi-link-45deg mr-1"></i>Copy LTI URL
+                data-course-title="{{ course_instance.course.title }}"
+                data-group-name="{{ course_instance.group_name }}"
+                title="Open LTI setup">
+          <i class="bi bi-link-45deg mr-1"></i>LTI Setup
         </button>
         <button class="btn btn-sm btn-outline-warning"
                 type="button"

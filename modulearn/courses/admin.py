@@ -14,6 +14,7 @@ from .models import (
     ModuleFormQuestion,
     ModuleFormSubmission,
     ModuleProgress,
+    ModuleProgressEvent,
     StudentScore,
     Unit,
 )
@@ -62,6 +63,13 @@ class ModuleAccessLogAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'module__title', 'course_instance__group_name')
 
 
+class ModuleProgressEventAdmin(admin.ModelAdmin):
+    list_display = ('user', 'module', 'course_instance', 'event_type', 'source', 'progress', 'score', 'created_at')
+    list_filter = ('event_type', 'source', 'created_at')
+    search_fields = ('user__username', 'module__title', 'course_instance__group_name')
+    readonly_fields = ('created_at',)
+
+
 class ModuleBranchRuleAdmin(admin.ModelAdmin):
     list_display = ('course', 'source_module', 'condition_type', 'required_study_condition', 'target_module', 'active', 'priority')
     list_filter = ('condition_type', 'required_study_condition', 'active')
@@ -85,5 +93,6 @@ admin.site.register(ModuleForm, ModuleFormAdmin)
 admin.site.register(ModuleFormSubmission)
 admin.site.register(ModuleFormAnswer)
 admin.site.register(ModuleAccessLog, ModuleAccessLogAdmin)
+admin.site.register(ModuleProgressEvent, ModuleProgressEventAdmin)
 admin.site.register(ModuleBranchRule, ModuleBranchRuleAdmin)
 admin.site.register(EnrollmentModuleUnlock, EnrollmentModuleUnlockAdmin)

@@ -29,6 +29,152 @@
   </div>
 </div>
 
+<!-- LTI Setup Modal -->
+<div id="ltiSetupModal" class="modal-overlay hidden fixed inset-0 z-[80] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+  <div class="modal-backdrop-close absolute inset-0"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div>
+        <h5 class="text-lg font-semibold flex items-center gap-2" id="ltiSetupModalLabel">
+          <i class="bi bi-link-45deg"></i>LTI Setup
+        </h5>
+        <p class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0" id="ltiSetupSubtitle">Copy launch values for this course session.</p>
+      </div>
+      <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6">
+      <div id="ltiSetupLoading" class="empty-state">
+        <span class="spinner-border mr-2"></span>Loading LTI setup...
+      </div>
+
+      <div id="ltiSetupContent" class="hidden space-y-5">
+        <section class="grid gap-3 md:grid-cols-2">
+          <article class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p class="stat-kicker">LTI 1.1</p>
+                <h6 class="font-bold text-slate-900 dark:text-white mb-0">Canvas legacy launch</h6>
+              </div>
+              <span class="badge badge-secondary">Existing flow</span>
+            </div>
+            <label class="form-label text-sm font-semibold" for="lti11LaunchUrl">Launch URL</label>
+            <div class="input-group mb-2">
+              <input id="lti11LaunchUrl" class="form-control font-mono text-xs" type="text" readonly>
+              <button class="btn btn-outline-secondary lti-copy-btn" type="button" data-copy-input="lti11LaunchUrl">Copy</button>
+            </div>
+            <label class="form-label text-sm font-semibold" for="lti11ConfigUrl">Cartridge XML URL</label>
+            <div class="input-group mb-2">
+              <input id="lti11ConfigUrl" class="form-control font-mono text-xs" type="text" readonly>
+              <button class="btn btn-outline-secondary lti-copy-btn" type="button" data-copy-input="lti11ConfigUrl">Copy</button>
+            </div>
+            <div class="grid gap-2 md:grid-cols-2">
+              <label class="block">
+                <span class="form-label text-sm font-semibold">Consumer key</span>
+                <input id="lti11ConsumerKey" class="form-control font-mono text-xs" type="text" readonly>
+              </label>
+              <label class="block">
+                <span class="form-label text-sm font-semibold">Shared secret</span>
+                <input id="lti11SharedSecret" class="form-control font-mono text-xs" type="text" readonly>
+              </label>
+            </div>
+          </article>
+
+          <article class="rounded-lg border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5 p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p class="stat-kicker">LTI 1.3</p>
+                <h6 class="font-bold text-slate-900 dark:text-white mb-0">Moodle / Canvas Advantage</h6>
+              </div>
+              <span class="badge badge-primary">Recommended</span>
+            </div>
+            <label class="form-label text-sm font-semibold" for="lti13ToolUrl">Tool URL / Target Link URI</label>
+            <div class="input-group mb-2">
+              <input id="lti13ToolUrl" class="form-control font-mono text-xs" type="text" readonly>
+              <button class="btn btn-outline-secondary lti-copy-btn" type="button" data-copy-input="lti13ToolUrl">Copy</button>
+            </div>
+            <label class="form-label text-sm font-semibold" for="lti13LoginUrl">Initiate login URL</label>
+            <div class="input-group mb-2">
+              <input id="lti13LoginUrl" class="form-control font-mono text-xs" type="text" readonly>
+              <button class="btn btn-outline-secondary lti-copy-btn" type="button" data-copy-input="lti13LoginUrl">Copy</button>
+            </div>
+            <label class="form-label text-sm font-semibold" for="lti13RedirectUri">Redirect URI</label>
+            <div class="input-group mb-2">
+              <input id="lti13RedirectUri" class="form-control font-mono text-xs" type="text" readonly>
+              <button class="btn btn-outline-secondary lti-copy-btn" type="button" data-copy-input="lti13RedirectUri">Copy</button>
+            </div>
+            <label class="form-label text-sm font-semibold" for="lti13JwksUrl">Public keyset / JWKS URL</label>
+            <div class="input-group">
+              <input id="lti13JwksUrl" class="form-control font-mono text-xs" type="text" readonly>
+              <button class="btn btn-outline-secondary lti-copy-btn" type="button" data-copy-input="lti13JwksUrl">Copy</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+          <button class="w-full flex items-center justify-between gap-3 text-left" type="button" data-bs-toggle="collapse" data-bs-target="#ltiPlatformRegistrationPanel" aria-expanded="false" aria-controls="ltiPlatformRegistrationPanel">
+            <span>
+              <span class="stat-kicker">Platform registration</span>
+              <span class="block font-bold text-slate-900 dark:text-white">Store Moodle or Canvas LTI 1.3 values</span>
+              <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">After the LMS admin creates the tool, paste the platform details here so launches can be verified.</span>
+            </span>
+            <i class="bi bi-chevron-down text-slate-400"></i>
+          </button>
+          <div id="ltiPlatformRegistrationPanel" class="hidden mt-4">
+            <form id="ltiPlatformRegistrationForm" class="grid gap-3">
+              <div class="grid gap-3 md:grid-cols-3">
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Name</span>
+                  <input class="form-control" name="name" placeholder="Example: Pitt Moodle" required>
+                </label>
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Platform</span>
+                  <select class="form-select" name="platform">
+                    <option value="moodle">Moodle</option>
+                    <option value="canvas">Canvas</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Deployment ID</span>
+                  <input class="form-control" name="deployment_id" placeholder="Deployment ID" required>
+                </label>
+              </div>
+              <div class="grid gap-3 md:grid-cols-2">
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Platform ID / Issuer</span>
+                  <input class="form-control" name="issuer" placeholder="https://moodle.example.edu" required>
+                </label>
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Client ID</span>
+                  <input class="form-control" name="client_id" placeholder="Client ID" required>
+                </label>
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Authentication request URL</span>
+                  <input class="form-control" name="auth_login_url" placeholder="https://.../auth.php" required>
+                </label>
+                <label class="block">
+                  <span class="form-label text-sm font-semibold">Access token URL</span>
+                  <input class="form-control" name="auth_token_url" placeholder="https://.../token.php" required>
+                </label>
+                <label class="block md:col-span-2">
+                  <span class="form-label text-sm font-semibold">Public keyset URL</span>
+                  <input class="form-control" name="key_set_url" placeholder="https://.../certs.php" required>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p id="ltiPlatformRegistrationStatus" class="text-sm text-slate-500 dark:text-slate-300 mb-0"></p>
+                <button class="btn btn-primary" type="submit">
+                  <i class="bi bi-save mr-1"></i>Save Platform Registration
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Delete Course Modal -->
 <div id="deleteCourseModal" class="modal-overlay hidden fixed inset-0 z-[80] items-center justify-center bg-black/50 p-4" aria-hidden="true">
   <div class="modal-backdrop-close absolute inset-0"></div>

@@ -5,6 +5,7 @@ Run with:
     python manage.py test lti
 """
 import os
+import json
 from unittest.mock import patch, MagicMock
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import TestCase, Client, RequestFactory, override_settings
@@ -12,7 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 
-from lti.models import LTILaunchCache, LTIOutcomeLog
+from lti.models import LTILaunchCache, LTIOutcomeLog, LTIPlatformRegistration, LTIUserIdentity
 from accounts.models import User
 from courses.models import Course, CourseInstance, Enrollment, Module, ModuleProgress, ModuleProgressEvent, Unit
 from lti.services import (
@@ -28,6 +29,11 @@ from lti.services import (
 )
 from lti.config import get_tool_config, is_tool_configured, list_configured_tools
 from lti.views import apply_lti_roles, process_launch_data
+
+LTI_CUSTOM_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/custom"
+LTI_DEPLOYMENT_ID_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/deployment_id"
+LTI_ROLES_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/roles"
+LTI_TARGET_LINK_URI_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/target_link_uri"
 
 
 class LTIRoleTests(TestCase):
@@ -91,6 +97,119 @@ class LTIRoleTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_instructor)
         self.assertFalse(user.is_student)
+
+
+class InboundLTI13Tests(TestCase):
+    def setUp(self):
+        self.instructor = User.objects.create_user(
+            username='lti13-instructor',
+            email='lti13-instructor@example.com',
+            password='safe-pass-123',
+            is_instructor=True,
+            is_student=False,
+        )
+        self.course = Course.objects.create(id='lti13-course', title='LTI 1.3 Course')
+        self.instance = CourseInstance.objects.create(course=self.course, group_name='LTI 1.3 Session')
+        self.instance.instructors.add(self.instructor)
+        self.registration = LTIPlatformRegistration.objects.create(
+            name='Test Moodle',
+            platform='moodle',
+            issuer='https://moodle.example.edu',
+            client_id='client-123',
+            deployment_ids=['deployment-123'],
+            auth_login_url='https://moodle.example.edu/mod/lti/auth.php',
+            auth_token_url='https://moodle.example.edu/mod/lti/token.php',
+            key_set_url='https://moodle.example.edu/mod/lti/certs.php',
+        )
+
+    def _session_request(self):
+        request = RequestFactory().post('/lti/launch/')
+        SessionMiddleware(lambda current_request: None).process_request(request)
+        request.session.save()
+        return request
+
+    def test_lti13_launch_maps_identity_without_canvas_user_id(self):
+        request = self._session_request()
+        response = process_launch_data(request, {
+            'iss': 'https://moodle.example.edu',
+            'aud': 'client-123',
+            'sub': 'moodle-user-7',
+            'email': 'Moodle.Student@Example.com',
+            'given_name': 'Moodle',
+            'family_name': 'Student',
+            LTI_ROLES_CLAIM: ['http://purl.imsglobal.org/vocab/lis/v2/membership#Learner'],
+            LTI_DEPLOYMENT_ID_CLAIM: 'deployment-123',
+            LTI_CUSTOM_CLAIM: {'course_id': str(self.instance.id)},
+        })
+
+        self.assertEqual(response.status_code, 302)
+        user = User.objects.get(email='moodle.student@example.com')
+        self.assertFalse(user.canvas_user_id)
+        self.assertTrue(Enrollment.objects.filter(student=user, course_instance=self.instance).exists())
+        identity = LTIUserIdentity.objects.get(
+            issuer='https://moodle.example.edu',
+            client_id='client-123',
+            subject='moodle-user-7',
+        )
+        self.assertEqual(identity.user, user)
+        self.assertEqual(identity.platform_registration, self.registration)
+        self.assertEqual(identity.deployment_id, 'deployment-123')
+
+    def test_lti13_launch_resolves_course_from_target_link_uri(self):
+        request = self._session_request()
+        response = process_launch_data(request, {
+            'iss': 'https://moodle.example.edu',
+            'aud': ['client-123'],
+            'sub': 'moodle-user-target',
+            'email': 'target.student@example.com',
+            LTI_ROLES_CLAIM: ['Learner'],
+            LTI_DEPLOYMENT_ID_CLAIM: 'deployment-123',
+            LTI_TARGET_LINK_URI_CLAIM: f'https://modulearn.example.edu/lti/launch/?course_id={self.instance.id}',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        user = User.objects.get(email='target.student@example.com')
+        self.assertTrue(Enrollment.objects.filter(student=user, course_instance=self.instance).exists())
+
+    def test_lti_setup_details_returns_session_specific_values(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(reverse('lti:setup_details'), {'course_id': self.instance.id})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertIn(f'course_id={self.instance.id}', data['setup']['lti_11']['launch_url'])
+        self.assertIn(f'course_id={self.instance.id}', data['setup']['lti_13']['tool_url'])
+        self.assertTrue(data['setup']['lti_13']['redirect_uri'].endswith('/lti/launch/'))
+        self.assertTrue(data['setup']['lti_13']['jwks_url'].endswith('/lti/jwks/'))
+
+    def test_platform_registration_endpoint_upserts_registration(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('lti:platform_registration'),
+            data=json.dumps({
+                'name': 'Updated Moodle',
+                'platform': 'moodle',
+                'issuer': 'https://moodle-two.example.edu',
+                'client_id': 'client-456',
+                'deployment_id': 'deployment-a, deployment-b',
+                'auth_login_url': 'https://moodle-two.example.edu/mod/lti/auth.php',
+                'auth_token_url': 'https://moodle-two.example.edu/mod/lti/token.php',
+                'key_set_url': 'https://moodle-two.example.edu/mod/lti/certs.php',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        registration = LTIPlatformRegistration.objects.get(
+            issuer='https://moodle-two.example.edu',
+            client_id='client-456',
+        )
+        self.assertEqual(registration.deployment_id_list(), ['deployment-a', 'deployment-b'])
 
 
 class LTIServicesTestCase(TestCase):

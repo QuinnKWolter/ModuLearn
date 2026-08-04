@@ -56,6 +56,8 @@
       legacyGroupsUrl: app.dataset.legacyGroupsUrl || '',
       legacyDashboardBaseUrl: app.dataset.legacyDashboardBaseUrl || '',
       ltiLaunchPath: app.dataset.ltiLaunchPath || '',
+      ltiSetupDetailsUrl: app.dataset.ltiSetupDetailsUrl || '',
+      ltiPlatformRegistrationUrl: app.dataset.ltiPlatformRegistrationUrl || '',
       courseAuthoringXLoginUrl: app.dataset.courseAuthoringXLoginUrl || '',
       courseAuthoringAppUrl: app.dataset.courseAuthoringAppUrl || '',
     };
@@ -110,6 +112,111 @@
       document.getElementById('groupNameFeedback').textContent = '';
       document.getElementById('newSessionForm').dataset.courseId = courseId;
       bootstrap.Modal.getOrCreateInstance(document.getElementById('newSessionModal')).show();
+    }
+
+    function setInputValue(id, value) {
+      const input = document.getElementById(id);
+      if (input) input.value = value || '';
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value || '';
+    }
+
+    async function copyInputValue(inputId, button) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const originalText = button ? button.textContent : '';
+      try {
+        await navigator.clipboard.writeText(input.value || '');
+        if (button) {
+          button.textContent = t('Copied');
+          window.setTimeout(() => {
+            button.textContent = originalText;
+          }, 1200);
+        }
+      } catch (error) {
+        input.focus();
+        input.select();
+      }
+    }
+
+    async function openLtiSetup(button) {
+      const modalElement = document.getElementById('ltiSetupModal');
+      if (!modalElement) return;
+      const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+      const loading = document.getElementById('ltiSetupLoading');
+      const content = document.getElementById('ltiSetupContent');
+      const status = document.getElementById('ltiPlatformRegistrationStatus');
+      const form = document.getElementById('ltiPlatformRegistrationForm');
+      const courseInstanceId = button.dataset.courseInstanceId || '';
+
+      setText(
+        'ltiSetupSubtitle',
+        `${button.dataset.courseTitle || t('Course Session')} - ${button.dataset.groupName || ''}`
+      );
+      if (loading) loading.classList.remove('hidden');
+      if (content) content.classList.add('hidden');
+      if (status) status.textContent = '';
+      if (form) form.reset();
+      modal.show();
+
+      try {
+        const url = new URL(config.ltiSetupDetailsUrl, window.location.origin);
+        url.searchParams.set('course_id', courseInstanceId);
+        const response = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+        const data = await parseJsonResponse(response);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || t('Unable to load LTI setup details.'));
+        }
+
+        const setup = data.setup || {};
+        const lti11 = setup.lti_11 || {};
+        const lti13 = setup.lti_13 || {};
+        setInputValue('lti11LaunchUrl', lti11.launch_url);
+        setInputValue('lti11ConfigUrl', lti11.cartridge_xml_url);
+        setInputValue('lti11ConsumerKey', lti11.consumer_key);
+        setInputValue('lti11SharedSecret', lti11.shared_secret);
+        setInputValue('lti13ToolUrl', lti13.tool_url || lti13.target_link_uri);
+        setInputValue('lti13LoginUrl', lti13.initiate_login_url || lti13.oidc_login_url);
+        setInputValue('lti13RedirectUri', lti13.redirect_uri);
+        setInputValue('lti13JwksUrl', lti13.jwks_url || lti13.public_keyset_url);
+      } catch (error) {
+        console.error('Failed to load LTI setup:', error);
+        setText('ltiSetupSubtitle', error.message || t('Unable to load LTI setup details.'));
+      } finally {
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+      }
+    }
+
+    async function saveLtiPlatformRegistration(form) {
+      const status = document.getElementById('ltiPlatformRegistrationStatus');
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+      if (status) status.textContent = t('Saving...');
+
+      try {
+        const response = await fetch(config.ltiPlatformRegistrationUrl, {
+          method: 'POST',
+          headers: csrfHeaders({
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify(payload),
+        });
+        const data = await parseJsonResponse(response);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || t('Failed to save platform registration.'));
+        }
+        if (status) status.textContent = data.created
+          ? t('Platform registration saved.')
+          : t('Platform registration updated.');
+      } catch (error) {
+        console.error('Failed to save LTI platform registration:', error);
+        if (status) status.textContent = error.message || t('Failed to save platform registration.');
+      }
     }
 
     async function showDeleteCourseConfirmation(courseId) {
@@ -424,22 +531,23 @@
 
     document.querySelectorAll('.copy-lti-url').forEach((button) => {
       button.addEventListener('click', function () {
-        const ltiUrl = new URL(config.ltiLaunchPath, window.location.origin);
-        ltiUrl.searchParams.set('course_id', this.dataset.courseInstanceId);
-
-        navigator.clipboard.writeText(ltiUrl.toString()).then(() => {
-          const tooltip = new bootstrap.Tooltip(button, {
-            title: t('URL Copied!'),
-            trigger: 'manual',
-          });
-          tooltip.show();
-          window.setTimeout(() => tooltip.dispose(), 1500);
-        }).catch((error) => {
-          console.error('Failed to copy URL:', error);
-          alert(t('Failed to copy URL to clipboard.'));
-        });
+        openLtiSetup(this);
       });
     });
+
+    document.querySelectorAll('.lti-copy-btn').forEach((button) => {
+      button.addEventListener('click', function () {
+        copyInputValue(this.dataset.copyInput, this);
+      });
+    });
+
+    const ltiPlatformRegistrationForm = document.getElementById('ltiPlatformRegistrationForm');
+    if (ltiPlatformRegistrationForm) {
+      ltiPlatformRegistrationForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        saveLtiPlatformRegistration(this);
+      });
+    }
 
     const legacySearchInput = document.getElementById('legacyGroupsSearch');
     const legacyClearBtn = document.getElementById('clearLegacySearch');

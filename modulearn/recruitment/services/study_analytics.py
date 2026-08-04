@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
-from courses.models import Module, ModuleProgress
+from django.db.models import Count, Max, Min
+
+from courses.models import Module, ModuleProgress, ModuleProgressEvent
 from recruitment.models import ParticipantSession, Study
+
+
+SESSION_ANALYTICS_EVENT_TYPES = ("launch", "iframe_load", "tab_blur", "tab_focus", "progress", "outcome", "completion")
 
 
 def build_study_analytics_context(study: Study) -> dict:
@@ -31,6 +36,7 @@ def build_study_analytics_context(study: Study) -> dict:
         (row.enrollment_id, row.module_id): row
         for row in progress_rows
     }
+    progress_event_summary = _progress_event_summary(progress_rows)
 
     condition_labels = [condition.label for condition in study.conditions.filter(is_active=True).order_by("order", "id")]
     condition_map = OrderedDict(
@@ -71,6 +77,7 @@ def build_study_analytics_context(study: Study) -> dict:
                 "success": bool(progress and progress.success),
                 "first_accessed": progress.first_accessed if progress else None,
                 "last_accessed": progress.last_accessed if progress else None,
+                "event_summary": progress_event_summary.get(progress.id, {}) if progress else {},
             })
 
         course_progress = getattr(getattr(session, "enrollment", None), "course_progress", None)
@@ -160,6 +167,15 @@ def study_analytics_csv_rows(context: dict):
                 "success": "yes" if module_row["success"] else "no",
                 "first_accessed": module_row["first_accessed"].isoformat() if module_row["first_accessed"] else "",
                 "last_accessed": module_row["last_accessed"].isoformat() if module_row["last_accessed"] else "",
+                "first_module_event_at": _iso_event_summary_value(module_row["event_summary"], "first_event_at"),
+                "last_module_event_at": _iso_event_summary_value(module_row["event_summary"], "last_event_at"),
+                "launch_events": _event_count(module_row["event_summary"], "launch"),
+                "iframe_load_events": _event_count(module_row["event_summary"], "iframe_load"),
+                "tab_blur_events": _event_count(module_row["event_summary"], "tab_blur"),
+                "tab_focus_events": _event_count(module_row["event_summary"], "tab_focus"),
+                "progress_events": _event_count(module_row["event_summary"], "progress"),
+                "outcome_events": _event_count(module_row["event_summary"], "outcome"),
+                "completion_events": _event_count(module_row["event_summary"], "completion"),
                 "overall_progress_percent": participant["overall_progress_percent"],
                 "modules_completed": participant["modules_completed"],
                 "total_modules": participant["total_modules"],
@@ -177,6 +193,52 @@ def _empty_condition_summary(label: str) -> dict:
         "completion_rate": 0.0,
         "participants": [],
     }
+
+
+def _progress_event_summary(progress_rows) -> dict:
+    progress_ids = [row.id for row in progress_rows]
+    if not progress_ids:
+        return {}
+
+    summary = {}
+    event_rows = (
+        ModuleProgressEvent.objects.filter(
+            module_progress_id__in=progress_ids,
+            event_type__in=SESSION_ANALYTICS_EVENT_TYPES,
+        )
+        .values("module_progress_id", "event_type")
+        .annotate(count=Count("id"), first_event_at=Min("created_at"), last_event_at=Max("created_at"))
+    )
+    for row in event_rows:
+        progress_summary = summary.setdefault(row["module_progress_id"], {
+            "counts": {},
+            "first_event_at": None,
+            "last_event_at": None,
+        })
+        progress_summary["counts"][row["event_type"]] = row["count"]
+        first_event_at = row["first_event_at"]
+        last_event_at = row["last_event_at"]
+        if first_event_at and (
+            progress_summary["first_event_at"] is None
+            or first_event_at < progress_summary["first_event_at"]
+        ):
+            progress_summary["first_event_at"] = first_event_at
+        if last_event_at and (
+            progress_summary["last_event_at"] is None
+            or last_event_at > progress_summary["last_event_at"]
+        ):
+            progress_summary["last_event_at"] = last_event_at
+
+    return summary
+
+
+def _event_count(event_summary: dict, event_type: str) -> int:
+    return int((event_summary or {}).get("counts", {}).get(event_type, 0))
+
+
+def _iso_event_summary_value(event_summary: dict, key: str) -> str:
+    value = (event_summary or {}).get(key)
+    return value.isoformat() if value else ""
 
 
 def _participant_label(session: ParticipantSession) -> str:

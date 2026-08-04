@@ -117,6 +117,46 @@ class CourseProgressTests(TestCase):
         )
         self.assertEqual(event_types, ['completion'])
 
+    def test_module_session_event_records_tab_attention_event(self):
+        self.client.force_login(self.student)
+
+        response = self.client.post(
+            reverse('courses:record_module_session_event', args=[self.instance.id, self.module_a.id]),
+            data=json.dumps({
+                'event_type': 'tab_blur',
+                'payload': {
+                    'browser_session_id': 'session-123',
+                    'client_timestamp': '2026-07-30T12:00:00.000Z',
+                    'elapsed_ms': 1200,
+                    'reason': 'window_blur',
+                },
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertTrue(payload['tracked'])
+        event = ModuleProgressEvent.objects.get(event_type='tab_blur')
+        self.assertEqual(event.module, self.module_a)
+        self.assertEqual(event.course_instance, self.instance)
+        self.assertEqual(event.payload['browser_session_id'], 'session-123')
+        self.assertEqual(event.payload['reason'], 'window_blur')
+
+    def test_module_session_event_ignores_instructor(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:record_module_session_event', args=[self.instance.id, self.module_a.id]),
+            data=json.dumps({'event_type': 'tab_focus', 'payload': {'reason': 'window_focus'}}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['tracked'])
+        self.assertFalse(ModuleProgressEvent.objects.filter(event_type='tab_focus').exists())
+
     def _pcex_worked_example_referer(self):
         return (
             'http://testserver/proxy/http/pawscomp2.sis.pitt.edu/pcex/pcex_v2/index.html?'

@@ -12,6 +12,110 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class LTIPlatformRegistration(models.Model):
+    """LTI 1.3 platform registration details for an LMS tenant."""
+
+    PLATFORM_CANVAS = "canvas"
+    PLATFORM_MOODLE = "moodle"
+    PLATFORM_OTHER = "other"
+    PLATFORM_CHOICES = [
+        (PLATFORM_CANVAS, "Canvas"),
+        (PLATFORM_MOODLE, "Moodle"),
+        (PLATFORM_OTHER, "Other"),
+    ]
+
+    name = models.CharField(max_length=255)
+    platform = models.CharField(max_length=32, choices=PLATFORM_CHOICES, default=PLATFORM_OTHER)
+    issuer = models.URLField(max_length=512, help_text="Platform ID / issuer URL")
+    client_id = models.CharField(max_length=255)
+    deployment_ids = models.JSONField(default=list, blank=True)
+    auth_login_url = models.URLField(max_length=512, help_text="Platform authentication request URL")
+    auth_token_url = models.URLField(max_length=512, help_text="Platform access token URL")
+    key_set_url = models.URLField(max_length=512, help_text="Platform public keyset URL")
+    auth_audience = models.URLField(max_length=512, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "LTI 1.3 Platform Registration"
+        verbose_name_plural = "LTI 1.3 Platform Registrations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["issuer", "client_id"],
+                name="lti_platform_registration_issuer_client_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["issuer", "client_id"]),
+            models.Index(fields=["platform", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.client_id})"
+
+    def deployment_id_list(self):
+        if isinstance(self.deployment_ids, list):
+            return [str(item).strip() for item in self.deployment_ids if str(item).strip()]
+        if isinstance(self.deployment_ids, str):
+            return [item.strip() for item in self.deployment_ids.split(",") if item.strip()]
+        return []
+
+    def to_tool_conf(self):
+        return {
+            "default": False,
+            "client_id": self.client_id,
+            "auth_login_url": self.auth_login_url,
+            "auth_token_url": self.auth_token_url,
+            "auth_audience": self.auth_audience or self.auth_token_url,
+            "key_set_url": self.key_set_url,
+            "key_set": None,
+            "deployment_ids": self.deployment_id_list(),
+        }
+
+
+class LTIUserIdentity(models.Model):
+    """Mapping between a platform-specific LTI user subject and a local user."""
+
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="lti_identities",
+    )
+    platform_registration = models.ForeignKey(
+        LTIPlatformRegistration,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="user_identities",
+    )
+    issuer = models.CharField(max_length=512)
+    client_id = models.CharField(max_length=255, blank=True, default="")
+    deployment_id = models.CharField(max_length=255, blank=True, default="")
+    subject = models.CharField(max_length=255)
+    last_launch_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "LTI User Identity"
+        verbose_name_plural = "LTI User Identities"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["issuer", "client_id", "subject"],
+                name="lti_user_identity_unique_subject_per_client",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["issuer", "client_id"]),
+            models.Index(fields=["subject"]),
+        ]
+
+    def __str__(self):
+        return f"{self.issuer}:{self.subject} -> {self.user_id}"
+
+
 class LTILaunchCache(models.Model):
     """
     Database-backed cache for LTI launch contexts.

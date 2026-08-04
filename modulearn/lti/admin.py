@@ -3,7 +3,56 @@ Django Admin configuration for LTI models.
 """
 from django.contrib import admin
 from django.utils import timezone
-from .models import LTILaunchCache, LTIOutcomeLog
+from .models import LTILaunchCache, LTIOutcomeLog, LTIPlatformRegistration, LTIUserIdentity
+
+
+@admin.register(LTIPlatformRegistration)
+class LTIPlatformRegistrationAdmin(admin.ModelAdmin):
+    list_display = [
+        "name", "platform", "issuer", "client_id", "deployment_count",
+        "is_active", "updated_at",
+    ]
+    list_filter = ["platform", "is_active", "created_at", "updated_at"]
+    search_fields = ["name", "issuer", "client_id", "deployment_ids"]
+    ordering = ["platform", "name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+    fieldsets = [
+        ("Platform", {
+            "fields": ["name", "platform", "is_active", "notes"],
+        }),
+        ("LTI 1.3 Identifiers", {
+            "fields": ["issuer", "client_id", "deployment_ids"],
+        }),
+        ("Platform endpoints", {
+            "fields": ["auth_login_url", "auth_token_url", "key_set_url", "auth_audience"],
+        }),
+        ("Timestamps", {
+            "fields": ["created_at", "updated_at"],
+            "classes": ["collapse"],
+        }),
+    ]
+
+    @admin.display(description="Deployments")
+    def deployment_count(self, obj):
+        return len(obj.deployment_id_list())
+
+
+@admin.register(LTIUserIdentity)
+class LTIUserIdentityAdmin(admin.ModelAdmin):
+    list_display = [
+        "user", "issuer", "client_id", "deployment_id", "subject", "last_seen_at",
+    ]
+    list_filter = ["issuer", "client_id", "deployment_id", "created_at", "last_seen_at"]
+    search_fields = ["user__username", "user__email", "issuer", "client_id", "subject"]
+    readonly_fields = [
+        "user", "platform_registration", "issuer", "client_id", "deployment_id",
+        "subject", "last_launch_data", "created_at", "last_seen_at",
+    ]
+    ordering = ["-last_seen_at"]
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(LTILaunchCache)

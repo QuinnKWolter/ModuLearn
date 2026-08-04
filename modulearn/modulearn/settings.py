@@ -283,6 +283,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@example.com'
 EMAIL_HOST_PASSWORD = 'your-email-password'
 
+LTI_PUBLIC_KEY_FILE = os.getenv('LTI_PUBLIC_KEY_FILE', './modulearn/public.key')
+LTI_PRIVATE_KEY_FILE = os.getenv('LTI_PRIVATE_KEY_FILE', './modulearn/private.key')
+
 LTI_CONFIG = {
     'https://saltire.lti.app/platform': {
         'client_id': 'saltire.lti.app',
@@ -291,8 +294,8 @@ LTI_CONFIG = {
         'key_set_url': 'https://saltire.lti.app/platform/jwks/3b4f2aae79ac1d451a4911ac3bc00145',
         'auth_audience': 'https://saltire.lti.app/platform',
         'deployment_ids': ['6eb84c059ff928e88f0b734420330efa09905105'],
-        'public_key_file': './modulearn/public.key',
-        'private_key_file': './modulearn/private.key',
+        'public_key_file': LTI_PUBLIC_KEY_FILE,
+        'private_key_file': LTI_PRIVATE_KEY_FILE,
     }
 }
 
@@ -319,8 +322,8 @@ else:
 
 LTI_CONSUMER_CONFIG = {
     'client_id': 'external-tool-client-id',
-    'public_key_file': './modulearn/public.key',
-    'private_key_file': './modulearn/private.key',
+    'public_key_file': LTI_PUBLIC_KEY_FILE,
+    'private_key_file': LTI_PRIVATE_KEY_FILE,
 }
 
 def get_primary_domain():

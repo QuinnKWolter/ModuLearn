@@ -144,6 +144,146 @@
 .analytics-kpi-success .analytics-kpi-icon { background: #16a34a; }
 .analytics-kpi-warning .analytics-kpi-icon { background: #f59e0b; }
 
+.student-detail-shell,
+.student-engagement-shell {
+    min-width: 0;
+}
+
+.student-resource-detail,
+.engagement-unit,
+.engagement-module {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.72);
+    overflow: hidden;
+}
+
+.dark .student-resource-detail,
+.dark .engagement-unit,
+.dark .engagement-module {
+    background: rgba(15, 23, 42, 0.46);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+.student-resource-detail summary,
+.engagement-unit summary,
+.engagement-module summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.student-resource-detail summary::-webkit-details-marker,
+.engagement-unit summary::-webkit-details-marker,
+.engagement-module summary::-webkit-details-marker {
+    display: none;
+}
+
+.student-resource-detail summary {
+    padding: 0.7rem 0.85rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.student-activity-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.55rem 0.75rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.engagement-unit summary {
+    padding: 0.9rem 1rem;
+    font-weight: 800;
+}
+
+.engagement-unit-body {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0 1rem 1rem;
+}
+
+.engagement-module summary {
+    padding: 0.8rem 0.9rem;
+}
+
+.engagement-module-body {
+    display: grid;
+    gap: 0.7rem;
+    padding: 0.25rem 0.9rem 0.9rem;
+}
+
+.engagement-event {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+    border-left: 4px solid #64748b;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.75rem;
+}
+
+.dark .engagement-event {
+    background: rgba(30, 41, 59, 0.58);
+}
+
+.engagement-event.is-complete { border-left-color: #16a34a; }
+.engagement-event.is-progress { border-left-color: #2563eb; }
+.engagement-event.is-blur { border-left-color: #f59e0b; }
+.engagement-event.is-focus { border-left-color: #0f766e; }
+.engagement-event.is-launch { border-left-color: #7c3aed; }
+
+.engagement-event-time {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.dark .engagement-event-time {
+    color: #cbd5e1;
+}
+
+.engagement-event-metrics,
+.engagement-event-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.engagement-event-metrics span,
+.engagement-event-chips span {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: rgba(100, 116, 139, 0.12);
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+}
+
+.dark .engagement-event-metrics span,
+.dark .engagement-event-chips span {
+    background: rgba(148, 163, 184, 0.14);
+    color: #e2e8f0;
+}
+
+.engagement-event-chips {
+    margin-top: 0.55rem;
+}
+
+@media (max-width: 768px) {
+    .engagement-event {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Progress bar striped animation */
 .progress-bar-striped {
     background-image: linear-gradient(

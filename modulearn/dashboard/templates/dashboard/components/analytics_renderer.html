@@ -7,6 +7,7 @@ let currentViewMode = 'classAverage';
 let studentTableSort = { key: 'progress', direction: 'desc' };
 let studentTableFilter = '';
 let showAllBreakdowns = false;
+const studentEngagementCache = new Map();
 
 function updateButtonStates() {
   document.querySelectorAll('input[name="viewMode"]').forEach(r => {
@@ -487,6 +488,249 @@ function showError(message) {
   }, 5000);
 }
 
+function formatDateTime(value) {
+  if (!value) return 'No timestamp';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'No timestamp';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+function formatDurationMs(value) {
+  const ms = Number(value);
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+}
+
+function currentModulearnInstanceId() {
+  return responseData?.context?.course_instance_id || document.getElementById('modulearnInstanceSelect')?.value || '';
+}
+
+function studentEngagementCacheKey(learnerId) {
+  return `${currentModulearnInstanceId()}::${learnerId}`;
+}
+
+async function fetchStudentEngagement(learnerId) {
+  const cacheKey = studentEngagementCacheKey(learnerId);
+  if (studentEngagementCache.has(cacheKey)) {
+    return studentEngagementCache.get(cacheKey);
+  }
+
+  const instanceId = currentModulearnInstanceId();
+  if (!instanceId) {
+    throw new Error('No course session is selected.');
+  }
+
+  const params = new URLSearchParams({ instance_id: instanceId, learner_id: learnerId });
+  const response = await fetch(`{% url 'dashboard:fetch_modulearn_student_engagement' %}?${params}`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || `Request failed: ${response.status}`);
+  }
+  studentEngagementCache.set(cacheKey, data);
+  return data;
+}
+
+function renderStudentProgressSummary(learner) {
+  const summary = computeLearnerSummary(learner);
+  const sortedTopics = (responseData.topics || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  return `
+    <div class="student-detail-shell">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="analytics-kpi p-4">
+          <div class="analytics-kpi-label">Overall</div>
+          <div class="analytics-kpi-value mt-2">${summary.progressPercent}%</div>
+        </div>
+        <div class="analytics-kpi p-4">
+          <div class="analytics-kpi-label">Units Complete</div>
+          <div class="analytics-kpi-value mt-2">${summary.topicsCompleted}/${summary.totalTopics}</div>
+        </div>
+        <div class="analytics-kpi p-4">
+          <div class="analytics-kpi-label">Last Active</div>
+          <div class="text-lg font-bold mt-3">${formatLastActive(summary.lastActive)}</div>
+        </div>
+        <div class="analytics-kpi p-4">
+          <div class="analytics-kpi-label mb-3">Resource Profile</div>
+          ${renderResourceProfile(summary)}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
+        ${sortedTopics.map(topic => {
+          const topicProgress = learner?.state?.topics?.[topic.id]?.overall?.p || 0;
+          const pct = clampPercent(topicProgress);
+          return `
+            <div class="analytics-card p-4">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h6 class="font-bold mb-1">${escapeHtml(topic.name)}</h6>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">${pct}% overall progress</div>
+                </div>
+                <span class="badge font-bold" style="${Object.entries(getBadgeStyle(pct)).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">${pct}%</span>
+              </div>
+              <div class="space-y-3">
+                ${(responseData.resources || []).map(resource => {
+                  const resourceProgress = learner?.state?.topics?.[topic.id]?.values?.[resource.id]?.p || 0;
+                  const resourcePct = clampPercent(resourceProgress);
+                  const activities = topic.activities?.[resource.id] || [];
+                  return `
+                    <details class="student-resource-detail">
+                      <summary>
+                        <span>${escapeHtml(resource.name)}</span>
+                        <span>${resourcePct}% · ${activities.length} modules</span>
+                      </summary>
+                      <div class="mt-3 space-y-2">
+                        ${activities.length ? activities.map(activity => {
+                          const values = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values || {};
+                          const activityPct = clampPercent(values.p || 0);
+                          return `
+                            <div class="student-activity-row">
+                              <div class="min-w-0">
+                                <div class="font-semibold truncate">${escapeHtml(activity.name || activity.id)}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">${activityPct >= 100 ? 'Completed' : activityPct > 0 ? 'In progress' : 'Not started'}</div>
+                              </div>
+                              <div class="text-right font-bold">${activityPct}%</div>
+                            </div>
+                          `;
+                        }).join('') : '<div class="text-sm text-gray-500 dark:text-gray-400">No modules in this resource group.</div>'}
+                      </div>
+                    </details>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function eventToneClass(eventType) {
+  if (eventType === 'completion') return 'is-complete';
+  if (eventType === 'outcome' || eventType === 'progress') return 'is-progress';
+  if (eventType === 'tab_blur') return 'is-blur';
+  if (eventType === 'tab_focus') return 'is-focus';
+  if (eventType === 'launch' || eventType === 'iframe_load') return 'is-launch';
+  return 'is-neutral';
+}
+
+function renderEventPayloadChips(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  const chips = [];
+  if (payload.reason) chips.push(`reason: ${payload.reason}`);
+  if (payload.elapsed_ms !== undefined) chips.push(`elapsed: ${formatDurationMs(payload.elapsed_ms)}`);
+  if (payload.visibility_state) chips.push(`visibility: ${payload.visibility_state}`);
+  if (payload.window_focused !== undefined && payload.window_focused !== null) chips.push(`focused: ${payload.window_focused ? 'yes' : 'no'}`);
+  if (payload.scoreText) chips.push(`score: ${payload.scoreText}`);
+  if (payload.result_type) chips.push(`result: ${payload.result_type}`);
+  if (payload.attempt_count !== undefined) chips.push(`attempts: ${payload.attempt_count}`);
+  if (payload.goal_name) chips.push(`goal: ${payload.goal_name}`);
+  if (payload.iframe_origin) chips.push(payload.iframe_origin);
+  if (!chips.length && Array.isArray(payload.payload_keys)) chips.push(`payload: ${payload.payload_keys.join(', ')}`);
+
+  return chips.length
+    ? `<div class="engagement-event-chips">${chips.map(chip => `<span>${escapeHtml(chip)}</span>`).join('')}</div>`
+    : '';
+}
+
+function renderEngagementEvent(event) {
+  const scoreText = event.score === null || event.score === undefined ? '' : `<span>Score ${Math.round(event.score)}%</span>`;
+  const progressText = event.progress_percent || event.event_type === 'progress' || event.event_type === 'completion'
+    ? `<span>${event.progress_percent}% progress</span>`
+    : '';
+  const successText = event.success ? '<span>Successful</span>' : '';
+  return `
+    <div class="engagement-event ${eventToneClass(event.event_type)}">
+      <div class="engagement-event-time">${formatDateTime(event.created_at)}</div>
+      <div class="engagement-event-body">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div>
+            <div class="font-bold">${escapeHtml(event.event_label || event.event_type)}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(event.source || 'system')}</div>
+          </div>
+          <div class="engagement-event-metrics">
+            ${progressText}
+            ${scoreText}
+            ${successText}
+          </div>
+        </div>
+        ${renderEventPayloadChips(event.payload)}
+      </div>
+    </div>
+  `;
+}
+
+function renderStudentEngagementView(data) {
+  const summary = data.summary || {};
+  return `
+    <div class="student-engagement-shell">
+      <div class="analytics-narrative mb-5">
+        <div class="analytics-narrative-icon"><i class="fas fa-route"></i></div>
+        <div>
+          <div class="font-bold">Engagement timeline for ${escapeHtml(data.learner?.id || '')}</div>
+          <div class="text-sm text-gray-600 dark:text-gray-300">
+            Interaction-by-interaction events from module launch, iframe load, tab focus changes, and progress/result updates.
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
+        <div class="analytics-kpi p-4"><div class="analytics-kpi-label">Events</div><div class="analytics-kpi-value mt-2">${summary.event_count || 0}</div></div>
+        <div class="analytics-kpi p-4"><div class="analytics-kpi-label">Progress Signals</div><div class="analytics-kpi-value mt-2">${summary.progress_event_count || 0}</div></div>
+        <div class="analytics-kpi p-4"><div class="analytics-kpi-label">Blur / Focus</div><div class="analytics-kpi-value mt-2">${summary.blur_count || 0}/${summary.focus_count || 0}</div></div>
+        <div class="analytics-kpi p-4"><div class="analytics-kpi-label">Last Event</div><div class="text-lg font-bold mt-3">${formatDateTime(summary.last_event_at)}</div></div>
+      </div>
+
+      <div class="space-y-4">
+        ${(data.units || []).map(unit => `
+          <details class="engagement-unit" ${unit.event_count ? 'open' : ''}>
+            <summary>
+              <span>${escapeHtml(unit.title)}</span>
+              <span>${unit.event_count || 0} events</span>
+            </summary>
+            <div class="engagement-unit-body">
+              ${(unit.modules || []).map(module => `
+                <details class="engagement-module" ${module.event_count ? 'open' : ''}>
+                  <summary>
+                    <div class="min-w-0">
+                      <div class="font-bold truncate">${escapeHtml(module.title)}</div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(module.module_type || 'Module')}</div>
+                    </div>
+                    <div class="text-right">
+                      <div class="font-bold">${module.progress_percent || 0}%</div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">${module.event_count || 0} events</div>
+                    </div>
+                  </summary>
+                  <div class="engagement-module-body">
+                    ${module.events?.length
+                      ? module.events.map(renderEngagementEvent).join('')
+                      : '<div class="empty-state py-4">No tracked interactions for this module yet.</div>'}
+                  </div>
+                </details>
+              `).join('')}
+            </div>
+          </details>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function showStudentDetails(learnerId) {
   const learner = responseData.learners?.find(l => l.id === learnerId);
   if (!learner) return;
@@ -494,18 +738,29 @@ function showStudentDetails(learnerId) {
   const modalHtml = `
     <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="studentModal" aria-hidden="true">
       <div class="modal-backdrop-close absolute inset-0"></div>
-      <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
-          <h5 class="text-lg font-bold">
-            <i class="fas fa-user-graduate mr-2"></i>
-            Student Details: ${learner.id}
-          </h5>
+          <div>
+            <h5 class="text-lg font-bold">
+              <i class="fas fa-user-graduate mr-2"></i>
+              Student Details: ${escapeHtml(learner.id)}
+            </h5>
+            <div class="text-sm text-white/80">${escapeHtml(learner.name || learner.email || '')}</div>
+          </div>
           <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
         </div>
-        <div class="flex-1 overflow-y-auto p-6">
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Click a cell in the grid to compare this student’s activity progress to peers for that Unit × Module Type.
-          </p>
+        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-3 bg-slate-50 dark:bg-slate-900/50">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="btn btn-primary btn-sm" id="studentSummaryModeBtn">
+              <i class="fas fa-chart-line mr-1"></i> Progress Summary
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="studentEngagementModeBtn">
+              <i class="fas fa-list-ul mr-1"></i> Interaction Timeline
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6" id="studentModalBody">
+          ${renderStudentProgressSummary(learner)}
         </div>
       </div>
     </div>
@@ -514,7 +769,35 @@ function showStudentDetails(learnerId) {
   const existingModal = document.getElementById('studentModal');
   if (existingModal) existingModal.remove();
   document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+  const modalEl = document.getElementById('studentModal');
+  const body = document.getElementById('studentModalBody');
+  const summaryBtn = document.getElementById('studentSummaryModeBtn');
+  const engagementBtn = document.getElementById('studentEngagementModeBtn');
+
+  if (summaryBtn && engagementBtn && body) {
+    summaryBtn.addEventListener('click', () => {
+      summaryBtn.className = 'btn btn-primary btn-sm';
+      engagementBtn.className = 'btn btn-outline-primary btn-sm';
+      body.innerHTML = renderStudentProgressSummary(learner);
+    });
+
+    engagementBtn.addEventListener('click', async () => {
+      summaryBtn.className = 'btn btn-outline-primary btn-sm';
+      engagementBtn.className = 'btn btn-primary btn-sm';
+      body.innerHTML = '<div class="empty-state py-5"><span class="spinner-border spinner-border-sm mr-2"></span>Loading interaction timeline...</div>';
+      try {
+        const engagement = await fetchStudentEngagement(learner.id);
+        body.innerHTML = renderStudentEngagementView(engagement);
+      } catch (error) {
+        body.innerHTML = renderStudentProgressSummary(learner);
+        summaryBtn.className = 'btn btn-primary btn-sm';
+        engagementBtn.className = 'btn btn-outline-primary btn-sm';
+        showError(`Could not load interaction timeline: ${error.message || error}`);
+      }
+    });
+  }
+
+  const modal = new bootstrap.Modal(modalEl);
   modal.show();
 }
 
