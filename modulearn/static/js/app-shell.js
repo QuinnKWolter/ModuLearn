@@ -77,10 +77,37 @@
     root.style.setProperty('--site-footer-height', footer ? footer.offsetHeight + 'px' : '0px');
   }
 
+  function dismissFlashMessage(message) {
+    if (!message || message.classList.contains('is-dismissing')) {
+      return;
+    }
+    message.classList.add('is-dismissing');
+    window.setTimeout(function () {
+      message.remove();
+    }, 240);
+  }
+
+  function initializeFlashMessages() {
+    document.querySelectorAll('[data-flash-message]').forEach(function (message) {
+      const dismissButton = message.querySelector('[data-flash-dismiss]');
+      if (dismissButton) {
+        dismissButton.addEventListener('click', function () {
+          dismissFlashMessage(message);
+        });
+      }
+      if (message.dataset.autoDismiss === 'true') {
+        window.setTimeout(function () {
+          dismissFlashMessage(message);
+        }, 4200);
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     applyTheme(getStoredTheme());
     handleHeaderScroll();
     syncShellOffsets();
+    initializeFlashMessages();
 
     document.querySelectorAll('[data-theme-toggle]').forEach(function (trigger) {
       trigger.addEventListener('click', toggleTheme);

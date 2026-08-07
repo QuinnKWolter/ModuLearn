@@ -50,6 +50,9 @@ class DashboardViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Instructor Dashboard')
         self.assertContains(response, 'Dashboard Course')
+        self.assertContains(response, 'Canvas Developer Key')
+        self.assertContains(response, 'Moodle LTI Advantage tool')
+        self.assertContains(response, 'Store the LMS values ModuLearn needs to verify LTI 1.3 launches')
 
     def test_instructor_recent_activity_names_student(self):
         self.student.full_name = 'Demo Learner'
@@ -81,7 +84,8 @@ class DashboardViewTests(TestCase):
         self.assertContains(response, 'Variable Assignment')
         self.assertContains(response, 'Demo Learner')
         self.assertContains(response, 'student1@example.com')
-        self.assertContains(response, 'Completed')
+        self.assertContains(response, 'sessionActivityModal')
+        self.assertContains(response, '"event_type": "completion"')
 
     def test_timelines_hide_redundant_100_percent_progress_events(self):
         unit = Unit.objects.create(course=self.course, title='Unit 1')

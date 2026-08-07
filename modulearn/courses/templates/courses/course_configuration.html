@@ -14,7 +14,9 @@
 <style>
   .cfg-layout {
     display: grid;
-    gap: 1rem;
+    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+    gap: 1.15rem;
+    align-items: start;
   }
 
   .cfg-shell {
@@ -123,6 +125,405 @@
   .cfg-stack {
     display: grid;
     gap: 0.625rem;
+  }
+
+  .cfg-workbench {
+    display: grid;
+    grid-template-columns: minmax(15rem, 18.5rem) minmax(0, 1fr);
+    gap: 0.875rem;
+    align-items: start;
+  }
+
+  .cfg-structure-sidebar {
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 28rem;
+    max-height: calc(100vh - 7rem);
+    border-radius: 0.65rem;
+    background: rgba(248, 250, 252, 0.72);
+    overflow: visible;
+  }
+
+  .dark .cfg-structure-sidebar {
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .cfg-sidebar-top {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.68rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .cfg-sidebar-title {
+    min-width: 0;
+  }
+
+  .cfg-sidebar-title strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #0f172a;
+    font-size: 0.94rem;
+    line-height: 1.15;
+  }
+
+  .dark .cfg-sidebar-title strong {
+    color: #f8fafc;
+  }
+
+  .cfg-sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.55rem;
+    scrollbar-width: thin;
+  }
+
+  .cfg-tree-empty {
+    border: 1px dashed rgba(148, 163, 184, 0.5);
+    border-radius: 0.45rem;
+    padding: 0.8rem;
+    color: #64748b;
+    font-size: 0.82rem;
+    text-align: center;
+  }
+
+  .cfg-tree-unit {
+    position: relative;
+    display: grid;
+    gap: 0.32rem;
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
+    padding: 0.25rem;
+    transition: background 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+  }
+
+  .cfg-tree-unit + .cfg-tree-unit {
+    margin-top: 0.28rem;
+  }
+
+  .cfg-tree-unit.is-active {
+    border-color: rgba(37, 99, 235, 0.25);
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  .cfg-tree-unit.is-compact .cfg-tree-modules {
+    display: none;
+  }
+
+  .dark .cfg-tree-unit.is-active {
+    border-color: rgba(96, 165, 250, 0.34);
+    background: rgba(37, 99, 235, 0.16);
+  }
+
+  .cfg-tree-unit.is-dragging,
+  .cfg-tree-module.is-dragging {
+    opacity: 0.48;
+  }
+
+  .cfg-tree-unit.is-drop-target,
+  .cfg-tree-modules.is-drop-target {
+    border-color: rgba(16, 185, 129, 0.42);
+    background: rgba(16, 185, 129, 0.08);
+  }
+
+  .cfg-tree-unit-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .cfg-tree-unit-button,
+  .cfg-tree-module {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    align-items: center;
+    border: 0;
+    border-radius: 0.38rem;
+    background: transparent;
+    color: #334155;
+    text-align: left;
+    transition: background 0.14s ease, color 0.14s ease, transform 0.14s ease;
+  }
+
+  .dark .cfg-tree-unit-button,
+  .dark .cfg-tree-module {
+    color: #cbd5e1;
+  }
+
+  .cfg-tree-unit-button {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.48rem 0.5rem;
+    font-weight: 800;
+  }
+
+  .cfg-tree-unit-button:hover,
+  .cfg-tree-unit-button:focus-visible,
+  .cfg-tree-module:hover,
+  .cfg-tree-module:focus-visible {
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.1);
+    transform: translateX(1px);
+  }
+
+  .dark .cfg-tree-unit-button:hover,
+  .dark .cfg-tree-unit-button:focus-visible,
+  .dark .cfg-tree-module:hover,
+  .dark .cfg-tree-module:focus-visible {
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.16);
+  }
+
+  .cfg-tree-icon {
+    width: 1.3rem;
+    height: 1.3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.28rem;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+  }
+
+  .cfg-tree-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cfg-tree-count {
+    min-width: 1.55rem;
+    border-radius: 0.32rem;
+    padding: 0.14rem 0.3rem;
+    color: #64748b;
+    background: rgba(148, 163, 184, 0.16);
+    font-size: 0.68rem;
+    text-align: center;
+  }
+
+  .cfg-tree-add-module {
+    width: 1.9rem;
+    height: 1.9rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 0.35rem;
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  .cfg-tree-unit.is-active .cfg-tree-add-module {
+    display: inline-flex;
+  }
+
+  .cfg-tree-add-module:hover,
+  .cfg-tree-add-module:focus-visible {
+    background: rgba(37, 99, 235, 0.16);
+  }
+
+  .cfg-tree-modules {
+    display: none;
+    gap: 0.18rem;
+    margin-left: 0.98rem;
+    padding: 0.18rem 0 0.38rem 0.58rem;
+    border-left: 1px solid rgba(37, 99, 235, 0.18);
+  }
+
+  .cfg-tree-unit.is-active .cfg-tree-modules {
+    display: grid;
+  }
+
+  .cfg-tree-unit.is-active.is-compact .cfg-tree-modules {
+    display: none;
+  }
+
+  .cfg-unit-status-tip {
+    position: absolute;
+    left: calc(100% + 0.55rem);
+    top: 0.25rem;
+    z-index: 8;
+    display: grid;
+    gap: 0.32rem;
+    min-width: 10.5rem;
+    padding: 0.55rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 0.45rem;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-0.3rem);
+    transition: opacity 0.14s ease, transform 0.14s ease;
+  }
+
+  .dark .cfg-unit-status-tip {
+    border-color: rgba(71, 85, 105, 0.72);
+    background: rgba(15, 23, 42, 0.98);
+    color: #e2e8f0;
+  }
+
+  .cfg-tree-unit:hover .cfg-unit-status-tip,
+  .cfg-tree-unit:focus-within .cfg-unit-status-tip {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .cfg-status-tip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    white-space: nowrap;
+  }
+
+  .cfg-status-tip-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+  }
+
+  .cfg-status-tip-icon.is-green {
+    color: #14532d;
+    background: #dcfce7;
+  }
+
+  .cfg-status-tip-icon.is-red {
+    color: #7f1d1d;
+    background: #fee2e2;
+  }
+
+  .cfg-status-tip-icon.is-amber {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .cfg-tree-module {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    padding: 0.36rem 0.4rem;
+    font-size: 0.79rem;
+    line-height: 1.2;
+  }
+
+  .cfg-tree-module.is-hidden .cfg-tree-label {
+    color: #94a3b8;
+    text-decoration: line-through;
+  }
+
+  .cfg-tree-flags {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22rem;
+    color: #94a3b8;
+    font-size: 0.68rem;
+  }
+
+  .cfg-unit-stage {
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+  }
+
+  .cfg-unit-stage > .cfg-unit[hidden] {
+    display: none !important;
+  }
+
+  .cfg-unit-empty-prompt {
+    min-height: 26rem;
+    display: grid;
+    place-items: center;
+    border: 1px dashed rgba(37, 99, 235, 0.28);
+    border-radius: 0.75rem;
+    background:
+      linear-gradient(180deg, rgba(239, 246, 255, 0.78), rgba(248, 250, 252, 0.82)),
+      radial-gradient(circle at 50% 0%, rgba(20, 184, 166, 0.14), transparent 42%);
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .dark .cfg-unit-empty-prompt {
+    border-color: rgba(96, 165, 250, 0.24);
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.66), rgba(2, 6, 23, 0.58)),
+      radial-gradient(circle at 50% 0%, rgba(45, 212, 191, 0.13), transparent 42%);
+  }
+
+  .cfg-unit-empty-prompt[hidden] {
+    display: none !important;
+  }
+
+  .cfg-unit-empty-icon {
+    width: 4rem;
+    height: 4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.16);
+    font-size: 1.7rem;
+  }
+
+  .dark .cfg-unit-empty-icon {
+    color: #93c5fd;
+    background: rgba(37, 99, 235, 0.16);
+  }
+
+  .cfg-layout.is-sidebar-collapsed,
+  .cfg-workbench.is-sidebar-collapsed {
+    grid-template-columns: 3.35rem minmax(0, 1fr);
+  }
+
+  .cfg-layout.is-sidebar-collapsed .cfg-structure-sidebar,
+  .cfg-workbench.is-sidebar-collapsed .cfg-structure-sidebar {
+    min-width: 0;
+  }
+
+  .cfg-layout.is-sidebar-collapsed .cfg-sidebar-top,
+  .cfg-workbench.is-sidebar-collapsed .cfg-sidebar-top {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0.5rem 0.38rem;
+  }
+
+  .cfg-layout.is-sidebar-collapsed .cfg-sidebar-title,
+  .cfg-layout.is-sidebar-collapsed .cfg-tree-label,
+  .cfg-layout.is-sidebar-collapsed .cfg-tree-count,
+  .cfg-layout.is-sidebar-collapsed .cfg-tree-add-module,
+  .cfg-layout.is-sidebar-collapsed .cfg-tree-modules,
+  .cfg-layout.is-sidebar-collapsed .cfg-tree-flags,
+  .cfg-layout.is-sidebar-collapsed .cfg-unit-status-tip,
+  .cfg-workbench.is-sidebar-collapsed .cfg-sidebar-title,
+  .cfg-workbench.is-sidebar-collapsed .cfg-tree-label,
+  .cfg-workbench.is-sidebar-collapsed .cfg-tree-count,
+  .cfg-workbench.is-sidebar-collapsed .cfg-tree-add-module,
+  .cfg-workbench.is-sidebar-collapsed .cfg-tree-modules,
+  .cfg-workbench.is-sidebar-collapsed .cfg-tree-flags {
+    display: none !important;
+  }
+
+  .cfg-layout.is-sidebar-collapsed .cfg-tree-unit-button,
+  .cfg-workbench.is-sidebar-collapsed .cfg-tree-unit-button {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0.5rem 0.2rem;
   }
 
   .cfg-unit {
@@ -322,6 +723,60 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
+  .cfg-source-panel {
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.38rem;
+    background: rgba(248, 250, 252, 0.68);
+    overflow: hidden;
+  }
+
+  .dark .cfg-source-panel {
+    border-color: rgba(71, 85, 105, 0.58);
+    background: rgba(15, 23, 42, 0.34);
+  }
+
+  .cfg-source-panel summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.48rem 0.55rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .cfg-source-panel summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cfg-source-panel summary strong {
+    display: block;
+    margin-top: 0.05rem;
+    color: #334155;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+
+  .dark .cfg-source-panel summary strong {
+    color: #e2e8f0;
+  }
+
+  .cfg-source-panel summary i {
+    color: #64748b;
+    transition: transform 0.14s ease;
+  }
+
+  .cfg-source-panel[open] summary i {
+    transform: rotate(180deg);
+  }
+
+  .cfg-source-body {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.55rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
   .cfg-toggle-row {
     display: flex;
     flex-wrap: wrap;
@@ -358,6 +813,21 @@
     justify-content: space-between;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
+  }
+
+  .cfg-module-window-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.16rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.4rem;
+    background: rgba(248, 250, 252, 0.7);
+  }
+
+  .dark .cfg-module-window-actions {
+    border-color: rgba(71, 85, 105, 0.66);
+    background: rgba(15, 23, 42, 0.42);
   }
 
   .cfg-modules {
@@ -434,6 +904,28 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+  }
+
+  .cfg-shape-note {
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 0.55rem;
+    padding: 0.8rem 0.9rem;
+    color: #334155;
+    background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(248, 250, 252, 0.9));
+  }
+
+  .dark .cfg-shape-note {
+    border-color: rgba(96, 165, 250, 0.28);
+    color: #cbd5e1;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+  }
+
+  .cfg-shape-note strong {
+    color: #0f172a;
+  }
+
+  .dark .cfg-shape-note strong {
+    color: #f8fafc;
   }
 
   .dark .cfg-composer {
@@ -667,7 +1159,7 @@
   .cfg-branch-grid {
     display: grid;
     gap: 0.5rem;
-    grid-template-columns: minmax(0, 1.25fr) minmax(10rem, 0.7fr) minmax(0, 1.25fr) 5.5rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(9rem, 0.7fr) minmax(0, 1.1fr) minmax(9rem, 0.75fr) 5rem;
     align-items: end;
   }
 
@@ -707,6 +1199,224 @@
 
   .dark .cfg-branch-path strong {
     color: #f8fafc;
+  }
+
+  .cfg-flow-modal {
+    width: min(96vw, 82rem);
+  }
+
+  .cfg-flow-body {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .cfg-flow-brief,
+  .cfg-flow-composer,
+  .cfg-flow-rules {
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.78);
+    padding: 0.9rem;
+  }
+
+  .dark .cfg-flow-brief,
+  .dark .cfg-flow-composer,
+  .dark .cfg-flow-rules {
+    border-color: rgba(71, 85, 105, 0.66);
+    background: rgba(2, 6, 23, 0.32);
+  }
+
+  .cfg-flow-brief {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .cfg-flow-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .cfg-flow-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.09);
+    color: #1e40af;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .dark .cfg-flow-stats span {
+    background: rgba(96, 165, 250, 0.14);
+    color: #bfdbfe;
+  }
+
+  .cfg-flow-map-shell {
+    position: relative;
+    overflow: auto;
+    border: 1px solid rgba(20, 184, 166, 0.24);
+    border-radius: 0.75rem;
+    background:
+      linear-gradient(180deg, rgba(240, 253, 250, 0.65), rgba(248, 250, 252, 0.92));
+    min-height: 24rem;
+  }
+
+  .dark .cfg-flow-map-shell {
+    border-color: rgba(45, 212, 191, 0.2);
+    background: linear-gradient(180deg, rgba(20, 83, 78, 0.18), rgba(15, 23, 42, 0.58));
+  }
+
+  .cfg-flow-map {
+    position: relative;
+    min-width: max-content;
+    min-height: 24rem;
+    padding: 0.85rem;
+  }
+
+  .cfg-flow-lines {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .cfg-flow-line-label {
+    fill: #1e40af;
+    paint-order: stroke;
+    stroke: rgba(248, 250, 252, 0.9);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .dark .cfg-flow-line-label {
+    fill: #bfdbfe;
+    stroke: rgba(15, 23, 42, 0.92);
+  }
+
+  .cfg-flow-units {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15.5rem, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .cfg-flow-unit {
+    display: grid;
+    gap: 0.6rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.82);
+    padding: 0.65rem;
+  }
+
+  .dark .cfg-flow-unit {
+    border-color: rgba(71, 85, 105, 0.66);
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  .cfg-flow-unit header {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .cfg-flow-unit header strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cfg-flow-node-list {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .cfg-flow-node {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: center;
+    width: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.52rem;
+    background: rgba(248, 250, 252, 0.92);
+    color: #0f172a;
+    padding: 0.55rem;
+    text-align: left;
+    transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+  }
+
+  .cfg-flow-node:hover,
+  .cfg-flow-node:focus-visible {
+    border-color: rgba(37, 99, 235, 0.45);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .dark .cfg-flow-node {
+    border-color: rgba(71, 85, 105, 0.68);
+    background: rgba(15, 23, 42, 0.9);
+    color: #f8fafc;
+  }
+
+  .cfg-flow-node.is-source {
+    border-color: rgba(37, 99, 235, 0.8);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  }
+
+  .cfg-flow-node.is-target {
+    border-color: rgba(20, 184, 166, 0.85);
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16);
+  }
+
+  .cfg-flow-node.is-hidden {
+    opacity: 0.62;
+  }
+
+  .cfg-flow-node strong,
+  .cfg-flow-node small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cfg-flow-node small {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .dark .cfg-flow-node small {
+    color: #cbd5e1;
+  }
+
+  .cfg-flow-node-icon {
+    color: #2563eb;
+  }
+
+  .cfg-flow-node-flags {
+    display: inline-flex;
+    gap: 0.25rem;
+    color: #94a3b8;
+    font-size: 0.72rem;
+  }
+
+  .cfg-branch-rule.is-muted {
+    opacity: 0.62;
   }
 
   .cfg-study-modal-body {
@@ -1105,6 +1815,12 @@
     display: none !important;
   }
 
+  [data-unlock-target][hidden],
+  [data-module-unlock-control][hidden],
+  [data-module-unlock-help][hidden] {
+    display: none !important;
+  }
+
   @media (max-width: 1220px) {
     .cfg-layout {
       grid-template-columns: 1fr;
@@ -1119,6 +1835,34 @@
     .cfg-authoring-actions,
     .cfg-wizard-steps {
       grid-template-columns: 1fr;
+    }
+
+    .cfg-layout.is-sidebar-collapsed,
+    .cfg-workbench,
+    .cfg-workbench.is-sidebar-collapsed {
+      grid-template-columns: 1fr;
+    }
+
+    .cfg-structure-sidebar {
+      position: static;
+      max-height: 22rem;
+      min-height: 0;
+    }
+
+    .cfg-layout.is-sidebar-collapsed .cfg-structure-sidebar,
+    .cfg-workbench.is-sidebar-collapsed .cfg-structure-sidebar {
+      max-height: 4rem;
+    }
+
+    .cfg-layout.is-sidebar-collapsed .cfg-sidebar-top,
+    .cfg-workbench.is-sidebar-collapsed .cfg-sidebar-top {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      justify-items: stretch;
+    }
+
+    .cfg-layout.is-sidebar-collapsed .cfg-sidebar-title,
+    .cfg-workbench.is-sidebar-collapsed .cfg-sidebar-title {
+      display: block !important;
     }
 
     .cfg-unit-grid,
@@ -1149,25 +1893,109 @@
     .cfg-branch-rule {
       grid-template-columns: 1fr;
     }
+
+    .cfg-flow-units {
+      grid-auto-flow: row;
+      grid-auto-columns: auto;
+      grid-template-columns: 1fr;
+    }
+
+    .cfg-flow-map {
+      min-width: 0;
+    }
   }
 </style>
 {% endblock %}
 
 {% block content %}
   {% if study %}
-    {% include 'includes/page_header.html' with eyebrow='Study Controls' title=study.title description='Configure study modules, sequence, visibility, lock rules, and participant flow.' %}
+    {% include 'includes/page_header.html' with eyebrow='Study Controls' title=course.title subtitle=course_instance.group_name|default:course.title description='Configure study modules, sequence, visibility, lock rules, and participant flow.' %}
   {% else %}
-    {% include 'includes/page_header.html' with eyebrow='Session Controls' title=course_instance.group_name|default:course.title description='Configure modules, sequence, visibility, lock rules, and manual additions.' %}
+    {% include 'includes/page_header.html' with eyebrow='Session Controls' title=course.title subtitle=course_instance.group_name|default:course.title description='Configure modules, sequence, visibility, lock rules, and manual additions.' %}
   {% endif %}
 
-  <div class="cfg-layout">
+  <div class="cfg-layout" data-structure-workbench>
+    <aside class="cfg-structure-sidebar" data-structure-sidebar aria-label="Course structure explorer">
+      <div class="cfg-sidebar-top">
+        <button type="button" class="cfg-icon-button" id="toggleStructureSidebar" title="Collapse structure explorer" aria-label="Collapse structure explorer" aria-expanded="true">
+          <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i>
+        </button>
+        <div class="cfg-sidebar-title">
+          <div class="stat-kicker">Course Structure</div>
+          <strong>{{ unit_groups|length }} unit{{ unit_groups|length|pluralize }}</strong>
+        </div>
+        <button type="button" class="cfg-icon-button" title="Add unit" aria-label="Add unit" data-bs-toggle="modal" data-bs-target="#addUnitModal">
+          <i class="bi bi-folder-plus" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="cfg-sidebar-scroll" data-unit-tree>
+        {% for group in unit_groups %}
+          <article class="cfg-tree-unit" data-tree-unit data-unit-id="{{ group.unit.id }}" draggable="true">
+            <div class="cfg-tree-unit-row">
+              <button type="button" class="cfg-tree-unit-button" data-select-unit="{{ group.unit.id }}">
+                <span class="cfg-tree-icon" aria-hidden="true">
+                  <i class="bi {% if group.unit.is_visible %}bi-folder2-open{% else %}bi-folder-x{% endif %}"></i>
+                </span>
+                <span class="cfg-tree-label">{{ group.unit.title }}</span>
+                <span class="cfg-tree-count" data-tree-unit-count>{{ group.modules|length }}</span>
+              </button>
+              <button type="button" class="cfg-tree-add-module" title="Add module to this unit" aria-label="Add module to {{ group.unit.title }}" data-sidebar-add-module data-unit-id="{{ group.unit.id }}" data-bs-toggle="modal" data-bs-target="#addModuleModal">
+                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="cfg-unit-status-tip" role="tooltip">
+              <span class="cfg-status-tip-row">
+                <span class="cfg-status-tip-icon {% if group.unit.is_visible %}is-green{% else %}is-red{% endif %}">
+                  <i class="fa-solid {% if group.unit.is_visible %}fa-eye{% else %}fa-eye-slash{% endif %}" aria-hidden="true"></i>
+                </span>
+                {% if group.unit.is_visible %}Visible to students{% else %}Hidden from students{% endif %}
+              </span>
+              <span class="cfg-status-tip-row">
+                <span class="cfg-status-tip-icon {% if group.unit.is_locked or group.unit.unlock_rule_type != 'none' %}is-amber{% else %}is-green{% endif %}">
+                  <i class="fa-solid {% if group.unit.is_locked or group.unit.unlock_rule_type != 'none' %}fa-lock{% else %}fa-unlock{% endif %}" aria-hidden="true"></i>
+                </span>
+                {% if group.unit.is_locked or group.unit.unlock_rule_type != 'none' %}Locked or conditional{% else %}Open by default{% endif %}
+              </span>
+            </div>
+            <div class="cfg-tree-modules" data-tree-module-list data-unit-id="{{ group.unit.id }}">
+              {% for module in group.modules %}
+                <button type="button" class="cfg-tree-module {% if not module.is_visible %}is-hidden{% endif %}" data-tree-module data-module-id="{{ module.id }}" data-unit-id="{{ group.unit.id }}" draggable="true">
+                  <span class="cfg-tree-icon" aria-hidden="true">
+                    <i class="bi bi-file-earmark-code"></i>
+                  </span>
+                  <span class="cfg-tree-label">{{ module.title }}</span>
+                  <span class="cfg-tree-flags">
+                  {% if module.is_locked or module.unlock_rule_type != 'none' %}
+                    <i class="fa-solid fa-lock" title="Locked" aria-label="Locked"></i>
+                  {% endif %}
+                  {% if not module.is_visible %}
+                    <i class="fa-solid fa-eye-slash" title="Hidden" aria-label="Hidden"></i>
+                  {% endif %}
+                </span>
+              </button>
+              {% empty %}
+                <div class="cfg-tree-empty" data-tree-empty>No modules yet.</div>
+              {% endfor %}
+            </div>
+          </article>
+        {% empty %}
+          <div class="cfg-tree-empty">No units yet. Add a unit to begin.</div>
+        {% endfor %}
+      </div>
+    </aside>
+
     <section class="card p-4 md:p-5 cfg-shell">
       <div class="cfg-toolbar">
         <div>
           <div class="stat-kicker">{% if study %}Study Controls{% else %}Session Controls{% endif %}</div>
-          <h2 class="text-xl font-bold mt-1">{% if study %}{{ study.title }}{% else %}{{ course_instance.group_name|default:course.title }}{% endif %}</h2>
+          <h2 class="text-xl font-bold mt-1">{{ course.title }}</h2>
           <div class="cfg-toolbar-meta mt-1">
-            <span>{{ course.title }}</span>
+            {% if study %}
+              <span>Study: {{ study.title }}</span>
+              <span>&middot;</span>
+            {% endif %}
+            <span>Session: {{ course_instance.group_name|default:course.title }}</span>
             <span>&middot;</span>
             <span>{{ unit_groups|length }} unit{{ unit_groups|length|pluralize }}</span>
           </div>
@@ -1177,6 +2005,9 @@
             <i class="bi bi-check2-circle mr-1" aria-hidden="true"></i>Save Configuration
           </button>
           <div class="cfg-utility-actions" aria-label="Configuration utilities">
+            <button type="button" class="cfg-icon-button" title="Instructors" aria-label="Instructors" data-bs-toggle="modal" data-bs-target="#courseInstructorsModal">
+              <i class="bi bi-person-gear" aria-hidden="true"></i>
+            </button>
             <button type="button" class="cfg-icon-button" title="Plugins" aria-label="Plugins" data-bs-toggle="modal" data-bs-target="#coursePluginsModal">
               <i class="bi bi-puzzle" aria-hidden="true"></i>
             </button>
@@ -1200,52 +2031,32 @@
         </div>
       {% endif %}
 
-      <section class="cfg-composer" aria-label="Course authoring tools">
-        <div class="cfg-authoring-actions">
-          <button type="button" class="btn btn-outline-primary btn-sm cfg-add-button" data-bs-toggle="modal" data-bs-target="#addUnitModal">
-            <i class="bi bi-collection" aria-hidden="true"></i>
-            Add Unit
-          </button>
-          <button type="button" class="btn btn-outline-primary btn-sm cfg-add-button" data-bs-toggle="modal" data-bs-target="#addModuleModal" {% if not unit_groups %}disabled title="Add a unit first"{% endif %}>
-            <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
-            Add Module
-          </button>
-        </div>
-      </section>
-
       <form method="post" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_structure">
 
-        <div class="cfg-structure-head">
-          <div>
-            <div class="stat-kicker">Content Structure</div>
-            <h3>Units and Modules</h3>
-          </div>
-          <div class="cfg-structure-tools" aria-label="Structure display controls">
-            <button type="button" class="cfg-icon-button" id="expandAllUnits" title="Expand all units" aria-label="Expand all units">
-              <i class="bi bi-arrows-expand" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="cfg-icon-button" id="collapseAllUnits" title="Collapse all units" aria-label="Collapse all units">
-              <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="cfg-icon-button" id="expandAllModules" title="Expand all modules" aria-label="Expand all modules">
-              <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="cfg-icon-button" id="collapseAllModules" title="Collapse all modules" aria-label="Collapse all modules">
-              <i class="bi bi-layout-sidebar" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
+        <main class="cfg-unit-stage" data-unit-stage>
+          <section class="cfg-unit-empty-prompt" data-unit-empty-prompt>
+            <div>
+              <span class="cfg-unit-empty-icon" aria-hidden="true">
+                <i class="bi bi-folder2-open"></i>
+              </span>
+              <div class="stat-kicker mt-4">Select a unit</div>
+              <h3 class="text-2xl font-black mt-2 text-slate-900 dark:text-white">Choose a unit from the structure sidebar</h3>
+              <p class="mt-2 max-w-xl text-sm text-slate-600 dark:text-slate-300">
+                Unit settings, module editing, lock rules, and sequence controls will appear here.
+              </p>
+            </div>
+          </section>
 
         {% for group in unit_groups %}
-          <details class="cfg-unit" data-unit-block {% if forloop.first %}open{% endif %}>
+          <details class="cfg-unit" data-unit-block data-unit-id="{{ group.unit.id }}" hidden>
             <summary class="cfg-unit-summary">
               <span class="cfg-arrow" aria-hidden="true">
                 <i class="fa-solid fa-chevron-right text-[10px]"></i>
               </span>
               <span class="cfg-unit-title">
-                <span class="stat-kicker">Unit {{ forloop.counter }}</span>
+                <span class="stat-kicker" data-unit-index-label>Unit {{ forloop.counter }}</span>
                 <strong>{{ group.unit.title }}</strong>
                 {% if group.unit.description %}
                   <small>{{ group.unit.description }}</small>
@@ -1278,7 +2089,7 @@
                   <div class="cfg-inline-grid">
                     <div>
                       <label class="stat-kicker" for="unit_{{ group.unit.id }}_order">Order</label>
-                      <input id="unit_{{ group.unit.id }}_order" name="unit_{{ group.unit.id }}_order" type="number" value="{{ group.unit.order }}" class="form-control mt-1">
+                      <input id="unit_{{ group.unit.id }}_order" name="unit_{{ group.unit.id }}_order" type="number" value="{{ group.unit.order }}" class="form-control mt-1" data-unit-order-input>
                     </div>
                     <div class="grid gap-2">
                       <label class="stat-kicker" for="unit_{{ group.unit.id }}_title">Unit Title</label>
@@ -1323,14 +2134,21 @@
                       <div class="stat-kicker">Modules In Unit</div>
                       <h3 class="text-base font-bold mt-1 mb-0">Module sequence and access rules</h3>
                     </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle-unit-modules>Toggle Unit Modules</button>
+                    <div class="cfg-module-window-actions" aria-label="Module display controls">
+                      <button type="button" class="cfg-icon-button" title="Expand all modules in this unit" aria-label="Expand all modules in this unit" data-expand-unit-modules>
+                        <i class="bi bi-arrows-expand" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="cfg-icon-button" title="Collapse all modules in this unit" aria-label="Collapse all modules in this unit" data-collapse-unit-modules>
+                        <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
+                      </button>
+                    </div>
                   </div>
 
-                  <div class="cfg-modules">
+                  <div class="cfg-modules" data-module-list data-unit-id="{{ group.unit.id }}">
                     {% for module in group.modules %}
-                      <details class="cfg-module" data-module-block>
+                      <details class="cfg-module" data-module-block data-module-id="{{ module.id }}" data-module-unit-id="{{ group.unit.id }}">
                         <summary class="cfg-module-summary">
-                          <span class="cfg-module-order">#{{ module.order }}</span>
+                          <span class="cfg-module-order" data-module-order-label>#{{ module.order }}</span>
                           <span class="cfg-module-title">
                             <strong>{{ module.title }}</strong>
                             <small class="text-slate-500 dark:text-slate-300">{{ module.display_type_label }}</small>
@@ -1351,13 +2169,88 @@
                         <div class="cfg-module-body">
                           <div class="cfg-module-grid">
                             <div>
+                              <input type="hidden" name="module_{{ module.id }}_unit_id" value="{{ group.unit.id }}" data-module-unit-input>
                               <label class="stat-kicker" for="module_{{ module.id }}_order">Order</label>
-                              <input id="module_{{ module.id }}_order" name="module_{{ module.id }}_order" type="number" value="{{ module.order }}" class="form-control mt-1">
+                              <input id="module_{{ module.id }}_order" name="module_{{ module.id }}_order" type="number" value="{{ module.order }}" class="form-control mt-1" data-module-order-input>
                             </div>
                             <div class="cfg-field-grid">
                               <input id="module_{{ module.id }}_title" name="module_{{ module.id }}_title" value="{{ module.title }}" class="form-control font-semibold">
                               <textarea name="module_{{ module.id }}_description" rows="2" class="form-control" placeholder="Module description">{{ module.description }}</textarea>
-                              <div class="cfg-rule-grid" data-unlock-control>
+                              {% if module.is_smart_content_configurable %}
+                                <details class="cfg-source-panel">
+                                  <summary>
+                                    <span>
+                                      <span class="stat-kicker">Smart Content Source</span>
+                                      <strong>URL, provider, and protocol metadata</strong>
+                                    </span>
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                  </summary>
+                                  <div class="cfg-source-body">
+                                    <label class="grid gap-1">
+                                      <span class="stat-kicker">Content URL</span>
+                                      <input name="module_{{ module.id }}_content_url" value="{{ module.content_url|default:'' }}" class="form-control font-mono" placeholder="https://...">
+                                    </label>
+                                    <div class="grid gap-2 md:grid-cols-2">
+                                      <label class="grid gap-1">
+                                        <span class="stat-kicker">Type Label</span>
+                                        <input name="module_{{ module.id }}_platform_name" value="{{ module.platform_name }}" class="form-control" placeholder="{{ module.get_module_type_display }}">
+                                      </label>
+                                      <label class="grid gap-1">
+                                        <span class="stat-kicker">Provider ID</span>
+                                        <input name="module_{{ module.id }}_provider_id" value="{{ module.provider_id }}" class="form-control" placeholder="codecheck, pcex, jsvee...">
+                                      </label>
+                                    </div>
+                                    <div class="grid gap-2 md:grid-cols-2">
+                                      <label class="grid gap-1">
+                                        <span class="stat-kicker">Author</span>
+                                        <input name="module_{{ module.id }}_author" value="{{ module.author }}" class="form-control" placeholder="Optional author/source">
+                                      </label>
+                                      <label class="grid gap-1">
+                                        <span class="stat-kicker">Protocols</span>
+                                        <input name="module_{{ module.id }}_supported_protocols" value="{{ module.supported_protocols_text }}" class="form-control" placeholder="splice, lti, pitt">
+                                      </label>
+                                    </div>
+                                  </div>
+                                </details>
+                              {% elif module.is_external_link_configurable %}
+                                <details class="cfg-source-panel">
+                                  <summary>
+                                    <span>
+                                      <span class="stat-kicker">External Link</span>
+                                      <strong>Destination URL students open</strong>
+                                    </span>
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                  </summary>
+                                  <div class="cfg-source-body">
+                                    <label class="grid gap-1">
+                                      <span class="stat-kicker">Content URL</span>
+                                      <input name="module_{{ module.id }}_content_url" value="{{ module.content_url|default:'' }}" class="form-control font-mono" placeholder="https://...">
+                                    </label>
+                                  </div>
+                                </details>
+                              {% elif module.is_file_configurable %}
+                                <details class="cfg-source-panel">
+                                  <summary>
+                                    <span>
+                                      <span class="stat-kicker">Uploaded File</span>
+                                      <strong>Replace the file students open</strong>
+                                    </span>
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                  </summary>
+                                  <div class="cfg-source-body">
+                                    <label class="grid gap-1">
+                                      <span class="stat-kicker">Replace Uploaded File</span>
+                                      <input name="module_{{ module.id }}_content_file" type="file" accept="image/*,application/pdf" class="form-control">
+                                      {% if module.content_file %}
+                                        <span class="text-xs text-slate-500 dark:text-slate-300"><span>Current file:</span> {{ module.content_file.name }}</span>
+                                      {% else %}
+                                        <span class="text-xs text-slate-500 dark:text-slate-300">No file has been uploaded for this module yet.</span>
+                                      {% endif %}
+                                    </label>
+                                  </div>
+                                </details>
+                              {% endif %}
+                              <div class="cfg-rule-grid" data-unlock-control data-module-unlock-control{% if not module.is_locked and module.unlock_rule_type == 'none' %} hidden{% endif %}>
                                 <select name="module_{{ module.id }}_rule_type" class="form-control" aria-label="Module unlock rule" data-unlock-rule>
                                   <option value="none" {% if module.unlock_rule_type == 'none' %}selected{% endif %}>No unlock condition</option>
                                   {% if module.has_previous_unit %}
@@ -1382,7 +2275,7 @@
                                   {% endfor %}
                                 </select>
                               </div>
-                              <p class="text-xs text-slate-500 dark:text-slate-300" data-unlock-help></p>
+                              <p class="text-xs text-slate-500 dark:text-slate-300" data-unlock-help data-module-unlock-help{% if not module.is_locked and module.unlock_rule_type == 'none' %} hidden{% endif %}></p>
                               {% if module.config_form %}
                                 <section class="cfg-form-content-panel">
                                   <div class="cfg-form-content-head">
@@ -1525,12 +2418,57 @@
           <div class="empty-state">No units exist yet.</div>
         {% endfor %}
 
+        </main>
+
         <div class="cfg-save-row">
           <button type="submit" class="btn btn-primary">Save Configuration Controls</button>
         </div>
       </form>
     </section>
 
+  </div>
+
+  <div id="courseInstructorsModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div>
+          <div class="stat-kicker">Course Access</div>
+          <h2 class="text-xl font-bold mt-1 mb-0">Manage Instructors</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0">Co-instructors can configure structure, manage sessions, view analytics, and enroll students.</p>
+        </div>
+        <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6 space-y-5">
+        <form id="courseInstructorAddForm" class="rounded-lg border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-400/20 dark:bg-blue-400/10">
+          <label class="block">
+            <span class="form-label text-sm font-semibold">Instructor email</span>
+            <span class="flex flex-col gap-2 sm:flex-row">
+              <input id="courseInstructorEmail" type="email" class="form-control" placeholder="instructor@example.edu" autocomplete="email" required>
+              <button type="submit" class="btn btn-primary shrink-0">
+                <i class="bi bi-person-plus mr-1" aria-hidden="true"></i>Add Instructor
+              </button>
+            </span>
+          </label>
+          <p class="text-xs text-slate-500 dark:text-slate-300 mt-2 mb-0">The account must already exist and be marked as an instructor.</p>
+        </form>
+
+        <section>
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <div class="stat-kicker">Current Team</div>
+              <h3 class="font-bold text-slate-900 dark:text-white mt-1 mb-0">Course instructors</h3>
+            </div>
+            <span id="courseInstructorStatus" class="text-sm text-slate-500 dark:text-slate-300"></span>
+          </div>
+          <div id="courseInstructorList" class="grid gap-2">
+            <div class="rounded-lg border border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-300">
+              Loading instructors...
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
   </div>
 
   <div id="coursePluginsModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
@@ -1580,117 +2518,29 @@
         </form>
 
         {% if adaptive_branching_enabled %}
-        <section class="cfg-branch-panel" aria-label="Adaptive branching rules">
+        <section class="cfg-branch-panel" aria-label="Adaptive branching tools">
           <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div class="stat-kicker">Adaptive Branching</div>
-              <h3 class="font-bold text-slate-900 dark:text-white mt-1">Correct and incorrect next-module paths</h3>
+              <h3 class="font-bold text-slate-900 dark:text-white mt-1">Flow map and conditional unlocks</h3>
               <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                Branch targets are locked for everyone until a learner earns an individual unlock from the selected source module.
+                Open the mapper to see modules as connected nodes, add correct/incorrect paths, and scope branches by study condition.
               </p>
             </div>
-            <span class="badge {% if adaptive_branching_enabled %}bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200{% else %}bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200{% endif %}">
-              {% if adaptive_branching_enabled %}Plugin enabled{% else %}Plugin disabled{% endif %}
-            </span>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200">Plugin enabled</span>
+              <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#adaptiveBranchingFlowModal">
+                <i class="bi bi-diagram-3 mr-1" aria-hidden="true"></i>Open Flow Mapper
+              </button>
+            </div>
           </div>
-
-          <form method="post" class="cfg-add-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="update_branching">
-
-            <div class="cfg-branch-rule-list">
-              {% for rule in branch_rules %}
-                <article class="cfg-branch-rule">
-                  <div class="cfg-branch-path">
-                    <strong>{{ rule.source_module.title }}</strong>
-                    <span class="text-slate-500 dark:text-slate-400">if</span>
-                    <span class="badge badge-primary">{{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}</span>
-                    {% if rule.required_study_condition %}
-                      <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200">Condition {{ rule.required_study_condition }}</span>
-                    {% endif %}
-                    <span class="text-slate-500 dark:text-slate-400">unlock</span>
-                    <strong>{{ rule.target_module.title }}</strong>
-                  </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <label class="cfg-toggle">
-                      <input type="checkbox" name="branch_rule_{{ rule.id }}_active" {% if rule.active %}checked{% endif %}>
-                      Active
-                    </label>
-                    <select class="form-control form-control-sm" name="branch_rule_{{ rule.id }}_required_study_condition" style="width: 10.5rem;" aria-label="Participant condition">
-                      <option value="">Any condition</option>
-                      {% for condition in research_conditions %}
-                        <option value="{{ condition }}" {% if rule.required_study_condition == condition %}selected{% endif %}>{{ condition }}</option>
-                      {% endfor %}
-                    </select>
-                    <input type="number" name="branch_rule_{{ rule.id }}_priority" value="{{ rule.priority }}" class="form-control" style="width: 4.75rem;" aria-label="Rule priority">
-                    <label class="cfg-toggle">
-                      <input type="checkbox" name="branch_rule_{{ rule.id }}_delete">
-                      Delete
-                    </label>
-                  </div>
-                </article>
-              {% empty %}
-                <div class="empty-state">No branching rules have been created yet.</div>
-              {% endfor %}
-            </div>
-
-            <div class="rounded-lg border border-slate-200/80 bg-white/70 p-3 dark:border-slate-700 dark:bg-slate-950/25">
-              <div class="stat-kicker mb-2">Add Branch Rule</div>
-              <div class="cfg-branch-grid">
-                <label class="text-sm font-semibold">From Module
-                  <select class="form-control mt-1" name="branch_source_module">
-                    <option value="">Choose source</option>
-                    {% for module in branch_modules %}
-                      <option value="{{ module.id }}">{{ module.unit.title }} - {{ module.title }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label class="text-sm font-semibold">Condition
-                  <select class="form-control mt-1" name="branch_condition_type" data-branch-condition>
-                    <option value="">Choose condition</option>
-                    {% for value,label in branch_condition_types %}
-                      <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label class="text-sm font-semibold">Unlock Module
-                  <select class="form-control mt-1" name="branch_target_module">
-                    <option value="">Choose target</option>
-                    {% for module in branch_modules %}
-                      <option value="{{ module.id }}">{{ module.unit.title }} - {{ module.title }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label class="text-sm font-semibold">Participants
-                  <select class="form-control mt-1" name="branch_required_study_condition">
-                    <option value="">Any condition</option>
-                    {% for condition in research_conditions %}
-                      <option value="{{ condition }}">{{ condition }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label class="text-sm font-semibold">Score
-                  <input class="form-control mt-1" type="number" name="branch_threshold" min="0" max="100" step="1" placeholder="70" data-branch-threshold disabled>
-                </label>
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-300 mt-2">
-                Correct/incorrect rules use the success flag from the activity outcome. Score rules use a 0-100 threshold; use Score Below 100 to branch on any non-perfect submission.
-                {% if research_conditions %}Participant conditions come from study assignment and can scope a branch to C1, C2, C3, or any condition.{% endif %}
-              </p>
-            </div>
-
-            <div class="cfg-wizard-footer">
-              <span class="text-xs text-slate-500 dark:text-slate-300">Saving a new target makes that target visible and locked for branch-based access.</span>
-              <div class="cfg-wizard-footer-actions">
-                <button type="submit" class="btn btn-primary btn-sm">Save Branching Rules</button>
-              </div>
-            </div>
-          </form>
         </section>
         {% endif %}
       </div>
     </div>
   </div>
+
+  {% include 'courses/components/adaptive_branching_flow_modal.html' %}
 
   <div id="addUnitModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
     <div class="modal-backdrop-close absolute inset-0"></div>
@@ -1779,7 +2629,7 @@
                 <div>
                   <label class="stat-kicker">Unit</label>
                   {% if unit_groups %}
-                    <select name="unit_id" required class="form-control mt-1">
+                    <select name="unit_id" required class="form-control mt-1" data-module-unit-select>
                       {% for group in unit_groups %}
                         <option value="{{ group.unit.id }}">{{ group.unit.title }}</option>
                       {% endfor %}
@@ -1797,9 +2647,9 @@
                   </select>
                 </div>
               </div>
-              <div class="rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
-                <strong class="text-slate-900 dark:text-white">Choose the module shape first.</strong>
-                <span class="block mt-1">Form questions only appear when the selected type is Form / Survey.</span>
+              <div class="cfg-shape-note text-sm">
+                <strong>Choose the module shape first.</strong>
+                <span class="block mt-1">Questions only appear when the selected type is Quiz / Form.</span>
               </div>
             </section>
 
@@ -2083,12 +2933,33 @@
     const stepNextButton = document.querySelector('[data-module-step-next]');
     const moduleSubmitButton = document.querySelector('[data-module-submit]');
     const wizardNote = document.querySelector('[data-module-wizard-note]');
-    const branchConditionSelect = document.querySelector('[data-branch-condition]');
-    const branchThresholdInput = document.querySelector('[data-branch-threshold]');
+    const branchConditionSelects = Array.from(document.querySelectorAll('[data-branch-condition]'));
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const instructorUrls = {
+      list: "{% url 'courses:course_instructors' course_instance.id %}",
+      add: "{% url 'courses:add_course_instructor' course_instance.id %}",
+      removePattern: "{% url 'courses:remove_course_instructor' course_instance.id 0 %}",
+    };
     let currentModuleStep = 1;
 
-    function syncBranchThreshold() {
-      if (!branchConditionSelect || !branchThresholdInput) return;
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = value === null || value === undefined ? '' : String(value);
+      return div.innerHTML;
+    }
+
+    function csrfHeaders(extraHeaders) {
+      return Object.assign({ 'X-CSRFToken': csrfToken }, extraHeaders || {});
+    }
+
+    function instructorRemoveUrl(userId) {
+      return instructorUrls.removePattern.replace('/0/remove/', `/${encodeURIComponent(String(userId))}/remove/`);
+    }
+
+    function syncBranchThreshold(branchConditionSelect) {
+      if (!branchConditionSelect) return;
+      const branchThresholdInput = branchConditionSelect.closest('form')?.querySelector('[data-branch-threshold]');
+      if (!branchThresholdInput) return;
       const needsThreshold = ['score_gte', 'score_lt'].includes(branchConditionSelect.value);
       branchThresholdInput.disabled = !needsThreshold;
       branchThresholdInput.placeholder = needsThreshold ? '70' : t('N/A');
@@ -2097,10 +2968,150 @@
       }
     }
 
-    if (branchConditionSelect) {
-      branchConditionSelect.addEventListener('change', syncBranchThreshold);
-      syncBranchThreshold();
+    branchConditionSelects.forEach(select => {
+      select.addEventListener('change', () => syncBranchThreshold(select));
+      syncBranchThreshold(select);
+    });
+
+    function renderCourseInstructors(instructors) {
+      const list = document.getElementById('courseInstructorList');
+      if (!list) return;
+      const rows = instructors || [];
+      if (!rows.length) {
+        list.innerHTML = `
+          <div class="rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-300">
+            ${escapeHtml(t('No instructors are assigned to this course.'))}
+          </div>
+        `;
+        return;
+      }
+      const canRemove = rows.length > 1;
+      list.innerHTML = rows.map(instructor => {
+        const label = instructor.name || instructor.username || instructor.email || t('Instructor');
+        const secondary = [
+          instructor.username ? `@${instructor.username}` : '',
+          instructor.email || '',
+        ].filter(Boolean).join(' · ');
+        return `
+          <article class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/50 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex min-w-0 items-center gap-3">
+              <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-200">
+                <i class="bi bi-person-workspace" aria-hidden="true"></i>
+              </span>
+              <div class="min-w-0">
+                <div class="font-bold text-slate-900 dark:text-white">${escapeHtml(label)}${instructor.is_current_user ? ` <span class="badge badge-primary ml-1">${escapeHtml(t('You'))}</span>` : ''}</div>
+                <div class="truncate text-xs text-slate-500 dark:text-slate-300">${escapeHtml(secondary || t('No email on file'))}</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger course-instructor-remove"
+              data-instructor-id="${instructor.id}"
+              ${canRemove ? '' : 'disabled'}
+              title="${canRemove ? escapeHtml(t('Remove instructor')) : escapeHtml(t('A course must keep at least one instructor.'))}"
+            >
+              <i class="bi bi-person-dash" aria-hidden="true"></i>
+              <span class="sr-only">${escapeHtml(t('Remove instructor'))}</span>
+            </button>
+          </article>
+        `;
+      }).join('');
     }
+
+    async function loadCourseInstructors() {
+      const status = document.getElementById('courseInstructorStatus');
+      if (status) status.textContent = t('Loading...');
+      try {
+        const response = await fetch(instructorUrls.list, { headers: { 'Accept': 'application/json' } });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || t('Unable to load instructors.'));
+        }
+        renderCourseInstructors(data.instructors || []);
+        if (status) status.textContent = `${(data.instructors || []).length} ${t('instructor(s)')}`;
+      } catch (error) {
+        if (status) status.textContent = t(error.message || 'Unable to load instructors.');
+      }
+    }
+
+    async function addCourseInstructor(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const input = document.getElementById('courseInstructorEmail');
+      const status = document.getElementById('courseInstructorStatus');
+      const button = form.querySelector('button[type="submit"]');
+      const email = (input?.value || '').trim();
+      if (!email) return;
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${escapeHtml(t('Adding...'))}`;
+      }
+      if (status) status.textContent = t('Adding instructor...');
+      try {
+        const response = await fetch(instructorUrls.add, {
+          method: 'POST',
+          headers: csrfHeaders({
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify({ email }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || t('Unable to add instructor.'));
+        }
+        if (input) input.value = '';
+        renderCourseInstructors(data.instructors || []);
+        if (status) status.textContent = t('Instructor added.');
+      } catch (error) {
+        if (status) status.textContent = t(error.message || 'Unable to add instructor.');
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.innerHTML = `<i class="bi bi-person-plus mr-1" aria-hidden="true"></i>${escapeHtml(t('Add Instructor'))}`;
+        }
+      }
+    }
+
+    async function removeCourseInstructor(button) {
+      if (!button || button.disabled) return;
+      const status = document.getElementById('courseInstructorStatus');
+      const instructorId = button.dataset.instructorId;
+      button.disabled = true;
+      if (status) status.textContent = t('Removing instructor...');
+      try {
+        const response = await fetch(instructorRemoveUrl(instructorId), {
+          method: 'POST',
+          headers: csrfHeaders({ 'Accept': 'application/json' }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || t('Unable to remove instructor.'));
+        }
+        renderCourseInstructors(data.instructors || []);
+        if (status) status.textContent = data.removed_self
+          ? t('You removed yourself. Reloading access...')
+          : t('Instructor removed.');
+        if (data.removed_self) {
+          window.setTimeout(() => window.location.href = "{% url 'dashboard:instructor_dashboard' %}", 900);
+        }
+      } catch (error) {
+        button.disabled = false;
+        if (status) status.textContent = t(error.message || 'Unable to remove instructor.');
+      }
+    }
+
+    const instructorModal = document.getElementById('courseInstructorsModal');
+    if (instructorModal) {
+      instructorModal.addEventListener('show.bs.modal', loadCourseInstructors);
+    }
+    document.getElementById('courseInstructorAddForm')?.addEventListener('submit', addCourseInstructor);
+    document.getElementById('courseInstructorList')?.addEventListener('click', event => {
+      const removeButton = event.target.closest('.course-instructor-remove');
+      if (removeButton) {
+        removeCourseInstructor(removeButton);
+      }
+    });
 
     function setAddPanel(target) {
       if (!target) return;
@@ -2179,7 +3190,7 @@
         } else if (currentModuleStep === 2) {
           wizardNote.textContent = t('Add the module details before building questions.');
         } else {
-          wizardNote.textContent = t('Only Form / Survey modules collect questions.');
+          wizardNote.textContent = t('Only Quiz / Form modules collect questions.');
         }
       }
     }
@@ -2319,25 +3330,346 @@
       syncConfigQuestionControls(select.closest('[data-config-question]'));
     });
 
+    const structureWorkbench = document.querySelector('[data-structure-workbench]');
+    const unitTree = document.querySelector('[data-unit-tree]');
+    const unitStage = document.querySelector('[data-unit-stage]');
+    const unitEmptyPrompt = document.querySelector('[data-unit-empty-prompt]');
     const unitBlocks = Array.from(document.querySelectorAll('[data-unit-block]'));
     const moduleBlocks = Array.from(document.querySelectorAll('[data-module-block]'));
-    const expandAllUnits = document.getElementById('expandAllUnits');
-    const collapseAllUnits = document.getElementById('collapseAllUnits');
-    const expandAllModules = document.getElementById('expandAllModules');
-    const collapseAllModules = document.getElementById('collapseAllModules');
+    const toggleStructureSidebar = document.getElementById('toggleStructureSidebar');
+    const addModuleUnitSelect = form ? form.querySelector('select[name="unit_id"]') : null;
+    let activeUnitId = null;
+    let dragState = null;
 
-    if (expandAllUnits) {
-      expandAllUnits.addEventListener('click', () => unitBlocks.forEach(unit => { unit.open = true; }));
+    function getUnitBlock(unitId) {
+      return unitBlocks.find(unit => unit.dataset.unitId === String(unitId));
     }
-    if (collapseAllUnits) {
-      collapseAllUnits.addEventListener('click', () => unitBlocks.forEach(unit => { unit.open = false; }));
+
+    function getTreeUnit(unitId) {
+      return unitTree ? unitTree.querySelector(`[data-tree-unit][data-unit-id="${unitId}"]`) : null;
     }
-    if (expandAllModules) {
-      expandAllModules.addEventListener('click', () => moduleBlocks.forEach(module => { module.open = true; }));
+
+    function getModuleBlock(moduleId) {
+      return moduleBlocks.find(module => module.dataset.moduleId === String(moduleId));
     }
-    if (collapseAllModules) {
-      collapseAllModules.addEventListener('click', () => moduleBlocks.forEach(module => { module.open = false; }));
+
+    function getTreeModule(moduleId) {
+      return unitTree ? unitTree.querySelector(`[data-tree-module][data-module-id="${moduleId}"]`) : null;
     }
+
+    function presetAddModuleUnit(unitId) {
+      if (!addModuleUnitSelect || !unitId) return;
+      addModuleUnitSelect.value = String(unitId);
+    }
+
+    function selectUnit(unitId, options = {}) {
+      const nextUnitId = unitId ? String(unitId) : '';
+      if (!nextUnitId) {
+        activeUnitId = null;
+        if (unitEmptyPrompt) unitEmptyPrompt.hidden = false;
+        if (unitStage) unitStage.classList.remove('has-selection');
+        unitBlocks.forEach(unit => {
+          unit.hidden = true;
+          unit.open = false;
+        });
+        if (unitTree) {
+          unitTree.querySelectorAll('[data-tree-unit]').forEach(unit => {
+            unit.classList.remove('is-active', 'is-compact');
+          });
+        }
+        return;
+      }
+      const targetUnit = getUnitBlock(nextUnitId);
+      if (!targetUnit) return;
+      const wasActive = activeUnitId === nextUnitId;
+      activeUnitId = nextUnitId;
+      if (unitEmptyPrompt) unitEmptyPrompt.hidden = true;
+      if (unitStage) unitStage.classList.add('has-selection');
+      unitBlocks.forEach(unit => {
+        const isActive = unit.dataset.unitId === nextUnitId;
+        unit.hidden = !isActive;
+        unit.open = isActive;
+      });
+      if (unitTree) {
+        unitTree.querySelectorAll('[data-tree-unit]').forEach(unit => {
+          const isActive = unit.dataset.unitId === nextUnitId;
+          unit.classList.toggle('is-active', isActive);
+          if (!isActive) {
+            unit.classList.remove('is-compact');
+          } else if (options.toggleCompactIfActive && wasActive) {
+            unit.classList.toggle('is-compact');
+          } else if (!options.preserveCompact) {
+            unit.classList.remove('is-compact');
+          }
+        });
+      }
+      presetAddModuleUnit(nextUnitId);
+    }
+
+    function updateUnitOrders() {
+      if (!unitTree) return;
+      Array.from(unitTree.querySelectorAll('[data-tree-unit]')).forEach((unit, index) => {
+        const unitBlock = getUnitBlock(unit.dataset.unitId);
+        const input = unitBlock?.querySelector('[data-unit-order-input]');
+        const label = unitBlock?.querySelector('[data-unit-index-label]');
+        if (input) {
+          input.value = (index + 1) * 10;
+        }
+        if (label) {
+          label.textContent = `${t('Unit')} ${index + 1}`;
+        }
+      });
+    }
+
+    function ensureTreeEmptyState(list) {
+      if (!list) return;
+      const hasModules = Boolean(list.querySelector('[data-tree-module]'));
+      const empty = list.querySelector('[data-tree-empty]');
+      if (hasModules && empty) {
+        empty.remove();
+      } else if (!hasModules && !empty) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'cfg-tree-empty';
+        placeholder.dataset.treeEmpty = 'true';
+        placeholder.textContent = t('No modules yet.');
+        list.appendChild(placeholder);
+      }
+    }
+
+    function updateUnitCounts() {
+      if (!unitTree) return;
+      unitTree.querySelectorAll('[data-tree-unit]').forEach(unit => {
+        const list = unit.querySelector('[data-tree-module-list]');
+        const count = list ? list.querySelectorAll('[data-tree-module]').length : 0;
+        const badge = unit.querySelector('[data-tree-unit-count]');
+        if (badge) {
+          badge.textContent = count;
+        }
+        ensureTreeEmptyState(list);
+      });
+    }
+
+    function updateModuleOrders(unitId) {
+      if (!unitTree) return;
+      const list = unitTree.querySelector(`[data-tree-module-list][data-unit-id="${unitId}"]`);
+      if (!list) return;
+      Array.from(list.querySelectorAll('[data-tree-module]')).forEach((module, index) => {
+        const orderValue = (index + 1) * 10;
+        const moduleBlock = getModuleBlock(module.dataset.moduleId);
+        const orderInput = moduleBlock ? moduleBlock.querySelector('[data-module-order-input]') : null;
+        const orderLabel = moduleBlock ? moduleBlock.querySelector('[data-module-order-label]') : null;
+        if (orderInput) orderInput.value = orderValue;
+        if (orderLabel) orderLabel.textContent = `#${orderValue}`;
+      });
+      updateUnitCounts();
+    }
+
+    function ensureMainEmptyState(list) {
+      if (!list) return;
+      const hasModules = Boolean(list.querySelector('[data-module-block]'));
+      const empty = list.querySelector('.empty-state');
+      if (hasModules && empty) {
+        empty.remove();
+      } else if (!hasModules && !empty) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'empty-state';
+        placeholder.textContent = t('No modules have been added to this unit yet.');
+        list.appendChild(placeholder);
+      }
+    }
+
+    function syncModulePanelPosition(moduleId, targetUnitId) {
+      const moduleBlock = getModuleBlock(moduleId);
+      const targetList = document.querySelector(`[data-module-list][data-unit-id="${targetUnitId}"]`);
+      const treeList = unitTree ? unitTree.querySelector(`[data-tree-module-list][data-unit-id="${targetUnitId}"]`) : null;
+      if (!moduleBlock || !targetList || !treeList) return;
+      const previousList = moduleBlock.closest('[data-module-list]');
+      targetList.querySelectorAll('.empty-state').forEach(empty => empty.remove());
+
+      const unitInput = moduleBlock.querySelector('[data-module-unit-input]');
+      if (unitInput) {
+        unitInput.value = String(targetUnitId);
+      }
+      moduleBlock.dataset.moduleUnitId = String(targetUnitId);
+
+      const orderedIds = Array.from(treeList.querySelectorAll('[data-tree-module]')).map(module => module.dataset.moduleId);
+      const currentIndex = orderedIds.indexOf(String(moduleId));
+      const laterIds = currentIndex >= 0 ? orderedIds.slice(currentIndex + 1) : [];
+      const nextPanel = laterIds.map(getModuleBlock).find(panel => panel && panel.parentElement === targetList);
+      if (nextPanel) {
+        targetList.insertBefore(moduleBlock, nextPanel);
+      } else {
+        targetList.appendChild(moduleBlock);
+      }
+      ensureMainEmptyState(previousList);
+      ensureMainEmptyState(targetList);
+    }
+
+    function moveTreeModule(moduleId, targetUnitId, beforeModule = null) {
+      const treeModule = getTreeModule(moduleId);
+      const targetList = unitTree ? unitTree.querySelector(`[data-tree-module-list][data-unit-id="${targetUnitId}"]`) : null;
+      if (!treeModule || !targetList) return;
+      const previousUnitId = treeModule.dataset.unitId;
+      const previousList = previousUnitId && unitTree
+        ? unitTree.querySelector(`[data-tree-module-list][data-unit-id="${previousUnitId}"]`)
+        : treeModule.closest('[data-tree-module-list]');
+      targetList.querySelectorAll('[data-tree-empty]').forEach(empty => empty.remove());
+      if (beforeModule && beforeModule.parentElement === targetList) {
+        targetList.insertBefore(treeModule, beforeModule);
+      } else {
+        targetList.appendChild(treeModule);
+      }
+      treeModule.dataset.unitId = String(targetUnitId);
+      syncModulePanelPosition(moduleId, targetUnitId);
+      ensureTreeEmptyState(previousList);
+      updateModuleOrders(previousUnitId || targetUnitId);
+      updateModuleOrders(targetUnitId);
+      selectUnit(targetUnitId);
+    }
+
+    function getAfterModule(list, y) {
+      const modules = Array.from(list.querySelectorAll('[data-tree-module]:not(.is-dragging)'));
+      return modules.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset, element: child };
+        }
+        return closest;
+      }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+    }
+
+    if (toggleStructureSidebar && structureWorkbench) {
+      toggleStructureSidebar.addEventListener('click', () => {
+        const collapsed = structureWorkbench.classList.toggle('is-sidebar-collapsed');
+        toggleStructureSidebar.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        toggleStructureSidebar.title = collapsed ? t('Expand structure explorer') : t('Collapse structure explorer');
+        toggleStructureSidebar.setAttribute('aria-label', toggleStructureSidebar.title);
+      });
+    }
+
+    if (unitTree) {
+      unitTree.addEventListener('click', event => {
+        const addModuleButton = event.target.closest('[data-sidebar-add-module]');
+        if (addModuleButton) {
+          presetAddModuleUnit(addModuleButton.dataset.unitId);
+          return;
+        }
+
+        const moduleButton = event.target.closest('[data-tree-module]');
+        if (moduleButton) {
+          selectUnit(moduleButton.dataset.unitId);
+          const moduleBlock = getModuleBlock(moduleButton.dataset.moduleId);
+          if (moduleBlock) {
+            const shouldOpen = !moduleBlock.open;
+            moduleBlocks.forEach(module => {
+              module.open = module === moduleBlock ? shouldOpen : false;
+            });
+            if (shouldOpen) {
+              moduleBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          return;
+        }
+
+        const unitButton = event.target.closest('[data-select-unit]');
+        if (unitButton) {
+          selectUnit(unitButton.dataset.selectUnit, { toggleCompactIfActive: true });
+        }
+      });
+
+      unitTree.addEventListener('dragstart', event => {
+        const module = event.target.closest('[data-tree-module]');
+        const unit = module ? null : event.target.closest('[data-tree-unit]');
+        const node = module || unit;
+        if (!node) return;
+        dragState = {
+          type: module ? 'module' : 'unit',
+          id: module ? module.dataset.moduleId : unit.dataset.unitId,
+        };
+        node.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', `${dragState.type}:${dragState.id}`);
+      });
+
+      unitTree.addEventListener('dragover', event => {
+        if (!dragState) return;
+        const list = event.target.closest('[data-tree-module-list]');
+        const unit = event.target.closest('[data-tree-unit]');
+        if (dragState.type === 'module' && (list || unit)) {
+          event.preventDefault();
+          const targetList = list || (unit ? unit.querySelector('[data-tree-module-list]') : null);
+          if (targetList) {
+            targetList.classList.add('is-drop-target');
+          }
+        } else if (dragState.type === 'unit' && unit) {
+          event.preventDefault();
+          unit.classList.add('is-drop-target');
+        }
+      });
+
+      unitTree.addEventListener('dragleave', event => {
+        const list = event.target.closest('[data-tree-module-list]');
+        const unit = event.target.closest('[data-tree-unit]');
+        if (list) list.classList.remove('is-drop-target');
+        if (unit) unit.classList.remove('is-drop-target');
+      });
+
+      unitTree.addEventListener('drop', event => {
+        if (!dragState) return;
+        event.preventDefault();
+        unitTree.querySelectorAll('.is-drop-target').forEach(node => node.classList.remove('is-drop-target'));
+
+        if (dragState.type === 'unit') {
+          const draggedUnit = getTreeUnit(dragState.id);
+          const targetUnit = event.target.closest('[data-tree-unit]');
+          if (draggedUnit && targetUnit && draggedUnit !== targetUnit) {
+            const box = targetUnit.getBoundingClientRect();
+            if (event.clientY > box.top + box.height / 2) {
+              targetUnit.after(draggedUnit);
+            } else {
+              targetUnit.before(draggedUnit);
+            }
+            updateUnitOrders();
+            selectUnit(dragState.id);
+          }
+        }
+
+        if (dragState.type === 'module') {
+          const targetList = event.target.closest('[data-tree-module-list]')
+            || event.target.closest('[data-tree-unit]')?.querySelector('[data-tree-module-list]');
+          if (targetList) {
+            const beforeModule = getAfterModule(targetList, event.clientY);
+            moveTreeModule(dragState.id, targetList.dataset.unitId, beforeModule);
+          }
+        }
+      });
+
+      unitTree.addEventListener('dragend', () => {
+        unitTree.querySelectorAll('.is-dragging, .is-drop-target').forEach(node => {
+          node.classList.remove('is-dragging', 'is-drop-target');
+        });
+        dragState = null;
+      });
+    }
+
+    document.addEventListener('input', event => {
+      const target = event.target;
+      if (!target || !target.name) return;
+      const unitTitleMatch = target.name.match(/^unit_(\d+)_title$/);
+      const moduleTitleMatch = target.name.match(/^module_(\d+)_title$/);
+      if (unitTitleMatch) {
+        const label = getTreeUnit(unitTitleMatch[1])?.querySelector('.cfg-tree-label');
+        if (label) label.textContent = target.value || t('Untitled unit');
+      }
+      if (moduleTitleMatch) {
+        const label = getTreeModule(moduleTitleMatch[1])?.querySelector('.cfg-tree-label');
+        if (label) label.textContent = target.value || t('Untitled module');
+      }
+    });
+
+    selectUnit(activeUnitId);
+    updateUnitCounts();
 
     function syncUnlockControl(select) {
       if (!select) return;
@@ -2346,17 +3678,27 @@
       const target = owner ? owner.querySelector('[data-unlock-target]') : null;
       const lock = owner ? owner.querySelector('[data-lock-input]') : null;
       const help = owner ? owner.querySelector('[data-unlock-help]') : null;
+      const control = select.closest('[data-unlock-control]');
       const value = select.value;
       const needsModule = ['module_accessed', 'module_completed'].includes(value);
       const needsCondition = value === 'condition_equals';
       const needsTarget = needsModule || needsCondition;
-      const hasAutomaticRules = Array.from(select.options).some(option => option.value && !option.disabled);
+      const hasAutomaticRules = Array.from(select.options).some(option => option.value && option.value !== 'none' && !option.disabled);
 
       select.disabled = !hasAutomaticRules;
 
       if (lock && value !== 'none') {
         setToggleValue(lock, true);
       }
+
+      if (owner && owner.matches('.cfg-module') && !isToggleOn(lock)) {
+        if (control) control.hidden = true;
+        if (help) help.hidden = true;
+        return;
+      }
+
+      if (control) control.hidden = false;
+      if (help) help.hidden = false;
 
       if (grid) {
         grid.classList.toggle('is-single', !needsTarget);
@@ -2412,6 +3754,16 @@
       }
     }
 
+    function syncModuleUnlockVisibility(owner) {
+      if (!owner || !owner.matches('.cfg-module')) return;
+      const lock = owner.querySelector('[data-lock-input]');
+      const control = owner.querySelector('[data-module-unlock-control]');
+      const help = owner.querySelector('[data-module-unlock-help]');
+      const isLocked = isToggleOn(lock);
+      if (control) control.hidden = !isLocked;
+      if (help) help.hidden = !isLocked;
+    }
+
     function isToggleOn(input) {
       return input && input.value === '1';
     }
@@ -2453,13 +3805,71 @@
       }
     }
 
+    function syncTreeStateForOwner(owner) {
+      if (!owner) return;
+      if (owner.matches('.cfg-unit')) {
+        const visibleInput = owner.querySelector('[data-toggle-value][data-toggle-kind="visible"]');
+        const lockInput = owner.querySelector('[data-lock-input]');
+        const treeUnit = getTreeUnit(owner.dataset.unitId);
+        const icon = treeUnit?.querySelector('.cfg-tree-icon i');
+        if (icon && visibleInput) {
+          const visible = isToggleOn(visibleInput);
+          icon.classList.toggle('bi-folder2-open', visible);
+          icon.classList.toggle('bi-folder-x', !visible);
+        }
+        const tip = treeUnit?.querySelector('.cfg-unit-status-tip');
+        if (tip && visibleInput && lockInput) {
+          const visible = isToggleOn(visibleInput);
+          const locked = isToggleOn(lockInput);
+          tip.innerHTML = `
+            <span class="cfg-status-tip-row">
+              <span class="cfg-status-tip-icon ${visible ? 'is-green' : 'is-red'}">
+                <i class="fa-solid ${visible ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
+              </span>
+              ${visible ? t('Visible to students') : t('Hidden from students')}
+            </span>
+            <span class="cfg-status-tip-row">
+              <span class="cfg-status-tip-icon ${locked ? 'is-amber' : 'is-green'}">
+                <i class="fa-solid ${locked ? 'fa-lock' : 'fa-unlock'}" aria-hidden="true"></i>
+              </span>
+              ${locked ? t('Locked or conditional') : t('Open by default')}
+            </span>
+          `;
+        }
+      }
+
+      if (owner.matches('.cfg-module')) {
+        const treeModule = getTreeModule(owner.dataset.moduleId);
+        if (!treeModule) return;
+        const visibleInput = owner.querySelector('[data-toggle-value][data-toggle-kind="visible"]');
+        const lockInput = owner.querySelector('[data-lock-input]');
+        const flags = treeModule.querySelector('.cfg-tree-flags');
+        const visible = visibleInput ? isToggleOn(visibleInput) : true;
+        const locked = lockInput ? isToggleOn(lockInput) : false;
+        treeModule.classList.toggle('is-hidden', !visible);
+        if (flags) {
+          flags.innerHTML = `
+            ${locked ? '<i class="fa-solid fa-lock" title="Locked" aria-label="Locked"></i>' : ''}
+            ${!visible ? '<i class="fa-solid fa-eye-slash" title="Hidden" aria-label="Hidden"></i>' : ''}
+          `;
+        }
+      }
+    }
+
     document.querySelectorAll('[data-unlock-rule]').forEach(select => {
-      select.addEventListener('change', () => syncUnlockControl(select));
+      select.addEventListener('change', () => {
+        syncUnlockControl(select);
+        syncModuleUnlockVisibility(select.closest('.cfg-unit, .cfg-module'));
+      });
       syncUnlockControl(select);
+      syncModuleUnlockVisibility(select.closest('.cfg-unit, .cfg-module'));
     });
 
     document.querySelectorAll('[data-toggle-value]').forEach(input => {
+      const owner = input.closest('.cfg-unit, .cfg-module');
       setToggleValue(input, isToggleOn(input));
+      syncModuleUnlockVisibility(owner);
+      syncTreeStateForOwner(owner);
     });
 
     document.querySelectorAll('[data-chip-toggle]').forEach(button => {
@@ -2479,7 +3889,9 @@
             select.value = 'none';
           }
           syncUnlockControl(select);
+          syncModuleUnlockVisibility(owner);
         }
+        syncTreeStateForOwner(owner);
       });
       button.addEventListener('keydown', event => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -2495,18 +3907,151 @@
           select.value = 'none';
           syncUnlockControl(select);
       }
+      syncModuleUnlockVisibility(owner);
     });
 
-    document.querySelectorAll('[data-toggle-unit-modules]').forEach(button => {
+    document.querySelectorAll('[data-expand-unit-modules]').forEach(button => {
       button.addEventListener('click', event => {
         const unit = event.currentTarget.closest('[data-unit-block]');
         if (!unit) return;
         const modules = Array.from(unit.querySelectorAll('[data-module-block]'));
-        if (!modules.length) return;
-        const shouldOpen = modules.some(module => !module.open);
-        modules.forEach(module => { module.open = shouldOpen; });
+        modules.forEach(module => { module.open = true; });
       });
     });
+
+    document.querySelectorAll('[data-collapse-unit-modules]').forEach(button => {
+      button.addEventListener('click', event => {
+        const unit = event.currentTarget.closest('[data-unit-block]');
+        if (!unit) return;
+        const modules = Array.from(unit.querySelectorAll('[data-module-block]'));
+        modules.forEach(module => { module.open = false; });
+      });
+    });
+
+    function initializeFlowMapper() {
+      const flowModal = document.getElementById('adaptiveBranchingFlowModal');
+      if (!flowModal) return;
+      const flowMap = flowModal.querySelector('[data-flow-map]');
+      const flowLines = flowModal.querySelector('[data-flow-lines]');
+      const flowShell = flowModal.querySelector('[data-flow-map-shell]');
+      const nodes = Array.from(flowModal.querySelectorAll('[data-flow-module-node]'));
+      const sourceSelect = flowModal.querySelector('[data-flow-source-select]');
+      const targetSelect = flowModal.querySelector('[data-flow-target-select]');
+      const conditionSelect = flowModal.querySelector('[data-flow-condition-select]');
+      let nextPick = 'source';
+
+      function syncNodeSelection() {
+        const sourceId = sourceSelect ? sourceSelect.value : '';
+        const targetId = targetSelect ? targetSelect.value : '';
+        nodes.forEach(node => {
+          node.classList.toggle('is-source', node.dataset.flowNodeId === sourceId);
+          node.classList.toggle('is-target', node.dataset.flowNodeId === targetId);
+        });
+      }
+
+      function drawFlowLines() {
+        if (!flowMap || !flowLines) return;
+        const edges = Array.from(flowModal.querySelectorAll('[data-flow-edge]'));
+        const mapRect = flowMap.getBoundingClientRect();
+        const width = Math.max(flowMap.scrollWidth, flowMap.offsetWidth, 1);
+        const height = Math.max(flowMap.scrollHeight, flowMap.offsetHeight, 1);
+        flowLines.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        flowLines.setAttribute('width', width);
+        flowLines.setAttribute('height', height);
+        flowLines.replaceChildren();
+
+        function drawEdge(sourceId, targetId, labelText, isActive = true, isPreview = false) {
+          const source = flowModal.querySelector(`[data-flow-module-node][data-flow-node-id="${sourceId}"]`);
+          const target = flowModal.querySelector(`[data-flow-module-node][data-flow-node-id="${targetId}"]`);
+          if (!source || !target) return;
+
+          const sourceRect = source.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const x1 = sourceRect.right - mapRect.left;
+          const y1 = sourceRect.top + sourceRect.height / 2 - mapRect.top;
+          const x2 = targetRect.left - mapRect.left;
+          const y2 = targetRect.top + targetRect.height / 2 - mapRect.top;
+          const curve = Math.max(46, Math.abs(x2 - x1) / 2);
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`);
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', isPreview ? 'rgba(20, 184, 166, 0.86)' : (isActive ? 'rgba(37, 99, 235, 0.72)' : 'rgba(100, 116, 139, 0.56)'));
+          path.setAttribute('stroke-width', isPreview ? '3' : '2.5');
+          path.setAttribute('stroke-linecap', 'round');
+          if (!isActive || isPreview) {
+            path.setAttribute('stroke-dasharray', '6 5');
+          }
+          flowLines.appendChild(path);
+
+          if (labelText) {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', String((x1 + x2) / 2));
+            label.setAttribute('y', String((y1 + y2) / 2 - 6));
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('class', 'cfg-flow-line-label');
+            label.textContent = labelText;
+            flowLines.appendChild(label);
+          }
+        }
+
+        edges.forEach(edge => {
+          drawEdge(edge.dataset.source, edge.dataset.target, edge.dataset.label, edge.dataset.active !== 'false');
+        });
+
+        if (sourceSelect?.value && targetSelect?.value && sourceSelect.value !== targetSelect.value) {
+          const selectedCondition = conditionSelect?.selectedOptions?.[0]?.textContent?.trim() || t('New connection');
+          drawEdge(sourceSelect.value, targetSelect.value, selectedCondition, true, true);
+        }
+      }
+
+      nodes.forEach(node => {
+        node.addEventListener('click', () => {
+          const nodeId = node.dataset.flowNodeId;
+          if (!nodeId) return;
+          if (nextPick === 'source' || !sourceSelect?.value) {
+            if (sourceSelect) sourceSelect.value = nodeId;
+            if (targetSelect && targetSelect.value === nodeId) targetSelect.value = '';
+            nextPick = 'target';
+          } else {
+            if (targetSelect) targetSelect.value = nodeId === sourceSelect.value ? '' : nodeId;
+            nextPick = 'source';
+          }
+          syncNodeSelection();
+          requestAnimationFrame(drawFlowLines);
+        });
+      });
+
+      [sourceSelect, targetSelect].forEach(select => {
+        if (!select) return;
+        select.addEventListener('change', () => {
+          if (sourceSelect && targetSelect && sourceSelect.value === targetSelect.value) {
+            targetSelect.value = '';
+          }
+          nextPick = sourceSelect && sourceSelect.value && !targetSelect?.value ? 'target' : 'source';
+          syncNodeSelection();
+          requestAnimationFrame(drawFlowLines);
+        });
+      });
+
+      if (conditionSelect) {
+        conditionSelect.addEventListener('change', () => {
+          syncBranchThreshold(conditionSelect);
+          requestAnimationFrame(drawFlowLines);
+        });
+      }
+
+      flowModal.addEventListener('shown.bs.modal', () => {
+        syncNodeSelection();
+        requestAnimationFrame(drawFlowLines);
+      });
+      if (flowShell) {
+        flowShell.addEventListener('scroll', () => requestAnimationFrame(drawFlowLines), { passive: true });
+      }
+      window.addEventListener('resize', () => requestAnimationFrame(drawFlowLines));
+      syncNodeSelection();
+    }
+
+    initializeFlowMapper();
 
     document.querySelectorAll('[data-copy-from]').forEach(button => {
       button.addEventListener('click', async () => {

@@ -28,16 +28,16 @@
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
     {% block extra_css %}{% endblock %}
   </head>
-  <body class="app-shell-body min-h-screen">
+  <body class="app-shell-body min-h-screen {% block body_class %}{% endblock %}">
     <div class="shell-background"></div>
     {% include 'includes/app_nav.html' %}
 
     {% if messages %}
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-3">
+      <div class="flash-stack max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3" aria-live="polite">
         {% for message in messages %}
-          <div class="alert flex items-start justify-between gap-4 {% if message.tags == 'error' or message.tags == 'danger' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}" role="alert">
+          <div class="alert flex items-start justify-between gap-4 {% if message.tags == 'error' or message.tags == 'danger' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}" role="alert" data-flash-message data-auto-dismiss="true">
             <span>{{ message }}</span>
-            <button type="button" class="text-current/70 hover:text-current" onclick="this.parentElement.remove()" aria-label="{% trans 'Dismiss message' %}" title="{% trans 'Dismiss message' %}">&times;</button>
+            <button type="button" class="text-current/70 hover:text-current" data-flash-dismiss aria-label="{% trans 'Dismiss message' %}" title="{% trans 'Dismiss message' %}">&times;</button>
           </div>
         {% endfor %}
       </div>

@@ -22,6 +22,7 @@ from .models import (
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import json
+import hashlib
 from .utils import fetch_course_details, create_course_from_json, export_course_to_json
 import logging
 import traceback
@@ -48,6 +49,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 import requests
 from django.db import models, transaction
+from django.utils.crypto import get_random_string
+from django.utils.text import slugify
 from accounts.email_utils import (
     emails_equal,
     find_user_by_email,
@@ -72,6 +75,14 @@ from modulearn.learning.services.course_plugins import (
 )
 from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch, record_module_session_event
 from modulearn.learning.services.pcrs_tracking import is_pcrs_url
+from modulearn.learning.services.limits import (
+    CapacityLimitError,
+    ensure_course_session_capacity,
+    ensure_instructor_session_capacity,
+    ensure_session_student_capacity,
+    max_students_per_session,
+    remaining_session_student_slots,
+)
 from modulearn.learning.services.slc_replacements import (
     apply_replacement_metadata,
     apply_slc_legacy_replacement,
@@ -204,8 +215,46 @@ def _redirect_after_module_completion(user, course_instance, module):
             module_id=next_module.id,
         )
     if getattr(user, "is_anonymous_participant", False):
-        return redirect("recruitment:sessions")
+        return redirect("recruitment:complete_current", course_instance_id=course_instance.id)
     return redirect("courses:course_detail", instance_id=course_instance.id)
+
+
+def _serialize_course_instructor(user, current_user=None):
+    display_name = (
+        getattr(user, "full_name", "")
+        or user.get_full_name()
+        or user.username
+    )
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email or "",
+        "name": display_name,
+        "is_current_user": bool(current_user and user.id == current_user.id),
+    }
+
+
+def _course_instructor_payload(course, current_user=None):
+    instructors = course.instructors.order_by("full_name", "username", "email")
+    return [_serialize_course_instructor(instructor, current_user=current_user) for instructor in instructors]
+
+
+def _add_instructor_to_course_and_sessions(course, user):
+    course.instructors.add(user)
+    for instance in course.instances.all():
+        instance.instructors.add(user)
+        study = getattr(instance, "study", None)
+        if study:
+            study.instructors.add(user)
+
+
+def _remove_instructor_from_course_and_sessions(course, user):
+    course.instructors.remove(user)
+    for instance in course.instances.all():
+        instance.instructors.remove(user)
+        study = getattr(instance, "study", None)
+        if study:
+            study.instructors.remove(user)
 
 
 def _module_rule_context(course):
@@ -221,6 +270,13 @@ def _module_rule_context(course):
             except ModuleForm.DoesNotExist:
                 module.config_form = None
                 module.config_form_questions = []
+            module.supported_protocols_text = ", ".join(module.supported_protocols or [])
+            module.is_file_configurable = module.module_type == Module.MODULE_TYPE_FILE
+            module.is_external_link_configurable = module.module_type == Module.MODULE_TYPE_EXTERNAL_LINK
+            module.is_smart_content_configurable = module.module_type in {
+                Module.MODULE_TYPE_IMPORTED,
+                Module.MODULE_TYPE_SPLICE_SMART_CONTENT,
+            }
         group = {
             "unit": unit,
             "modules": modules,
@@ -270,13 +326,21 @@ def course_detail(request, instance_id):
     if not user_can_access_participant_course(request.user, course_instance.id):
         raise PermissionDenied("Research participants can only access their assigned course session.")
     if getattr(request.user, "is_anonymous_participant", False):
-        return redirect("recruitment:sessions")
+        redirect_response = participant_course_redirect(request.user)
+        if redirect_response:
+            return redirect_response
+        raise PermissionDenied("Research participants can only access their assigned study flow.")
     context = build_course_detail_context(request.user, course_instance)
 
     # Handle enrollment POST request
     role_snapshot = get_user_role_snapshot(request.user)
     if request.method == 'POST' and role_snapshot["effective_is_student"] and not getattr(request.user, "is_anonymous_participant", False):
         if not context['is_enrolled']:
+            try:
+                ensure_session_student_capacity(course_instance)
+            except CapacityLimitError as error:
+                messages.error(request, str(error))
+                return redirect('courses:course_detail', instance_id=instance_id)
             Enrollment.objects.create(
                 student=request.user, 
                 course_instance=course_instance
@@ -336,7 +400,7 @@ def course_configuration(request, instance_id):
         "unit_groups": _module_rule_context(course),
         "branch_modules": _branch_module_options(course),
         "branch_rules": _branch_rule_context(course),
-        "module_types": Module.MODULE_TYPE_CHOICES[1:],
+        "module_types": Module.MANUAL_MODULE_TYPE_CHOICES,
         "branch_condition_types": ModuleBranchRule.CONDITION_CHOICES,
         "question_types": ModuleFormQuestion.TYPE_CHOICES,
         "research_conditions": _course_research_conditions(course),
@@ -369,9 +433,94 @@ def export_course(request, instance_id):
     return response
 
 
+@login_required
+@require_GET
+def course_instructors(request, instance_id):
+    course_instance = get_object_or_404(
+        CourseInstance.objects.select_related("course").prefetch_related("course__instructors"),
+        id=instance_id,
+    )
+    if not _is_course_instructor(request.user, course_instance):
+        return JsonResponse({"success": False, "error": "Permission denied"}, status=403)
+
+    return JsonResponse({
+        "success": True,
+        "instructors": _course_instructor_payload(course_instance.course, current_user=request.user),
+    })
+
+
+@login_required
+@require_POST
+def add_course_instructor(request, instance_id):
+    course_instance = get_object_or_404(
+        CourseInstance.objects.select_related("course").prefetch_related("course__instances"),
+        id=instance_id,
+    )
+    if not _is_course_instructor(request.user, course_instance):
+        return JsonResponse({"success": False, "error": "Permission denied"}, status=403)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON payload"}, status=400)
+
+    email = normalize_email_address(data.get("email"))
+    if not email:
+        return JsonResponse({"success": False, "error": "Enter an instructor email address."}, status=400)
+
+    user = find_user_by_email(email)
+    if not user:
+        return JsonResponse({
+            "success": False,
+            "error": "No ModuLearn account exists for that email address.",
+        }, status=404)
+    if not user.is_instructor:
+        return JsonResponse({
+            "success": False,
+            "error": "That account exists, but it is not marked as an instructor.",
+        }, status=400)
+
+    with transaction.atomic():
+        _add_instructor_to_course_and_sessions(course_instance.course, user)
+
+    return JsonResponse({
+        "success": True,
+        "instructors": _course_instructor_payload(course_instance.course, current_user=request.user),
+        "message": f"{user.email or user.username} can now manage this course.",
+    })
+
+
+@login_required
+@require_POST
+def remove_course_instructor(request, instance_id, user_id):
+    course_instance = get_object_or_404(
+        CourseInstance.objects.select_related("course").prefetch_related("course__instances"),
+        id=instance_id,
+    )
+    if not _is_course_instructor(request.user, course_instance):
+        return JsonResponse({"success": False, "error": "Permission denied"}, status=403)
+
+    course = course_instance.course
+    user = get_object_or_404(User, id=user_id)
+    if not course.instructors.filter(id=user.id).exists():
+        return JsonResponse({"success": False, "error": "That user is not an instructor for this course."}, status=404)
+    if course.instructors.count() <= 1:
+        return JsonResponse({"success": False, "error": "A course must keep at least one instructor."}, status=400)
+
+    with transaction.atomic():
+        _remove_instructor_from_course_and_sessions(course, user)
+
+    return JsonResponse({
+        "success": True,
+        "removed_self": user.id == request.user.id,
+        "instructors": _course_instructor_payload(course, current_user=request.user),
+    })
+
+
 def _update_course_structure_controls(request, course):
     rule_context = _module_rule_context(course)
     valid_conditions = set(_course_research_conditions(course))
+    valid_unit_ids = {group["unit"].id for group in rule_context}
 
     for group in rule_context:
         unit = group["unit"]
@@ -396,6 +545,15 @@ def _update_course_structure_controls(request, course):
             module.description = request.POST.get(f"{module_prefix}_description", module.description)
             module.order = int(request.POST.get(f"{module_prefix}_order") or module.order or 0)
             module.is_visible = _parse_bool(request.POST.get(f"{module_prefix}_visible"))
+            target_unit_id = request.POST.get(f"{module_prefix}_unit_id")
+            if target_unit_id:
+                try:
+                    target_unit_id = int(target_unit_id)
+                except (TypeError, ValueError):
+                    target_unit_id = None
+                if target_unit_id in valid_unit_ids:
+                    module.unit_id = target_unit_id
+            _update_module_content_configuration(request, module, module_prefix)
             module.is_locked, module.unlock_rule = _normalize_unlock_settings(
                 _parse_bool(request.POST.get(f"{module_prefix}_locked")),
                 request.POST.get(f"{module_prefix}_rule_type"),
@@ -407,12 +565,97 @@ def _update_course_structure_controls(request, course):
             module.save(update_fields=[
                 "title",
                 "description",
+                "unit",
                 "order",
                 "is_visible",
                 "is_locked",
                 "unlock_rule",
+                "content_url",
+                "content_file",
+                "platform_name",
+                "provider_id",
+                "author",
+                "supported_protocols",
+                "module_type",
+                "content_data",
             ])
             _update_module_form_configuration(request, module)
+
+
+def _parse_protocol_list(raw_value):
+    protocols = []
+    for raw_item in (raw_value or "").replace("\n", ",").split(","):
+        protocol = raw_item.strip().lower()
+        if protocol and protocol not in protocols:
+            protocols.append(protocol)
+    return protocols
+
+
+def _clean_content_data_after_url_edit(content_data):
+    if not isinstance(content_data, dict) or "slc_legacy_replacement" not in content_data:
+        return content_data
+    next_data = dict(content_data)
+    next_data.pop("slc_legacy_replacement", None)
+    return next_data or None
+
+
+def _update_module_content_configuration(request, module, prefix):
+    content_field_names = {
+        f"{prefix}_content_url",
+        f"{prefix}_supported_protocols",
+        f"{prefix}_platform_name",
+        f"{prefix}_provider_id",
+        f"{prefix}_author",
+    }
+    file_field_name = f"{prefix}_content_file"
+    if not any(name in request.POST for name in content_field_names) and file_field_name not in request.FILES:
+        return
+
+    if f"{prefix}_content_url" in request.POST:
+        content_url = (request.POST.get(f"{prefix}_content_url") or "").strip() or None
+    else:
+        content_url = module.content_url or None
+    url_changed = content_url != (module.content_url or None)
+    if f"{prefix}_supported_protocols" in request.POST:
+        supported_protocols = _parse_protocol_list(request.POST.get(f"{prefix}_supported_protocols"))
+    else:
+        supported_protocols = module.supported_protocols or []
+    content_data = module.content_data
+
+    if content_url:
+        replacement = apply_slc_legacy_replacement(
+            content_url,
+            current_module_type=module.module_type,
+            current_supported_protocols=supported_protocols,
+        )
+        if replacement:
+            logger.info(
+                "Replacing legacy SLC URL during module configuration: %s -> %s",
+                replacement.original_url,
+                replacement.replacement_url,
+            )
+            content_url = replacement.replacement_url
+            module.module_type = replacement.module_type
+            supported_protocols = replacement.supported_protocols
+            content_data = apply_replacement_metadata(content_data, replacement)
+        elif url_changed:
+            content_data = _clean_content_data_after_url_edit(content_data)
+    elif url_changed:
+        content_data = _clean_content_data_after_url_edit(content_data)
+
+    module.content_url = content_url
+    if f"{prefix}_platform_name" in request.POST:
+        module.platform_name = (request.POST.get(f"{prefix}_platform_name") or "").strip()
+    if f"{prefix}_provider_id" in request.POST:
+        module.provider_id = (request.POST.get(f"{prefix}_provider_id") or "").strip()
+    if f"{prefix}_author" in request.POST:
+        module.author = (request.POST.get(f"{prefix}_author") or "").strip()
+    module.supported_protocols = supported_protocols
+    module.content_data = content_data
+
+    uploaded_file = request.FILES.get(file_field_name)
+    if uploaded_file:
+        module.content_file = uploaded_file
 
 
 def _update_module_form_configuration(request, module):
@@ -694,8 +937,8 @@ def _create_custom_module(request, course):
     unit_id = request.POST.get("unit_id")
     unit = get_object_or_404(Unit, id=unit_id, course=course)
     module_type = request.POST.get("module_type")
-    valid_types = {choice[0] for choice in Module.MODULE_TYPE_CHOICES}
-    if module_type not in valid_types or module_type == Module.MODULE_TYPE_IMPORTED:
+    valid_types = {choice[0] for choice in Module.MANUAL_MODULE_TYPE_CHOICES}
+    if module_type not in valid_types:
         raise ValueError("Choose a valid manually-authored module type.")
 
     title = (request.POST.get("title") or "").strip()
@@ -1704,6 +1947,11 @@ def enroll_with_code(request):
             if Enrollment.objects.filter(student=user, course_instance=course_instance).exists():
                 messages.warning(request, 'You are already enrolled in this course.')
             else:
+                try:
+                    ensure_session_student_capacity(course_instance)
+                except CapacityLimitError as error:
+                    messages.error(request, str(error))
+                    return redirect('courses:enroll_with_code')
                 Enrollment.objects.create(
                     student=user,
                     course_instance=course_instance
@@ -1758,6 +2006,8 @@ def create_enrollment_code(request, course_instance_id):
                     'error': 'User is already enrolled in this course.',
                     'status': 'already_enrolled'
                 })
+
+        ensure_session_student_capacity(course_instance)
 
         # Create or get enrollment code
         enrollment_code, created = EnrollmentCode.objects.get_or_create(
@@ -1902,12 +2152,17 @@ def duplicate_course_instance(request, course_instance_id):
         # Check if user is instructor for this course
         if not course_instance.instructors.filter(id=request.user.id).exists():
             return JsonResponse({'success': False, 'error': 'Permission denied'})
+
+        ensure_course_session_capacity(course_instance.course)
+        ensure_instructor_session_capacity(request.user)
             
         # Duplicate the course session
         new_instance = course_instance.duplicate(new_group_name)
         
         return JsonResponse({'success': True, 'new_instance_id': new_instance.id})
         
+    except CapacityLimitError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)})
     except Exception as e:
@@ -1982,6 +2237,9 @@ def create_course_instance(request, course_id):
         if CourseInstance.objects.filter(course=course, group_name=group_name).exists():
             logger.warning(f"Group name '{group_name}' already exists for course {course_id}")
             return JsonResponse({'success': False, 'error': 'A session with this group name already exists'})
+
+        ensure_course_session_capacity(course)
+        ensure_instructor_session_capacity(request.user)
         
         # Create new course session
         logger.info(f"Creating new course session with group_name: {group_name}")
@@ -1989,7 +2247,8 @@ def create_course_instance(request, course_id):
             course=course,
             group_name=group_name
         )
-        instance.instructors.add(request.user)
+        course_instructors = list(course.instructors.all()) or [request.user]
+        instance.instructors.add(*course_instructors)
         logger.info(f"Successfully created course session id: {instance.id}")
         
         return JsonResponse({'success': True, 'instance_id': instance.id})
@@ -2000,6 +2259,9 @@ def create_course_instance(request, course_id):
     except Course.DoesNotExist:
         logger.error(f"Course not found: {course_id}")
         return JsonResponse({'success': False, 'error': 'Course not found'})
+    except CapacityLimitError as e:
+        logger.warning("Course session capacity limit hit: %s", str(e))
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except Exception as e:
         logger.error(f"Unexpected error creating course session: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred'})
@@ -2090,24 +2352,19 @@ def get_course_enrollments(request, course_instance_id):
         # Get total modules count for the course
         total_modules = Module.objects.filter(unit__course=course_instance.course).count()
         
-        enrollments_data = []
-        for enrollment in course_instance.enrollments.select_related('student', 'course_progress').all():
-            enrollments_data.append({
-                'id': enrollment.id,
-                'student': {
-                    'email': enrollment.student.email,
-                    'username': enrollment.student.username
-                },
-                'progress': {
-                    'modules_completed': enrollment.course_progress.modules_completed if hasattr(enrollment, 'course_progress') else 0,
-                    'total_modules': total_modules,  # Use the calculated total
-                    'overall_score': enrollment.course_progress.overall_score if hasattr(enrollment, 'course_progress') else 0.0
-                }
-            })
+        enrollments_data = [
+            _enrollment_response_payload(enrollment, total_modules)
+            for enrollment in course_instance.enrollments.select_related('student', 'course_progress').all()
+        ]
         
         return JsonResponse({
             'success': True,
-            'enrollments': enrollments_data
+            'enrollments': enrollments_data,
+            'limits': {
+                'max_students': max_students_per_session(),
+                'current_students': course_instance.enrollments.filter(active=True).count(),
+                'remaining_students': remaining_session_student_slots(course_instance),
+            },
         })
         
     except CourseInstance.DoesNotExist:
@@ -2115,6 +2372,47 @@ def get_course_enrollments(request, course_instance_id):
     except Exception as e:
         logger.error(f"Error fetching enrollments: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def _enrollment_response_payload(enrollment, total_modules):
+    student = enrollment.student
+    progress = getattr(enrollment, "course_progress", None)
+    return {
+        'id': enrollment.id,
+        'student': {
+            'email': student.email or '',
+            'username': student.username,
+            'full_name': student.full_name or '',
+            'has_email': bool(student.email),
+            'has_usable_password': student.has_usable_password(),
+        },
+        'progress': {
+            'modules_completed': progress.modules_completed if progress else 0,
+            'total_modules': total_modules,
+            'overall_score': progress.overall_score if progress else 0.0,
+        },
+    }
+
+
+def _unique_generated_student_username(course_instance, prefix=''):
+    label = f"{course_instance.course_id}:{course_instance.id}:{course_instance.group_name}:{course_instance.created_at:%Y%m%d}"
+    digest = hashlib.blake2s(label.encode("utf-8"), digest_size=3).hexdigest()
+    prefix_slug = slugify(prefix or "anon").strip("-") or "anon"
+    prefix_slug = prefix_slug[:24].strip("-") or "anon"
+    base = f"{prefix_slug}-{digest}"[:40].strip("-") or f"anon-{digest}"
+    User = get_user_model()
+    while True:
+        token = get_random_string(6, allowed_chars="23456789abcdefghjkmnpqrstuvwxyz")
+        candidate = f"{base}-{token}"[:150]
+        if not User.objects.filter(username__iexact=candidate).exists():
+            return candidate
+
+
+def _generated_student_password():
+    return get_random_string(
+        8,
+        allowed_chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789",
+    )
 
 @login_required
 @require_POST
@@ -2136,6 +2434,7 @@ def bulk_enroll_students(request, course_instance_id):
         error_count = 0
         new_enrollments = []
         error_details = []
+        remaining_slots = remaining_session_student_slots(course_instance)
         
         seen_emails = set()
         for raw_email in emails:
@@ -2147,16 +2446,29 @@ def bulk_enroll_students(request, course_instance_id):
                 seen_emails.add(email)
 
                 user = find_user_by_email(email)
-                user_created = user is None
-                if user_created:
+                if user and Enrollment.objects.filter(student=user, course_instance=course_instance).exists():
+                    error_count += 1
+                    error_details.append(f"{email}: Already enrolled in this course session")
+                    continue
+
+                if remaining_slots <= 0:
+                    error_count += 1
+                    error_details.append(
+                        f"{email}: This session can have at most {max_students_per_session()} active students."
+                    )
+                    continue
+
+                user_created = False
+                if user is None:
+                    user_created = True
                     user = User.objects.create_user(
                         username=unique_username_for_email(email),
                         email=email,
                         is_student=True,
                     )
                 logger.debug("Bulk enrollment user %s: %s", "created" if user_created else "found", user.username)
-                
-                # Check enrollment
+
+                ensure_session_student_capacity(course_instance)
                 enrollment, enrollment_created = Enrollment.objects.get_or_create(
                     student=user,
                     course_instance=course_instance,
@@ -2164,17 +2476,16 @@ def bulk_enroll_students(request, course_instance_id):
                 )
                 
                 if enrollment_created:
-                    new_enrollments.append({
-                        'id': enrollment.id,
-                        'student': {
-                            'email': user.email
-                        },
-                        'progress': {
-                            'modules_completed': 0,
-                            'total_modules': Module.objects.filter(unit__course=course_instance.course).count(),
-                            'overall_score': 0.0
-                        }
-                    })
+                    remaining_slots -= 1
+                    total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+                    new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
+                    success_count += 1
+                elif not enrollment.active:
+                    enrollment.active = True
+                    enrollment.save(update_fields=['active'])
+                    remaining_slots -= 1
+                    total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+                    new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 else:
                     error_count += 1
@@ -2215,6 +2526,100 @@ def bulk_enroll_students(request, course_instance_id):
         logger.error(f"Error in bulk enrollment: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@login_required
+@require_POST
+def generate_anonymous_students(request, course_instance_id):
+    logger.info("Generating anonymous student roster for course session %s", course_instance_id)
+    try:
+        course_instance = CourseInstance.objects.get(id=course_instance_id)
+        if request.user not in course_instance.instructors.all():
+            logger.warning(
+                "User %s is not authorized to generate roster accounts on instance %s",
+                request.user.username,
+                course_instance.id,
+            )
+            return JsonResponse({'error': 'Not authorized'}, status=403)
+
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
+
+        try:
+            count = int(data.get('count') or 1)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'Enter a valid number of accounts to generate.'}, status=400)
+
+        if count < 1 or count > max_students_per_session():
+            return JsonResponse({
+                'error': f'Generate between 1 and {max_students_per_session()} accounts at a time.'
+            }, status=400)
+
+        remaining_slots = remaining_session_student_slots(course_instance)
+        if count > remaining_slots:
+            return JsonResponse({
+                'error': (
+                    f'This session can have at most {max_students_per_session()} active students. '
+                    f'{remaining_slots} slot{"s" if remaining_slots != 1 else ""} remain.'
+                )
+            }, status=400)
+
+        prefix = (data.get('prefix') or 'anon').strip() or 'anon'
+        password_mode = (data.get('password_mode') or 'username').strip().lower()
+        use_username_password = password_mode != 'random'
+        total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+        generated_accounts = []
+        enrollments_data = []
+
+        with transaction.atomic():
+            ensure_session_student_capacity(course_instance, additional=count)
+            for _index in range(count):
+                username = _unique_generated_student_username(course_instance, prefix=prefix)
+                password = username if use_username_password else _generated_student_password()
+                user = User.objects.create_user(
+                    username=username,
+                    email='',
+                    password=password,
+                    is_student=True,
+                    is_instructor=False,
+                    full_name='',
+                )
+                enrollment = Enrollment.objects.create(
+                    student=user,
+                    course_instance=course_instance,
+                    active=True,
+                )
+                generated_accounts.append({
+                    'username': username,
+                    'email': '',
+                    'password': password,
+                    'course_session': course_instance.group_name,
+                })
+                enrollments_data.append(_enrollment_response_payload(enrollment, total_modules))
+
+        logger.info(
+            "Generated %s anonymous student accounts for course session %s",
+            len(generated_accounts),
+            course_instance.id,
+        )
+        return JsonResponse({
+            'success': True,
+            'success_count': len(generated_accounts),
+            'accounts': generated_accounts,
+            'enrollments': enrollments_data,
+        })
+
+    except CourseInstance.DoesNotExist:
+        logger.warning("Course session %s not found during anonymous roster generation", course_instance_id)
+        return JsonResponse({'error': 'Course session not found'}, status=404)
+    except CapacityLimitError as e:
+        logger.warning("Anonymous roster capacity limit hit for instance %s: %s", course_instance_id, str(e))
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        logger.exception("Error generating anonymous student roster for instance %s", course_instance_id)
+        return JsonResponse({'error': str(e)}, status=500)
+
 @login_required
 @require_POST
 def remove_enrollment(request, enrollment_id):
@@ -2229,18 +2634,18 @@ def remove_enrollment(request, enrollment_id):
             return JsonResponse({'error': 'Not authorized'}, status=403)
         
         # Store info for logging
-        student_email = enrollment.student.email
+        student_label = enrollment.student.email or enrollment.student.username
         course_name = enrollment.course_instance.course.title
         
         # Delete the enrollment (this will cascade to related records)
         enrollment.delete()
         
         # Log the action
-        logger.info(f"Removed enrollment of {student_email} from {course_name} by {request.user.username}")
+        logger.info(f"Removed enrollment of {student_label} from {course_name} by {request.user.username}")
         
         return JsonResponse({
             'success': True,
-            'message': f'Successfully removed {student_email} from the course'
+            'message': f'Successfully removed {student_label} from the course'
         })
         
     except Enrollment.DoesNotExist:
@@ -2252,19 +2657,33 @@ def remove_enrollment(request, enrollment_id):
 @login_required
 @require_POST
 def delete_course_instance(request, instance_id):
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
     try:
-        instance = CourseInstance.objects.get(id=instance_id)
+        instance = CourseInstance.objects.select_related('course').get(id=instance_id)
         
         # Check if user is an instructor for this course session
         if request.user not in instance.instructors.all():
-            return JsonResponse({'error': 'Not authorized'}, status=403)
-            
+            return JsonResponse({'success': False, 'error': 'Not authorized'}, status=403)
+
+        session_label = instance.group_name or f"Session {instance.id}"
+        course_title = instance.course.title if instance.course else "Course"
+        enrollment_count = instance.enrollments.count()
         instance.delete()
+        logger.info(
+            "Deleted course session %s (%s) with %s enrollments by %s",
+            session_label,
+            course_title,
+            enrollment_count,
+            request.user.username,
+        )
         return JsonResponse({'success': True})
     except CourseInstance.DoesNotExist:
-        return JsonResponse({'error': 'Course session not found'}, status=404)
+        return JsonResponse({'success': False, 'error': 'Course session not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error("Error deleting course session %s: %s", instance_id, str(e), exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required
 @require_GET
@@ -2312,6 +2731,8 @@ def create_raw_course_session(request):
 
     try:
         with transaction.atomic():
+            ensure_instructor_session_capacity(request.user)
+
             course_id = f"manual-{uuid.uuid4().hex[:16]}"
             course = Course.objects.create(
                 id=course_id,
@@ -2339,6 +2760,12 @@ def create_raw_course_session(request):
             'instance_id': instance.id,
             'redirect_url': reverse('courses:course_configuration', kwargs={'instance_id': instance.id}),
         })
+    except CapacityLimitError as error:
+        logger.warning("Custom session capacity limit hit for user %s: %s", request.user.id, str(error))
+        return JsonResponse({
+            'success': False,
+            'error': str(error),
+        }, status=400)
     except Exception as error:
         logger.exception("Failed to create custom course session for user %s", request.user.id)
         return JsonResponse({

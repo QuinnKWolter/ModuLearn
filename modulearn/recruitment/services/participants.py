@@ -56,9 +56,12 @@ def get_participant_sessions(user):
 
 
 def participant_course_redirect(user):
-    if not get_current_participant_session(user):
+    participant_session = get_current_participant_session(user)
+    if not participant_session:
         return None
-    return redirect("recruitment:sessions")
+    if participant_session.is_finished:
+        return redirect("recruitment:already_completed", session_uuid=participant_session.uuid)
+    return redirect("recruitment:resume_session", session_uuid=participant_session.uuid)
 
 
 def user_can_access_participant_course(user, course_instance_id) -> bool:

@@ -98,6 +98,130 @@
     flex: 0 0 auto;
   }
 
+  .dashboard-two-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-overview-card {
+    display: grid;
+    gap: 1rem;
+    padding: 1.1rem;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 0.75rem;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(239, 246, 255, 0.68)),
+      radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.12), transparent 30%);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+  }
+
+  .dashboard-overview-card.is-study {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(236, 253, 245, 0.7)),
+      radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.14), transparent 30%);
+  }
+
+  .dark .dashboard-overview-card {
+    border-color: rgba(71, 85, 105, 0.68);
+    background:
+      linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.66)),
+      radial-gradient(circle at 100% 0%, rgba(96, 165, 250, 0.18), transparent 30%);
+  }
+
+  .dark .dashboard-overview-card.is-study {
+    background:
+      linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(6, 78, 59, 0.24)),
+      radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.16), transparent 30%);
+  }
+
+  .dashboard-overview-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .dashboard-overview-icon {
+    width: 2.65rem;
+    height: 2.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.7rem;
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.1);
+    font-size: 1.25rem;
+  }
+
+  .dashboard-overview-card.is-study .dashboard-overview-icon {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+  }
+
+  .dashboard-overview-title {
+    min-width: 0;
+  }
+
+  .dashboard-overview-title h2 {
+    margin: 0.12rem 0 0;
+    color: #0f172a;
+    font-size: 1.35rem;
+    line-height: 1.1;
+  }
+
+  .dark .dashboard-overview-title h2 {
+    color: #f8fafc;
+  }
+
+  .dashboard-overview-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .dashboard-overview-stat {
+    padding: 0.72rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 0.55rem;
+    background: rgba(255, 255, 255, 0.64);
+  }
+
+  .dark .dashboard-overview-stat {
+    border-color: rgba(71, 85, 105, 0.62);
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .dashboard-overview-stat strong {
+    display: block;
+    color: #0f172a;
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .dark .dashboard-overview-stat strong {
+    color: #f8fafc;
+  }
+
+  .dashboard-overview-list {
+    display: grid;
+    gap: 0.38rem;
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+
+  .dashboard-overview-list span {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+  }
+
+  .dashboard-overview-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
   .course-structure-panel {
     border: 1px solid rgba(148, 163, 184, 0.3);
     border-radius: 0.6rem;
@@ -131,6 +255,196 @@
     margin-top: 0.85rem;
   }
 
+  .course-structure-action-btn.btn {
+    --structure-action-rgb: 22, 163, 74;
+    --structure-action-color: rgb(var(--structure-action-rgb));
+    --bs-btn-color: var(--structure-action-color) !important;
+    --bs-btn-border-color: rgba(var(--structure-action-rgb), 0.68) !important;
+    --bs-btn-bg: transparent !important;
+    --bs-btn-hover-color: var(--structure-action-color) !important;
+    --bs-btn-hover-bg: rgba(var(--structure-action-rgb), 0.12) !important;
+    --bs-btn-hover-border-color: var(--structure-action-color) !important;
+    --bs-btn-active-color: var(--structure-action-color) !important;
+    --bs-btn-active-bg: rgba(var(--structure-action-rgb), 0.18) !important;
+    --bs-btn-active-border-color: var(--structure-action-color) !important;
+    color: var(--structure-action-color) !important;
+    border-color: rgba(var(--structure-action-rgb), 0.68) !important;
+    background-color: transparent !important;
+    box-shadow: 0 0 0 0 rgba(var(--structure-action-rgb), 0);
+    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, border-color 140ms ease;
+  }
+
+  .course-structure-action-btn.btn:hover,
+  .course-structure-action-btn.btn:focus-visible {
+    color: var(--structure-action-color) !important;
+    border-color: var(--structure-action-color) !important;
+    background-color: rgba(var(--structure-action-rgb), 0.12) !important;
+    box-shadow:
+      0 0 0 0.22rem rgba(var(--structure-action-rgb), 0.24),
+      0 0.65rem 1.35rem -0.6rem rgba(var(--structure-action-rgb), 0.44);
+    transform: translateY(-1px);
+  }
+
+  .course-structure-action-btn.is-danger {
+    --structure-action-rgb: 220, 38, 38;
+  }
+
+  .dark .course-structure-action-btn.btn {
+    background-color: rgba(15, 23, 42, 0.14) !important;
+    border-color: rgba(var(--structure-action-rgb), 0.72) !important;
+  }
+
+  .dark .course-structure-action-btn.btn:hover,
+  .dark .course-structure-action-btn.btn:focus-visible {
+    background-color: rgba(var(--structure-action-rgb), 0.18) !important;
+    box-shadow:
+      0 0 0 0.22rem rgba(var(--structure-action-rgb), 0.34),
+      0 0.7rem 1.4rem -0.6rem rgba(var(--structure-action-rgb), 0.58);
+  }
+
+  .session-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .session-action-btn.btn {
+    --session-action-rgb: 37, 99, 235;
+    --session-action-color: rgb(var(--session-action-rgb));
+    --session-action-soft: rgba(var(--session-action-rgb), 0.12);
+    --session-action-ring: rgba(var(--session-action-rgb), 0.32);
+    --session-action-shadow: rgba(var(--session-action-rgb), 0.52);
+    --bs-btn-color: var(--session-action-color) !important;
+    --bs-btn-border-color: rgba(var(--session-action-rgb), 0.7) !important;
+    --bs-btn-bg: transparent !important;
+    --bs-btn-hover-color: var(--session-action-color) !important;
+    --bs-btn-hover-bg: var(--session-action-soft) !important;
+    --bs-btn-hover-border-color: var(--session-action-color) !important;
+    --bs-btn-active-color: var(--session-action-color) !important;
+    --bs-btn-active-bg: rgba(var(--session-action-rgb), 0.18) !important;
+    --bs-btn-active-border-color: var(--session-action-color) !important;
+    --bs-btn-disabled-color: rgba(var(--session-action-rgb), 0.42) !important;
+    --bs-btn-disabled-border-color: rgba(var(--session-action-rgb), 0.28) !important;
+    --bs-btn-focus-shadow-rgb: var(--session-action-rgb) !important;
+    min-height: 2.05rem;
+    min-width: 2.15rem;
+    max-width: 2.15rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    border-radius: 0.4rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    overflow: hidden;
+    white-space: nowrap;
+    color: var(--session-action-color) !important;
+    border-color: rgba(var(--session-action-rgb), 0.7) !important;
+    background-color: transparent !important;
+    box-shadow: 0 0 0 0 rgba(var(--session-action-rgb), 0);
+    transition:
+      max-width 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      padding 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      transform 140ms ease,
+      box-shadow 140ms ease,
+      background-color 140ms ease,
+      border-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .session-action-btn.btn > i {
+    width: 1rem;
+    min-width: 1rem;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .session-action-label {
+    display: inline-block;
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateX(-0.18rem);
+    transition:
+      max-width 190ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      margin-left 170ms ease,
+      opacity 120ms ease,
+      transform 170ms ease;
+  }
+
+  .session-action-btn.is-action-expanded,
+  .session-action-row:not(.is-interacting) .session-action-btn.is-default-action,
+  .session-action-btn.btn:hover,
+  .session-action-btn.btn:focus-visible {
+    max-width: 12rem;
+    padding-inline: 0.62rem 0.72rem;
+  }
+
+  .session-action-btn.is-action-expanded .session-action-label,
+  .session-action-row:not(.is-interacting) .session-action-btn.is-default-action .session-action-label,
+  .session-action-btn.btn:hover .session-action-label,
+  .session-action-btn.btn:focus-visible .session-action-label {
+    max-width: 9.5rem;
+    margin-left: 0.38rem;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .session-action-btn.btn:hover,
+  .session-action-btn.btn:focus-visible {
+    color: var(--session-action-color) !important;
+    border-color: var(--session-action-color) !important;
+    background-color: var(--session-action-soft) !important;
+    box-shadow:
+      0 0 0 0.26rem var(--session-action-ring),
+      0 0.9rem 1.9rem -0.58rem var(--session-action-shadow),
+      0 0.4rem 1.15rem rgba(15, 23, 42, 0.14);
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  .session-action-btn.btn:active {
+    color: var(--session-action-color) !important;
+    border-color: var(--session-action-color) !important;
+    background-color: rgba(var(--session-action-rgb), 0.18) !important;
+    transform: translateY(0);
+    box-shadow:
+      0 0 0 0.2rem rgba(var(--session-action-rgb), 0.32),
+      0 0.45rem 1rem -0.55rem var(--session-action-shadow);
+  }
+
+  .session-action-btn.is-config { --session-action-rgb: 37, 99, 235; }
+  .session-action-btn.is-view { --session-action-rgb: 202, 138, 4; }
+  .session-action-btn.is-lti { --session-action-rgb: 124, 58, 237; }
+  .session-action-btn.is-roster { --session-action-rgb: 217, 119, 6; }
+  .session-action-btn.is-analytics { --session-action-rgb: 8, 145, 178; }
+  .session-action-btn.is-activity { --session-action-rgb: 22, 163, 74; }
+  .session-action-btn.is-delete { --session-action-rgb: 220, 38, 38; }
+
+  .dark .session-action-btn.btn {
+    --bs-btn-color: rgb(var(--session-action-rgb)) !important;
+    --bs-btn-border-color: rgba(var(--session-action-rgb), 0.72) !important;
+    --bs-btn-hover-color: rgb(var(--session-action-rgb)) !important;
+    --bs-btn-hover-bg: rgba(var(--session-action-rgb), 0.18) !important;
+    --bs-btn-hover-border-color: rgb(var(--session-action-rgb)) !important;
+    color: rgb(var(--session-action-rgb)) !important;
+    border-color: rgba(var(--session-action-rgb), 0.72) !important;
+    background-color: rgba(15, 23, 42, 0.14) !important;
+  }
+
+  .dark .session-action-btn.btn:hover,
+  .dark .session-action-btn.btn:focus-visible {
+    color: rgb(var(--session-action-rgb)) !important;
+    background-color: rgba(var(--session-action-rgb), 0.18) !important;
+    box-shadow:
+      0 0 0 0.26rem rgba(var(--session-action-rgb), 0.38),
+      0 0.95rem 1.9rem -0.68rem rgba(var(--session-action-rgb), 0.62);
+  }
+
   .dark .course-structure-panel {
     border-color: rgba(71, 85, 105, 0.72);
     background: rgba(15, 23, 42, 0.58);
@@ -138,6 +452,48 @@
 
   .dark .course-structure-toggle:hover {
     background: rgba(30, 41, 59, 0.5);
+  }
+
+  .enrollment-tool-card {
+    --enrollment-card-rgb: 37, 99, 235;
+    border: 1px solid rgba(var(--enrollment-card-rgb), 0.18);
+    border-radius: 0.65rem;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(var(--enrollment-card-rgb), 0.06)),
+      rgba(248, 250, 252, 0.84);
+    padding: 1rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  .enrollment-tool-card.is-anonymous {
+    --enrollment-card-rgb: 16, 185, 129;
+  }
+
+  .enrollment-tool-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 0.55rem;
+    color: rgb(var(--enrollment-card-rgb));
+    background: rgba(var(--enrollment-card-rgb), 0.12);
+    border: 1px solid rgba(var(--enrollment-card-rgb), 0.18);
+  }
+
+  .dark .enrollment-tool-card {
+    border-color: rgba(var(--enrollment-card-rgb), 0.34);
+    background:
+      linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(var(--enrollment-card-rgb), 0.12)),
+      rgba(15, 23, 42, 0.72);
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
+  }
+
+  .dark .enrollment-tool-icon {
+    color: rgb(var(--enrollment-card-rgb));
+    background: rgba(var(--enrollment-card-rgb), 0.18);
+    border-color: rgba(var(--enrollment-card-rgb), 0.28);
   }
 
   .dashboard-modal-list {
@@ -468,6 +824,107 @@
     white-space: nowrap;
   }
 
+  .session-activity-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, auto) auto;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .session-activity-export-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(5, 150, 105, 0.32);
+    border-radius: 0.45rem;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.08);
+    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+  }
+
+  .session-activity-export-btn:hover,
+  .session-activity-export-btn:focus-visible {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.14);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12), 0 10px 20px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .session-activity-table-wrap {
+    max-height: min(58vh, 42rem);
+    overflow: auto;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.55rem;
+  }
+
+  .session-activity-table {
+    min-width: 58rem;
+    margin: 0;
+  }
+
+  .session-activity-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .session-activity-table th button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: inherit;
+    font-weight: 900;
+  }
+
+  .session-activity-table td {
+    vertical-align: middle;
+  }
+
+  .activity-event-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    border-radius: 0.35rem;
+    padding: 0.22rem 0.48rem;
+    font-size: 0.7rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .activity-event-pill.is-completion {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+  }
+
+  .activity-event-pill.is-outcome {
+    color: #0369a1;
+    background: rgba(14, 165, 233, 0.12);
+  }
+
+  .activity-event-pill.is-launch,
+  .activity-event-pill.is-iframe-load {
+    color: #5b21b6;
+    background: rgba(124, 58, 237, 0.12);
+  }
+
+  .activity-event-pill.is-tab-blur,
+  .activity-event-pill.is-tab-focus {
+    color: #92400e;
+    background: rgba(245, 158, 11, 0.13);
+  }
+
+  .activity-event-pill.is-progress {
+    color: #475569;
+    background: rgba(100, 116, 139, 0.12);
+  }
+
   .dark .session-activity-heading,
   .dark .session-activity-module {
     color: #e2e8f0;
@@ -520,6 +977,15 @@
   .dark .session-activity-status.is-progress {
     color: #cbd5e1;
     background: rgba(100, 116, 139, 0.16);
+  }
+
+  .dark .session-activity-table th {
+    color: #cbd5e1;
+    background: #0f172a;
+  }
+
+  .dark .session-activity-table-wrap {
+    border-color: rgba(71, 85, 105, 0.72);
   }
 
   .dashboard-right-col {
@@ -600,7 +1066,18 @@
     }
   }
 
+  @media (max-width: 900px) {
+    .dashboard-two-card-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   @media (max-width: 639px) {
+    .dashboard-overview-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
     .session-activity-row {
       grid-template-columns: 1.9rem minmax(0, 1fr) auto;
       gap: 0.5rem;
@@ -615,6 +1092,10 @@
     .session-activity-email {
       display: none;
     }
+
+    .session-activity-tools {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 {% endblock %}
@@ -626,9 +1107,11 @@
   data-csrf-token="{{ csrf_token }}"
   data-course-details-pattern="{% url 'courses:course_details' course_id='__COURSE_ID__' %}"
   data-course-delete-pattern="{% url 'courses:delete_course' course_id='__COURSE_ID__' %}"
+  data-course-instance-delete-pattern="{% url 'courses:delete_course_instance' instance_id=0 %}"
   data-get-enrollments-pattern="{% url 'courses:get_course_enrollments' course_instance_id='__COURSE_INSTANCE_ID__' %}"
   data-remove-enrollment-pattern="{% url 'courses:remove_enrollment' enrollment_id=0 %}"
   data-bulk-enroll-pattern="{% url 'courses:bulk_enroll_students' course_instance_id='__COURSE_INSTANCE_ID__' %}"
+  data-generate-anonymous-students-pattern="{% url 'courses:generate_anonymous_students' course_instance_id='__COURSE_INSTANCE_ID__' %}"
   data-create-course-instance-pattern="{% url 'courses:create_course_instance' course_id='__COURSE_ID__' %}"
   data-check-group-name-url="{% url 'courses:check_group_name' %}"
   data-create-course-url="{% url 'courses:create_course' %}"
@@ -646,46 +1129,67 @@
 >
   <section class="dashboard-layout">
     <div>
-      <section class="dashboard-metrics grid gap-3 md:grid-cols-2 mb-5">
-        <article class="card p-4 dashboard-metric">
-          <div class="stat-kicker">Courses</div>
-          <div class="mt-3 course-metric-split">
-            <div>
-              <div class="text-4xl font-bold">{{ courses|length }}</div>
-              <p class="mt-1 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Structures</p>
+      <section class="dashboard-two-card-grid" aria-label="Instructor workspace">
+        <article class="dashboard-overview-card">
+          <div class="dashboard-overview-head">
+            <div class="dashboard-overview-title">
+              <div class="stat-kicker">Courses</div>
+              <h2>Course Workspace</h2>
             </div>
-            <div>
-              <div class="text-4xl font-bold">{{ course_session_count }}</div>
-              <p class="mt-1 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Sessions</p>
+            <span class="dashboard-overview-icon"><i class="bi bi-layers" aria-hidden="true"></i></span>
+          </div>
+          <div class="dashboard-overview-stats">
+            <div class="dashboard-overview-stat">
+              <strong>{{ courses|length }}</strong>
+              <span class="stat-kicker">Structures</span>
+            </div>
+            <div class="dashboard-overview-stat">
+              <strong>{{ course_session_count }}</strong>
+              <span class="stat-kicker">Sessions</span>
             </div>
           </div>
-          <p class="mt-2 text-slate-600 dark:text-slate-300">Reusable course definitions and their active teaching sessions.</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Reusable course definitions, live teaching sessions, imports, rosters, configuration, and analytics live together here.</p>
+          <div class="dashboard-overview-list">
+            <span><i class="bi bi-check2-circle text-blue-600" aria-hidden="true"></i>Import from authoring or JSON, create custom sessions, and clone reusable structures.</span>
+            <span><i class="bi bi-people text-blue-600" aria-hidden="true"></i>Manage enrollment by email, anonymous roster accounts, or LTI launch paths.</span>
+          </div>
+          <div class="dashboard-overview-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseStructuresModal">
+              <i class="bi bi-layers mr-2" aria-hidden="true"></i>Manage Courses
+            </button>
+          </div>
         </article>
-        <article class="card p-4 dashboard-metric">
-          <div class="stat-kicker">Studies</div>
-          <div class="text-4xl font-bold mt-3">{{ studies|length }}</div>
-          <p class="mt-2 text-slate-600 dark:text-slate-300">Research protocols with participant flow, conditions, and Prolific links.</p>
+
+        <article class="dashboard-overview-card is-study">
+          <div class="dashboard-overview-head">
+            <div class="dashboard-overview-title">
+              <div class="stat-kicker">Studies</div>
+              <h2>Research Workspace</h2>
+            </div>
+            <span class="dashboard-overview-icon"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i></span>
+          </div>
+          <div class="dashboard-overview-stats">
+            <div class="dashboard-overview-stat">
+              <strong>{{ studies|length }}</strong>
+              <span class="stat-kicker">Protocols</span>
+            </div>
+            <div class="dashboard-overview-stat">
+              <strong>Prolific</strong>
+              <span class="stat-kicker">Recruitment</span>
+            </div>
+          </div>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Study sessions keep participant entry, condition assignment, module flow, completion links, resets, and exports in one place.</p>
+          <div class="dashboard-overview-list">
+            <span><i class="bi bi-diagram-3 text-emerald-600" aria-hidden="true"></i>Create condition-aware study flows with configurable modules.</span>
+            <span><i class="bi bi-file-earmark-spreadsheet text-emerald-600" aria-hidden="true"></i>Review participant progress and export study data as it accrues.</span>
+          </div>
+          <div class="dashboard-overview-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#studiesModal">
+              <i class="bi bi-clipboard2-pulse mr-2" aria-hidden="true"></i>Manage Studies
+            </button>
+          </div>
         </article>
       </section>
-
-      <div class="dashboard-command-grid mb-6">
-        <button type="button" class="dashboard-command" data-bs-toggle="modal" data-bs-target="#courseStructuresModal">
-          <span class="min-w-0">
-            <span class="stat-kicker block">Courses</span>
-            <strong class="block text-slate-900 dark:text-white">Manage Courses</strong>
-            <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">Organize structures, sessions, imports, enrollment, and analytics.</span>
-          </span>
-          <span class="dashboard-command-icon"><i class="bi bi-layers" aria-hidden="true"></i></span>
-        </button>
-        <button type="button" class="dashboard-command" data-bs-toggle="modal" data-bs-target="#studiesModal">
-          <span class="min-w-0">
-            <span class="stat-kicker block">Studies</span>
-            <strong class="block text-slate-900 dark:text-white">Manage Studies</strong>
-            <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">Create protocols, conditions, and Prolific recruitment links.</span>
-          </span>
-          <span class="dashboard-command-icon"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i></span>
-        </button>
-      </div>
 
       {% if show_legacy_groups_section %}
         {% include 'dashboard/components/legacy_courses_section.html' %}
@@ -753,10 +1257,10 @@
                 >
                   <div class="course-structure-body">
                     <div class="flex flex-wrap gap-2">
-                      <button class="btn btn-sm btn-outline-success new-session-btn" data-course-id="{{ course.id }}">
+                      <button class="btn btn-sm btn-outline-success course-structure-action-btn new-session-btn" data-course-id="{{ course.id }}">
                         <i class="bi bi-plus-circle mr-1"></i>New Session
                       </button>
-                      <button class="btn btn-sm btn-outline-danger delete-course-btn" data-course-id="{{ course.id }}">
+                      <button class="btn btn-sm btn-outline-danger course-structure-action-btn is-danger delete-course-btn" data-course-id="{{ course.id }}">
                         <i class="bi bi-trash mr-1"></i>Delete Structure
                       </button>
                     </div>
@@ -779,6 +1283,56 @@
         {% else %}
           <div class="empty-state">No reusable course structures yet. Import JSON, use Course Authoring, or create a custom session.</div>
         {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div id="sessionActivityModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 z-[80] items-center justify-center bg-black/55 p-4" aria-hidden="true">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="min-w-0">
+          <div class="stat-kicker">Session Activity</div>
+          <h2 id="sessionActivityModalTitle" class="text-xl font-bold mt-1 mb-0 truncate">Recent Activity</h2>
+          <p id="sessionActivityModalMeta" class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0">Reverse chronological activity across this session.</p>
+        </div>
+        <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6 space-y-4">
+        <div class="session-activity-tools">
+          <label class="relative mb-0">
+            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true"></i>
+            <input id="sessionActivitySearch" type="search" class="form-control pl-9" placeholder="Filter by student, module, event, source, or email">
+          </label>
+          <select id="sessionActivityTypeFilter" class="form-select">
+            <option value="">All events</option>
+          </select>
+          <button id="downloadSessionActivityButton" class="session-activity-export-btn" type="button" title="Download activity CSV" aria-label="Download activity CSV">
+            <i class="bi bi-download" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="session-activity-table-wrap">
+          <table class="table table-hover table-sm session-activity-table">
+            <thead>
+              <tr>
+                <th><button type="button" data-activity-sort="created_at">Time <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="learner">Student <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="module">Module <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="event_type">Event <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th class="text-right"><button type="button" data-activity-sort="progress">Progress <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th class="text-right"><button type="button" data-activity-sort="score">Score <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="source">Source <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="success">Success <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+              </tr>
+            </thead>
+            <tbody id="sessionActivityTableBody">
+              <tr>
+                <td colspan="8" class="text-center text-slate-500 py-5">Choose a session activity button to load events.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -1017,7 +1571,7 @@
   </div>
 
   {% if show_create_demo_course %}
-    <div id="demoCourseModal" class="modal-overlay hidden fixed inset-0 z-[80] items-center justify-center bg-black/50 p-4" aria-hidden="true">
+    <div id="demoCourseModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 z-[80] items-center justify-center bg-black/50 p-4" aria-hidden="true">
       <div class="modal-backdrop-close absolute inset-0"></div>
       <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">

@@ -9,10 +9,12 @@
     {% if not preview_mode and course_instance %}
       <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
-          <a href="{% if participant_mode %}{% url 'recruitment:sessions' %}{% else %}{% url 'courses:course_detail' course_instance.id %}{% endif %}" class="btn btn-outline-secondary btn-sm">
+          {% if not participant_mode %}
+          <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
-            {% if participant_mode %}Study Sessions{% else %}Back To Course{% endif %}
+            Back To Course
           </a>
+          {% endif %}
           {% include 'courses/components/next_module_button.html' with button_class='btn-sm' %}
         </div>
         <div class="text-sm text-slate-600 dark:text-slate-300">

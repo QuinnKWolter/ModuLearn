@@ -13,6 +13,12 @@ from pylti1p3.tool_config import ToolConfDict
 from .models import LTIPlatformRegistration
 
 
+def normalize_platform_issuer(value: str) -> str:
+    """Normalize an LMS issuer value for lookup while preserving path segments."""
+    issuer = str(value or "").strip()
+    return issuer.rstrip("/") if issuer else ""
+
+
 def _resolve_key_path(path_value: str) -> Path:
     path = Path(path_value)
     if path.is_absolute():
@@ -38,18 +44,22 @@ def _tool_key_paths(config_item: dict) -> tuple[str, str]:
 
 def get_lti13_config_dict() -> dict:
     """Merge settings-backed LTI 1.3 config with database platform registrations."""
-    config = deepcopy(getattr(settings, "LTI_CONFIG", {}))
+    config = {
+        normalize_platform_issuer(issuer): conf
+        for issuer, conf in deepcopy(getattr(settings, "LTI_CONFIG", {})).items()
+    }
 
     for registration in LTIPlatformRegistration.objects.filter(is_active=True):
         issuer_config = registration.to_tool_conf()
-        existing = config.get(registration.issuer)
+        issuer = normalize_platform_issuer(registration.issuer)
+        existing = config.get(issuer)
         if existing is None:
-            config[registration.issuer] = [issuer_config]
+            config[issuer] = [issuer_config]
         elif isinstance(existing, list):
             existing.append(issuer_config)
         else:
             existing["default"] = True
-            config[registration.issuer] = [existing, issuer_config]
+            config[issuer] = [existing, issuer_config]
 
     return config
 
@@ -89,18 +99,32 @@ def build_absolute_url(request, path: str, query: dict | None = None) -> str:
 def lti_setup_payload(request, course_instance_id=None) -> dict:
     """Return copyable LTI 1.1 and 1.3 setup details for a course session."""
     course_query = {"course_id": course_instance_id} if course_instance_id else None
+    course_custom_parameters = (
+        f"course_id={course_instance_id}\nmodulearn_course_id={course_instance_id}"
+        if course_instance_id
+        else ""
+    )
     launch_path = reverse("lti:launch")
     login_path = reverse("lti:login")
     jwks_path = reverse("lti:jwks")
     config_path = reverse("lti:config")
+    tool_config = getattr(settings, "LTI_TOOL_CONFIG", {})
 
     return {
         "course_instance_id": course_instance_id,
+        "tool": {
+            "name": tool_config.get("title") or "ModuLearn",
+            "description": tool_config.get("description") or "ModuLearn course session launch",
+            "privacy": "public",
+            "default_launch_container": "Embed, without blocks",
+            "deep_linking_supported": False,
+        },
         "lti_11": {
             "launch_url": build_absolute_url(request, launch_path, course_query),
             "cartridge_xml_url": build_absolute_url(request, config_path, course_query),
             "consumer_key": getattr(settings, "LTI_11_CONSUMER_KEY", ""),
             "shared_secret": getattr(settings, "LTI_11_CONSUMER_SECRET", ""),
+            "custom_parameters": course_custom_parameters,
         },
         "lti_13": {
             "tool_url": build_absolute_url(request, launch_path, course_query),
@@ -110,5 +134,6 @@ def lti_setup_payload(request, course_instance_id=None) -> dict:
             "oidc_login_url": build_absolute_url(request, login_path),
             "jwks_url": build_absolute_url(request, jwks_path),
             "public_keyset_url": build_absolute_url(request, jwks_path),
+            "custom_parameters": course_custom_parameters,
         },
     }

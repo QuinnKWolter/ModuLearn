@@ -408,6 +408,205 @@ class CourseProgressTests(TestCase):
             1,
         )
 
+    def test_generate_anonymous_students_creates_enrolled_login_roster(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:generate_anonymous_students', args=[self.instance.id]),
+            data=json.dumps({'count': 2, 'prefix': 'lab'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['success_count'], 2)
+        self.assertEqual(len(payload['accounts']), 2)
+        for account in payload['accounts']:
+            self.assertTrue(account['username'].startswith('lab-'))
+            self.assertEqual(account['email'], '')
+            user = User.objects.get(username=account['username'])
+            self.assertEqual(user.email, '')
+            self.assertTrue(user.is_student)
+            self.assertFalse(user.is_anonymous_participant)
+            self.assertTrue(user.check_password(account['password']))
+            self.assertTrue(
+                Enrollment.objects.filter(student=user, course_instance=self.instance).exists()
+            )
+
+    def test_generate_anonymous_students_defaults_to_anon_and_username_password(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:generate_anonymous_students', args=[self.instance.id]),
+            data=json.dumps({'count': 1}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        account = response.json()['accounts'][0]
+        self.assertTrue(account['username'].startswith('anon-'))
+        self.assertEqual(account['password'], account['username'])
+        user = User.objects.get(username=account['username'])
+        self.assertTrue(user.check_password(account['username']))
+
+    def test_generate_anonymous_students_can_use_random_short_passwords(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:generate_anonymous_students', args=[self.instance.id]),
+            data=json.dumps({'count': 1, 'password_mode': 'random'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        account = response.json()['accounts'][0]
+        self.assertNotEqual(account['password'], account['username'])
+        self.assertEqual(len(account['password']), 8)
+        user = User.objects.get(username=account['username'])
+        self.assertTrue(user.check_password(account['password']))
+
+    @override_settings(MAX_STUDENTS_PER_SESSION=2)
+    def test_generate_anonymous_students_respects_session_capacity(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:generate_anonymous_students', args=[self.instance.id]),
+            data=json.dumps({'count': 2}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('1 slot remain', response.json()['error'])
+
+    @override_settings(MAX_STUDENTS_PER_SESSION=1)
+    def test_bulk_enrollment_respects_session_capacity(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:bulk_enroll_students', args=[self.instance.id]),
+            data=json.dumps({'emails': ['new.student@example.com']}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['success_count'], 0)
+        self.assertEqual(payload['error_count'], 1)
+        self.assertIn('at most 1 active students', payload['error_details'][0])
+
+    def test_generate_anonymous_students_requires_instructor(self):
+        self.client.force_login(self.student)
+
+        response = self.client.post(
+            reverse('courses:generate_anonymous_students', args=[self.instance.id]),
+            data=json.dumps({'count': 1}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(MAX_SESSIONS_PER_COURSE=1)
+    def test_create_course_instance_respects_course_session_capacity(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:create_course_instance', args=[self.course.id]),
+            data=json.dumps({'group_name': 'Spring 2027'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()['success'])
+        self.assertIn('at most 1 active sessions', response.json()['error'])
+
+    def test_instructor_can_delete_course_session(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:delete_course_instance', args=[self.instance.id]),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        self.assertFalse(CourseInstance.objects.filter(id=self.instance.id).exists())
+
+    def test_student_cannot_delete_course_session(self):
+        self.client.force_login(self.student)
+
+        response = self.client.post(
+            reverse('courses:delete_course_instance', args=[self.instance.id]),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(CourseInstance.objects.filter(id=self.instance.id).exists())
+
+    def test_course_instructor_management_adds_existing_instructor_to_all_sessions(self):
+        co_instructor = User.objects.create_user(
+            username='co-instructor',
+            email='Co.Teacher@Example.com',
+            password='safe-pass-123',
+            is_instructor=True,
+            is_student=False,
+        )
+        other_instance = CourseInstance.objects.create(course=self.course, group_name='Spring 2027')
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:add_course_instructor', args=[self.instance.id]),
+            data=json.dumps({'email': 'co.teacher@example.com'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.course.instructors.filter(id=co_instructor.id).exists())
+        self.assertTrue(self.instance.instructors.filter(id=co_instructor.id).exists())
+        self.assertTrue(other_instance.instructors.filter(id=co_instructor.id).exists())
+
+        self.client.force_login(co_instructor)
+        config_response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
+        self.assertEqual(config_response.status_code, 200)
+
+        create_response = self.client.post(
+            reverse('courses:create_course_instance', args=[self.course.id]),
+            data=json.dumps({'group_name': 'Summer 2027'}),
+            content_type='application/json',
+        )
+        self.assertEqual(create_response.status_code, 200)
+        new_instance = CourseInstance.objects.get(id=create_response.json()['instance_id'])
+        self.assertTrue(new_instance.instructors.filter(id=self.instructor.id).exists())
+        self.assertTrue(new_instance.instructors.filter(id=co_instructor.id).exists())
+
+    def test_course_instructor_management_removes_instructor_but_keeps_last_owner(self):
+        co_instructor = User.objects.create_user(
+            username='co-instructor-remove',
+            email='remove.teacher@example.com',
+            password='safe-pass-123',
+            is_instructor=True,
+            is_student=False,
+        )
+        self.course.instructors.add(co_instructor)
+        self.instance.instructors.add(co_instructor)
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:remove_course_instructor', args=[self.instance.id, co_instructor.id]),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.course.instructors.filter(id=co_instructor.id).exists())
+        self.assertFalse(self.instance.instructors.filter(id=co_instructor.id).exists())
+
+        last_owner_response = self.client.post(
+            reverse('courses:remove_course_instructor', args=[self.instance.id, self.instructor.id]),
+            content_type='application/json',
+        )
+        self.assertEqual(last_owner_response.status_code, 400)
+        self.assertIn('at least one instructor', last_owner_response.json()['error'])
+
     def test_hidden_modules_are_not_in_student_course_context(self):
         self.module_b.is_visible = False
         self.module_b.save(update_fields=['is_visible'])
@@ -636,6 +835,203 @@ class CourseProgressTests(TestCase):
         self.assertEqual(module.content_url, 'https://splice-learning.example/activity/1')
         self.assertEqual(module.supported_protocols, ['splice'])
 
+    def test_configuration_module_type_dropdown_excludes_study_specific_form_types(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
+
+        self.assertEqual(response.status_code, 200)
+        module_type_values = [value for value, _label in response.context['module_types']]
+        self.assertIn(Module.MODULE_TYPE_FORM, module_type_values)
+        self.assertNotIn(Module.MODULE_TYPE_STUDY_CONSENT, module_type_values)
+        self.assertNotIn(Module.MODULE_TYPE_STUDY_INSTRUCTIONS, module_type_values)
+        self.assertNotIn(Module.MODULE_TYPE_STUDY_PRETEST, module_type_values)
+        self.assertNotIn(Module.MODULE_TYPE_STUDY_POSTTEST, module_type_values)
+        self.assertNotIn(Module.MODULE_TYPE_STUDY_DEBRIEF, module_type_values)
+
+    def test_configuration_uses_type_specific_module_editors(self):
+        self.module_a.module_type = Module.MODULE_TYPE_IMPORTED
+        self.module_a.content_url = 'https://smart.example.test/activity'
+        self.module_a.supported_protocols = ['splice']
+        self.module_a.save(update_fields=['module_type', 'content_url', 'supported_protocols'])
+        self.module_b.module_type = Module.MODULE_TYPE_FILE
+        self.module_b.save(update_fields=['module_type'])
+        form_module = Module.objects.create(
+            unit=self.unit,
+            title='Reflection Form',
+            module_type=Module.MODULE_TYPE_FORM,
+        )
+        ModuleForm.objects.create(module=form_module, instructions='Reflect briefly.')
+        link_module = Module.objects.create(
+            unit=self.unit,
+            title='External Reading',
+            module_type=Module.MODULE_TYPE_EXTERNAL_LINK,
+            content_url='https://example.test/reading',
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'name="module_{self.module_a.id}_content_url"')
+        self.assertContains(response, f'name="module_{self.module_a.id}_supported_protocols"')
+        self.assertNotContains(response, f'name="module_{self.module_a.id}_content_file"')
+        self.assertContains(response, f'name="module_{self.module_b.id}_content_file"')
+        self.assertNotContains(response, f'name="module_{self.module_b.id}_content_url"')
+        self.assertContains(response, f'name="module_{form_module.id}_form_instructions"')
+        self.assertNotContains(response, f'name="module_{form_module.id}_content_url"')
+        self.assertNotContains(response, f'name="module_{form_module.id}_content_file"')
+        self.assertContains(response, f'name="module_{link_module.id}_content_url"')
+        self.assertNotContains(response, f'name="module_{link_module.id}_supported_protocols"')
+        self.assertNotContains(response, f'name="module_{link_module.id}_content_file"')
+
+    def test_configuration_page_renders_structure_explorer(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-structure-sidebar')
+        self.assertContains(response, 'data-unit-tree')
+        self.assertContains(response, f'data-tree-unit data-unit-id="{self.unit.id}"')
+        self.assertContains(response, f'data-tree-module data-module-id="{self.module_a.id}"')
+        self.assertContains(response, f'name="module_{self.module_a.id}_unit_id"')
+        self.assertContains(response, 'data-unit-empty-prompt')
+        self.assertContains(response, 'Choose a unit from the structure sidebar')
+        self.assertContains(response, f'data-unit-block data-unit-id="{self.unit.id}" hidden')
+
+    def test_configuration_can_move_module_between_units(self):
+        second_unit = Unit.objects.create(course=self.course, title='Unit 2', order=20)
+        self.module_a.order = 10
+        self.module_b.order = 20
+        self.module_a.save(update_fields=['order'])
+        self.module_b.save(update_fields=['order'])
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'update_structure',
+                f'unit_{self.unit.id}_title': self.unit.title,
+                f'unit_{self.unit.id}_description': self.unit.description,
+                f'unit_{self.unit.id}_order': 10,
+                f'unit_{self.unit.id}_visible': '1',
+                f'unit_{self.unit.id}_locked': '0',
+                f'unit_{self.unit.id}_rule_type': 'none',
+                f'unit_{self.unit.id}_rule_target': '',
+                f'unit_{second_unit.id}_title': second_unit.title,
+                f'unit_{second_unit.id}_description': second_unit.description,
+                f'unit_{second_unit.id}_order': 20,
+                f'unit_{second_unit.id}_visible': '1',
+                f'unit_{second_unit.id}_locked': '0',
+                f'unit_{second_unit.id}_rule_type': 'none',
+                f'unit_{second_unit.id}_rule_target': '',
+                f'module_{self.module_a.id}_title': self.module_a.title,
+                f'module_{self.module_a.id}_description': self.module_a.description,
+                f'module_{self.module_a.id}_unit_id': second_unit.id,
+                f'module_{self.module_a.id}_order': 10,
+                f'module_{self.module_a.id}_visible': '1',
+                f'module_{self.module_a.id}_locked': '0',
+                f'module_{self.module_a.id}_rule_type': 'none',
+                f'module_{self.module_a.id}_rule_target': '',
+                f'module_{self.module_b.id}_title': self.module_b.title,
+                f'module_{self.module_b.id}_description': self.module_b.description,
+                f'module_{self.module_b.id}_unit_id': self.unit.id,
+                f'module_{self.module_b.id}_order': 10,
+                f'module_{self.module_b.id}_visible': '1',
+                f'module_{self.module_b.id}_locked': '0',
+                f'module_{self.module_b.id}_rule_type': 'none',
+                f'module_{self.module_b.id}_rule_target': '',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.module_a.refresh_from_db()
+        self.module_b.refresh_from_db()
+        self.assertEqual(self.module_a.unit, second_unit)
+        self.assertEqual(self.module_a.order, 10)
+        self.assertEqual(self.module_b.unit, self.unit)
+
+    def test_configuration_rejects_manual_creation_of_study_specific_form_type(self):
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'add_module',
+                'unit_id': self.unit.id,
+                'module_type': Module.MODULE_TYPE_STUDY_CONSENT,
+                'title': 'Not A Manual Type',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Module.objects.filter(unit=self.unit, title='Not A Manual Type').exists())
+
+    def test_configuration_can_edit_imported_module_source_fields(self):
+        self.module_a.module_type = Module.MODULE_TYPE_IMPORTED
+        self.module_a.content_url = 'https://old.example.test/activity'
+        self.module_a.platform_name = 'Imported Activity'
+        self.module_a.provider_id = 'old-provider'
+        self.module_a.author = 'old-author'
+        self.module_a.supported_protocols = ['pitt']
+        self.module_a.content_data = {
+            'slc_legacy_replacement': {'original_url': 'https://old.example.test/activity'},
+        }
+        self.module_a.save(update_fields=[
+            'module_type',
+            'content_url',
+            'platform_name',
+            'provider_id',
+            'author',
+            'supported_protocols',
+            'content_data',
+        ])
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'update_structure',
+                f'unit_{self.unit.id}_title': self.unit.title,
+                f'unit_{self.unit.id}_description': self.unit.description,
+                f'unit_{self.unit.id}_order': self.unit.order,
+                f'unit_{self.unit.id}_visible': '1',
+                f'unit_{self.unit.id}_locked': '0',
+                f'unit_{self.unit.id}_rule_type': 'none',
+                f'unit_{self.unit.id}_rule_target': '',
+                f'module_{self.module_a.id}_title': self.module_a.title,
+                f'module_{self.module_a.id}_description': self.module_a.description,
+                f'module_{self.module_a.id}_order': self.module_a.order,
+                f'module_{self.module_a.id}_visible': '1',
+                f'module_{self.module_a.id}_locked': '0',
+                f'module_{self.module_a.id}_rule_type': 'none',
+                f'module_{self.module_a.id}_rule_target': '',
+                f'module_{self.module_a.id}_content_url': 'https://new.example.test/activity',
+                f'module_{self.module_a.id}_platform_name': 'Code Tracing',
+                f'module_{self.module_a.id}_provider_id': 'pcex',
+                f'module_{self.module_a.id}_author': 'new-author',
+                f'module_{self.module_a.id}_supported_protocols': 'splice, html',
+                f'module_{self.module_b.id}_title': self.module_b.title,
+                f'module_{self.module_b.id}_description': self.module_b.description,
+                f'module_{self.module_b.id}_order': self.module_b.order,
+                f'module_{self.module_b.id}_visible': '1',
+                f'module_{self.module_b.id}_locked': '0',
+                f'module_{self.module_b.id}_rule_type': 'none',
+                f'module_{self.module_b.id}_rule_target': '',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.module_a.refresh_from_db()
+        self.assertEqual(self.module_a.content_url, 'https://new.example.test/activity')
+        self.assertEqual(self.module_a.platform_name, 'Code Tracing')
+        self.assertEqual(self.module_a.provider_id, 'pcex')
+        self.assertEqual(self.module_a.author, 'new-author')
+        self.assertEqual(self.module_a.supported_protocols, ['splice', 'html'])
+        self.assertEqual(self.module_a.module_type, Module.MODULE_TYPE_IMPORTED)
+        self.assertNotIn('slc_legacy_replacement', self.module_a.content_data or {})
+
     def test_configuration_can_toggle_course_plugins(self):
         self.client.force_login(self.instructor)
 
@@ -655,6 +1051,25 @@ class CourseProgressTests(TestCase):
         context = build_course_detail_context(self.student, self.instance)
         self.assertTrue(context['course_plugins']['static_recommendations'])
         self.assertFalse(context['course_plugins']['dynamic_recommendations'])
+
+    def test_stale_masterygrids_style_flag_does_not_render_student_toggle(self):
+        self.course.plugin_config = {
+            'plugins': {
+                'masterygrids_style': {'enabled': True},
+            },
+        }
+        self.course.save(update_fields=['plugin_config'])
+
+        context = build_course_detail_context(self.student, self.instance)
+        self.assertNotIn('masterygrids_style', context['course_plugins'])
+        self.assertFalse(context['provider_grid']['has_columns'])
+
+        self.client.force_login(self.student)
+        response = self.client.get(reverse('courses:course_detail', args=[self.instance.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-course-view-toggle="provider-grid"')
+        self.assertNotContains(response, 'Provider Grid')
 
     def test_imported_activity_uses_resource_name_as_display_type(self):
         imported_course = create_course_from_json(
@@ -697,6 +1112,9 @@ class CourseProgressTests(TestCase):
         self.assertEqual(module.module_type, Module.MODULE_TYPE_IMPORTED)
         self.assertEqual(module.platform_name, 'Programming Examples')
         self.assertEqual(module.display_type_label, 'Programming Examples')
+        self.assertEqual(module.provider_id, 'pcex')
+        self.assertEqual(module.author, 'r.hosseini')
+        self.assertEqual(module.description, '')
 
         context = build_course_detail_context(self.student, imported_instance)
         self.assertEqual(
@@ -790,7 +1208,8 @@ class CourseProgressTests(TestCase):
         response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Correct and incorrect next-module paths')
+        self.assertNotContains(response, 'Open Flow Mapper')
+        self.assertNotContains(response, 'id="adaptiveBranchingFlowModal"')
 
         self.course.plugin_config = {
             'plugins': {
@@ -802,7 +1221,8 @@ class CourseProgressTests(TestCase):
         response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Correct and incorrect next-module paths')
+        self.assertContains(response, 'Open Flow Mapper')
+        self.assertContains(response, 'id="adaptiveBranchingFlowModal"')
 
     def test_guided_sequence_plugin_applies_default_sequential_locks(self):
         self.module_a.order = 10
@@ -1104,6 +1524,29 @@ class CourseProgressTests(TestCase):
         self.assertTrue(self.module_b.is_visible)
         self.assertTrue(self.module_b.is_locked)
         self.assertEqual(self.module_b.unlock_rule, {})
+
+    def test_configuration_renders_adaptive_branching_flow_mapper_when_enabled(self):
+        self.course.plugin_config = {
+            'plugins': {
+                'adaptive_branching': {'enabled': True},
+            },
+        }
+        self.course.save(update_fields=['plugin_config'])
+        ModuleBranchRule.objects.create(
+            course=self.course,
+            source_module=self.module_a,
+            target_module=self.module_b,
+            condition_type=ModuleBranchRule.CONDITION_FAILURE,
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(reverse('courses:course_configuration', args=[self.instance.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="adaptiveBranchingFlowModal"')
+        self.assertContains(response, 'data-flow-module-node')
+        self.assertContains(response, 'data-flow-source-select')
+        self.assertContains(response, 'data-flow-edge')
 
     @override_settings(
         STORAGES={

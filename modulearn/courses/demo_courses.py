@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from modulearn.learning.services.course_plugins import normalize_course_plugin_config
 from modulearn.learning.services.access_rules import build_unlock_rule
+from modulearn.learning.services.limits import ensure_instructor_session_capacity
 
 from .models import Course, CourseInstance, Module, ModuleBranchRule, Unit
 
@@ -267,6 +268,7 @@ def repair_demo_courses_for_instructor(instructor):
 
 def create_intro_python_demo_course(instructor):
     """Create an isolated demo course/session for the requesting instructor."""
+    ensure_instructor_session_capacity(instructor)
     suffix = uuid.uuid4().hex[:10]
     now = timezone.localtime(timezone.now())
     now_label = f"{now.strftime('%b')} {now.day}, {now.year} {now.strftime('%I:%M %p')}"
@@ -326,6 +328,7 @@ def instructor_has_intro_python_demo_course(instructor):
 
 
 def create_adaptive_branching_demo_course(instructor):
+    ensure_instructor_session_capacity(instructor)
     suffix = uuid.uuid4().hex[:10]
     now = timezone.localtime(timezone.now())
     now_label = f"{now.strftime('%b')} {now.day}, {now.year} {now.strftime('%I:%M %p')}"

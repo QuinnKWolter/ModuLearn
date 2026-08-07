@@ -43,9 +43,11 @@
       csrfToken: app.dataset.csrfToken || '',
       courseDetailsPattern: app.dataset.courseDetailsPattern || '',
       courseDeletePattern: app.dataset.courseDeletePattern || '',
+      courseInstanceDeletePattern: app.dataset.courseInstanceDeletePattern || '',
       getEnrollmentsPattern: app.dataset.getEnrollmentsPattern || '',
       removeEnrollmentPattern: app.dataset.removeEnrollmentPattern || '',
       bulkEnrollPattern: app.dataset.bulkEnrollPattern || '',
+      generateAnonymousStudentsPattern: app.dataset.generateAnonymousStudentsPattern || '',
       createCourseInstancePattern: app.dataset.createCourseInstancePattern || '',
       checkGroupNameUrl: app.dataset.checkGroupNameUrl || '',
       createCourseUrl: app.dataset.createCourseUrl || '',
@@ -68,6 +70,250 @@
 
     if (resourcesClient) {
       resourcesClient.bindTriggers(app);
+    }
+
+    const sessionActivityState = {
+      events: [],
+      filtered: [],
+      sortKey: 'created_at',
+      sortDirection: 'desc',
+      title: 'Recent Activity',
+    };
+
+    function activityEventLabel(value) {
+      const normalized = String(value || '').replace(/_/g, ' ').trim();
+      if (!normalized) return t('Activity');
+      return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    function activityEventClass(value) {
+      return `is-${String(value || 'activity').replace(/_/g, '-').toLowerCase()}`;
+    }
+
+    function formatActivityDate(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString([], {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
+
+    function activitySuccessLabel(event) {
+      if (event.success === true) return t('Yes');
+      if (['completion', 'outcome', 'progress'].includes(event.event_type)) return t('No');
+      return '-';
+    }
+
+    function activitySortValue(event, key) {
+      switch (key) {
+        case 'created_at':
+          return Date.parse(event.created_at || '') || 0;
+        case 'learner':
+          return `${event.learner_name || ''} ${event.learner_username || ''} ${event.learner_email || ''}`.toLowerCase();
+        case 'module':
+          return String(event.module_title || '').toLowerCase();
+        case 'event_type':
+          return String(event.event_type || '').toLowerCase();
+        case 'progress':
+          return Number(event.progress_percent || 0);
+        case 'score':
+          return Number(event.score ?? -1);
+        case 'source':
+          return String(event.source || '').toLowerCase();
+        case 'success':
+          return event.success === true ? 1 : 0;
+        default:
+          return '';
+      }
+    }
+
+    function compareActivityValues(a, b, direction) {
+      if (typeof a === 'number' && typeof b === 'number') {
+        return direction === 'asc' ? a - b : b - a;
+      }
+      const result = String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+      return direction === 'asc' ? result : -result;
+    }
+
+    function renderSessionActivityTable() {
+      const tbody = document.getElementById('sessionActivityTableBody');
+      const meta = document.getElementById('sessionActivityModalMeta');
+      const search = (document.getElementById('sessionActivitySearch')?.value || '').trim().toLowerCase();
+      const type = document.getElementById('sessionActivityTypeFilter')?.value || '';
+      if (!tbody) return;
+
+      const filtered = sessionActivityState.events
+        .filter((event) => !type || event.event_type === type)
+        .filter((event) => {
+          if (!search) return true;
+          const haystack = [
+            event.learner_name,
+            event.learner_username,
+            event.learner_email,
+            event.module_title,
+            event.event_type,
+            event.source,
+            event.score,
+            event.progress_percent,
+          ].join(' ').toLowerCase();
+          return haystack.includes(search);
+        })
+        .sort((left, right) => compareActivityValues(
+          activitySortValue(left, sessionActivityState.sortKey),
+          activitySortValue(right, sessionActivityState.sortKey),
+          sessionActivityState.sortDirection
+        ));
+
+      sessionActivityState.filtered = filtered;
+      if (meta) {
+        meta.textContent = `${filtered.length} of ${sessionActivityState.events.length} events - reverse chronological by default.`;
+      }
+
+      if (!filtered.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center text-slate-500 py-5">${escapeHtml(t('No activity matches the current filters.'))}</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((event) => {
+        const learnerLabel = event.learner_name || event.learner_username || t('Unknown learner');
+        const learnerSub = [event.learner_username ? `@${event.learner_username}` : '', event.learner_email || ''].filter(Boolean).join(' - ');
+        const score = event.score === null || event.score === undefined ? '-' : `${Number(event.score).toFixed(0)}%`;
+        const progress = `${Number(event.progress_percent || 0).toFixed(0)}%`;
+        return `
+          <tr>
+            <td class="whitespace-nowrap">${escapeHtml(formatActivityDate(event.created_at))}</td>
+            <td>
+              <div class="font-semibold text-slate-900 dark:text-white">${escapeHtml(learnerLabel)}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-300">${escapeHtml(learnerSub)}</div>
+            </td>
+            <td class="max-w-xs">
+              <div class="truncate font-semibold" title="${escapeHtml(event.module_title || '')}">${escapeHtml(event.module_title || t('Module activity'))}</div>
+            </td>
+            <td><span class="activity-event-pill ${activityEventClass(event.event_type)}">${escapeHtml(activityEventLabel(event.event_type))}</span></td>
+            <td class="text-right font-semibold">${escapeHtml(progress)}</td>
+            <td class="text-right">${escapeHtml(score)}</td>
+            <td>${escapeHtml(event.source || '-')}</td>
+            <td>${escapeHtml(activitySuccessLabel(event))}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function populateSessionActivityTypeFilter(events) {
+      const select = document.getElementById('sessionActivityTypeFilter');
+      if (!select) return;
+      const types = Array.from(new Set((events || []).map((event) => event.event_type).filter(Boolean))).sort();
+      select.innerHTML = `<option value="">${escapeHtml(t('All events'))}</option>` + types
+        .map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(activityEventLabel(type))}</option>`)
+        .join('');
+    }
+
+    function openSessionActivity(button) {
+      if (!button) return;
+      const scriptId = button.dataset.sessionActivityScript;
+      const script = scriptId ? document.getElementById(scriptId) : null;
+      let events = [];
+      try {
+        events = script ? JSON.parse(script.textContent || '[]') : [];
+      } catch (error) {
+        console.error('Failed to parse session activity data:', error);
+        events = [];
+      }
+      sessionActivityState.events = events;
+      sessionActivityState.sortKey = 'created_at';
+      sessionActivityState.sortDirection = 'desc';
+      sessionActivityState.title = button.dataset.sessionTitle || t('Recent Activity');
+      const title = document.getElementById('sessionActivityModalTitle');
+      const search = document.getElementById('sessionActivitySearch');
+      if (title) title.textContent = sessionActivityState.title;
+      if (search) search.value = '';
+      populateSessionActivityTypeFilter(events);
+      renderSessionActivityTable();
+    }
+
+    function csvEscape(value) {
+      const text = value === null || value === undefined ? '' : String(value);
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function downloadSessionActivityCsv() {
+      const rows = sessionActivityState.filtered || [];
+      const header = ['time', 'student_name', 'username', 'email', 'module', 'event_type', 'progress_percent', 'score', 'source', 'success'];
+      const csvRows = rows.map((event) => [
+        formatActivityDate(event.created_at),
+        event.learner_name || '',
+        event.learner_username || '',
+        event.learner_email || '',
+        event.module_title || '',
+        event.event_type || '',
+        event.progress_percent ?? '',
+        event.score ?? '',
+        event.source || '',
+        activitySuccessLabel(event),
+      ]);
+      const csv = [header, ...csvRows].map((row) => row.map(csvEscape).join(',')).join('\n');
+      const slug = sessionActivityState.title.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'session-activity';
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${slug}-activity.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function initializeSessionActionRows() {
+      document.querySelectorAll('.session-action-row').forEach((row) => {
+        const buttons = Array.from(row.querySelectorAll('.session-action-btn'));
+        if (!buttons.length) return;
+
+        let resetTimer = null;
+
+        const clearReset = () => {
+          if (resetTimer) {
+            window.clearTimeout(resetTimer);
+            resetTimer = null;
+          }
+        };
+
+        const expandButton = (button) => {
+          clearReset();
+          row.classList.add('is-interacting');
+          buttons.forEach((item) => item.classList.toggle('is-action-expanded', item === button));
+        };
+
+        const scheduleIdleState = () => {
+          clearReset();
+          resetTimer = window.setTimeout(() => {
+            if (row.matches(':hover') || row.contains(document.activeElement)) return;
+            row.classList.remove('is-interacting');
+            buttons.forEach((item) => item.classList.remove('is-action-expanded'));
+          }, 180);
+        };
+
+        row.addEventListener('pointerenter', clearReset);
+        row.addEventListener('pointerleave', scheduleIdleState);
+
+        buttons.forEach((button) => {
+          button.addEventListener('pointerenter', () => expandButton(button));
+          button.addEventListener('focusin', () => expandButton(button));
+          button.addEventListener('focusout', scheduleIdleState);
+        });
+      });
     }
 
     app.addEventListener('click', async function handleDashboardCopy(event) {
@@ -119,6 +365,12 @@
       if (input) input.value = value || '';
     }
 
+    function setLtiValue(name, value) {
+      document.querySelectorAll(`[data-lti-value="${name}"]`).forEach((input) => {
+        input.value = value || '';
+      });
+    }
+
     function setText(id, value) {
       const element = document.getElementById(id);
       if (element) element.textContent = value || '';
@@ -128,18 +380,117 @@
       const input = document.getElementById(inputId);
       if (!input) return;
       const originalText = button ? button.textContent : '';
+      const originalLabel = button ? button.getAttribute('aria-label') : '';
+      const originalTitle = button ? button.getAttribute('title') : '';
+      const isIconButton = button && button.classList.contains('lti-copy-icon');
       try {
         await navigator.clipboard.writeText(input.value || '');
         if (button) {
-          button.textContent = t('Copied');
+          if (isIconButton) {
+            button.classList.add('is-copied');
+            button.setAttribute('aria-label', t('Copied'));
+            button.setAttribute('title', t('Copied'));
+          } else {
+            button.textContent = t('Copied');
+          }
           window.setTimeout(() => {
-            button.textContent = originalText;
+            if (isIconButton) {
+              button.classList.remove('is-copied');
+              if (originalLabel) button.setAttribute('aria-label', originalLabel);
+              if (originalTitle) button.setAttribute('title', originalTitle);
+            } else {
+              button.textContent = originalText;
+            }
           }, 1200);
         }
       } catch (error) {
         input.focus();
         input.select();
       }
+    }
+
+    function normalizeIssuerBase(value) {
+      const trimmed = String(value || '').trim().replace(/\/+$/, '');
+      if (!trimmed) return '';
+      if (!/^https?:\/\//i.test(trimmed)) return '';
+      try {
+        const parsed = new URL(trimmed);
+        return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`;
+      } catch (error) {
+        return trimmed;
+      }
+    }
+
+    function fillLtiEndpointDefaults(form, forcedPlatform) {
+      if (!form) return;
+      const platform = forcedPlatform || (form.elements.platform ? form.elements.platform.value : '');
+      if (forcedPlatform && form.elements.platform) {
+        form.elements.platform.value = forcedPlatform;
+        syncLtiPlatformHelp(form);
+      }
+      const issuerBase = normalizeIssuerBase(form.elements.issuer ? form.elements.issuer.value : '');
+      const status = document.getElementById('ltiPlatformRegistrationStatus');
+      if (!issuerBase || !['moodle', 'canvas'].includes(platform)) {
+        if (status && forcedPlatform) {
+          status.textContent = t('Enter the Platform ID / Issuer first, then fill endpoint defaults.');
+        }
+        return;
+      }
+
+      const defaults = platform === 'canvas'
+        ? {
+          auth_login_url: `${issuerBase}/api/lti/authorize_redirect`,
+          auth_token_url: `${issuerBase}/login/oauth2/token`,
+          key_set_url: `${issuerBase}/api/lti/security/jwks`,
+          auth_audience: `${issuerBase}/login/oauth2/token`,
+        }
+        : {
+          auth_login_url: `${issuerBase}/mod/lti/auth.php`,
+          auth_token_url: `${issuerBase}/mod/lti/token.php`,
+          key_set_url: `${issuerBase}/mod/lti/certs.php`,
+          auth_audience: `${issuerBase}/mod/lti/token.php`,
+        };
+
+      Object.entries(defaults).forEach(([name, value]) => {
+        const input = form.elements[name];
+        if (!input) return;
+        const previousBase = input.dataset.ltiDefaultBase || '';
+        const pathMarker = platform === 'canvas' ? '/' : '/mod/lti/';
+        const isPreviousDefault = previousBase && input.value.startsWith(`${previousBase}${pathMarker}`);
+        if (!input.value || input.dataset.ltiAutofilled === 'true' || isPreviousDefault) {
+          input.value = value;
+          input.dataset.ltiAutofilled = 'true';
+          input.dataset.ltiDefaultBase = issuerBase;
+        }
+      });
+
+      if (status && forcedPlatform) {
+        status.textContent = platform === 'canvas'
+          ? t('Canvas endpoint defaults filled from the issuer URL.')
+          : t('Moodle endpoint defaults filled from the issuer URL.');
+      }
+    }
+
+    function fillMoodleEndpointDefaults(form) {
+      fillLtiEndpointDefaults(form);
+    }
+
+    function syncLtiPlatformHelp(form) {
+      if (!form) return;
+      const platform = form.elements.platform ? form.elements.platform.value : 'moodle';
+      document.querySelectorAll('[data-lti-platform-help]').forEach((panel) => {
+        panel.classList.toggle('hidden', panel.dataset.ltiPlatformHelp !== platform);
+      });
+    }
+
+    function resetLtiEndpointAutofillState(form) {
+      if (!form) return;
+      ['auth_login_url', 'auth_token_url', 'key_set_url', 'auth_audience'].forEach((name) => {
+        const input = form.elements[name];
+        if (!input) return;
+        delete input.dataset.ltiAutofilled;
+        delete input.dataset.ltiDefaultBase;
+      });
     }
 
     async function openLtiSetup(button) {
@@ -159,7 +510,10 @@
       if (loading) loading.classList.remove('hidden');
       if (content) content.classList.add('hidden');
       if (status) status.textContent = '';
-      if (form) form.reset();
+      if (form) {
+        form.reset();
+        resetLtiEndpointAutofillState(form);
+      }
       modal.show();
 
       try {
@@ -172,6 +526,7 @@
         }
 
         const setup = data.setup || {};
+        const tool = setup.tool || {};
         const lti11 = setup.lti_11 || {};
         const lti13 = setup.lti_13 || {};
         setInputValue('lti11LaunchUrl', lti11.launch_url);
@@ -182,6 +537,19 @@
         setInputValue('lti13LoginUrl', lti13.initiate_login_url || lti13.oidc_login_url);
         setInputValue('lti13RedirectUri', lti13.redirect_uri);
         setInputValue('lti13JwksUrl', lti13.jwks_url || lti13.public_keyset_url);
+        setLtiValue('tool.name', tool.name);
+        setLtiValue('tool.description', tool.description);
+        setLtiValue('tool.default_launch_container', tool.default_launch_container);
+        setLtiValue('lti_11.launch_url', lti11.launch_url);
+        setLtiValue('lti_11.cartridge_xml_url', lti11.cartridge_xml_url);
+        setLtiValue('lti_11.consumer_key', lti11.consumer_key);
+        setLtiValue('lti_11.shared_secret', lti11.shared_secret);
+        setLtiValue('lti_11.custom_parameters', lti11.custom_parameters);
+        setLtiValue('lti_13.tool_url', lti13.tool_url || lti13.target_link_uri);
+        setLtiValue('lti_13.login_url', lti13.initiate_login_url || lti13.oidc_login_url);
+        setLtiValue('lti_13.redirect_uri', lti13.redirect_uri);
+        setLtiValue('lti_13.jwks_url', lti13.jwks_url || lti13.public_keyset_url);
+        setLtiValue('lti_13.custom_parameters', lti13.custom_parameters);
       } catch (error) {
         console.error('Failed to load LTI setup:', error);
         setText('ltiSetupSubtitle', error.message || t('Unable to load LTI setup details.'));
@@ -292,13 +660,90 @@
       }
     }
 
+    function showDeleteSessionConfirmation(button) {
+      const modalElement = document.getElementById('deleteSessionModal');
+      if (!modalElement) return;
+      const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+      const confirmButton = document.getElementById('confirmDeleteSessionButton');
+      const confirmInput = document.getElementById('deleteSessionConfirmText');
+      const sessionLabel = `${button.dataset.courseTitle || t('Course')} - ${button.dataset.groupName || t('Session')}`;
+      const enrollmentCount = Number.parseInt(button.dataset.enrollmentCount || '0', 10) || 0;
+
+      document.getElementById('sessionToDelete').textContent = sessionLabel;
+      document.getElementById('sessionDeleteEnrollmentCount').textContent = String(enrollmentCount);
+      if (confirmInput) {
+        confirmInput.value = '';
+        confirmInput.dataset.courseInstanceId = button.dataset.courseInstanceId || '';
+      }
+      if (confirmButton) {
+        confirmButton.disabled = true;
+        confirmButton.dataset.courseInstanceId = button.dataset.courseInstanceId || '';
+        confirmButton.innerHTML = `<i class="bi bi-trash mr-1"></i>${t('Delete Session')}`;
+      }
+      modal.show();
+      window.setTimeout(() => confirmInput?.focus(), 120);
+    }
+
+    async function deleteCourseSession(courseInstanceId) {
+      const confirmButton = document.getElementById('confirmDeleteSessionButton');
+      if (!courseInstanceId || !confirmButton) return;
+      confirmButton.disabled = true;
+      confirmButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${t('Deleting...')}`;
+
+      try {
+        const response = await fetch(
+          replaceNumericPathSegment(config.courseInstanceDeletePattern, 0, courseInstanceId),
+          {
+            method: 'POST',
+            headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+          }
+        );
+        const data = await parseJsonResponse(response);
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || t('Failed to delete course session'));
+        }
+
+        window.location.reload();
+      } catch (error) {
+        console.error('Error deleting course session:', error);
+        alert(`${t('Error:')} ${t(error.message || 'Failed to delete course session')}`);
+        confirmButton.disabled = false;
+        confirmButton.innerHTML = `<i class="bi bi-trash mr-1"></i>${t('Delete Session')}`;
+      }
+    }
+
+    function updateAnonymousCapacityHint(limits) {
+      const countInput = document.getElementById('anonymousStudentCount');
+      const hint = document.getElementById('anonymousCapacityHint');
+      const form = document.getElementById('anonymousEnrollmentForm');
+      const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+      const maxStudents = Number.parseInt(limits && limits.max_students, 10) || 500;
+      const remaining = Math.max(0, Number.parseInt(limits && limits.remaining_students, 10) || 0);
+      if (countInput) {
+        countInput.max = String(Math.max(1, remaining));
+        if (Number.parseInt(countInput.value, 10) > remaining && remaining > 0) {
+          countInput.value = String(remaining);
+        }
+        countInput.disabled = remaining <= 0;
+      }
+      if (submitButton) {
+        submitButton.disabled = remaining <= 0;
+      }
+      if (hint) {
+        hint.textContent = remaining > 0
+          ? t(`This session has ${remaining} of ${maxStudents} student slots remaining.`)
+          : t(`This session is at its ${maxStudents}-student limit.`);
+      }
+    }
+
     async function loadEnrollments(courseInstanceId) {
       const tableBody = document.getElementById('enrollmentTableBody');
       if (!tableBody) return;
 
       tableBody.innerHTML = `
         <tr>
-          <td colspan="4" class="text-center text-gray-400 py-4">
+          <td colspan="5" class="text-center text-gray-400 py-4">
             <span class="spinner-border mr-2"></span>${t('Loading...')}
           </td>
         </tr>
@@ -312,12 +757,20 @@
           throw new Error(data.error || `${t('Failed to load enrollments')} (${response.status})`);
         }
 
+        updateAnonymousCapacityHint(data.limits);
         tableBody.innerHTML = '';
         if (data.enrollments && data.enrollments.length) {
           data.enrollments.forEach((enrollment) => {
             const row = document.createElement('tr');
+            const studentName = enrollment.student.full_name || enrollment.student.username || t('Student');
+            const emailLabel = enrollment.student.email || t('No email on file');
+            const emailClass = enrollment.student.email ? '' : 'text-slate-400 italic';
             row.innerHTML = `
-              <td>${enrollment.student.email}</td>
+              <td>
+                <div class="font-semibold">${escapeHtml(studentName)}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(enrollment.student.username || '')}</div>
+              </td>
+              <td><span class="${emailClass}">${escapeHtml(emailLabel)}</span></td>
               <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules}</td>
               <td class="text-right">${enrollment.progress.overall_score.toFixed(2)}%</td>
               <td class="text-right">
@@ -332,7 +785,7 @@
         } else {
           tableBody.innerHTML = `
             <tr>
-              <td colspan="4" class="text-center text-gray-500 py-4">
+              <td colspan="5" class="text-center text-gray-500 py-4">
                 <em>${t('No students are currently enrolled in this course session.')}</em>
               </td>
             </tr>
@@ -342,7 +795,7 @@
         console.error('Error loading enrollments:', error);
         tableBody.innerHTML = `
           <tr>
-            <td colspan="4" class="text-center text-red-500 py-4">
+            <td colspan="5" class="text-center text-red-500 py-4">
               <em>${t('Error loading enrollments. Please try again.')}</em>
             </td>
           </tr>
@@ -506,6 +959,117 @@
       });
     }
 
+    function formatGeneratedRoster(accounts) {
+      const header = ['username', 'temporary_password'];
+      const rows = (accounts || []).map((account) => [
+        account.username || '',
+        account.password || '',
+      ]);
+      return [header, ...rows]
+        .map((row) => row.map((value) => String(value).replace(/\s+/g, ' ').trim()).join('\t'))
+        .join('\n');
+    }
+
+    const anonymousEnrollmentForm = document.getElementById('anonymousEnrollmentForm');
+    if (anonymousEnrollmentForm) {
+      anonymousEnrollmentForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const courseInstanceId = document.getElementById('currentCourseInstanceId').value;
+        const countInput = document.getElementById('anonymousStudentCount');
+        const prefixInput = document.getElementById('anonymousUsernamePrefix');
+        const passwordMatchesUsernameInput = document.getElementById('anonymousPasswordMatchesUsername');
+        const rosterOutput = document.getElementById('anonymousRosterOutput');
+        const rosterText = document.getElementById('anonymousRosterText');
+        const count = Number.parseInt(countInput.value, 10);
+        const maxCount = Number.parseInt(countInput.max, 10) || 500;
+
+        if (!Number.isInteger(count) || count < 1 || count > maxCount) {
+          alert(t(`Generate between 1 and ${maxCount} accounts at a time.`));
+          return;
+        }
+
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${t('Generating...')}`;
+
+        try {
+          const response = await fetch(
+            replacePattern(config.generateAnonymousStudentsPattern, '__COURSE_INSTANCE_ID__', courseInstanceId),
+            {
+              method: 'POST',
+              headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({
+                count,
+                prefix: prefixInput.value.trim() || 'anon',
+                password_mode: passwordMatchesUsernameInput && passwordMatchesUsernameInput.checked ? 'username' : 'random',
+              }),
+            }
+          );
+          const data = await parseJsonResponse(response);
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || t('Failed to generate anonymous accounts'));
+          }
+
+          if (rosterText) {
+            rosterText.value = formatGeneratedRoster(data.accounts || []);
+          }
+          if (rosterOutput) {
+            rosterOutput.classList.remove('hidden');
+          }
+          await loadEnrollments(courseInstanceId);
+        } catch (error) {
+          console.error('Error generating anonymous accounts:', error);
+          alert(t(error.message || 'An error occurred while generating anonymous accounts.'));
+        } finally {
+          submitButton.disabled = Boolean(countInput && countInput.disabled);
+          submitButton.innerHTML = `<i class="bi bi-person-badge mr-1"></i>${t('Generate Accounts')}`;
+        }
+      });
+    }
+
+    const copyAnonymousRosterButton = document.getElementById('copyAnonymousRosterButton');
+    if (copyAnonymousRosterButton) {
+      copyAnonymousRosterButton.addEventListener('click', async function () {
+        const rosterText = document.getElementById('anonymousRosterText');
+        if (!rosterText || !rosterText.value.trim()) return;
+        const originalText = this.innerHTML;
+        try {
+          await navigator.clipboard.writeText(rosterText.value);
+          this.innerHTML = `<i class="bi bi-check2 mr-1"></i>${t('Copied')}`;
+          window.setTimeout(() => {
+            this.innerHTML = originalText;
+          }, 1400);
+        } catch (_error) {
+          rosterText.focus();
+          rosterText.select();
+          document.execCommand('copy');
+        }
+      });
+    }
+
+    const downloadAnonymousRosterButton = document.getElementById('downloadAnonymousRosterButton');
+    if (downloadAnonymousRosterButton) {
+      downloadAnonymousRosterButton.addEventListener('click', function () {
+        const rosterText = document.getElementById('anonymousRosterText');
+        if (!rosterText || !rosterText.value.trim()) return;
+        const sessionName = (document.getElementById('manageEnrollmentModalLabel')?.textContent || 'anonymous-roster')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80) || 'anonymous-roster';
+        const blob = new Blob([rosterText.value], { type: 'text/tab-separated-values;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${sessionName}-logins.tsv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      });
+    }
+
     const manageEnrollmentModal = document.getElementById('manageEnrollmentModal');
     if (manageEnrollmentModal) {
       manageEnrollmentModal.addEventListener('show.bs.modal', function (event) {
@@ -513,9 +1077,19 @@
         document.getElementById('manageEnrollmentModalLabel').textContent =
           `${button.getAttribute('data-course-title')} - ${button.getAttribute('data-group-name')}`;
         document.getElementById('currentCourseInstanceId').value = button.getAttribute('data-course-instance-id');
+        const rosterOutput = document.getElementById('anonymousRosterOutput');
+        const rosterText = document.getElementById('anonymousRosterText');
+        if (rosterOutput) rosterOutput.classList.add('hidden');
+        if (rosterText) rosterText.value = '';
+        const prefixInput = document.getElementById('anonymousUsernamePrefix');
+        const passwordMatchesUsernameInput = document.getElementById('anonymousPasswordMatchesUsername');
+        if (prefixInput) prefixInput.value = 'anon';
+        if (passwordMatchesUsernameInput) passwordMatchesUsernameInput.checked = true;
         loadEnrollments(button.getAttribute('data-course-instance-id'));
       });
     }
+
+    initializeSessionActionRows();
 
     document.querySelectorAll('.new-session-btn').forEach((button) => {
       button.addEventListener('click', function () {
@@ -529,9 +1103,50 @@
       });
     });
 
+    document.querySelectorAll('.delete-session-btn').forEach((button) => {
+      button.addEventListener('click', function () {
+        showDeleteSessionConfirmation(this);
+      });
+    });
+
+    document.getElementById('deleteSessionConfirmText')?.addEventListener('input', function () {
+      const confirmButton = document.getElementById('confirmDeleteSessionButton');
+      if (confirmButton) {
+        confirmButton.disabled = this.value.trim() !== 'DELETE SESSION';
+      }
+    });
+
+    document.getElementById('confirmDeleteSessionButton')?.addEventListener('click', function () {
+      const confirmInput = document.getElementById('deleteSessionConfirmText');
+      if (confirmInput?.value.trim() !== 'DELETE SESSION') return;
+      deleteCourseSession(this.dataset.courseInstanceId || confirmInput.dataset.courseInstanceId);
+    });
+
     document.querySelectorAll('.copy-lti-url').forEach((button) => {
       button.addEventListener('click', function () {
         openLtiSetup(this);
+      });
+    });
+
+    document.querySelectorAll('[data-session-activity-button]').forEach((button) => {
+      button.addEventListener('click', function () {
+        openSessionActivity(this);
+      });
+    });
+
+    document.getElementById('sessionActivitySearch')?.addEventListener('input', debounce(renderSessionActivityTable, 120));
+    document.getElementById('sessionActivityTypeFilter')?.addEventListener('change', renderSessionActivityTable);
+    document.getElementById('downloadSessionActivityButton')?.addEventListener('click', downloadSessionActivityCsv);
+    document.querySelectorAll('[data-activity-sort]').forEach((button) => {
+      button.addEventListener('click', function () {
+        const key = this.dataset.activitySort;
+        if (sessionActivityState.sortKey === key) {
+          sessionActivityState.sortDirection = sessionActivityState.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          sessionActivityState.sortKey = key;
+          sessionActivityState.sortDirection = key === 'created_at' ? 'desc' : 'asc';
+        }
+        renderSessionActivityTable();
       });
     });
 
@@ -543,8 +1158,38 @@
 
     const ltiPlatformRegistrationForm = document.getElementById('ltiPlatformRegistrationForm');
     if (ltiPlatformRegistrationForm) {
+      const issuerInput = ltiPlatformRegistrationForm.elements.issuer;
+      const platformInput = ltiPlatformRegistrationForm.elements.platform;
+      if (issuerInput) {
+        issuerInput.addEventListener('input', debounce(() => {
+          fillMoodleEndpointDefaults(ltiPlatformRegistrationForm);
+        }, 250));
+        issuerInput.addEventListener('blur', () => {
+          fillMoodleEndpointDefaults(ltiPlatformRegistrationForm);
+        });
+      }
+      if (platformInput) {
+        platformInput.addEventListener('change', () => {
+          syncLtiPlatformHelp(ltiPlatformRegistrationForm);
+          fillLtiEndpointDefaults(ltiPlatformRegistrationForm);
+        });
+      }
+      document.querySelectorAll('[data-lti-fill-defaults]').forEach((button) => {
+        button.addEventListener('click', () => {
+          fillLtiEndpointDefaults(ltiPlatformRegistrationForm, button.dataset.ltiFillDefaults);
+        });
+      });
+      ['auth_login_url', 'auth_token_url', 'key_set_url', 'auth_audience'].forEach((name) => {
+        const input = ltiPlatformRegistrationForm.elements[name];
+        if (!input) return;
+        input.addEventListener('input', () => {
+          input.dataset.ltiAutofilled = 'false';
+        });
+      });
+      syncLtiPlatformHelp(ltiPlatformRegistrationForm);
       ltiPlatformRegistrationForm.addEventListener('submit', function (event) {
         event.preventDefault();
+        fillLtiEndpointDefaults(this);
         saveLtiPlatformRegistration(this);
       });
     }

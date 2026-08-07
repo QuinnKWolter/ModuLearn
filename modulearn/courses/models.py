@@ -62,15 +62,21 @@ class CourseInstance(models.Model):
         """Create a new instance of this course with a different group name"""
         if CourseInstance.objects.filter(course=self.course, group_name=new_group_name).exists():
             raise ValueError("A course session with this group name already exists")
+
+        from modulearn.learning.services.limits import ensure_course_session_capacity
+
+        ensure_course_session_capacity(self.course)
         
         new_instance = CourseInstance.objects.create(
             course=self.course,
             group_name=new_group_name
         )
         
-        # Copy instructors
-        for instructor in self.instructors.all():
-            new_instance.instructors.add(instructor)
+        # Copy session instructors and include any course-level co-instructors.
+        instructor_ids = set(self.instructors.values_list("id", flat=True))
+        instructor_ids.update(self.course.instructors.values_list("id", flat=True))
+        if instructor_ids:
+            new_instance.instructors.add(*User.objects.filter(id__in=instructor_ids))
         
         return new_instance
 
@@ -105,6 +111,7 @@ class Module(models.Model):
     MODULE_TYPE_SPLICE_SMART_CONTENT = 'splice_smart_content'
     MODULE_TYPE_FILE = 'file'
     MODULE_TYPE_FORM = 'form'
+    # Legacy study-specific form aliases remain valid for existing databases.
     MODULE_TYPE_STUDY_CONSENT = 'study_consent'
     MODULE_TYPE_STUDY_INSTRUCTIONS = 'study_instructions'
     MODULE_TYPE_STUDY_PRETEST = 'study_pretest'
@@ -113,7 +120,7 @@ class Module(models.Model):
     MODULE_TYPE_CHOICES = [
         (MODULE_TYPE_IMPORTED, 'Imported Activity'),
         (MODULE_TYPE_EXTERNAL_LINK, 'External Link'),
-        (MODULE_TYPE_SPLICE_SMART_CONTENT, 'SPLICE Smart Learning Content'),
+        (MODULE_TYPE_SPLICE_SMART_CONTENT, 'Smart Learning Content'),
         (MODULE_TYPE_FILE, 'Uploaded File'),
         (MODULE_TYPE_FORM, 'Form / Survey'),
         (MODULE_TYPE_STUDY_CONSENT, 'Study Consent'),
@@ -121,6 +128,12 @@ class Module(models.Model):
         (MODULE_TYPE_STUDY_PRETEST, 'Study Pretest'),
         (MODULE_TYPE_STUDY_POSTTEST, 'Study Posttest'),
         (MODULE_TYPE_STUDY_DEBRIEF, 'Study Debrief'),
+    ]
+    MANUAL_MODULE_TYPE_CHOICES = [
+        (MODULE_TYPE_EXTERNAL_LINK, 'External Link'),
+        (MODULE_TYPE_SPLICE_SMART_CONTENT, 'Smart Learning Content'),
+        (MODULE_TYPE_FILE, 'Uploaded File'),
+        (MODULE_TYPE_FORM, 'Quiz / Form'),
     ]
     FORM_LIKE_TYPES = {
         MODULE_TYPE_FORM,
@@ -387,6 +400,9 @@ class ModuleProgress(models.Model):
             try:
                 enrollment = Enrollment.objects.get(student=user, course_instance=course_instance)
             except Enrollment.DoesNotExist:
+                from modulearn.learning.services.limits import ensure_session_student_capacity
+
+                ensure_session_student_capacity(course_instance)
                 enrollment = Enrollment.objects.create(student=user, course_instance=course_instance)
             
             module_progress, created = cls.objects.get_or_create(

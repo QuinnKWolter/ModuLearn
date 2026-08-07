@@ -1,0 +1,195 @@
+{% if adaptive_branching_enabled %}
+<div id="adaptiveBranchingFlowModal" class="modal-overlay hidden fixed inset-0 z-[80] items-center justify-center bg-black/60 p-4" aria-hidden="true">
+  <div class="modal-backdrop-close absolute inset-0"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl cfg-flow-modal max-h-[92vh] flex flex-col overflow-hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-center gap-3">
+        <span class="cfg-create-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
+        <div>
+          <div class="stat-kicker">Adaptive Branching</div>
+          <h2 class="text-xl font-bold mt-1 mb-0">Flow Mapper</h2>
+        </div>
+      </div>
+      <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+    </div>
+
+    <form method="post" class="flex-1 min-h-0 overflow-y-auto" data-flow-mapper>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_branching">
+
+      <div class="cfg-flow-body">
+        <section class="cfg-flow-brief">
+          <div>
+            <div class="stat-kicker">Current Map</div>
+            <h3 class="font-bold text-slate-900 dark:text-white mt-1 mb-0">{{ branch_rules|length }} saved connection{{ branch_rules|length|pluralize }}</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
+              Click a module once to set the source, then click another to set the unlock target. Save to make the target visible and locked for learner-specific access.
+            </p>
+          </div>
+          <div class="cfg-flow-stats">
+            <span><strong>{{ branch_modules|length }}</strong> modules</span>
+            {% if research_conditions %}
+              <span><strong>{{ research_conditions|length }}</strong> conditions</span>
+            {% else %}
+              <span><strong>Any</strong> participants</span>
+            {% endif %}
+          </div>
+        </section>
+
+        <section class="cfg-flow-map-shell" data-flow-map-shell aria-label="Adaptive branching module map">
+          <div class="cfg-flow-map" data-flow-map>
+            <svg class="cfg-flow-lines" data-flow-lines aria-hidden="true"></svg>
+            <div class="cfg-flow-units">
+              {% for group in unit_groups %}
+                <section class="cfg-flow-unit">
+                  <header>
+                    <span class="stat-kicker">Unit {{ forloop.counter }}</span>
+                    <strong>{{ group.unit.title }}</strong>
+                  </header>
+                  <div class="cfg-flow-node-list">
+                    {% for module in group.modules %}
+                      <button
+                        type="button"
+                        class="cfg-flow-node {% if module.is_locked or module.unlock_rule_type != 'none' %}is-locked{% endif %} {% if not module.is_visible %}is-hidden{% endif %}"
+                        data-flow-module-node
+                        data-flow-node-id="{{ module.id }}"
+                        data-flow-node-title="{{ module.title }}"
+                      >
+                        <span class="cfg-flow-node-icon" aria-hidden="true">
+                          <i class="bi bi-file-earmark-code"></i>
+                        </span>
+                        <span class="min-w-0">
+                          <strong>{{ module.title }}</strong>
+                          <small>{{ module.display_type_label }}</small>
+                        </span>
+                        <span class="cfg-flow-node-flags">
+                          {% if module.is_locked or module.unlock_rule_type != 'none' %}
+                            <i class="fa-solid fa-lock" title="Locked" aria-label="Locked"></i>
+                          {% endif %}
+                          {% if not module.is_visible %}
+                            <i class="fa-solid fa-eye-slash" title="Hidden" aria-label="Hidden"></i>
+                          {% endif %}
+                        </span>
+                      </button>
+                    {% empty %}
+                      <div class="cfg-tree-empty">No modules yet.</div>
+                    {% endfor %}
+                  </div>
+                </section>
+              {% empty %}
+                <div class="empty-state">Add units and modules before mapping adaptive branches.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+
+        <section class="cfg-flow-composer">
+          <div>
+            <div class="stat-kicker">Add Connection</div>
+            <h3 class="font-bold text-slate-900 dark:text-white mt-1 mb-0">Conditional unlock</h3>
+          </div>
+          <div class="cfg-branch-grid">
+            <label class="text-sm font-semibold">From Module
+              <select class="form-control mt-1" name="branch_source_module" data-flow-source-select>
+                <option value="">Choose source</option>
+                {% for module in branch_modules %}
+                  <option value="{{ module.id }}">{{ module.unit.title }} - {{ module.title }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="text-sm font-semibold">Condition
+              <select class="form-control mt-1" name="branch_condition_type" data-branch-condition data-flow-condition-select>
+                <option value="">Choose condition</option>
+                {% for value,label in branch_condition_types %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="text-sm font-semibold">Unlock Module
+              <select class="form-control mt-1" name="branch_target_module" data-flow-target-select>
+                <option value="">Choose target</option>
+                {% for module in branch_modules %}
+                  <option value="{{ module.id }}">{{ module.unit.title }} - {{ module.title }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="text-sm font-semibold">Participants
+              <select class="form-control mt-1" name="branch_required_study_condition">
+                <option value="">Any condition</option>
+                {% for condition in research_conditions %}
+                  <option value="{{ condition }}">{{ condition }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="text-sm font-semibold">Score
+              <input class="form-control mt-1" type="number" name="branch_threshold" min="0" max="100" step="1" placeholder="N/A" data-branch-threshold disabled>
+            </label>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-300">
+            Correct/incorrect rules use the latest activity outcome. Score rules use a 0-100 threshold; Score Below 100 catches non-perfect submissions.
+          </p>
+        </section>
+
+        <section class="cfg-flow-rules" aria-label="Saved adaptive branching connections">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="stat-kicker">Saved Connections</div>
+              <h3 class="font-bold text-slate-900 dark:text-white mt-1 mb-0">Edit priority, participant scope, or delete a connection</h3>
+            </div>
+          </div>
+          <div class="cfg-branch-rule-list">
+            {% for rule in branch_rules %}
+              <article
+                class="cfg-branch-rule {% if not rule.active %}is-muted{% endif %}"
+                data-flow-edge
+                data-source="{{ rule.source_module.id }}"
+                data-target="{{ rule.target_module.id }}"
+                data-active="{% if rule.active %}true{% else %}false{% endif %}"
+                data-label="{{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}{% if rule.required_study_condition %} / {{ rule.required_study_condition }}{% endif %}"
+              >
+                <div class="cfg-branch-path">
+                  <strong>{{ rule.source_module.unit.title }} - {{ rule.source_module.title }}</strong>
+                  <span class="text-slate-500 dark:text-slate-400">if</span>
+                  <span class="badge badge-primary">{{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}</span>
+                  {% if rule.required_study_condition %}
+                    <span class="badge bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200">{{ rule.required_study_condition }}</span>
+                  {% endif %}
+                  <span class="text-slate-500 dark:text-slate-400">unlock</span>
+                  <strong>{{ rule.target_module.unit.title }} - {{ rule.target_module.title }}</strong>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <label class="cfg-toggle">
+                    <input type="checkbox" name="branch_rule_{{ rule.id }}_active" {% if rule.active %}checked{% endif %}>
+                    Active
+                  </label>
+                  <select class="form-control form-control-sm" name="branch_rule_{{ rule.id }}_required_study_condition" style="width: 10.5rem;" aria-label="Participant condition">
+                    <option value="">Any condition</option>
+                    {% for condition in research_conditions %}
+                      <option value="{{ condition }}" {% if rule.required_study_condition == condition %}selected{% endif %}>{{ condition }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="number" name="branch_rule_{{ rule.id }}_priority" value="{{ rule.priority }}" class="form-control" style="width: 4.75rem;" aria-label="Rule priority">
+                  <label class="cfg-toggle">
+                    <input type="checkbox" name="branch_rule_{{ rule.id }}_delete">
+                    Delete
+                  </label>
+                </div>
+              </article>
+            {% empty %}
+              <div class="empty-state">No branching rules have been created yet.</div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <div class="cfg-wizard-footer">
+        <span class="text-xs text-slate-500 dark:text-slate-300">Branch targets become visible and locked for branch-based access after saving.</span>
+        <div class="cfg-wizard-footer-actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Flow Map</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}

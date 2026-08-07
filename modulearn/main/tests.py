@@ -35,7 +35,8 @@ class MainPageTests(TestCase):
     def test_about_page_renders(self):
         response = self.client.get(reverse('main:about'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'ModuLearn is a Django-based portal')
+        self.assertContains(response, 'ModuLearn is a small, open portal')
+        self.assertContains(response, 'The structure around the learning tool.')
 
     def test_contact_page_renders(self):
         response = self.client.get(reverse('main:contact'))

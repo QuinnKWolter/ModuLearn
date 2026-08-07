@@ -66,6 +66,23 @@ class AccountPageTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('email', form.errors)
 
+    def test_student_signup_allows_blank_email(self):
+        form = SignUpForm(data={
+            'username': 'no-email-learner',
+            'email': '',
+            'full_name': 'No Email Learner',
+            'password1': 'safe-pass-456',
+            'password2': 'safe-pass-456',
+            'role': 'student',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save(commit=False)
+        user.full_name = form.cleaned_data['full_name']
+        user.is_student = True
+        user.save()
+        self.assertEqual(user.email, '')
+
     def test_profile_rejects_case_insensitive_duplicate_email(self):
         other = User.objects.create_user(
             username='other-learner',
@@ -80,6 +97,17 @@ class AccountPageTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn('email', form.errors)
+
+    def test_profile_allows_blank_email(self):
+        form = ProfileEditForm(
+            instance=self.user,
+            data={'email': '', 'full_name': 'Learner Without Email'},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        self.assertEqual(user.email, '')
+        self.assertEqual(user.full_name, 'Learner Without Email')
 
     def test_database_rejects_case_insensitive_duplicate_email(self):
         with self.assertRaises(IntegrityError), transaction.atomic():

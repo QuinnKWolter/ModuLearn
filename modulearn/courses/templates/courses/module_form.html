@@ -2,6 +2,10 @@
 
 {% block title %}{{ module.title }} - ModuLearn{% endblock %}
 
+{% block breadcrumbs_wrapper %}
+  {% if not participant_mode %}{{ block.super }}{% endif %}
+{% endblock %}
+
 {% block breadcrumbs %}
   <li><a href="{% url 'courses:course_detail' course_instance.id %}">{{ course_instance.course.title }}</a></li>
   <li>/</li>
@@ -141,10 +145,12 @@
       <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Submitting this form marks the module complete and can unlock downstream content.</p>
       <div class="mt-5 grid gap-2">
         {% include 'courses/components/next_module_button.html' with button_class='w-full justify-center' %}
-        <a href="{% if participant_mode %}{% url 'recruitment:sessions' %}{% else %}{% url 'courses:course_detail' course_instance.id %}{% endif %}" class="btn btn-outline-secondary w-full justify-center">
+        {% if not participant_mode %}
+        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary w-full justify-center">
           <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          {% if participant_mode %}Study Sessions{% else %}Back To Course{% endif %}
+          Back To Course
         </a>
+        {% endif %}
       </div>
     </aside>
   </div>

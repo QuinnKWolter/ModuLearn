@@ -50,6 +50,15 @@ class RecruitmentEntryFlowTests(TestCase):
         StudyCondition.objects.create(study=study, label="treatment", name="Treatment", order=20)
         return study
 
+    def assert_entry_redirects_to_resume(self, response, source):
+        session = ParticipantSession.objects.get(recruitment_source=source)
+        self.assertRedirects(
+            response,
+            reverse("recruitment:resume_session", args=[session.uuid]),
+            fetch_redirect_response=False,
+        )
+        return session
+
     def test_prolific_entry_provisions_participant_session(self):
         study = self.make_study()
         source = RecruitmentSource.objects.create(
@@ -64,8 +73,7 @@ class RecruitmentEntryFlowTests(TestCase):
             "SESSION_ID": "cccccccccccccccccccccccc",
         })
 
-        self.assertRedirects(response, reverse("recruitment:sessions"))
-        session = ParticipantSession.objects.get(recruitment_source=source)
+        session = self.assert_entry_redirects_to_resume(response, source)
         self.assertEqual(session.external_pid, "5a9d64f5f6dfdd0001eaa73d")
         self.assertEqual(session.external_session_id, "cccccccccccccccccccccccc")
         self.assertEqual(session.status, ParticipantSession.STATUS_IN_PROGRESS)
@@ -104,8 +112,7 @@ class RecruitmentEntryFlowTests(TestCase):
             "SESSION_ID": "testsession01",
         })
 
-        self.assertRedirects(response, reverse("recruitment:sessions"))
-        session = ParticipantSession.objects.get(recruitment_source=source)
+        session = self.assert_entry_redirects_to_resume(response, source)
         self.assertEqual(session.external_pid, "test-participant-01")
         self.assertEqual(session.external_session_id, "testsession01")
 
@@ -125,7 +132,7 @@ class RecruitmentEntryFlowTests(TestCase):
                 "SESSION_ID": "demosession02",
             })
 
-        self.assertRedirects(response, reverse("recruitment:sessions"))
+        self.assert_entry_redirects_to_resume(response, RecruitmentSource.objects.get(study=study))
         self.assertFalse(mocked_get.called)
         self.assertTrue(ParticipantSession.objects.filter(
             external_pid="demo-participant-02",
@@ -146,8 +153,7 @@ class RecruitmentEntryFlowTests(TestCase):
             "SESSION_ID": "0jfggbb63i5q",
         })
 
-        self.assertRedirects(response, reverse("recruitment:sessions"))
-        session = ParticipantSession.objects.get(recruitment_source=source)
+        session = self.assert_entry_redirects_to_resume(response, source)
         self.assertEqual(session.external_session_id, "0jfggbb63i5q")
         self.assertEqual(session.external_study_id, "6a584b56ace9629c9093ace6")
 
@@ -164,7 +170,7 @@ class RecruitmentEntryFlowTests(TestCase):
             "SESSION_ID": "0jfggbb63i5q",
         })
 
-        self.assertRedirects(response, reverse("recruitment:sessions"))
+        self.assert_entry_redirects_to_resume(response, source)
         source.refresh_from_db()
         self.assertEqual(source.prolific_study_id, "6a584b56ace9629c9093ace6")
 
@@ -405,6 +411,12 @@ class RecruitmentEntryFlowTests(TestCase):
         self.assertEqual([module.title for module in units[0].modules.all()], ["Consent", "Instructions", "Pretest"])
         self.assertEqual([module.title for module in units[1].modules.all()], ["Main Study Task"])
         self.assertEqual([module.title for module in units[2].modules.all()], ["Posttest", "Debrief"])
+        generated_modules = [module for unit in units for module in unit.modules.all()]
+        self.assertTrue(all(module.module_type == Module.MODULE_TYPE_FORM for module in generated_modules))
+        self.assertEqual(
+            [module.content_data.get("study_step") for module in generated_modules],
+            ["consent", "instructions", "pretest", "main_task", "posttest", "debrief"],
+        )
 
     def test_instructor_can_edit_default_study_form_modules(self):
         study = create_study_for_instructor(
@@ -473,7 +485,9 @@ class RecruitmentEntryFlowTests(TestCase):
         self.assertEqual(consent_question.options, ["Yes", "No"])
         self.assertTrue(consent.form.questions.filter(prompt="Participant initials").exists())
 
-    def test_anonymous_participant_profile_and_dashboard_redirect_to_study_sessions(self):
+    def test_anonymous_participant_profile_and_dashboard_redirect_to_resume(self):
+        unit = self.course.units.create(title="Unit 1", order=10)
+        unit.modules.create(title="First Module", order=10)
         source = RecruitmentSource.objects.create(
             course_instance=self.instance,
             platform=RecruitmentSource.PLATFORM_PROLIFIC,
@@ -483,11 +497,12 @@ class RecruitmentEntryFlowTests(TestCase):
             "STUDY_ID": "bbbbbbbbbbbbbbbbbbbbbbbb",
             "SESSION_ID": "cccccccccccccccccccccccc",
         })
-        sessions_url = reverse("recruitment:sessions")
+        session = ParticipantSession.objects.get(recruitment_source=source)
+        resume_url = reverse("recruitment:resume_session", args=[session.uuid])
 
-        self.assertRedirects(self.client.get(reverse("accounts:profile")), sessions_url)
-        self.assertRedirects(self.client.get(reverse("dashboard:student_dashboard")), sessions_url)
-        self.assertRedirects(self.client.get(reverse("courses:course_detail", args=[self.instance.id])), sessions_url)
+        self.assertRedirects(self.client.get(reverse("accounts:profile")), resume_url, fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse("dashboard:student_dashboard")), resume_url, fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse("courses:course_detail", args=[self.instance.id])), resume_url, fetch_redirect_response=False)
 
     def test_anonymous_participant_cannot_open_other_course_session(self):
         other_course = Course.objects.create(id="other-research", title="Other Research")

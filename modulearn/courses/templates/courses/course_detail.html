@@ -178,6 +178,222 @@
     background: rgba(71, 85, 105, 0.55);
   }
 
+  .course-view-switch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.65rem;
+    background: rgba(248, 250, 252, 0.78);
+    padding: 0.75rem;
+  }
+
+  .dark .course-view-switch {
+    border-color: rgba(71, 85, 105, 0.62);
+    background: rgba(15, 23, 42, 0.46);
+  }
+
+  .course-view-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.25rem;
+  }
+
+  .dark .course-view-tabs {
+    border-color: rgba(71, 85, 105, 0.7);
+    background: rgba(15, 23, 42, 0.68);
+  }
+
+  .course-view-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    border: 0;
+    border-radius: 999px;
+    padding: 0.48rem 0.8rem;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 800;
+    transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  }
+
+  .course-view-tab:hover,
+  .course-view-tab:focus-visible {
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  .course-view-tab.is-active {
+    color: #fff;
+    background: #2563eb;
+    pointer-events: none;
+  }
+
+  .course-view-panel[hidden] {
+    display: none !important;
+  }
+
+  .provider-grid-shell {
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .dark .provider-grid-shell {
+    border-color: rgba(71, 85, 105, 0.64);
+    background: rgba(15, 23, 42, 0.46);
+  }
+
+  .provider-grid-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .provider-grid-mark {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    color: #fff;
+    background: linear-gradient(135deg, #2563eb, #0f766e);
+  }
+
+  .provider-grid-table-wrap {
+    overflow-x: auto;
+  }
+
+  .provider-grid-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .provider-grid-table th,
+  .provider-grid-table td {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    border-right: 1px solid rgba(148, 163, 184, 0.14);
+    padding: 0.55rem;
+    vertical-align: middle;
+  }
+
+  .provider-grid-table th:last-child,
+  .provider-grid-table td:last-child {
+    border-right: 0;
+  }
+
+  .provider-grid-table tr:last-child th,
+  .provider-grid-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .provider-grid-table thead th {
+    background: rgba(248, 250, 252, 0.86);
+    color: #334155;
+    font-size: 0.78rem;
+  }
+
+  .dark .provider-grid-table thead th {
+    background: rgba(30, 41, 59, 0.76);
+    color: #e2e8f0;
+  }
+
+  .provider-grid-unit {
+    width: 15.5rem;
+    min-width: 15.5rem;
+    background: rgba(248, 250, 252, 0.62);
+  }
+
+  .dark .provider-grid-unit {
+    background: rgba(15, 23, 42, 0.55);
+  }
+
+  .provider-grid-cell {
+    width: 100%;
+    min-height: 5.2rem;
+    display: grid;
+    gap: 0.28rem;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 0.52rem;
+    background: rgba(248, 250, 252, 0.86);
+    color: #334155;
+    text-align: center;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .provider-grid-cell:not(:disabled):hover,
+  .provider-grid-cell:not(:disabled):focus-visible {
+    border-color: rgba(37, 99, 235, 0.36);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .provider-grid-cell:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  .provider-grid-cell.is-complete {
+    background: rgba(220, 252, 231, 0.86);
+    color: #166534;
+  }
+
+  .provider-grid-cell.is-active {
+    background: rgba(224, 242, 254, 0.86);
+    color: #075985;
+  }
+
+  .provider-grid-cell.is-locked {
+    background: rgba(254, 243, 199, 0.9);
+    color: #92400e;
+  }
+
+  .provider-grid-cell.is-empty {
+    background: rgba(226, 232, 240, 0.38);
+    color: #94a3b8;
+  }
+
+  .provider-grid-pct {
+    font-size: 1.35rem;
+    line-height: 1;
+    font-weight: 900;
+  }
+
+  .provider-grid-counts {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.42rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .provider-grid-counts span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.18rem;
+  }
+
+  .provider-modal-list {
+    display: grid;
+    gap: 0.3rem;
+  }
+
   @media (max-width: 720px) {
     .course-unit-summary {
       grid-template-columns: auto minmax(0, 1fr);
@@ -200,6 +416,16 @@
     .course-module-row .btn {
       grid-column: 2;
       justify-self: start;
+    }
+
+    .course-view-switch {
+      align-items: stretch;
+    }
+
+    .course-view-tabs,
+    .course-view-tab {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>
@@ -279,7 +505,27 @@
       </div>
 
       {% if is_instructor or is_enrolled %}
-        <div class="course-unit-list">
+        {% if course_plugins.masterygrids_style and provider_grid.has_columns %}
+          <div class="course-view-switch">
+            <div>
+              <div class="stat-kicker">Course View</div>
+              <div class="text-sm font-semibold text-slate-600 dark:text-slate-300">Switch between the module sequence and a provider-grouped grid.</div>
+            </div>
+            <div class="course-view-tabs" role="group" aria-label="Course view mode">
+              <button type="button" class="course-view-tab is-active" data-course-view-toggle="sequence" aria-pressed="true">
+                <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                Module Sequence
+              </button>
+              <button type="button" class="course-view-tab" data-course-view-toggle="provider-grid" aria-pressed="false">
+                <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+                Provider Grid
+              </button>
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="course-view-panel" data-course-view-panel="sequence">
+          <div class="course-unit-list">
           {% for card in unit_cards %}
             <details class="course-unit" {% if card.is_expanded %}open{% endif %}>
               <summary class="course-unit-summary">
@@ -356,7 +602,156 @@
           {% empty %}
             <div class="empty-state">No units are available for this course yet.</div>
           {% endfor %}
+          </div>
         </div>
+
+        {% if course_plugins.masterygrids_style and provider_grid.has_columns %}
+          <div class="course-view-panel" data-course-view-panel="provider-grid" hidden>
+            <section class="provider-grid-shell">
+              <div class="provider-grid-header">
+                <div class="flex items-center gap-3">
+                  <span class="provider-grid-mark" aria-hidden="true">
+                    <i class="fa-solid fa-table-cells-large"></i>
+                  </span>
+                  <div>
+                    <h2 class="text-xl font-bold mb-0">Provider Grid</h2>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">Units are rows; provider IDs are columns. Open a cell to see the matching modules.</p>
+                  </div>
+                </div>
+                <div class="text-sm font-semibold text-slate-500 dark:text-slate-300">
+                  {{ provider_grid.columns|length }} provider{{ provider_grid.columns|length|pluralize }}
+                </div>
+              </div>
+              <div class="provider-grid-table-wrap">
+                <table class="provider-grid-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="text-left">
+                        <span class="stat-kicker">Unit</span>
+                      </th>
+                      {% for column in provider_grid.columns %}
+                        <th scope="col" class="text-center">
+                          <span class="block text-sm font-black">{{ column.label }}</span>
+                          {% if column.sublabels %}
+                            <span class="block mt-1 text-[0.68rem] font-semibold text-slate-500 dark:text-slate-300 truncate">{{ column.sublabels|join:", " }}</span>
+                          {% endif %}
+                        </th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in provider_grid.rows %}
+                      <tr>
+                        <th scope="row" class="provider-grid-unit text-left">
+                          <span class="block text-sm font-black truncate">{{ row.unit.title }}</span>
+                          <span class="block mt-1 text-xs text-slate-500 dark:text-slate-300">{{ row.completed_count }}/{{ row.module_count }} complete · {{ row.progress_percent }}%</span>
+                        </th>
+                        {% for cell in row.cells %}
+                          <td>
+                            <button
+                              type="button"
+                              class="provider-grid-cell {{ cell.status_class }}"
+                              {% if cell.module_count %}
+                                data-bs-toggle="modal"
+                                data-bs-target="#{{ cell.modal_id }}"
+                                aria-label="Open {{ row.unit.title }} {{ cell.column.label }} modules"
+                              {% else %}
+                                disabled
+                                aria-label="No modules for {{ row.unit.title }} and {{ cell.column.label }}"
+                              {% endif %}
+                            >
+                              {% if cell.module_count %}
+                                <span class="provider-grid-pct">{{ cell.progress_percent }}%</span>
+                                <span class="provider-grid-counts" aria-label="{{ cell.module_count }} modules">
+                                  <span><i class="fa-solid fa-check text-green-600" aria-hidden="true"></i>{{ cell.completed_count }}</span>
+                                  <span><i class="fa-solid fa-play text-sky-600" aria-hidden="true"></i>{{ cell.in_progress_count }}</span>
+                                  <span><i class="fa-regular fa-circle text-slate-500" aria-hidden="true"></i>{{ cell.todo_count }}</span>
+                                  {% if cell.locked_count %}
+                                    <span><i class="fa-solid fa-lock text-amber-600" aria-hidden="true"></i>{{ cell.locked_count }}</span>
+                                  {% endif %}
+                                </span>
+                                <span class="text-[0.68rem] font-black uppercase tracking-wide">{{ cell.module_count }} module{{ cell.module_count|pluralize }}</span>
+                              {% else %}
+                                <span class="font-bold">No modules</span>
+                              {% endif %}
+                            </button>
+                          </td>
+                        {% endfor %}
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          {% for row in provider_grid.rows %}
+            {% for cell in row.cells %}
+              {% if cell.module_count %}
+                <div class="modal fade" id="{{ cell.modal_id }}" tabindex="-1" aria-labelledby="{{ cell.modal_id }}Label" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <div>
+                          <div class="stat-kicker">{{ cell.column.label }}</div>
+                          <h5 class="modal-title" id="{{ cell.modal_id }}Label">{{ row.unit.title }}</h5>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="grid gap-3 sm:grid-cols-3 mb-4">
+                          <div class="shell-surface rounded-lg p-3">
+                            <div class="stat-kicker">Average</div>
+                            <div class="text-2xl font-black mt-1">{{ cell.progress_percent }}%</div>
+                          </div>
+                          <div class="shell-surface rounded-lg p-3">
+                            <div class="stat-kicker">Completed</div>
+                            <div class="text-2xl font-black mt-1">{{ cell.completed_count }}/{{ cell.module_count }}</div>
+                          </div>
+                          <div class="shell-surface rounded-lg p-3">
+                            <div class="stat-kicker">Available</div>
+                            <div class="text-2xl font-black mt-1">{{ cell.todo_count|add:cell.in_progress_count|add:cell.completed_count }}</div>
+                          </div>
+                        </div>
+                        <div class="provider-modal-list">
+                          {% for module in cell.modules %}
+                            <article class="course-module-row {% if not module.can_access %}is-locked{% endif %}">
+                              <span class="{% if module.is_complete %}text-green-600{% else %}text-slate-400{% endif %}" aria-hidden="true">
+                                <i class="{{ module.icon_class }}"></i>
+                              </span>
+                              <span class="min-w-0">
+                                {% if module.can_access %}
+                                  <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="truncate font-semibold text-blue-700 dark:text-blue-300 hover:underline">
+                                    {{ module.title }}
+                                  </a>
+                                {% else %}
+                                  <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{{ module.title }}</span>
+                                {% endif %}
+                                <span class="block text-xs text-slate-500 dark:text-slate-400">
+                                  {{ module.type_label }}{% if module.provider_id %} · {{ module.provider_id }}{% endif %}
+                                  {% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
+                                  {% if is_instructor and not module.is_visible %} · Hidden from students{% endif %}
+                                </span>
+                              </span>
+                              <span class="course-module-status {{ module.status_class }}">
+                                {{ module.status }} <span>{{ module.progress_percent }}%</span>
+                              </span>
+                              {% if module.can_access %}
+                                <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="btn btn-outline-primary btn-sm">Open</a>
+                              {% else %}
+                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Locked</button>
+                              {% endif %}
+                            </article>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        {% endif %}
       {% elif not user.is_authenticated %}
         <div class="empty-state">
           <div class="text-xl font-semibold text-slate-700 dark:text-slate-200">Sign in to access this course</div>
@@ -367,4 +762,28 @@
 
     {% include 'includes/timeline_panel.html' with events=timeline title='Recent course timeline' kicker='Course Timeline' count=timeline|length %}
   </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggles = Array.from(document.querySelectorAll('[data-course-view-toggle]'));
+    const panels = Array.from(document.querySelectorAll('[data-course-view-panel]'));
+    if (!toggles.length || !panels.length) return;
+
+    toggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const targetView = toggle.dataset.courseViewToggle;
+        toggles.forEach(item => {
+          const isActive = item === toggle;
+          item.classList.toggle('is-active', isActive);
+          item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        panels.forEach(panel => {
+          panel.hidden = panel.dataset.courseViewPanel !== targetView;
+        });
+      });
+    });
+  });
+</script>
 {% endblock %}

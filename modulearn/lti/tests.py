@@ -29,6 +29,7 @@ from lti.services import (
 )
 from lti.config import get_tool_config, is_tool_configured, list_configured_tools
 from lti.views import apply_lti_roles, process_launch_data
+from lti.platforms import get_lti13_config_dict
 
 LTI_CUSTOM_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/custom"
 LTI_DEPLOYMENT_ID_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/deployment_id"
@@ -81,6 +82,26 @@ class LTIRoleTests(TestCase):
             User.objects.filter(email__iexact='lti.student@example.com').count(),
             1,
         )
+
+    def test_lti_launch_without_email_creates_blank_email_student(self):
+        course = Course.objects.create(id='no-email-lti-course', title='No Email LTI Course')
+        instance = CourseInstance.objects.create(course=course, group_name='No Email LTI Session')
+        request = RequestFactory().get('/lti/launch/')
+        SessionMiddleware(lambda current_request: None).process_request(request)
+        request.session.save()
+
+        response = process_launch_data(request, {
+            'user_id': 'canvas-no-email-user',
+            'roles': ['Learner'],
+            'custom_course_id': str(instance.id),
+        })
+
+        self.assertEqual(response.status_code, 302)
+        identity = LTIUserIdentity.objects.get(subject='canvas-no-email-user')
+        user = identity.user
+        self.assertEqual(user.email, '')
+        self.assertTrue(user.username.startswith('lti-canvas-no-email-user'))
+        self.assertTrue(Enrollment.objects.filter(student=user, course_instance=instance).exists())
 
     def test_instructor_launch_promotes_existing_student(self):
         user = User.objects.create_user(
@@ -171,6 +192,30 @@ class InboundLTI13Tests(TestCase):
         user = User.objects.get(email='target.student@example.com')
         self.assertTrue(Enrollment.objects.filter(student=user, course_instance=self.instance).exists())
 
+    def test_lti13_config_normalizes_platform_issuer_trailing_slash(self):
+        self.registration.issuer = 'https://moodle.example.edu/'
+        self.registration.save(update_fields=['issuer'])
+
+        config = get_lti13_config_dict()
+
+        self.assertIn('https://moodle.example.edu', config)
+        self.assertNotIn('https://moodle.example.edu/', config)
+
+    def test_lti13_login_missing_platform_registration_returns_actionable_message(self):
+        response = self.client.get(reverse('lti:login'), {
+            'iss': 'https://sandbox.moodledemo.net',
+            'client_id': 'sandbox-client',
+            'login_hint': 'user-hint',
+            'target_link_uri': 'http://testserver/lti/launch/',
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(
+            response,
+            'platform issuer https://sandbox.moodledemo.net is not registered in ModuLearn',
+            status_code=400,
+        )
+
     def test_lti_setup_details_returns_session_specific_values(self):
         self.client.force_login(self.instructor)
 
@@ -183,6 +228,9 @@ class InboundLTI13Tests(TestCase):
         self.assertIn(f'course_id={self.instance.id}', data['setup']['lti_13']['tool_url'])
         self.assertTrue(data['setup']['lti_13']['redirect_uri'].endswith('/lti/launch/'))
         self.assertTrue(data['setup']['lti_13']['jwks_url'].endswith('/lti/jwks/'))
+        self.assertEqual(data['setup']['tool']['name'], 'ModuLearn')
+        self.assertIn(f'course_id={self.instance.id}', data['setup']['lti_11']['custom_parameters'])
+        self.assertIn(f'modulearn_course_id={self.instance.id}', data['setup']['lti_13']['custom_parameters'])
 
     def test_platform_registration_endpoint_upserts_registration(self):
         self.client.force_login(self.instructor)
@@ -192,7 +240,7 @@ class InboundLTI13Tests(TestCase):
             data=json.dumps({
                 'name': 'Updated Moodle',
                 'platform': 'moodle',
-                'issuer': 'https://moodle-two.example.edu',
+                'issuer': 'https://moodle-two.example.edu/',
                 'client_id': 'client-456',
                 'deployment_id': 'deployment-a, deployment-b',
                 'auth_login_url': 'https://moodle-two.example.edu/mod/lti/auth.php',

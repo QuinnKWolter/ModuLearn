@@ -195,6 +195,7 @@ def create_course_from_json(course_data, current_user):
             for activity in activities:
                 module_index += 1
                 provider_id = activity.get('provider_id', '') or ''
+                author_id = activity.get('author_id', '') or ''
                 platform_name = _activity_platform_name(activity, resource_id, resource_metadata)
                 supported_protocols = activity.get('supported_protocols') or provider_protocols_map.get(provider_id, [])
                 activity_url_was_supplied = activity.get('url') is not None
@@ -222,11 +223,11 @@ def create_course_from_json(course_data, current_user):
                     defaults={
                         'module_type': desired_module_type,
                         'order': activity.get('order') or module_index * 10,
-                        'description': activity.get('description') or f"Provider: {provider_id or 'unknown'}, Author: {activity.get('author_id', 'unknown')}",
+                        'description': activity.get('description') or '',
                         'content_url': content_url,
                         'provider_id': provider_id,
                         'platform_name': platform_name,
-                        'author': activity.get('author_id', ''),
+                        'author': author_id,
                         'supported_protocols': supported_protocols,
                         'is_visible': activity.get('is_visible', True),
                         'is_locked': activity.get('is_locked', False),
@@ -246,8 +247,12 @@ def create_course_from_json(course_data, current_user):
                 if module.module_type != desired_module_type:
                     module.module_type = desired_module_type
                     updated = True
+                legacy_metadata_description = f"Provider: {provider_id or 'unknown'}, Author: {author_id or 'unknown'}"
                 if activity.get('description') is not None and module.description != activity.get('description'):
                     module.description = activity.get('description') or ''
+                    updated = True
+                elif activity.get('description') is None and module.description == legacy_metadata_description:
+                    module.description = ''
                     updated = True
                 if activity_url_was_supplied and module.content_url != content_url:
                     module.content_url = content_url or None

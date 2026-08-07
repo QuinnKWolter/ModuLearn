@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from django.contrib.auth import get_user_model
 
 
@@ -23,9 +25,14 @@ def find_user_by_email(value: str | None):
 
 
 def unique_username_for_email(value: str, *, local_part_only: bool = False) -> str:
-    User = get_user_model()
     email = normalize_email_address(value)
     base = email.split("@", 1)[0] if local_part_only else email
+    return unique_username_from_base(base or "student")
+
+
+def unique_username_from_base(value: str | None) -> str:
+    User = get_user_model()
+    base = re.sub(r"[^\w.@+-]+", "-", (value or "student").strip()).strip("-") or "student"
     base = (base or "student")[:150]
     candidate = base
     counter = 1

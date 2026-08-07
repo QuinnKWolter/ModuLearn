@@ -12,8 +12,8 @@ class SignUpForm(UserCreationForm):
 
     email = forms.EmailField(
         max_length=254,
-        required=True,
-        help_text='We\'ll never share your email with anyone else.'
+        required=False,
+        help_text='Optional. You can add or update this later from your profile.'
     )
     full_name = forms.CharField(max_length=100, required=True, label='Full Name')
     role = forms.ChoiceField(
@@ -29,6 +29,8 @@ class SignUpForm(UserCreationForm):
 
     def clean_email(self):
         email = normalize_email_address(self.cleaned_data.get('email'))
+        if not email:
+            return ''
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError('An account with this email address already exists.')
         return email
@@ -42,8 +44,8 @@ class ProfileEditForm(forms.ModelForm):
     """Form for editing user profile information."""
     email = forms.EmailField(
         max_length=254,
-        required=True,
-        help_text='Your email address'
+        required=False,
+        help_text='Optional. You can add, change, or clear your email address at any time.'
     )
     full_name = forms.CharField(
         max_length=100,
@@ -58,6 +60,8 @@ class ProfileEditForm(forms.ModelForm):
 
     def clean_email(self):
         email = normalize_email_address(self.cleaned_data.get('email'))
+        if not email:
+            return ''
         if User.objects.exclude(pk=self.instance.pk).filter(email__iexact=email).exists():
             raise forms.ValidationError('An account with this email address already exists.')
         return email

@@ -18,10 +18,16 @@ from courses.models import CourseInstance, Enrollment, CourseProgress
 import logging
 from modulearn.integrations.config import prefixed_path
 from modulearn.settings import get_primary_domain
-from accounts.email_utils import find_user_by_email, normalize_email_address, unique_username_for_email
+from accounts.email_utils import (
+    find_user_by_email,
+    normalize_email_address,
+    unique_username_for_email,
+    unique_username_from_base,
+)
 from .cache_data_storage import CacheDataStorage
 from .models import LTIPlatformRegistration, LTIUserIdentity
-from .platforms import build_lti13_tool_conf, lti_setup_payload
+from .platforms import build_lti13_tool_conf, lti_setup_payload, normalize_platform_issuer
+from modulearn.learning.services.limits import CapacityLimitError, ensure_session_student_capacity
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +76,8 @@ def lti13_login(request):
     logger.info(f"GET parameters: {request.GET}")
     logger.info(f"POST parameters: {request.POST}")
 
+    request_data = request.POST if request.method == 'POST' else request.GET
+    incoming_issuer = normalize_platform_issuer(request_data.get('iss', ''))
     tool_conf = build_lti13_tool_conf()
     launch_data_storage = CacheDataStorage()
 
@@ -86,6 +94,16 @@ def lti13_login(request):
         return oidc_login.redirect(launch_url)
     except Exception as e:
         logger.exception("LTI 1.3 login error: %s", e)
+        if incoming_issuer and 'not found in settings' in str(e):
+            return HttpResponse(
+                "LTI 1.3 login error: platform issuer "
+                f"{incoming_issuer} is not registered in ModuLearn. "
+                "Open the course session's LTI Setup modal as an instructor, "
+                "save Moodle's Platform ID / issuer, Client ID, Deployment ID, "
+                "Authentication request URL, Access token URL, and Public keyset URL, "
+                "then retry the launch.",
+                status=400,
+            )
         return HttpResponse(f"LTI 1.3 login error: {e}", status=400)
 
 def handle_lti13_launch(request):
@@ -187,9 +205,13 @@ def _get_client_id(launch_data):
 def _get_registration(issuer, client_id):
     if not issuer or not client_id:
         return None
+    normalized_issuer = normalize_platform_issuer(issuer)
+    issuer_candidates = {issuer, normalized_issuer}
+    if normalized_issuer:
+        issuer_candidates.add(f"{normalized_issuer}/")
     return (
         LTIPlatformRegistration.objects
-        .filter(issuer=issuer, client_id=client_id, is_active=True)
+        .filter(issuer__in=issuer_candidates, client_id=client_id, is_active=True)
         .order_by('-updated_at', '-id')
         .first()
     )
@@ -239,10 +261,8 @@ def _get_lms_context_ids(launch_data):
 
 
 def _identity_issuer(launch_data):
-    return (
-        str(launch_data.get('iss') or '')
-        or f"lti1p1:{launch_data.get('oauth_consumer_key') or 'unknown'}"
-    )
+    issuer = normalize_platform_issuer(launch_data.get('iss') or '')
+    return issuer or f"lti1p1:{launch_data.get('oauth_consumer_key') or 'unknown'}"
 
 
 def _safe_launch_snapshot(launch_data):
@@ -295,8 +315,7 @@ def process_launch_data(request, launch_data):
 
     email = normalize_email_address(
         launch_data.get('email') or  # LTI 1.3 email
-        launch_data.get('lis_person_contact_email_primary') or  # LTI 1.1 email
-        f"{platform_user_id}@lti.modulearn.local"  # Fallback email
+        launch_data.get('lis_person_contact_email_primary')  # LTI 1.1 email
     )
 
     identity = (
@@ -324,8 +343,13 @@ def process_launch_data(request, launch_data):
     )
 
     if created:
+        username = (
+            unique_username_for_email(email)
+            if email
+            else unique_username_from_base(f"lti-{platform_user_id}")
+        )
         create_kwargs = {
-            'username': unique_username_for_email(email),
+            'username': username,
             'email': email,
             'first_name': launch_data.get('given_name') or launch_data.get('lis_person_name_given', ''),
             'last_name': launch_data.get('family_name') or launch_data.get('lis_person_name_family', ''),
@@ -399,11 +423,24 @@ def process_launch_data(request, launch_data):
             if user.is_instructor:
                 course_instance.instructors.add(user)
             elif user.is_student:
+                existing_enrollment = Enrollment.objects.filter(
+                    student=user,
+                    course_instance=course_instance,
+                ).first()
+                if not existing_enrollment or not existing_enrollment.active:
+                    try:
+                        ensure_session_student_capacity(course_instance)
+                    except CapacityLimitError as error:
+                        logger.warning("LTI enrollment capacity limit hit for instance %s: %s", course_instance.id, str(error))
+                        return HttpResponse(str(error), status=403)
                 enrollment, created = Enrollment.objects.get_or_create(
                     student=user,
                     course_instance=course_instance,
                     defaults={'active': True}
                 )
+                if not enrollment.active:
+                    enrollment.active = True
+                    enrollment.save(update_fields=['active'])
                 
                 # Get or create CourseProgress (signal should create it, but handle race condition)
                 course_progress, _ = CourseProgress.objects.get_or_create(
@@ -544,7 +581,7 @@ def lti13_platform_registration(request):
 
     required = {
         'name': clean('name'),
-        'issuer': clean('issuer'),
+        'issuer': normalize_platform_issuer(clean('issuer')),
         'client_id': clean('client_id'),
         'auth_login_url': clean('auth_login_url'),
         'auth_token_url': clean('auth_token_url'),

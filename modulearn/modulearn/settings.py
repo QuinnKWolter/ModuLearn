@@ -145,6 +145,13 @@ USE_L10N = True
 USE_TZ = True
 
 # =============================================================================
+# APPLICATION CAPACITY LIMITS
+# =============================================================================
+MAX_STUDENTS_PER_SESSION = int(os.getenv('MAX_STUDENTS_PER_SESSION', '500'))
+MAX_SESSIONS_PER_COURSE = int(os.getenv('MAX_SESSIONS_PER_COURSE', '100'))
+MAX_ACTIVE_SESSIONS_PER_INSTRUCTOR = int(os.getenv('MAX_ACTIVE_SESSIONS_PER_INSTRUCTOR', '250'))
+
+# =============================================================================
 # STATIC & MEDIA ASSET MANAGEMENT
 # =============================================================================
 FORCE_SCRIPT_NAME = os.getenv('DJANGO_FORCE_SCRIPT_NAME', None)

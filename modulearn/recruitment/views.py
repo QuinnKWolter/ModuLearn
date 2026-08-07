@@ -32,6 +32,7 @@ from recruitment.services.prolific import (
 from recruitment.services.sona import SonaCreditError, client_credit_url, grant_credit_server_side
 from recruitment.services.studies import clear_study_participation, create_study_for_instructor
 from modulearn.core.roles import get_user_role_snapshot
+from modulearn.learning.services.limits import CapacityLimitError, ensure_session_student_capacity
 
 User = get_user_model()
 
@@ -232,9 +233,23 @@ def _enter_source(request, source: RecruitmentSource):
         return reject("This Prolific submission does not match the participant identifier.", 403)
     if not existing_session and not source.has_capacity():
         return reject("This study has reached its participant cap.", 403)
+    if not existing_session:
+        try:
+            ensure_session_student_capacity(course_instance)
+        except CapacityLimitError:
+            return reject("This study session has reached its participant cap.", 403)
 
     with transaction.atomic():
         user = _provision_participant_user(source, external_pid)
+        existing_enrollment = Enrollment.objects.filter(
+            student=user,
+            course_instance=course_instance,
+        ).first()
+        if not existing_enrollment or not existing_enrollment.active:
+            try:
+                ensure_session_student_capacity(course_instance)
+            except CapacityLimitError:
+                return reject("This study session has reached its participant cap.", 403)
         enrollment, _ = Enrollment.objects.get_or_create(
             student=user,
             course_instance=course_instance,
@@ -303,7 +318,7 @@ def _enter_source(request, source: RecruitmentSource):
         participant_session.status = ParticipantSession.STATUS_IN_PROGRESS
         participant_session.save(update_fields=["status", "updated_at"])
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-    return redirect("recruitment:sessions")
+    return redirect("recruitment:resume_session", session_uuid=participant_session.uuid)
 
 
 @login_required
@@ -313,6 +328,9 @@ def sessions(request):
         return redirect("dashboard:student_dashboard")
 
     participant_sessions = get_participant_sessions(request.user)
+    if len(participant_sessions) == 1 and not participant_sessions[0].is_finished:
+        return redirect("recruitment:resume_session", session_uuid=participant_sessions[0].uuid)
+
     session_cards = []
     for participant_session in participant_sessions:
         course_instance = participant_session.recruitment_source.resolved_course_instance
@@ -347,10 +365,16 @@ def resume_session(request, session_uuid):
         raise PermissionDenied("You cannot open another participant session.")
     if getattr(request.user, "is_anonymous_participant", False) and request.user != participant_session.user:
         raise PermissionDenied("You cannot open another participant session.")
+    if participant_session.is_finished:
+        return redirect("recruitment:already_completed", session_uuid=participant_session.uuid)
 
     resume_module = get_participant_resume_module(participant_session)
     if not resume_module:
         messages.info(request, "No available module was found for this study session.")
+        if getattr(request.user, "is_anonymous_participant", False):
+            course_instance = participant_session.recruitment_source.resolved_course_instance
+            if course_instance:
+                return redirect("recruitment:complete_current", course_instance_id=course_instance.id)
         return redirect("recruitment:sessions")
 
     if participant_session.status in {
@@ -380,7 +404,7 @@ def consent(request, session_uuid):
         if participant_session.status == ParticipantSession.STATUS_ENTERED:
             participant_session.status = ParticipantSession.STATUS_CONSENTED
             participant_session.save(update_fields=["status", "updated_at"])
-        return redirect("recruitment:sessions")
+        return redirect("recruitment:resume_session", session_uuid=participant_session.uuid)
     return render(request, "recruitment/consent.html", {"participant_session": participant_session})
 
 

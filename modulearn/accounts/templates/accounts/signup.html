@@ -27,7 +27,7 @@
         </div>
 
         <div>
-          <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }} <span class="text-red-500">*</span></label>
+          <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}{% if form.email.field.required %} <span class="text-red-500">*</span>{% endif %}</label>
           {{ form.email|tw_input }}
           {% if form.email.help_text %}<p class="form-text">{{ form.email.help_text|safe }}</p>{% endif %}
           {% for error in form.email.errors %}<p class="invalid-feedback" style="display:block;">{{ error }}</p>{% endfor %}

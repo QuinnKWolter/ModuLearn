@@ -26,6 +26,7 @@ from recruitment.models import (
     Study,
     StudyCondition,
 )
+from modulearn.learning.services.limits import ensure_instructor_session_capacity
 
 
 DEFAULT_STUDY_CONDITIONS = ["control", "treatment"]
@@ -39,7 +40,8 @@ DEFAULT_STUDY_UNITS = [
             {
                 "title": "Consent",
                 "description": "Participant consent and eligibility confirmation.",
-                "module_type": Module.MODULE_TYPE_STUDY_CONSENT,
+                "module_type": Module.MODULE_TYPE_FORM,
+                "study_step": "consent",
                 "instructions": (
                     "Review the study information carefully. Submit this form only if you agree to participate."
                 ),
@@ -56,7 +58,8 @@ DEFAULT_STUDY_UNITS = [
             {
                 "title": "Instructions",
                 "description": "Study instructions shown before the task sequence begins.",
-                "module_type": Module.MODULE_TYPE_STUDY_INSTRUCTIONS,
+                "module_type": Module.MODULE_TYPE_FORM,
+                "study_step": "instructions",
                 "instructions": "Read the instructions for this study. Submit when you are ready to continue.",
                 "submit_button_label": "Continue",
                 "questions": [
@@ -71,7 +74,8 @@ DEFAULT_STUDY_UNITS = [
             {
                 "title": "Pretest",
                 "description": "Baseline questions or an external pretest placeholder.",
-                "module_type": Module.MODULE_TYPE_STUDY_PRETEST,
+                "module_type": Module.MODULE_TYPE_FORM,
+                "study_step": "pretest",
                 "instructions": "Complete the pretest items before beginning the main study tasks.",
                 "submit_button_label": "Submit Pretest",
                 "questions": [
@@ -92,6 +96,7 @@ DEFAULT_STUDY_UNITS = [
                 "title": "Main Study Task",
                 "description": "Replace this placeholder with the first interactive problem or study module.",
                 "module_type": Module.MODULE_TYPE_FORM,
+                "study_step": "main_task",
                 "instructions": "This placeholder marks where the main experimental task sequence begins.",
                 "submit_button_label": "Mark Placeholder Complete",
                 "questions": [
@@ -112,7 +117,8 @@ DEFAULT_STUDY_UNITS = [
             {
                 "title": "Posttest",
                 "description": "Required post-study questions or external posttest placeholder.",
-                "module_type": Module.MODULE_TYPE_STUDY_POSTTEST,
+                "module_type": Module.MODULE_TYPE_FORM,
+                "study_step": "posttest",
                 "instructions": "Complete the posttest before receiving study completion credit.",
                 "submit_button_label": "Submit Posttest",
                 "questions": [
@@ -126,7 +132,8 @@ DEFAULT_STUDY_UNITS = [
             {
                 "title": "Debrief",
                 "description": "Final debrief and completion instructions.",
-                "module_type": Module.MODULE_TYPE_STUDY_DEBRIEF,
+                "module_type": Module.MODULE_TYPE_FORM,
+                "study_step": "debrief",
                 "instructions": "Read the debrief. The final study link can return you to Prolific for credit.",
                 "submit_button_label": "Finish Debrief",
                 "questions": [
@@ -164,6 +171,7 @@ def create_study_for_instructor(
     title = (title or "").strip() or "Untitled Study"
     description = (description or "").strip()
     version_label = (version_label or "").strip() or "v1.0"
+    ensure_instructor_session_capacity(instructor)
     course = Course.objects.create(
         id=f"study-{uuid.uuid4().hex[:16]}",
         title=title,
@@ -232,7 +240,7 @@ def create_study_for_instructor(
                 is_visible=True,
                 is_locked=is_locked,
                 unlock_rule=unlock_rule,
-                content_data={"study_default": True, "study_step": definition["module_type"]},
+                content_data={"study_default": True, "study_step": definition["study_step"]},
             )
             module_form = ModuleForm.objects.create(
                 module=module,

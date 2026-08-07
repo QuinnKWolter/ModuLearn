@@ -2,10 +2,112 @@ from __future__ import annotations
 
 from courses.models import CourseProgress, Enrollment, ModuleProgress
 from django.db.models import Q
+from django.utils.text import slugify
 
 from .timelines import get_course_timeline_for_student
 from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
 from modulearn.learning.services.course_plugins import enabled_course_plugins
+
+
+def _module_provider_identity(module):
+    provider_id = (module.provider_id or "").strip()
+    type_label = (module.display_type_label or "").strip()
+    label = provider_id or type_label or "Other"
+    sublabel = type_label if provider_id and type_label and type_label.lower() != provider_id.lower() else ""
+    key = slugify(provider_id or type_label or module.module_type or "other") or "other"
+    return key, label, sublabel
+
+
+def _build_provider_grid(unit_cards):
+    columns_by_key = {}
+    for card in unit_cards:
+        for module in card["modules"]:
+            key = module.get("provider_key") or "other"
+            if key not in columns_by_key:
+                columns_by_key[key] = {
+                    "key": key,
+                    "label": module.get("provider_label") or "Other",
+                    "sublabels": [],
+                    "module_count": 0,
+                }
+            column = columns_by_key[key]
+            type_label = module.get("type_label") or ""
+            if type_label and type_label not in column["sublabels"]:
+                column["sublabels"].append(type_label)
+            column["module_count"] += 1
+
+    columns = list(columns_by_key.values())
+    rows = []
+    for row_index, card in enumerate(unit_cards):
+        modules_by_provider = {}
+        for module in card["modules"]:
+            modules_by_provider.setdefault(module.get("provider_key") or "other", []).append(module)
+
+        cells = []
+        for column_index, column in enumerate(columns):
+            modules = modules_by_provider.get(column["key"], [])
+            module_count = len(modules)
+            completed_count = sum(1 for module in modules if module["is_complete"])
+            locked_count = sum(1 for module in modules if not module["can_access"])
+            in_progress_count = sum(
+                1
+                for module in modules
+                if module["can_access"] and not module["is_complete"] and module["progress_percent"] > 0
+            )
+            todo_count = sum(
+                1
+                for module in modules
+                if module["can_access"] and not module["is_complete"] and module["progress_percent"] <= 0
+            )
+            progress_percent = (
+                round(sum(module["progress_percent"] for module in modules) / module_count)
+                if module_count
+                else 0
+            )
+            if not module_count:
+                status = "No modules"
+                status_class = "is-empty"
+            elif completed_count == module_count:
+                status = "Complete"
+                status_class = "is-complete"
+            elif locked_count == module_count:
+                status = "Locked"
+                status_class = "is-locked"
+            elif progress_percent > 0:
+                status = "In Progress"
+                status_class = "is-active"
+            else:
+                status = "To-Do"
+                status_class = "is-todo"
+
+            cells.append({
+                "key": column["key"],
+                "column": column,
+                "modules": modules,
+                "module_count": module_count,
+                "completed_count": completed_count,
+                "locked_count": locked_count,
+                "in_progress_count": in_progress_count,
+                "todo_count": todo_count,
+                "progress_percent": progress_percent,
+                "status": status,
+                "status_class": status_class,
+                "modal_id": f"providerGridCell-{row_index}-{column_index}",
+            })
+
+        rows.append({
+            "unit": card["unit"],
+            "progress_percent": card["progress_percent"],
+            "completed_count": card["completed_count"],
+            "module_count": card["module_count"],
+            "cells": cells,
+        })
+
+    return {
+        "columns": columns,
+        "rows": rows,
+        "has_columns": bool(columns),
+    }
 
 
 def build_course_detail_context(user, course_instance):
@@ -59,6 +161,7 @@ def build_course_detail_context(user, course_instance):
         has_progress = False
 
         for module in unit.modules.all():
+            provider_key, provider_label, provider_sublabel = _module_provider_identity(module)
             module_state = evaluate_module_access(
                 module,
                 enrollment,
@@ -113,6 +216,10 @@ def build_course_detail_context(user, course_instance):
                 "can_access": is_instructor or module_state.can_access,
                 "lock_reason": module_state.reason,
                 "type_label": module.display_type_label,
+                "provider_id": module.provider_id,
+                "provider_key": provider_key,
+                "provider_label": provider_label,
+                "provider_sublabel": provider_sublabel,
             })
 
         unit_percent = round((progress_sum / module_count) * 100) if module_count else 0
@@ -131,11 +238,19 @@ def build_course_detail_context(user, course_instance):
             "lock_reason": unit_state.reason,
         })
 
+    plugin_flags = enabled_course_plugins(course)
+    provider_grid = (
+        _build_provider_grid(unit_cards)
+        if plugin_flags.get("masterygrids_style") and (is_instructor or is_enrolled)
+        else {"columns": [], "rows": [], "has_columns": False}
+    )
+
     return {
         "course": course,
         "current_instance": course_instance,
         "units": units,
         "unit_cards": unit_cards,
+        "provider_grid": provider_grid,
         "is_instructor": is_instructor,
         "is_enrolled": is_enrolled,
         "enrollment": enrollment,
@@ -143,5 +258,5 @@ def build_course_detail_context(user, course_instance):
         "module_progress_data": module_progress_data,
         "timeline": timeline,
         "participant_session": participant_session,
-        "course_plugins": enabled_course_plugins(course),
+        "course_plugins": plugin_flags,
     }
