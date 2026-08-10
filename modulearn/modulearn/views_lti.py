@@ -87,7 +87,7 @@ def _update_module_progress(user_id: int, module_id: int, course_instance_id: in
     try:
         from courses.models import Module, ModuleProgress, CourseInstance
         from accounts.models import User
-        from modulearn.learning.services.progress import apply_progress_snapshot
+        from modulearn.learning.services.progress import apply_progress_snapshot, module_accepts_scored_attempt
         
         # Get the user
         try:
@@ -127,6 +127,12 @@ def _update_module_progress(user_id: int, module_id: int, course_instance_id: in
                 logger.info(f"[LTI→Progress] No progress record for preview/external launch: {source_id}")
                 return False
             created = False
+
+        if not module_accepts_scored_attempt(progress):
+            logger.info(
+                f"[LTI→Progress] Ignoring resubmission for single-attempt module: user={user_id}, module={module_id}"
+            )
+            return False
         
         # Only update if new score is better (or no score yet)
         if progress.score is None or score > progress.score:

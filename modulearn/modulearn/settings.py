@@ -389,6 +389,7 @@ PROXY_ALLOWED_HOSTS = {
     "columbus.exp.sis.pitt.edu",
     "pawscomp2.sis.pitt.edu",
     "adapt2.sis.pitt.edu",
+    "acos.cs.vt.edu",
     "pcrs.utm.utoronto.ca",
     "localhost",
     "127.0.0.1",

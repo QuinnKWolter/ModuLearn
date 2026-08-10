@@ -10,6 +10,11 @@
   /* Modal                                                                    */
   /* ======================================================================= */
   const _modalInstances = new Map();
+  const _openModals = new Set();
+
+  function syncBodyModalState() {
+    document.body.style.overflow = _openModals.size ? 'hidden' : '';
+  }
 
   class Modal {
     constructor(element) {
@@ -30,7 +35,8 @@
       el.classList.remove('hidden');
       el.classList.add('flex');
       el.removeAttribute('aria-hidden');
-      document.body.style.overflow = 'hidden';
+      _openModals.add(el);
+      syncBodyModalState();
 
       requestAnimationFrame(() => {
         const shownEvt = new Event('shown.bs.modal', { bubbles: true });
@@ -48,7 +54,8 @@
       el.classList.add('hidden');
       el.classList.remove('flex');
       el.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
+      _openModals.delete(el);
+      syncBodyModalState();
 
       setTimeout(() => {
         const hiddenEvt = new Event('hidden.bs.modal', { bubbles: true });

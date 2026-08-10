@@ -12,6 +12,10 @@ from modulearn.learning.services.pcrs_tracking import PCRS_HOST, capture_pcrs_re
 
 logger = logging.getLogger(__name__)
 
+ACOS_PCEX_HOST = "acos.cs.vt.edu"
+ACOS_PCEX_EVENT_REST = "pitt/acos-pcex/acos-pcex-examples/event"
+MATERIAL_ICON_FALLBACK_NAMES = frozenset({"help", "undo", "redo", "play_circle_outline"})
+
 PCRS_FEEDBACK_ASSETS = {
     "red-sad-face.jpg": "img/pcrs/red-sad-face.png",
     "yellow-happy-face.png": "img/pcrs/yellow-happy-face.png",
@@ -636,15 +640,21 @@ def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5
         # DO NOT inject JavaScript blockers - they cause issues
         # The iframe sandbox will handle security
         if _is_paws_activity_page(u):
+            content_str = _annotate_material_icon_fallbacks(content_str)
             content_str = _inject_activity_api_rewrite_script(content_str)
         
         content = content_str.encode('utf-8')
         logger.debug(f"DEBUG PROXY HTML: Rewrote {rewrite_count} URLs, {original_length} -> {len(content)} bytes")
+    elif _is_acos_pcex_javascript_response(u, ctype):
+        content = _rewrite_acos_pcex_javascript(content)
     elif _is_pcex_activity_data_response(u, ctype):
         _cache_pcex_activity_metadata(request, u, content)
     
     resp = HttpResponse(content, content_type=ctype, status=r.status_code)
-    resp["Cache-Control"] = r.headers.get("Cache-Control", "public, max-age=3600")
+    if _is_acos_pcex_javascript_response(u, ctype):
+        resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    else:
+        resp["Cache-Control"] = r.headers.get("Cache-Control", "public, max-age=3600")
     
     # Forward Set-Cookie headers from KnowledgeTree to the browser
     # This allows KnowledgeTree session cookies to be set for the proxy domain
@@ -670,6 +680,14 @@ def _is_paws_activity_page(parsed_url) -> bool:
         )
     ):
         return True
+    if (
+        parsed_url.hostname == ACOS_PCEX_HOST
+        and (
+            parsed_url.path.startswith("/html/acos-pcex/")
+            or parsed_url.path.startswith("/pitt/acos-pcex/")
+        )
+    ):
+        return True
     return parsed_url.hostname == PCRS_HOST and parsed_url.path.startswith("/mgrids/")
 
 
@@ -683,10 +701,119 @@ def _inject_activity_api_rewrite_script(content: str) -> str:
         for filename in PCRS_FEEDBACK_ASSETS
     }
     script = f"""
+<style>
+.modu-slc-icon {{
+  align-items: center !important;
+  box-sizing: border-box !important;
+  color: currentColor !important;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-style: normal !important;
+  justify-content: center !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+  overflow: visible !important;
+  position: static !important;
+  text-align: center !important;
+  text-transform: none !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}}
+.modu-slc-icon svg {{
+  display: block !important;
+  height: 20px !important;
+  overflow: visible !important;
+  width: 20px !important;
+}}
+.modu-slc-icon-help {{
+  background: #d63b3b !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  height: 1.35em !important;
+  min-width: 1.35em !important;
+}}
+.modu-slc-icon-help .modu-slc-icon-text {{
+  display: block;
+  line-height: 1.35em;
+  transform: translateY(-0.5px);
+}}
+.btn.modu-material-icon-button,
+a.btn.modu-material-icon-button,
+button.btn.modu-material-icon-button {{
+  align-items: center !important;
+  display: inline-flex !important;
+  gap: 9px !important;
+  justify-content: center !important;
+}}
+.btn.modu-material-icon-button .modu-slc-icon,
+a.btn.modu-material-icon-button .modu-slc-icon,
+button.btn.modu-material-icon-button .modu-slc-icon {{
+  flex: 0 0 auto !important;
+  float: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  top: auto !important;
+  transform: none !important;
+}}
+.btn.modu-material-icon-button .modu-slc-icon-left,
+a.btn.modu-material-icon-button .modu-slc-icon-left,
+button.btn.modu-material-icon-button .modu-slc-icon-left {{
+  order: 0 !important;
+}}
+.btn.modu-material-icon-button .modu-slc-icon-right,
+a.btn.modu-material-icon-button .modu-slc-icon-right,
+button.btn.modu-material-icon-button .modu-slc-icon-right {{
+  order: 2 !important;
+}}
+.btn.modu-material-icon-button span,
+a.btn.modu-material-icon-button span,
+button.btn.modu-material-icon-button span {{
+  order: 1 !important;
+}}
+</style>
 <script>
 (function() {{
   const moduLearnPrefix = {json.dumps(script_name)};
   const pcrsFeedbackAssets = {json.dumps(pcrs_feedback_assets)};
+  const materialIconFallbacks = new Set({json.dumps(sorted(MATERIAL_ICON_FALLBACK_NAMES))});
+  const materialIconMarkup = {{
+    help: '<span class="modu-slc-icon-text">?</span>',
+    undo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7L6 12L11 17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path><path d="M7 12H19" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>',
+    redo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 7L18 12L13 17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 12H17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>',
+    play_circle_outline: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"></circle><path d="M10 8.25L16 12L10 15.75Z" fill="currentColor"></path></svg>'
+  }};
+  function normalizeMaterialIcons(root) {{
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('.material-icons').forEach(function(icon) {{
+      const name = (icon.textContent || '').trim().toLowerCase();
+      if (materialIconFallbacks.has(name)) {{
+        icon.setAttribute('data-modu-icon', name);
+        icon.setAttribute('aria-hidden', 'true');
+        icon.classList.remove('material-icons');
+        icon.classList.add('modu-slc-icon', 'modu-slc-icon-' + name);
+        if (icon.classList.contains('left')) icon.classList.add('modu-slc-icon-left');
+        if (icon.classList.contains('right')) icon.classList.add('modu-slc-icon-right');
+        icon.innerHTML = materialIconMarkup[name];
+        const iconButton = icon.closest && icon.closest('.btn');
+        if (iconButton) iconButton.classList.add('modu-material-icon-button');
+      }}
+    }});
+    scope.querySelectorAll('[data-modu-icon]:not(.modu-slc-icon)').forEach(function(icon) {{
+      const name = (icon.getAttribute('data-modu-icon') || '').trim().toLowerCase();
+      if (materialIconFallbacks.has(name)) {{
+        icon.classList.remove('material-icons');
+        icon.classList.add('modu-slc-icon', 'modu-slc-icon-' + name);
+        if (icon.classList.contains('left')) icon.classList.add('modu-slc-icon-left');
+        if (icon.classList.contains('right')) icon.classList.add('modu-slc-icon-right');
+        icon.innerHTML = materialIconMarkup[name];
+        const iconButton = icon.closest && icon.closest('.btn');
+        if (iconButton) iconButton.classList.add('modu-material-icon-button');
+      }}
+    }});
+  }}
   function localizeActivityUrl(url) {{
     if (typeof url !== 'string') return url;
     if (pcrsFeedbackAssets[url]) return pcrsFeedbackAssets[url];
@@ -694,9 +821,19 @@ def _inject_activity_api_rewrite_script(content: str) -> str:
     if (absoluteMatch) return moduLearnPrefix + absoluteMatch[1];
     const adaptMatch = url.match(/^https?:\\/\\/adapt2\\.sis\\.pitt\\.edu(\\/(?:pcex|cbum)\\/.*)$/i);
     if (adaptMatch) return moduLearnPrefix + adaptMatch[1];
+    const acosMatch = url.match(/^https?:\\/\\/acos\\.cs\\.vt\\.edu(\\/(?:html|pitt)\\/acos-pcex\\/.*|\\/static\\/(?:acos-pcex|acos-pcex-examples)\\/.*)$/i);
+    if (acosMatch) return moduLearnPrefix + '/proxy/https/acos.cs.vt.edu' + acosMatch[1];
     const pcrsMatch = url.match(/^https?:\\/\\/pcrs\\.utm\\.utoronto\\.ca(\\/mgrids\\/.*)$/i);
     if (pcrsMatch) return moduLearnPrefix + '/proxy/https/pcrs.utm.utoronto.ca' + pcrsMatch[1];
     if (url.startsWith('/mgrids/')) return moduLearnPrefix + '/proxy/https/pcrs.utm.utoronto.ca' + url;
+    if (
+      url.startsWith('/html/acos-pcex/')
+      || url.startsWith('/pitt/acos-pcex/')
+      || url.startsWith('/static/acos-pcex/')
+      || url.startsWith('/static/acos-pcex-examples/')
+    ) {{
+      return moduLearnPrefix + '/proxy/https/acos.cs.vt.edu' + url;
+    }}
     if (url.startsWith('/pcex/') || url.startsWith('/cbum/')) return moduLearnPrefix + url;
     return url;
   }}
@@ -745,14 +882,99 @@ def _inject_activity_api_rewrite_script(content: str) -> str:
       return originalSendBeacon(localizeActivityUrl(url), data);
     }};
   }}
+
+  if (document.readyState === 'loading') {{
+    document.addEventListener('DOMContentLoaded', function() {{
+      normalizeMaterialIcons(document);
+    }});
+  }} else {{
+    normalizeMaterialIcons(document);
+  }}
+  if (window.MutationObserver) {{
+    new MutationObserver(function(mutations) {{
+      mutations.forEach(function(mutation) {{
+        mutation.addedNodes.forEach(function(node) {{
+          if (node.nodeType === 1) {{
+            if (node.matches && node.matches('.material-icons')) {{
+              normalizeMaterialIcons(node.parentNode || document);
+            }} else {{
+              normalizeMaterialIcons(node);
+            }}
+          }}
+        }});
+      }});
+    }}).observe(document.documentElement, {{ childList: true, subtree: true }});
+  }}
 }})();
 </script>
 """
     if "moduLearnPrefix" in content:
         return content
     if re.search(r"</head\s*>", content, flags=re.IGNORECASE):
-        return re.sub(r"</head\s*>", script + r"\g<0>", content, count=1, flags=re.IGNORECASE)
+        return re.sub(
+            r"</head\s*>",
+            lambda match: script + match.group(0),
+            content,
+            count=1,
+            flags=re.IGNORECASE,
+        )
     return script + content
+
+
+def _annotate_material_icon_fallbacks(content: str) -> str:
+    def replace_icon(match):
+        opening_tag = match.group(1)
+        icon_name = match.group(2).strip().lower()
+        closing_tag = match.group(3)
+        if icon_name not in MATERIAL_ICON_FALLBACK_NAMES or "data-modu-icon" in opening_tag:
+            return match.group(0)
+        return (
+            opening_tag[:-1]
+            + f' data-modu-icon="{icon_name}" aria-hidden="true">'
+            + match.group(2)
+            + closing_tag
+        )
+
+    return re.sub(
+        r'(<i\b[^>]*class=["\'][^"\']*\bmaterial-icons\b[^"\']*["\'][^>]*>)'
+        r'(\s*(?:help|undo|redo|play_circle_outline)\s*)'
+        r'(</i>)',
+        replace_icon,
+        content,
+        flags=re.IGNORECASE,
+    )
+
+
+def _is_acos_pcex_javascript_response(parsed_url, content_type: str) -> bool:
+    content_type = (content_type or "").lower()
+    return (
+        parsed_url.hostname == ACOS_PCEX_HOST
+        and (
+            parsed_url.path.startswith("/static/acos-pcex/")
+            or parsed_url.path.startswith("/static/acos-pcex-examples/")
+        )
+        and ("javascript" in content_type or parsed_url.path.endswith(".js"))
+    )
+
+
+def _rewrite_acos_pcex_javascript(content: bytes) -> bytes:
+    script_name = (getattr(settings, "FORCE_SCRIPT_NAME", "") or "").rstrip("/")
+    proxy_prefix = f"{script_name}/proxy/https/{ACOS_PCEX_HOST}"
+    text = content.decode("utf-8", errors="ignore")
+
+    # ACOS' pcex.js builds some URLs as root-relative paths. Inside ModuLearn,
+    # those must remain in the upstream ACOS namespace rather than hitting our
+    # own /static/ route.
+    root_paths = (
+        "/static/acos-pcex-examples/",
+        "/static/acos-pcex/",
+        "/pitt/acos-pcex/",
+        "/html/acos-pcex/",
+    )
+    for root_path in root_paths:
+        for quote in ("'", '"', "`"):
+            text = text.replace(f"{quote}{root_path}", f"{quote}{proxy_prefix}{root_path}")
+    return text.encode("utf-8")
 
 
 def _first_query_value(params: dict, key: str, default: str = "") -> str:
@@ -780,6 +1002,18 @@ def _find_pcex_module(course, params: dict):
 
     set_id = _first_query_value(params, "set")
     challenge_id = _first_query_value(params, "ch")
+    example_id = _first_query_value(params, "example-id") or _first_query_value(params, "example_id")
+    if not set_id and not challenge_id and not example_id:
+        return None
+
+    if example_id:
+        normalized_example = re.sub(r"[^a-z0-9]+", "", example_id.lower())
+        for module in Module.objects.filter(unit__course=course).select_related("unit"):
+            module_url = module.content_url or ""
+            normalized_url = re.sub(r"[^a-z0-9]+", "", module_url.lower())
+            if example_id in module_url or (normalized_example and normalized_example in normalized_url):
+                return module
+
     if not set_id and not challenge_id:
         return None
 
@@ -809,7 +1043,8 @@ def _pcex_context_key(params: dict) -> str:
     module_id = _first_query_value(params, "module_id")
     set_id = _first_query_value(params, "set")
     challenge_id = _first_query_value(params, "ch")
-    return f"{course_id}:{username}:{module_id}:{set_id}:{challenge_id}"
+    example_id = _first_query_value(params, "example-id") or _first_query_value(params, "example_id")
+    return f"{course_id}:{username}:{module_id}:{set_id}:{challenge_id}:{example_id}"
 
 
 def _session_pcex_state(request) -> dict:
@@ -1257,6 +1492,224 @@ def _pcex_tracking_payload(payload: dict) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
+def _request_form_payload(request) -> dict:
+    form = getattr(request, "POST", None)
+    if form:
+        if hasattr(form, "lists"):
+            return {
+                key: values[0] if len(values) == 1 else list(values)
+                for key, values in form.lists()
+            }
+        if isinstance(form, dict):
+            return dict(form)
+
+    try:
+        body = request.body or b""
+    except Exception:
+        body = b""
+    if not body:
+        return {}
+    if isinstance(body, str):
+        body_text = body
+    else:
+        body_text = body.decode("utf-8", errors="replace")
+    return {
+        key: values[0] if len(values) == 1 else list(values)
+        for key, values in parse_qs(body_text).items()
+    }
+
+
+def _json_form_object(form_payload: dict, key: str) -> dict:
+    value = form_payload.get(key)
+    if isinstance(value, list):
+        value = value[0] if value else ""
+    if isinstance(value, dict):
+        return value
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, ValueError):
+        logger.warning("[ACOS PCEX Tracking] Could not parse %s as JSON", key)
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _acos_pcex_params(request, protocol_data: dict) -> dict:
+    params = _referer_query_params(request)
+    if not isinstance(params, dict):
+        params = {}
+
+    def set_if_missing(target_key: str, value):
+        if value in (None, ""):
+            return
+        if _first_query_value(params, target_key):
+            return
+        text_value = str(value)
+        if target_key == "grp":
+            text_value = text_value.replace("+", " ")
+        params[target_key] = [text_value]
+
+    for key in ("usr", "grp", "sid", "cid", "module_id"):
+        set_if_missing(key, protocol_data.get(key))
+    set_if_missing("example-id", protocol_data.get("example-id") or protocol_data.get("example_id"))
+    return params
+
+
+def _acos_pcex_event_path(host: str, rest: str) -> bool:
+    return host == ACOS_PCEX_HOST and (rest or "").strip("/").rstrip("/") == ACOS_PCEX_EVENT_REST
+
+
+def _acos_pcex_score_snapshot(event_name: str, payload: dict) -> tuple[float, float, float, bool] | None:
+    if event_name != "grade" or not isinstance(payload, dict):
+        return None
+    try:
+        points = float(payload.get("points") or 0)
+        max_points = float(payload.get("max_points") or 0)
+    except (TypeError, ValueError):
+        return None
+    if max_points <= 0:
+        return None
+    progress = max(0.0, min(1.0, points / max_points))
+    score = progress * 100.0
+    return points, max_points, score, points >= max_points
+
+
+def _acos_pcex_attempt_count(payload: dict) -> int | None:
+    event_data = payload.get("event_data") if isinstance(payload, dict) else None
+    candidates = []
+    if isinstance(event_data, dict):
+        candidates.append(event_data.get("attempt_count"))
+    if isinstance(payload, dict):
+        candidates.append(payload.get("attempt_count"))
+    for candidate in candidates:
+        try:
+            attempt = int(candidate)
+        except (TypeError, ValueError):
+            continue
+        if attempt > 0:
+            return attempt
+    return None
+
+
+def _acos_pcex_log_event_type(event_name: str, payload: dict) -> str:
+    payload_event_type = str(payload.get("event_type") or "").strip().lower() if isinstance(payload, dict) else ""
+    if event_name == "content-load" or payload_event_type in {"initial-load", "load-activity"}:
+        return "launch"
+    return "iframe_load"
+
+
+def _capture_acos_pcex_event_if_possible(request, host: str, rest: str, response: HttpResponse):
+    if request.method != "POST" or not _acos_pcex_event_path(host, rest):
+        return
+    if getattr(response, "status_code", 500) >= 400:
+        return
+
+    form_payload = _request_form_payload(request)
+    event_name = str(form_payload.get("event") or "").strip()
+    payload = _json_form_object(form_payload, "payload")
+    protocol_data = _json_form_object(form_payload, "protocolData")
+    if not event_name and not payload:
+        return
+
+    params = _acos_pcex_params(request, protocol_data)
+    local_context = _pcex_local_progress_context(params)
+    if not local_context:
+        return
+
+    try:
+        from courses.models import ModuleProgress
+        from modulearn.learning.services.progress import (
+            apply_progress_snapshot,
+            log_module_progress_event,
+            module_accepts_scored_attempt,
+        )
+
+        _course, user, course_instance, module = local_context
+        module_progress, _ = ModuleProgress.get_or_create_progress(
+            user=user,
+            module=module,
+            course_instance=course_instance,
+        )
+
+        raw_payload = {
+            "acos_pcex_event": {
+                "event": event_name,
+                "payload": payload,
+                "protocol_data": protocol_data,
+                "referer_params": {
+                    key: _first_query_value(params, key)
+                    for key in ("cid", "usr", "grp", "sid", "module_id", "example-id")
+                    if _first_query_value(params, key)
+                },
+            }
+        }
+
+        score_snapshot = _acos_pcex_score_snapshot(event_name, payload)
+        if score_snapshot:
+            points, max_points, score, success = score_snapshot
+            provider_attempt = _acos_pcex_attempt_count(payload)
+            if not module_accepts_scored_attempt(module_progress, provider_attempt=provider_attempt):
+                logger.info(
+                    "[ACOS PCEX Tracking] Ignoring resubmission for single-attempt module user=%s module=%s",
+                    user.username,
+                    module.id,
+                )
+                return
+
+            raw_progress = max(0.0, min(1.0, points / max_points))
+            progress = max(raw_progress, module_progress.progress or 0.0)
+            percent_score = max(score, module_progress.score or 0.0)
+            is_complete = bool(module_progress.is_complete or raw_progress >= 1.0)
+            apply_progress_snapshot(
+                module_progress,
+                source="acos_pcex",
+                progress=progress,
+                score=percent_score,
+                success=bool(module_progress.success or success),
+                is_complete=is_complete,
+                payload={
+                    **raw_payload,
+                    "points": points,
+                    "max_points": max_points,
+                    "progress_percent": percent_score,
+                },
+                event_type="outcome",
+            )
+            if provider_attempt and module_progress.attempts < provider_attempt:
+                module_progress.attempts = provider_attempt
+                module_progress.save(update_fields=["attempts", "last_accessed"])
+            elif not provider_attempt:
+                module_progress.attempts = (module_progress.attempts or 0) + 1
+                module_progress.save(update_fields=["attempts", "last_accessed"])
+            logger.info(
+                "[ACOS PCEX Tracking] Recorded grade for user=%s module=%s score=%s/%s",
+                user.username,
+                module.id,
+                points,
+                max_points,
+            )
+            return
+
+        log_module_progress_event(
+            module_progress,
+            event_type=_acos_pcex_log_event_type(event_name, payload),
+            source="acos_pcex_event",
+            payload=raw_payload,
+            progress=module_progress.progress,
+            score=module_progress.score,
+            success=module_progress.success,
+        )
+        logger.debug(
+            "[ACOS PCEX Tracking] Captured %s event for user=%s module=%s",
+            event_name,
+            user.username,
+            module.id,
+        )
+    except Exception:
+        logger.exception("[ACOS PCEX Tracking] Failed to record event")
+
+
 def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse):
     if request.method != "POST" or rest.rstrip("/") != "api/track/result":
         return
@@ -1280,7 +1733,7 @@ def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse)
     try:
         from django.contrib.auth import get_user_model
         from courses.models import Course, CourseInstance, ModuleProgress
-        from modulearn.learning.services.progress import apply_progress_snapshot
+        from modulearn.learning.services.progress import apply_progress_snapshot, module_accepts_scored_attempt
 
         course = Course.objects.filter(id=course_id).first()
         user = get_user_model().objects.filter(username=username).first()
@@ -1311,6 +1764,19 @@ def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse)
             module=module,
             course_instance=course_instance,
         )
+
+        try:
+            attempt_count = int(payload.get("attempt_count") or 0)
+        except (TypeError, ValueError):
+            attempt_count = 0
+        provider_attempt = attempt_count or None
+        if not module_accepts_scored_attempt(module_progress, provider_attempt=provider_attempt):
+            logger.info(
+                "[PCEX Tracking] Ignoring resubmission for single-attempt module user=%s module=%s",
+                username,
+                module.id,
+            )
+            return
         progress = max(progress, module_progress.progress or 0.0)
         score = max(score, module_progress.score or 0.0)
         is_complete = bool(module_progress.is_complete or progress >= 1.0)
@@ -1330,10 +1796,6 @@ def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse)
             event_type="progress",
         )
 
-        try:
-            attempt_count = int(payload.get("attempt_count") or 0)
-        except (TypeError, ValueError):
-            attempt_count = 0
         if attempt_count and module_progress.attempts < attempt_count:
             module_progress.attempts = attempt_count
             module_progress.save(update_fields=["attempts", "last_accessed"])
@@ -1474,6 +1936,42 @@ def forward_cbum(request, rest: str):
         # For GET/HEAD, use http_get_proxy_path which handles query params
         return http_get_proxy_path(request, f"http/{target_host}/{full_path}")
 
+
+@csrf_exempt
+def forward_acos_pcex(request, rest: str, prefix: str = "pitt/acos-pcex"):
+    """Forward root-relative ACOS PCEX requests back through the ModuLearn proxy."""
+    target_host = ACOS_PCEX_HOST
+    if target_host not in getattr(settings, "PROXY_ALLOWED_HOSTS", set()):
+        logger.warning("%s not in PROXY_ALLOWED_HOSTS - cannot forward ACOS PCEX requests", target_host)
+        return HttpResponseForbidden(f"Proxy forwarding not configured for {target_host}")
+
+    full_path = f"{prefix.strip('/')}/{rest.lstrip('/')}"
+    if request.method == "POST":
+        class ProxyRequest:
+            def __init__(self, original_request, proxy_path):
+                self.method = original_request.method
+                self.GET = QueryDict()
+                self.POST = original_request.POST
+                self.body = original_request.body
+                self.META = original_request.META.copy()
+                self.META["PATH_INFO"] = proxy_path
+                self._redirect_depth = getattr(original_request, "_redirect_depth", 0)
+                if hasattr(original_request, "session"):
+                    self.session = original_request.session
+
+        script_name = getattr(settings, "FORCE_SCRIPT_NAME", "")
+        proxy_path = f"/proxy/https/{target_host}/{full_path}"
+        if script_name:
+            proxy_path = script_name.rstrip("/") + proxy_path
+
+        proxy_request = ProxyRequest(request, proxy_path)
+        response = http_get_proxy(proxy_request, _redirect_depth=0)
+        _capture_acos_pcex_event_if_possible(request, target_host, full_path, response)
+        return response
+
+    return http_get_proxy_path(request, f"https/{target_host}/{full_path}")
+
+
 @csrf_exempt
 def http_get_proxy_path(request, rest: str):
     """
@@ -1536,6 +2034,7 @@ def http_get_proxy_path(request, rest: str):
                 _capture_pcex_activity_if_possible(request, pcex_rest, result)
                 _capture_pcex_explanation_if_possible(request, pcex_rest, result)
                 _capture_pcex_result_if_possible(request, pcex_rest, result)
+            _capture_acos_pcex_event_if_possible(request, host, path_rest, result)
             capture_pcrs_result_if_possible(request, host, path_rest, result)
             return result
         else:

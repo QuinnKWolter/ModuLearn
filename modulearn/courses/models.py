@@ -111,23 +111,26 @@ class Module(models.Model):
     MODULE_TYPE_SPLICE_SMART_CONTENT = 'splice_smart_content'
     MODULE_TYPE_FILE = 'file'
     MODULE_TYPE_FORM = 'form'
-    # Legacy study-specific form aliases remain valid for existing databases.
+    # Legacy study-specific aliases are retained only so imports/data migrations can
+    # normalize them into the regular form module type.
     MODULE_TYPE_STUDY_CONSENT = 'study_consent'
     MODULE_TYPE_STUDY_INSTRUCTIONS = 'study_instructions'
     MODULE_TYPE_STUDY_PRETEST = 'study_pretest'
     MODULE_TYPE_STUDY_POSTTEST = 'study_posttest'
     MODULE_TYPE_STUDY_DEBRIEF = 'study_debrief'
+    LEGACY_STUDY_FORM_TYPES = {
+        MODULE_TYPE_STUDY_CONSENT,
+        MODULE_TYPE_STUDY_INSTRUCTIONS,
+        MODULE_TYPE_STUDY_PRETEST,
+        MODULE_TYPE_STUDY_POSTTEST,
+        MODULE_TYPE_STUDY_DEBRIEF,
+    }
     MODULE_TYPE_CHOICES = [
         (MODULE_TYPE_IMPORTED, 'Imported Activity'),
         (MODULE_TYPE_EXTERNAL_LINK, 'External Link'),
         (MODULE_TYPE_SPLICE_SMART_CONTENT, 'Smart Learning Content'),
         (MODULE_TYPE_FILE, 'Uploaded File'),
         (MODULE_TYPE_FORM, 'Form / Survey'),
-        (MODULE_TYPE_STUDY_CONSENT, 'Study Consent'),
-        (MODULE_TYPE_STUDY_INSTRUCTIONS, 'Study Instructions'),
-        (MODULE_TYPE_STUDY_PRETEST, 'Study Pretest'),
-        (MODULE_TYPE_STUDY_POSTTEST, 'Study Posttest'),
-        (MODULE_TYPE_STUDY_DEBRIEF, 'Study Debrief'),
     ]
     MANUAL_MODULE_TYPE_CHOICES = [
         (MODULE_TYPE_EXTERNAL_LINK, 'External Link'),
@@ -135,14 +138,7 @@ class Module(models.Model):
         (MODULE_TYPE_FILE, 'Uploaded File'),
         (MODULE_TYPE_FORM, 'Quiz / Form'),
     ]
-    FORM_LIKE_TYPES = {
-        MODULE_TYPE_FORM,
-        MODULE_TYPE_STUDY_CONSENT,
-        MODULE_TYPE_STUDY_INSTRUCTIONS,
-        MODULE_TYPE_STUDY_PRETEST,
-        MODULE_TYPE_STUDY_POSTTEST,
-        MODULE_TYPE_STUDY_DEBRIEF,
-    }
+    FORM_LIKE_TYPES = {MODULE_TYPE_FORM}
 
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='modules', null=True, blank=True)
     title = models.CharField(max_length=255)
@@ -151,6 +147,7 @@ class Module(models.Model):
     order = models.PositiveIntegerField(default=0, db_index=True)
     is_visible = models.BooleanField(default=True)
     is_locked = models.BooleanField(default=False)
+    allow_resubmission = models.BooleanField(default=True)
     unlock_rule = models.JSONField(default=dict, blank=True)
     content_data = models.JSONField(blank=True, null=True)
     content_url = models.URLField(blank=True, null=True)
@@ -434,7 +431,15 @@ class ModuleProgress(models.Model):
         
         # Update fields from the activity data
         try:
-            from modulearn.learning.services.progress import apply_progress_snapshot
+            from modulearn.learning.services.progress import apply_progress_snapshot, module_accepts_scored_attempt
+
+            if not module_accepts_scored_attempt(self):
+                logger.info(
+                    "Ignoring resubmission for single-attempt module progress user=%s module=%s",
+                    self.user_id,
+                    self.module_id,
+                )
+                return
 
             progress_value = None
             if 'completion' in activity_data and bool(activity_data['completion']):

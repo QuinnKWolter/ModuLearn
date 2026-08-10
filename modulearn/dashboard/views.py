@@ -494,6 +494,261 @@ def _serialize_module_progress_event(event):
     }
 
 
+def _can_view_course_instance_analytics(user, course_instance):
+    if user.is_staff:
+        return True
+    if course_instance.instructors.filter(id=user.id).exists():
+        return True
+    course = getattr(course_instance, "course", None)
+    if course and course.instructors.filter(id=user.id).exists():
+        return True
+    try:
+        study = course_instance.study
+    except Exception:
+        study = None
+    return bool(study and study.instructors.filter(id=user.id).exists())
+
+
+def _serialize_full_progress_event(event):
+    progress = float(event.progress or 0.0)
+    return {
+        "kind": "progress_event",
+        "id": event.id,
+        "label": event.get_event_type_display(),
+        "event_type": event.event_type,
+        "source": event.source,
+        "timestamp": event.created_at,
+        "created_at": event.created_at,
+        "progress": progress,
+        "progress_percent": round(progress * 100.0),
+        "score": event.score,
+        "success": bool(event.success),
+        "study_condition": event.study_condition,
+        "payload": event.payload or {},
+    }
+
+
+def _serialize_access_log(log):
+    return {
+        "kind": "access_log",
+        "id": log.id,
+        "label": log.get_event_type_display(),
+        "event_type": log.event_type,
+        "source": "module_access_log",
+        "timestamp": log.created_at,
+        "created_at": log.created_at,
+        "payload": log.metadata or {},
+    }
+
+
+def _serialize_form_submission(submission):
+    answers = []
+    for answer in submission.answers.all():
+        question = answer.question
+        answers.append({
+            "question_id": question.id,
+            "prompt": question.prompt,
+            "question_type": question.question_type,
+            "question_type_label": question.get_question_type_display(),
+            "required": bool(question.required),
+            "order": question.order,
+            "value": answer.value,
+            "text_value": answer.text_value,
+        })
+    return {
+        "kind": "form_submission",
+        "id": submission.id,
+        "label": "Form Submission",
+        "event_type": "form_submission",
+        "source": "module_form",
+        "timestamp": submission.submitted_at,
+        "created_at": submission.submitted_at,
+        "success": bool(submission.is_complete),
+        "payload": {
+            "submission_id": submission.id,
+            "is_complete": submission.is_complete,
+            "answers": answers,
+        },
+    }
+
+
+def _resolve_history_participant(course_instance, learner_id, participant_session_uuid):
+    from recruitment.models import ParticipantSession
+
+    participant_session = None
+    enrollment = None
+
+    if participant_session_uuid:
+        participant_session = (
+            ParticipantSession.objects
+            .select_related("user", "enrollment", "recruitment_source", "recruitment_source__study")
+            .filter(uuid=participant_session_uuid)
+            .first()
+        )
+        if not participant_session:
+            return None, None, "Participant session not found"
+        source = participant_session.recruitment_source
+        source_instance_id = source.study.course_instance_id if source.study_id else source.course_instance_id
+        if source_instance_id != course_instance.id:
+            return None, None, "Participant session does not belong to this course session"
+        enrollment = participant_session.enrollment
+        if not enrollment and participant_session.user_id:
+            enrollment = Enrollment.objects.filter(
+                course_instance=course_instance,
+                student=participant_session.user,
+            ).select_related("student").first()
+    elif learner_id:
+        enrollment = (
+            Enrollment.objects
+            .select_related("student")
+            .filter(course_instance=course_instance, student__username=learner_id)
+            .first()
+        )
+        if enrollment:
+            participant_session = (
+                ParticipantSession.objects
+                .filter(enrollment=enrollment)
+                .select_related("recruitment_source")
+                .order_by("-entered_at", "-id")
+                .first()
+            )
+
+    if not enrollment:
+        return None, participant_session, "Learner not found for this course session"
+    return enrollment, participant_session, ""
+
+
+@login_required
+@require_GET
+def fetch_module_capture_history(request):
+    """
+    Return all captured local history for one learner/participant and one module.
+
+    This endpoint intentionally keeps full event payloads intact so instructors and
+    researchers can inspect submitted code, provider responses, form answers, and
+    raw metadata without inflating the main analytics dashboard payload.
+    """
+    instance_id = (request.GET.get("instance_id") or "").strip()
+    module_id = (request.GET.get("module_id") or "").strip()
+    learner_id = (request.GET.get("learner_id") or "").strip()
+    participant_session_uuid = (request.GET.get("participant_session_uuid") or "").strip()
+
+    if not instance_id or not module_id or not (learner_id or participant_session_uuid):
+        return JsonResponse({
+            "error": "instance_id, module_id, and learner_id or participant_session_uuid are required"
+        }, status=400)
+
+    if not get_user_role_snapshot(request.user)["effective_is_instructor"] and not request.user.is_staff:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    try:
+        from courses.models import Module, ModuleAccessLog, ModuleFormSubmission, ModuleProgress, ModuleProgressEvent
+
+        course_instance = CourseInstance.objects.select_related("course").get(id=instance_id)
+        if not _can_view_course_instance_analytics(request.user, course_instance):
+            return JsonResponse({"error": "Not found"}, status=404)
+
+        module = Module.objects.select_related("unit").filter(
+            id=module_id,
+            unit__course=course_instance.course,
+        ).first()
+        if not module:
+            return JsonResponse({"error": "Module not found for this course session"}, status=404)
+
+        enrollment, participant_session, error = _resolve_history_participant(
+            course_instance,
+            learner_id,
+            participant_session_uuid,
+        )
+        if error:
+            return JsonResponse({"error": error}, status=404)
+
+        progress = (
+            ModuleProgress.objects
+            .filter(enrollment=enrollment, module=module)
+            .select_related("module", "enrollment", "user")
+            .first()
+        )
+
+        items = []
+        if progress:
+            events = (
+                ModuleProgressEvent.objects
+                .filter(module_progress=progress)
+                .select_related("study_participant_session")
+                .order_by("created_at", "id")
+            )
+            items.extend(_serialize_full_progress_event(event) for event in events)
+
+        access_logs = (
+            ModuleAccessLog.objects
+            .filter(course_instance=course_instance, module=module, user=enrollment.student)
+            .order_by("created_at", "id")
+        )
+        items.extend(_serialize_access_log(log) for log in access_logs)
+
+        submissions = (
+            ModuleFormSubmission.objects
+            .filter(form__module=module, enrollment=enrollment)
+            .prefetch_related("answers", "answers__question")
+            .order_by("submitted_at", "id")
+        )
+        items.extend(_serialize_form_submission(submission) for submission in submissions)
+
+        items.sort(key=lambda item: (item.get("timestamp") is None, item.get("timestamp")))
+        learner = enrollment.student
+        summary_counts = {}
+        for item in items:
+            summary_counts[item["kind"]] = summary_counts.get(item["kind"], 0) + 1
+
+        return JsonResponse({
+            "success": True,
+            "learner": {
+                "id": learner.username,
+                "name": getattr(learner, "full_name", "") or learner.get_full_name() or learner.username,
+                "email": learner.email,
+            },
+            "participant": {
+                "uuid": str(participant_session.uuid) if participant_session else "",
+                "condition": getattr(participant_session, "condition", "") or "",
+                "external_pid": getattr(participant_session, "external_pid", "") or "",
+                "external_session_id": getattr(participant_session, "external_session_id", "") or "",
+            },
+            "module": {
+                "id": module.id,
+                "title": module.title,
+                "unit_title": module.unit.title if module.unit else "",
+                "module_type": module.display_type_label,
+                "provider_id": module.provider_id,
+                "platform_name": module.platform_name,
+                "content_url": module.content_url,
+            },
+            "progress": {
+                "id": progress.id if progress else None,
+                "progress": float(progress.progress or 0.0) if progress else 0.0,
+                "progress_percent": round(float(progress.progress or 0.0) * 100.0) if progress else 0,
+                "score": progress.score if progress else None,
+                "success": bool(progress and progress.success),
+                "is_complete": bool(progress and progress.is_complete),
+                "attempts": progress.attempts if progress else 0,
+                "first_accessed": progress.first_accessed if progress else None,
+                "last_accessed": progress.last_accessed if progress else None,
+                "state_data": progress.state_data if progress else None,
+                "last_response": progress.last_response if progress else "",
+            },
+            "summary": {
+                "item_count": len(items),
+                "counts": summary_counts,
+            },
+            "items": items,
+        })
+    except CourseInstance.DoesNotExist:
+        return JsonResponse({"error": "Course session not found"}, status=404)
+    except Exception as e:
+        logger.error("Error building module capture history: %s", str(e), exc_info=True)
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 @login_required
 @require_GET
 def fetch_modulearn_student_engagement(request):
@@ -606,12 +861,25 @@ def fetch_modulearn_student_engagement(request):
             or enrollment.student.get_full_name()
             or enrollment.student.username
         )
+        try:
+            from recruitment.models import ParticipantSession
+
+            participant_session = (
+                ParticipantSession.objects
+                .filter(enrollment=enrollment)
+                .order_by("-entered_at", "-id")
+                .first()
+            )
+        except Exception:
+            participant_session = None
         return JsonResponse({
             "success": True,
             "learner": {
                 "id": enrollment.student.username,
                 "name": learner_name,
                 "email": enrollment.student.email,
+                "participant_session_uuid": str(participant_session.uuid) if participant_session else "",
+                "condition": getattr(participant_session, "condition", "") or "",
             },
             "context": {
                 "course_instance_id": course_instance.id,

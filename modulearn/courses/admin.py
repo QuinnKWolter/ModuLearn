@@ -41,8 +41,8 @@ class UnitAdmin(admin.ModelAdmin):
 
 
 class ModuleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'unit', 'module_type', 'order', 'is_visible', 'is_locked')
-    list_filter = ('module_type', 'is_visible', 'is_locked')
+    list_display = ('title', 'unit', 'module_type', 'order', 'is_visible', 'is_locked', 'allow_resubmission')
+    list_filter = ('module_type', 'is_visible', 'is_locked', 'allow_resubmission')
     search_fields = ('title', 'unit__title', 'unit__course__title')
     ordering = ('unit', 'order', 'id')
 

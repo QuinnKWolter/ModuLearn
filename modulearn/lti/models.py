@@ -48,8 +48,8 @@ class LTIPlatformRegistration(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["issuer", "client_id"]),
-            models.Index(fields=["platform", "is_active"]),
+            models.Index(fields=["issuer", "client_id"], name="lti_ltiplat_issuer_b30e7f_idx"),
+            models.Index(fields=["platform", "is_active"], name="lti_ltiplat_platfor_2dfe0d_idx"),
         ]
 
     def __str__(self):
@@ -108,8 +108,8 @@ class LTIUserIdentity(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["issuer", "client_id"]),
-            models.Index(fields=["subject"]),
+            models.Index(fields=["issuer", "client_id"], name="lti_ltiuser_issuer_2f6f0e_idx"),
+            models.Index(fields=["subject"], name="lti_ltiuser_subject_167c61_idx"),
         ]
 
     def __str__(self):

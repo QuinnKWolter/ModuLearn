@@ -105,11 +105,12 @@ def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None
     if not module.is_visible and not include_hidden:
         return AccessState(False, False, "Hidden by instructor")
     has_dynamic_unlock = _has_dynamic_module_unlock(enrollment, module)
+    has_branch_lock = _has_active_branch_target(module)
     if unit_state is not None and not unit_state.can_access:
         if unit_state.is_visible and has_dynamic_unlock:
             return AccessState(True, True)
         return AccessState(unit_state.is_visible, False, unit_state.reason or "Unit is locked")
-    if not module.is_locked:
+    if not module.is_locked and not has_branch_lock:
         return AccessState(True, True)
     if has_dynamic_unlock:
         return AccessState(True, True)
@@ -122,6 +123,17 @@ def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None
         or _branch_reason(module)
         or "Locked until the instructor conditions are met",
     )
+
+
+def _has_active_branch_target(module) -> bool:
+    if not module or not getattr(module, "id", None):
+        return False
+    try:
+        from courses.models import ModuleBranchRule
+
+        return ModuleBranchRule.objects.filter(target_module=module, active=True).exists()
+    except Exception:
+        return False
 
 
 def _rule_passes(rule: dict[str, Any] | None, enrollment, *, subject_unit=None, subject_module=None) -> bool:

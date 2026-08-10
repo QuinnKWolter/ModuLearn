@@ -426,6 +426,20 @@
     text-decoration: line-through;
   }
 
+  .cfg-tree-module.is-pending-delete {
+    color: #b91c1c;
+    background: rgba(254, 226, 226, 0.68);
+  }
+
+  .cfg-tree-module.is-pending-delete .cfg-tree-label {
+    text-decoration: line-through;
+  }
+
+  .dark .cfg-tree-module.is-pending-delete {
+    color: #fecaca;
+    background: rgba(127, 29, 29, 0.28);
+  }
+
   .cfg-tree-flags {
     display: inline-flex;
     align-items: center;
@@ -681,6 +695,97 @@
   .cfg-chip-toggle.is-off[data-chip-kind="lock"] {
     color: #14532d;
     background: #dcfce7;
+  }
+
+  .cfg-chip-toggle.is-on[data-chip-kind="resubmission"] {
+    color: #1e40af;
+    background: #dbeafe;
+  }
+
+  .cfg-chip-toggle.is-off[data-chip-kind="resubmission"] {
+    color: #6d28d9;
+    background: #ede9fe;
+  }
+
+  .cfg-module.is-pending-delete {
+    border-color: rgba(220, 38, 38, 0.42);
+    background: rgba(254, 226, 226, 0.56);
+  }
+
+  .dark .cfg-module.is-pending-delete {
+    border-color: rgba(248, 113, 113, 0.48);
+    background: rgba(127, 29, 29, 0.2);
+  }
+
+  .cfg-module.is-pending-delete .cfg-module-summary,
+  .cfg-module.is-pending-delete .cfg-module-body {
+    opacity: 0.72;
+  }
+
+  .cfg-module-delete-control {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .cfg-delete-module-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    border: 1px solid rgba(220, 38, 38, 0.28);
+    border-radius: 0.35rem;
+    padding: 0.42rem 0.55rem;
+    color: #b91c1c;
+    background: rgba(254, 242, 242, 0.82);
+    font-size: 0.78rem;
+    font-weight: 850;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+  }
+
+  .cfg-delete-module-btn:hover,
+  .cfg-delete-module-btn:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(220, 38, 38, 0.46);
+    background: rgba(254, 226, 226, 0.96);
+    box-shadow: 0 10px 22px rgba(185, 28, 28, 0.16);
+  }
+
+  .cfg-delete-module-btn.is-marked {
+    color: #075985;
+    border-color: rgba(2, 132, 199, 0.28);
+    background: rgba(224, 242, 254, 0.9);
+  }
+
+  .dark .cfg-delete-module-btn {
+    color: #fecaca;
+    border-color: rgba(248, 113, 113, 0.38);
+    background: rgba(127, 29, 29, 0.28);
+  }
+
+  .dark .cfg-delete-module-btn:hover,
+  .dark .cfg-delete-module-btn:focus-visible {
+    background: rgba(127, 29, 29, 0.42);
+    box-shadow: 0 10px 22px rgba(248, 113, 113, 0.16);
+  }
+
+  .dark .cfg-delete-module-btn.is-marked {
+    color: #bae6fd;
+    border-color: rgba(56, 189, 248, 0.4);
+    background: rgba(12, 74, 110, 0.36);
+  }
+
+  .cfg-delete-module-note {
+    color: #991b1b;
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+
+  .dark .cfg-delete-module-note {
+    color: #fecaca;
   }
 
   .cfg-unit-body {
@@ -1166,16 +1271,19 @@
   .cfg-branch-rule-list {
     display: grid;
     gap: 0.45rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.12rem;
   }
 
   .cfg-branch-rule {
     display: grid;
-    gap: 0.55rem;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.38rem;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     border: 1px solid rgba(148, 163, 184, 0.28);
     border-radius: 0.42rem;
-    padding: 0.55rem;
+    padding: 0.38rem;
     background: rgba(255, 255, 255, 0.76);
   }
 
@@ -1185,12 +1293,130 @@
   }
 
   .cfg-branch-path {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.26rem;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
-    font-size: 0.82rem;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.84);
+    padding: 0.18rem 0.3rem;
+    font-size: 0.72rem;
+    outline: none;
+  }
+
+  .cfg-branch-path:focus-visible {
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
+
+  .dark .cfg-branch-path {
+    border-color: rgba(71, 85, 105, 0.68);
+    background: rgba(15, 23, 42, 0.72);
+  }
+
+  .cfg-branch-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.24rem;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .cfg-branch-token,
+  .cfg-branch-word {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.22rem;
+    border-radius: 999px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .cfg-branch-token {
+    background: rgba(226, 232, 240, 0.72);
+    color: #334155;
+    padding: 0.2rem 0.42rem;
+    min-width: 0;
+  }
+
+  .cfg-branch-token--module {
+    max-width: 12.5rem;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cfg-branch-token--condition {
+    max-width: 8.5rem;
+    background: rgba(245, 158, 11, 0.15);
+    color: #92400e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cfg-branch-word {
+    color: #64748b;
+    padding: 0 0.04rem;
+    text-transform: lowercase;
+  }
+
+  .dark .cfg-branch-token {
+    background: rgba(51, 65, 85, 0.7);
+    color: #e2e8f0;
+  }
+
+  .dark .cfg-branch-token--module {
+    color: #f8fafc;
+  }
+
+  .dark .cfg-branch-token--condition {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fde68a;
+  }
+
+  .dark .cfg-branch-word {
+    color: #cbd5e1;
+  }
+
+  .cfg-branch-rule-tooltip {
+    position: fixed;
+    z-index: 220;
+    max-width: min(34rem, calc(100vw - 2rem));
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 0.62rem;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.22);
+    color: #1e293b;
+    opacity: 0;
+    padding: 0.62rem 0.72rem;
+    pointer-events: none;
+    transform: translateY(0.25rem) scale(0.98);
+    visibility: hidden;
+    font-size: 0.76rem;
+    font-weight: 750;
+    line-height: 1.35;
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+  }
+
+  .cfg-branch-rule-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+  }
+
+  .dark .cfg-branch-rule-tooltip {
+    border-color: rgba(96, 165, 250, 0.26);
+    background: rgba(15, 23, 42, 0.98);
+    color: #e2e8f0;
   }
 
   .cfg-branch-path strong {
@@ -1202,43 +1428,69 @@
   }
 
   .cfg-flow-modal {
-    width: min(96vw, 82rem);
+    width: min(96vw, 80rem);
+    height: min(92vh, 52rem);
+    height: min(92dvh, 52rem);
+    max-height: calc(100vh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
+  }
+
+  .cfg-flow-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.78rem 1rem;
+    flex: 0 0 auto;
+  }
+
+  .cfg-flow-modal-header .cfg-create-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.65rem;
+  }
+
+  .cfg-flow-header-tools {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+
+  .cfg-flow-form {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .cfg-flow-body {
     display: grid;
-    gap: 1rem;
-    padding: 1rem;
+    grid-template-rows: minmax(16rem, 1fr) minmax(12.5rem, 0.72fr);
+    gap: 0.7rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.72rem;
   }
 
-  .cfg-flow-brief,
-  .cfg-flow-composer,
-  .cfg-flow-rules {
+  .cfg-flow-connections {
     border: 1px solid rgba(148, 163, 184, 0.26);
     border-radius: 0.65rem;
     background: rgba(255, 255, 255, 0.78);
-    padding: 0.9rem;
+    padding: 0.62rem;
   }
 
-  .dark .cfg-flow-brief,
-  .dark .cfg-flow-composer,
-  .dark .cfg-flow-rules {
+  .dark .cfg-flow-connections {
     border-color: rgba(71, 85, 105, 0.66);
     background: rgba(2, 6, 23, 0.32);
-  }
-
-  .cfg-flow-brief {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
   }
 
   .cfg-flow-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.35rem;
   }
 
   .cfg-flow-stats span {
@@ -1248,14 +1500,206 @@
     border-radius: 999px;
     background: rgba(37, 99, 235, 0.09);
     color: #1e40af;
-    padding: 0.35rem 0.7rem;
-    font-size: 0.78rem;
+    padding: 0.28rem 0.56rem;
+    font-size: 0.72rem;
     font-weight: 800;
   }
 
   .dark .cfg-flow-stats span {
     background: rgba(96, 165, 250, 0.14);
     color: #bfdbfe;
+  }
+
+  .cfg-flow-stats--header {
+    justify-content: flex-end;
+  }
+
+  .cfg-flow-connections {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 0.46rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cfg-flow-connections-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .cfg-flow-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-width: 0;
+  }
+
+  .cfg-flow-section-title h3 {
+    font-size: 0.98rem;
+    line-height: 1.1;
+  }
+
+  .cfg-flow-help {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1px solid rgba(37, 99, 235, 0.24);
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    cursor: help;
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+    outline: none;
+  }
+
+  .cfg-flow-help:hover,
+  .cfg-flow-help:focus-visible {
+    border-color: rgba(37, 99, 235, 0.46);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .cfg-flow-help-bubble {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 0.5rem);
+    z-index: 5;
+    width: min(19rem, 76vw);
+    transform: translate(-50%, 0.2rem);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 0.55rem;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+    color: #334155;
+    opacity: 0;
+    padding: 0.55rem 0.65rem;
+    pointer-events: none;
+    text-align: left;
+    visibility: hidden;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.35;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+  }
+
+  .cfg-flow-help:hover .cfg-flow-help-bubble,
+  .cfg-flow-help:focus-visible .cfg-flow-help-bubble,
+  .cfg-flow-help:focus .cfg-flow-help-bubble {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    visibility: visible;
+  }
+
+  .dark .cfg-flow-help {
+    border-color: rgba(96, 165, 250, 0.26);
+    background: rgba(96, 165, 250, 0.14);
+    color: #bfdbfe;
+  }
+
+  .dark .cfg-flow-help-bubble {
+    border-color: rgba(96, 165, 250, 0.22);
+    background: rgba(15, 23, 42, 0.98);
+    color: #dbeafe;
+  }
+
+  .cfg-flow-status {
+    min-height: 1.4rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .cfg-flow-status.is-saving {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+  }
+
+  .cfg-flow-status.is-saved {
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
+  }
+
+  .cfg-flow-status.is-error {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
+  }
+
+  .dark .cfg-flow-status.is-saving {
+    color: #bfdbfe;
+  }
+
+  .dark .cfg-flow-status.is-saved {
+    color: #a7f3d0;
+  }
+
+  .dark .cfg-flow-status.is-error {
+    color: #fecaca;
+  }
+
+  .cfg-flow-builder {
+    display: grid;
+    gap: 0.42rem;
+    grid-template-columns: minmax(0, 1.15fr) minmax(9rem, 0.78fr) minmax(0, 1.15fr) minmax(9rem, 0.75fr) 5rem auto;
+    align-items: end;
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    border-radius: 0.5rem;
+    padding: 0.48rem;
+    background: linear-gradient(135deg, rgba(239, 246, 255, 0.82), rgba(240, 253, 250, 0.72));
+  }
+
+  .cfg-flow-builder label {
+    font-size: 0.76rem;
+  }
+
+  .cfg-flow-builder .form-control {
+    min-height: 2rem;
+    padding-block: 0.34rem;
+    font-size: 0.82rem;
+  }
+
+  .dark .cfg-flow-builder {
+    border-color: rgba(96, 165, 250, 0.2);
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.22), rgba(20, 83, 78, 0.18));
+  }
+
+  .cfg-flow-add-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.12rem;
+    white-space: nowrap;
+  }
+
+  .cfg-wizard-footer.cfg-flow-footer {
+    flex: 0 0 auto;
+    padding: 0.58rem 0.75rem;
+    background: rgba(248, 250, 252, 0.94);
+  }
+
+  .dark .cfg-wizard-footer.cfg-flow-footer {
+    background: rgba(15, 23, 42, 0.88);
+  }
+
+  @media (max-width: 1100px) {
+    .cfg-flow-builder {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .cfg-flow-builder {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .cfg-flow-map-shell {
@@ -1265,7 +1709,8 @@
     border-radius: 0.75rem;
     background:
       linear-gradient(180deg, rgba(240, 253, 250, 0.65), rgba(248, 250, 252, 0.92));
-    min-height: 24rem;
+    min-height: 14rem;
+    max-height: 100%;
   }
 
   .dark .cfg-flow-map-shell {
@@ -1276,8 +1721,8 @@
   .cfg-flow-map {
     position: relative;
     min-width: max-content;
-    min-height: 24rem;
-    padding: 0.85rem;
+    min-height: 14rem;
+    padding: 0.58rem;
   }
 
   .cfg-flow-lines {
@@ -1286,6 +1731,26 @@
     z-index: 0;
     pointer-events: none;
     overflow: visible;
+  }
+
+  .cfg-flow-line {
+    transition: opacity 0.16s ease, stroke-width 0.16s ease, filter 0.16s ease;
+  }
+
+  .cfg-flow-line.is-related {
+    stroke-width: 4;
+    filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.38));
+    animation: cfg-flow-dash 0.62s linear infinite;
+  }
+
+  .cfg-flow-line:not(.is-related).is-dimmed {
+    opacity: 0.22;
+  }
+
+  @keyframes cfg-flow-dash {
+    to {
+      stroke-dashoffset: -18;
+    }
   }
 
   .cfg-flow-line-label {
@@ -1298,6 +1763,14 @@
     font-weight: 800;
   }
 
+  .cfg-flow-line-label.is-related {
+    font-size: 0.76rem;
+  }
+
+  .cfg-flow-line-label.is-dimmed {
+    opacity: 0.26;
+  }
+
   .dark .cfg-flow-line-label {
     fill: #bfdbfe;
     stroke: rgba(15, 23, 42, 0.92);
@@ -1308,18 +1781,18 @@
     z-index: 1;
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(15.5rem, 1fr);
-    gap: 0.75rem;
+    grid-auto-columns: minmax(10.75rem, 1fr);
+    gap: 0.46rem;
     align-items: start;
   }
 
   .cfg-flow-unit {
     display: grid;
-    gap: 0.6rem;
+    gap: 0.34rem;
     border: 1px solid rgba(148, 163, 184, 0.24);
-    border-radius: 0.65rem;
+    border-radius: 0.58rem;
     background: rgba(255, 255, 255, 0.82);
-    padding: 0.65rem;
+    padding: 0.42rem;
   }
 
   .dark .cfg-flow-unit {
@@ -1328,33 +1801,47 @@
   }
 
   .cfg-flow-unit header {
-    display: grid;
-    gap: 0.1rem;
+    display: block;
     min-width: 0;
   }
 
   .cfg-flow-unit header strong {
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.8rem;
+    line-height: 1.18;
+  }
+
+  .cfg-flow-unit header strong span {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .dark .cfg-flow-unit header strong span {
+    color: #cbd5e1;
   }
 
   .cfg-flow-node-list {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.26rem;
   }
 
   .cfg-flow-node {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.55rem;
+    grid-template-columns: 0.9rem minmax(0, 1fr) auto;
+    gap: 0.32rem;
     align-items: center;
     width: 100%;
     border: 1px solid rgba(148, 163, 184, 0.24);
-    border-radius: 0.52rem;
+    border-radius: 0.45rem;
     background: rgba(248, 250, 252, 0.92);
     color: #0f172a;
-    padding: 0.55rem;
+    padding: 0.34rem 0.36rem;
     text-align: left;
     transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
   }
@@ -1382,6 +1869,18 @@
     box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16);
   }
 
+  .cfg-flow-map.has-flow-focus .cfg-flow-node:not(.is-related) {
+    opacity: 0.38;
+  }
+
+  .cfg-flow-node.is-related {
+    border-color: var(--flow-focus-color, rgba(37, 99, 235, 0.86));
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--flow-focus-color, #2563eb) 20%, transparent),
+      0 14px 28px rgba(15, 23, 42, 0.16);
+    transform: translateY(-1px);
+  }
+
   .cfg-flow-node.is-hidden {
     opacity: 0.62;
   }
@@ -1396,8 +1895,13 @@
 
   .cfg-flow-node small {
     color: #64748b;
-    font-size: 0.72rem;
+    font-size: 0.6rem;
     font-weight: 700;
+  }
+
+  .cfg-flow-node strong {
+    font-size: 0.72rem;
+    line-height: 1.12;
   }
 
   .dark .cfg-flow-node small {
@@ -1406,17 +1910,157 @@
 
   .cfg-flow-node-icon {
     color: #2563eb;
+    font-size: 0.86rem;
   }
 
   .cfg-flow-node-flags {
     display: inline-flex;
-    gap: 0.25rem;
+    gap: 0.18rem;
     color: #94a3b8;
-    font-size: 0.72rem;
+    font-size: 0.62rem;
   }
 
   .cfg-branch-rule.is-muted {
     opacity: 0.62;
+  }
+
+  .cfg-branch-rule {
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
+  }
+
+  .cfg-flow-connections.has-flow-focus .cfg-branch-rule:not(.is-related) {
+    opacity: 0.36;
+  }
+
+  .cfg-branch-rule.is-related {
+    border-color: var(--flow-focus-color, rgba(37, 99, 235, 0.8));
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--flow-focus-color, #2563eb) 16%, transparent),
+      0 12px 28px rgba(15, 23, 42, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .cfg-branch-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.28rem;
+  }
+
+  .cfg-branch-actions .cfg-toggle {
+    min-height: 1.46rem;
+    padding: 0.16rem 0.38rem;
+    font-size: 0.68rem;
+    line-height: 1;
+  }
+
+  .cfg-branch-actions .form-control {
+    min-height: 1.46rem;
+    height: 1.46rem;
+    border-radius: 0.34rem;
+    padding: 0.12rem 0.36rem;
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1;
+  }
+
+  .cfg-branch-actions select.form-control {
+    width: 7.75rem !important;
+  }
+
+  .cfg-branch-actions input[type="number"].form-control {
+    width: 3.25rem !important;
+    text-align: center;
+  }
+
+  .cfg-branch-condition-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.14rem;
+    height: 1.14rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+  }
+
+  .cfg-condition-tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    min-height: 1.22rem;
+    padding: 0.2rem 0.42rem;
+    font-size: 0.66rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .cfg-condition-tag--success,
+  .cfg-branch-rule--success .cfg-branch-condition-icon {
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
+  }
+
+  .cfg-condition-tag--failure,
+  .cfg-branch-rule--failure .cfg-branch-condition-icon {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
+  }
+
+  .cfg-condition-tag--completed,
+  .cfg-branch-rule--completed .cfg-branch-condition-icon {
+    background: rgba(37, 99, 235, 0.14);
+    color: #1d4ed8;
+  }
+
+  .cfg-condition-tag--score_gte,
+  .cfg-branch-rule--score_gte .cfg-branch-condition-icon {
+    background: rgba(20, 184, 166, 0.16);
+    color: #0f766e;
+  }
+
+  .cfg-condition-tag--score_lt,
+  .cfg-branch-rule--score_lt .cfg-branch-condition-icon {
+    background: rgba(245, 158, 11, 0.18);
+    color: #b45309;
+  }
+
+  .dark .cfg-condition-tag--success,
+  .dark .cfg-branch-rule--success .cfg-branch-condition-icon {
+    color: #a7f3d0;
+  }
+
+  .dark .cfg-condition-tag--failure,
+  .dark .cfg-branch-rule--failure .cfg-branch-condition-icon {
+    color: #fecaca;
+  }
+
+  .dark .cfg-condition-tag--completed,
+  .dark .cfg-branch-rule--completed .cfg-branch-condition-icon {
+    color: #bfdbfe;
+  }
+
+  .dark .cfg-condition-tag--score_gte,
+  .dark .cfg-branch-rule--score_gte .cfg-branch-condition-icon {
+    color: #99f6e4;
+  }
+
+  .dark .cfg-condition-tag--score_lt,
+  .dark .cfg-branch-rule--score_lt .cfg-branch-condition-icon {
+    color: #fde68a;
+  }
+
+  .cfg-toggle-danger {
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #b91c1c;
+    background: rgba(254, 226, 226, 0.72);
+  }
+
+  .dark .cfg-toggle-danger {
+    border-color: rgba(248, 113, 113, 0.28);
+    color: #fecaca;
+    background: rgba(127, 29, 29, 0.22);
   }
 
   .cfg-study-modal-body {
@@ -1904,6 +2548,72 @@
       min-width: 0;
     }
   }
+
+  @media (max-width: 760px) {
+    .cfg-flow-modal {
+      width: calc(100vw - 0.75rem);
+      height: calc(100dvh - 0.75rem);
+      max-height: calc(100dvh - 0.75rem);
+    }
+
+    .cfg-flow-modal-header {
+      padding: 0.62rem 0.75rem;
+      align-items: flex-start;
+    }
+
+    .cfg-flow-header-tools {
+      align-items: flex-end;
+      flex-direction: column-reverse;
+      gap: 0.4rem;
+    }
+
+    .cfg-flow-stats--header {
+      max-width: 13rem;
+    }
+
+    .cfg-flow-body {
+      grid-template-rows: minmax(12rem, 0.82fr) minmax(13rem, 1fr);
+      padding: 0.55rem;
+    }
+
+    .cfg-flow-footer {
+      align-items: stretch;
+    }
+
+    .cfg-flow-footer .cfg-wizard-footer-actions {
+      width: 100%;
+    }
+
+    .cfg-flow-footer .btn {
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+  }
+
+  @media (max-height: 780px) and (min-width: 761px) {
+    .cfg-flow-modal {
+      height: calc(100dvh - 1rem);
+      max-height: calc(100dvh - 1rem);
+    }
+
+    .cfg-flow-modal-header {
+      padding-block: 0.6rem;
+    }
+
+    .cfg-flow-body {
+      grid-template-rows: minmax(13rem, 0.78fr) minmax(10.5rem, 1fr);
+      gap: 0.52rem;
+      padding: 0.58rem;
+    }
+
+    .cfg-flow-node {
+      padding-block: 0.34rem;
+    }
+
+    .cfg-flow-footer {
+      padding-block: 0.48rem;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -2164,14 +2874,28 @@
                               <i class="fa-solid {% if module.is_locked or module.unlock_rule_type != 'none' %}fa-lock{% else %}fa-unlock{% endif %}" data-chip-icon></i>
                               <span data-chip-label>{% if module.is_locked or module.unlock_rule_type != 'none' %}Locked{% else %}Open{% endif %}</span>
                             </button>
+                            <input type="hidden" name="module_{{ module.id }}_allow_resubmission" value="{% if module.allow_resubmission %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="resubmission">
+                            <button type="button" class="cfg-chip cfg-chip-toggle {% if module.allow_resubmission %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="resubmission" aria-pressed="{% if module.allow_resubmission %}true{% else %}false{% endif %}" title="Toggle resubmissions">
+                              <i class="fa-solid {% if module.allow_resubmission %}fa-rotate-right{% else %}fa-ban{% endif %}" data-chip-icon></i>
+                              <span data-chip-label>{% if module.allow_resubmission %}Retries{% else %}Single Try{% endif %}</span>
+                            </button>
                           </span>
                         </summary>
                         <div class="cfg-module-body">
                           <div class="cfg-module-grid">
                             <div>
                               <input type="hidden" name="module_{{ module.id }}_unit_id" value="{{ group.unit.id }}" data-module-unit-input>
+                              <input type="hidden" name="module_{{ module.id }}_delete" value="0" data-delete-module-input>
                               <label class="stat-kicker" for="module_{{ module.id }}_order">Order</label>
                               <input id="module_{{ module.id }}_order" name="module_{{ module.id }}_order" type="number" value="{{ module.order }}" class="form-control mt-1" data-module-order-input>
+                              <div class="cfg-module-delete-control">
+                                <button type="button" class="cfg-delete-module-btn" data-delete-module-button aria-pressed="false">
+                                  <i class="bi bi-trash3" aria-hidden="true" data-delete-module-icon></i>
+                                </button>
+                                <p class="cfg-delete-module-note" data-delete-module-note hidden>
+                                  Marked for deletion. Save changes to remove it, or click Undo.
+                                </p>
+                              </div>
                             </div>
                             <div class="cfg-field-grid">
                               <input id="module_{{ module.id }}_title" name="module_{{ module.id }}_title" value="{{ module.title }}" class="form-control font-semibold">
@@ -2283,15 +3007,9 @@
                                       <div class="stat-kicker">Form Content</div>
                                       <h4 class="text-sm font-bold text-slate-900 dark:text-white mb-0">Participant-facing copy and questions</h4>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                      <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                        <input type="checkbox" name="module_{{ module.id }}_form_allow_resubmission" {% if module.config_form.allow_resubmission %}checked{% endif %}>
-                                        Allow resubmission
-                                      </label>
-                                      <button type="button" class="btn btn-outline-primary btn-sm cfg-question-add-button" title="Add question" aria-label="Add question" data-bs-toggle="modal" data-bs-target="#addQuestionModal{{ module.id }}">
-                                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                                      </button>
-                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm cfg-question-add-button" title="Add question" aria-label="Add question" data-bs-toggle="modal" data-bs-target="#addQuestionModal{{ module.id }}">
+                                      <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                    </button>
                                   </div>
 
                                   <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(10rem,0.35fr)] mt-3">
@@ -2669,6 +3387,10 @@
                 <label class="stat-kicker">Description</label>
                 <textarea name="description" rows="3" class="form-control mt-1" placeholder="Optional description"></textarea>
               </div>
+              <label class="cfg-toggle justify-center">
+                <input type="checkbox" name="allow_resubmission" checked>
+                Allow resubmissions
+              </label>
 
               <div class="cfg-type-panels">
                 <div data-type-panel="external_link splice_smart_content">
@@ -2688,10 +3410,7 @@
                 <label class="stat-kicker">Instructions</label>
                 <textarea name="form_instructions" rows="3" class="form-control mt-1" placeholder="Optional instructions shown above questions"></textarea>
               </div>
-              <div class="grid gap-2 md:grid-cols-2">
-                <label class="cfg-toggle justify-center"><input type="checkbox" name="allow_resubmission"> Allow resubmission</label>
-                <input name="submit_button_label" class="form-control" placeholder="Submit button label">
-              </div>
+              <input name="submit_button_label" class="form-control" placeholder="Submit button label">
               <div class="cfg-form-builder-head">
                 <div>
                   <div class="stat-kicker">Questions</div>
@@ -3803,6 +4522,16 @@
         button.title = enabled ? t('Click to unlock') : t('Click to lock');
         button.setAttribute('aria-label', button.title);
       }
+
+      if (kind === 'resubmission') {
+        if (label) label.textContent = enabled ? t('Retries') : t('Single Try');
+        if (icon) {
+          icon.classList.toggle('fa-rotate-right', enabled);
+          icon.classList.toggle('fa-ban', !enabled);
+        }
+        button.title = enabled ? t('Click to limit to one attempt') : t('Click to allow resubmissions');
+        button.setAttribute('aria-label', button.title);
+      }
     }
 
     function syncTreeStateForOwner(owner) {
@@ -3843,15 +4572,51 @@
         if (!treeModule) return;
         const visibleInput = owner.querySelector('[data-toggle-value][data-toggle-kind="visible"]');
         const lockInput = owner.querySelector('[data-lock-input]');
+        const resubmitInput = owner.querySelector('[data-toggle-value][data-toggle-kind="resubmission"]');
         const flags = treeModule.querySelector('.cfg-tree-flags');
         const visible = visibleInput ? isToggleOn(visibleInput) : true;
         const locked = lockInput ? isToggleOn(lockInput) : false;
+        const allowsResubmission = resubmitInput ? isToggleOn(resubmitInput) : true;
         treeModule.classList.toggle('is-hidden', !visible);
         if (flags) {
           flags.innerHTML = `
             ${locked ? '<i class="fa-solid fa-lock" title="Locked" aria-label="Locked"></i>' : ''}
             ${!visible ? '<i class="fa-solid fa-eye-slash" title="Hidden" aria-label="Hidden"></i>' : ''}
+            ${!allowsResubmission ? '<i class="fa-solid fa-ban" title="Single attempt" aria-label="Single attempt"></i>' : ''}
           `;
+        }
+      }
+    }
+
+    function setModuleDeletionState(owner, marked) {
+      if (!owner || !owner.matches('.cfg-module')) return;
+      const input = owner.querySelector('[data-delete-module-input]');
+      const button = owner.querySelector('[data-delete-module-button]');
+      const icon = owner.querySelector('[data-delete-module-icon]');
+      const label = owner.querySelector('[data-delete-module-label]');
+      const note = owner.querySelector('[data-delete-module-note]');
+      const treeModule = getTreeModule(owner.dataset.moduleId);
+      if (input) input.value = marked ? '1' : '0';
+      owner.classList.toggle('is-pending-delete', marked);
+      if (treeModule) treeModule.classList.toggle('is-pending-delete', marked);
+      if (button) {
+        button.classList.toggle('is-marked', marked);
+        button.setAttribute('aria-pressed', marked ? 'true' : 'false');
+        button.title = marked
+          ? t('Undo module deletion')
+          : t('Mark this module for deletion');
+      }
+      if (icon) {
+        icon.classList.toggle('bi-trash3', !marked);
+        icon.classList.toggle('bi-arrow-counterclockwise', marked);
+      }
+      if (label) label.textContent = marked ? t('Undo Delete') : t('Delete Module');
+      if (note) note.hidden = !marked;
+      syncTreeStateForOwner(owner);
+      if (treeModule && marked) {
+        const flags = treeModule.querySelector('.cfg-tree-flags');
+        if (flags && !flags.querySelector('[data-delete-flag]')) {
+          flags.insertAdjacentHTML('beforeend', '<i class="fa-solid fa-trash" data-delete-flag title="Pending deletion" aria-label="Pending deletion"></i>');
         }
       }
     }
@@ -3900,6 +4665,20 @@
       });
     });
 
+    document.querySelectorAll('[data-delete-module-button]').forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        const owner = button.closest('[data-module-block]');
+        if (!owner) return;
+        const input = owner.querySelector('[data-delete-module-input]');
+        const nextValue = !(input && input.value === '1');
+        if (nextValue && !window.confirm(t('Mark this module for deletion? It will be removed when you save changes.'))) {
+          return;
+        }
+        setModuleDeletionState(owner, nextValue);
+      });
+    });
+
     document.querySelectorAll('[data-lock-input]').forEach(lock => {
       const owner = lock.closest('.cfg-unit, .cfg-module');
       const select = owner ? owner.querySelector('[data-unlock-rule]') : null;
@@ -3931,14 +4710,104 @@
     function initializeFlowMapper() {
       const flowModal = document.getElementById('adaptiveBranchingFlowModal');
       if (!flowModal) return;
+      if (flowModal.parentElement !== document.body) {
+        document.body.appendChild(flowModal);
+      }
+
+      if (Array.isArray(flowModal.__flowCleanup)) {
+        flowModal.__flowCleanup.forEach(cleanup => cleanup());
+      }
+      flowModal.__flowCleanup = [];
+
+      function bind(element, eventName, handler, options) {
+        if (!element) return;
+        element.addEventListener(eventName, handler, options);
+        flowModal.__flowCleanup.push(() => element.removeEventListener(eventName, handler, options));
+      }
+
+      const flowForm = flowModal.querySelector('[data-flow-mapper]');
       const flowMap = flowModal.querySelector('[data-flow-map]');
       const flowLines = flowModal.querySelector('[data-flow-lines]');
       const flowShell = flowModal.querySelector('[data-flow-map-shell]');
-      const nodes = Array.from(flowModal.querySelectorAll('[data-flow-module-node]'));
-      const sourceSelect = flowModal.querySelector('[data-flow-source-select]');
-      const targetSelect = flowModal.querySelector('[data-flow-target-select]');
-      const conditionSelect = flowModal.querySelector('[data-flow-condition-select]');
+      const connectionsPanel = flowModal.querySelector('.cfg-flow-connections');
+      const ruleList = flowModal.querySelector('.cfg-branch-rule-list');
+      const statusEl = flowModal.querySelector('[data-flow-save-status]');
+      let nodes = Array.from(flowModal.querySelectorAll('[data-flow-module-node]'));
+      let sourceSelect = flowModal.querySelector('[data-flow-source-select]');
+      let targetSelect = flowModal.querySelector('[data-flow-target-select]');
+      let conditionSelect = flowModal.querySelector('[data-flow-condition-select]');
       let nextPick = 'source';
+      let activeFocus = null;
+
+      const conditionColors = {
+        success: '#10b981',
+        failure: '#ef4444',
+        completed: '#2563eb',
+        score_gte: '#14b8a6',
+        score_lt: '#f59e0b',
+        preview: '#8b5cf6',
+        inactive: '#94a3b8',
+      };
+
+      function currentRules() {
+        return Array.from(flowModal.querySelectorAll('[data-flow-edge]'));
+      }
+
+      let ruleTooltip = null;
+      let activeTooltipPath = null;
+
+      function ensureRuleTooltip() {
+        if (ruleTooltip) return ruleTooltip;
+        ruleTooltip = document.createElement('div');
+        ruleTooltip.className = 'cfg-branch-rule-tooltip';
+        ruleTooltip.setAttribute('role', 'tooltip');
+        document.body.appendChild(ruleTooltip);
+        flowModal.__flowCleanup.push(() => {
+          ruleTooltip?.remove();
+          ruleTooltip = null;
+          activeTooltipPath = null;
+        });
+        return ruleTooltip;
+      }
+
+      function positionRuleTooltip(path) {
+        if (!ruleTooltip || !path) return;
+        const rect = path.getBoundingClientRect();
+        const margin = 12;
+        const tooltipRect = ruleTooltip.getBoundingClientRect();
+        const maxLeft = window.innerWidth - tooltipRect.width - margin;
+        const left = Math.max(margin, Math.min(rect.left + rect.width / 2 - tooltipRect.width / 2, maxLeft));
+        const below = rect.bottom + margin;
+        const above = rect.top - tooltipRect.height - margin;
+        const top = below + tooltipRect.height < window.innerHeight - margin
+          ? below
+          : Math.max(margin, above);
+        ruleTooltip.style.left = `${left}px`;
+        ruleTooltip.style.top = `${top}px`;
+      }
+
+      function showRuleTooltip(path) {
+        const text = path?.dataset.ruleTooltip?.trim();
+        if (!text) return;
+        activeTooltipPath = path;
+        const tooltip = ensureRuleTooltip();
+        tooltip.textContent = text;
+        tooltip.classList.add('is-visible');
+        requestAnimationFrame(() => positionRuleTooltip(path));
+      }
+
+      function hideRuleTooltip(path) {
+        if (path && activeTooltipPath && path !== activeTooltipPath) return;
+        activeTooltipPath = null;
+        ruleTooltip?.classList.remove('is-visible');
+      }
+
+      function setStatus(message, state) {
+        if (!statusEl) return;
+        statusEl.textContent = message || '';
+        statusEl.classList.remove('is-saving', 'is-saved', 'is-error');
+        if (state) statusEl.classList.add(`is-${state}`);
+      }
 
       function syncNodeSelection() {
         const sourceId = sourceSelect ? sourceSelect.value : '';
@@ -3949,9 +4818,121 @@
         });
       }
 
+      function focusColor(focus) {
+        if (!focus) return conditionColors.completed;
+        if (focus.conditionType && conditionColors[focus.conditionType]) return conditionColors[focus.conditionType];
+        if (focus.ruleId) {
+          const rule = flowModal.querySelector(`[data-flow-edge][data-flow-rule-id="${focus.ruleId}"]`);
+          return conditionColors[rule?.dataset.conditionType] || conditionColors.completed;
+        }
+        return conditionColors.completed;
+      }
+
+      function relatedRule(rule, focus) {
+        if (!focus) return false;
+        if (focus.ruleId && rule.dataset.flowRuleId === focus.ruleId) return true;
+        if (focus.moduleId && (rule.dataset.source === focus.moduleId || rule.dataset.target === focus.moduleId)) return true;
+        return false;
+      }
+
+      function relatedNodeIds(focus) {
+        const ids = new Set();
+        if (!focus) return ids;
+        if (focus.moduleId) ids.add(focus.moduleId);
+        currentRules().forEach(rule => {
+          if (!relatedRule(rule, focus)) return;
+          if (rule.dataset.source) ids.add(rule.dataset.source);
+          if (rule.dataset.target) ids.add(rule.dataset.target);
+        });
+        return ids;
+      }
+
+      function applyFlowFocus() {
+        const hasFocus = Boolean(activeFocus);
+        const color = focusColor(activeFocus);
+        if (flowMap) {
+          flowMap.classList.toggle('has-flow-focus', hasFocus);
+          flowMap.style.setProperty('--flow-focus-color', color);
+        }
+        if (connectionsPanel) {
+          connectionsPanel.classList.toggle('has-flow-focus', hasFocus);
+          connectionsPanel.style.setProperty('--flow-focus-color', color);
+        }
+
+        const relatedIds = relatedNodeIds(activeFocus);
+        nodes.forEach(node => {
+          node.classList.toggle('is-related', hasFocus && relatedIds.has(node.dataset.flowNodeId));
+          if (hasFocus) node.style.setProperty('--flow-focus-color', color);
+          else node.style.removeProperty('--flow-focus-color');
+        });
+        currentRules().forEach(rule => {
+          const isRelated = hasFocus && relatedRule(rule, activeFocus);
+          rule.classList.toggle('is-related', isRelated);
+          if (isRelated) rule.style.setProperty('--flow-focus-color', color);
+          else rule.style.removeProperty('--flow-focus-color');
+        });
+        flowLines?.querySelectorAll('[data-flow-line], [data-flow-line-label]').forEach(element => {
+          const isRelated = hasFocus && (
+            element.dataset.flowRuleId === activeFocus?.ruleId
+            || element.dataset.source === activeFocus?.moduleId
+            || element.dataset.target === activeFocus?.moduleId
+          );
+          element.classList.toggle('is-related', isRelated);
+          element.classList.toggle('is-dimmed', hasFocus && !isRelated);
+        });
+      }
+
+      function setFlowFocus(focus) {
+        activeFocus = focus;
+        requestAnimationFrame(() => {
+          drawFlowLines();
+          applyFlowFocus();
+        });
+      }
+
+      function clearFlowFocus() {
+        activeFocus = null;
+        requestAnimationFrame(() => {
+          drawFlowLines();
+          applyFlowFocus();
+        });
+      }
+
+      function markerId(condition, isActive, isPreview) {
+        if (isPreview) return 'cfg-flow-arrow-preview';
+        if (!isActive) return 'cfg-flow-arrow-inactive';
+        return `cfg-flow-arrow-${condition || 'completed'}`;
+      }
+
+      function buildMarkers() {
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const defs = document.createElementNS(svgNS, 'defs');
+        const markerColors = {
+          ...conditionColors,
+          preview: conditionColors.preview,
+          inactive: conditionColors.inactive,
+        };
+        Object.entries(markerColors).forEach(([key, color]) => {
+          const marker = document.createElementNS(svgNS, 'marker');
+          marker.setAttribute('id', `cfg-flow-arrow-${key}`);
+          marker.setAttribute('markerWidth', '10');
+          marker.setAttribute('markerHeight', '10');
+          marker.setAttribute('refX', '8');
+          marker.setAttribute('refY', '3');
+          marker.setAttribute('orient', 'auto');
+          marker.setAttribute('markerUnits', 'strokeWidth');
+          const arrow = document.createElementNS(svgNS, 'path');
+          arrow.setAttribute('d', 'M0,0 L0,6 L9,3 z');
+          arrow.setAttribute('fill', color);
+          marker.appendChild(arrow);
+          defs.appendChild(marker);
+        });
+        flowLines.appendChild(defs);
+      }
+
       function drawFlowLines() {
         if (!flowMap || !flowLines) return;
-        const edges = Array.from(flowModal.querySelectorAll('[data-flow-edge]'));
+        const edges = currentRules();
         const mapRect = flowMap.getBoundingClientRect();
         const width = Math.max(flowMap.scrollWidth, flowMap.offsetWidth, 1);
         const height = Math.max(flowMap.scrollHeight, flowMap.offsetHeight, 1);
@@ -3959,8 +4940,9 @@
         flowLines.setAttribute('width', width);
         flowLines.setAttribute('height', height);
         flowLines.replaceChildren();
+        buildMarkers();
 
-        function drawEdge(sourceId, targetId, labelText, isActive = true, isPreview = false) {
+        function drawEdge({ sourceId, targetId, labelText, isActive = true, isPreview = false, conditionType = 'completed', ruleId = '' }) {
           const source = flowModal.querySelector(`[data-flow-module-node][data-flow-node-id="${sourceId}"]`);
           const target = flowModal.querySelector(`[data-flow-module-node][data-flow-node-id="${targetId}"]`);
           if (!source || !target) return;
@@ -3972,14 +4954,24 @@
           const x2 = targetRect.left - mapRect.left;
           const y2 = targetRect.top + targetRect.height / 2 - mapRect.top;
           const curve = Math.max(46, Math.abs(x2 - x1) / 2);
+          const stroke = isPreview
+            ? conditionColors.preview
+            : (isActive ? (conditionColors[conditionType] || conditionColors.completed) : conditionColors.inactive);
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           path.setAttribute('d', `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`);
           path.setAttribute('fill', 'none');
-          path.setAttribute('stroke', isPreview ? 'rgba(20, 184, 166, 0.86)' : (isActive ? 'rgba(37, 99, 235, 0.72)' : 'rgba(100, 116, 139, 0.56)'));
+          path.setAttribute('stroke', stroke);
           path.setAttribute('stroke-width', isPreview ? '3' : '2.5');
           path.setAttribute('stroke-linecap', 'round');
-          if (!isActive || isPreview) {
-            path.setAttribute('stroke-dasharray', '6 5');
+          path.setAttribute('class', 'cfg-flow-line');
+          path.setAttribute('data-flow-line', '1');
+          path.setAttribute('data-flow-rule-id', ruleId);
+          path.setAttribute('data-source', sourceId);
+          path.setAttribute('data-target', targetId);
+          path.setAttribute('data-condition-type', conditionType);
+          path.setAttribute('marker-end', `url(#${markerId(conditionType, isActive, isPreview)})`);
+          if (!isActive || isPreview || (activeFocus && (ruleId === activeFocus.ruleId || sourceId === activeFocus.moduleId || targetId === activeFocus.moduleId))) {
+            path.setAttribute('stroke-dasharray', '8 6');
           }
           flowLines.appendChild(path);
 
@@ -3989,23 +4981,42 @@
             label.setAttribute('y', String((y1 + y2) / 2 - 6));
             label.setAttribute('text-anchor', 'middle');
             label.setAttribute('class', 'cfg-flow-line-label');
+            label.setAttribute('data-flow-line-label', '1');
+            label.setAttribute('data-flow-rule-id', ruleId);
+            label.setAttribute('data-source', sourceId);
+            label.setAttribute('data-target', targetId);
             label.textContent = labelText;
             flowLines.appendChild(label);
           }
         }
 
         edges.forEach(edge => {
-          drawEdge(edge.dataset.source, edge.dataset.target, edge.dataset.label, edge.dataset.active !== 'false');
+          drawEdge({
+            sourceId: edge.dataset.source,
+            targetId: edge.dataset.target,
+            labelText: edge.dataset.label,
+            isActive: edge.dataset.active !== 'false',
+            conditionType: edge.dataset.conditionType || 'completed',
+            ruleId: edge.dataset.flowRuleId || '',
+          });
         });
 
         if (sourceSelect?.value && targetSelect?.value && sourceSelect.value !== targetSelect.value) {
           const selectedCondition = conditionSelect?.selectedOptions?.[0]?.textContent?.trim() || t('New connection');
-          drawEdge(sourceSelect.value, targetSelect.value, selectedCondition, true, true);
+          drawEdge({
+            sourceId: sourceSelect.value,
+            targetId: targetSelect.value,
+            labelText: selectedCondition,
+            isPreview: true,
+            conditionType: conditionSelect?.value || 'preview',
+            ruleId: 'preview',
+          });
         }
+        applyFlowFocus();
       }
 
       nodes.forEach(node => {
-        node.addEventListener('click', () => {
+        bind(node, 'click', () => {
           const nodeId = node.dataset.flowNodeId;
           if (!nodeId) return;
           if (nextPick === 'source' || !sourceSelect?.value) {
@@ -4019,11 +5030,39 @@
           syncNodeSelection();
           requestAnimationFrame(drawFlowLines);
         });
+        bind(node, 'mouseenter', () => setFlowFocus({ moduleId: node.dataset.flowNodeId }));
+        bind(node, 'focus', () => setFlowFocus({ moduleId: node.dataset.flowNodeId }));
+        bind(node, 'mouseleave', clearFlowFocus);
+        bind(node, 'blur', clearFlowFocus);
+      });
+
+      currentRules().forEach(rule => {
+        const focus = () => setFlowFocus({
+          ruleId: rule.dataset.flowRuleId,
+          conditionType: rule.dataset.conditionType,
+        });
+        const path = rule.querySelector('[data-branch-path]');
+        if (path) {
+          bind(path, 'mouseenter', () => showRuleTooltip(path));
+          bind(path, 'focusin', () => showRuleTooltip(path));
+          bind(path, 'mousemove', () => positionRuleTooltip(path));
+          bind(path, 'mouseleave', () => hideRuleTooltip(path));
+          bind(path, 'focusout', () => hideRuleTooltip(path));
+        }
+        bind(rule, 'mouseenter', focus);
+        bind(rule, 'focusin', focus);
+        bind(rule, 'mouseleave', () => {
+          hideRuleTooltip();
+          clearFlowFocus();
+        });
+        bind(rule, 'focusout', () => {
+          hideRuleTooltip();
+          clearFlowFocus();
+        });
       });
 
       [sourceSelect, targetSelect].forEach(select => {
-        if (!select) return;
-        select.addEventListener('change', () => {
+        bind(select, 'change', () => {
           if (sourceSelect && targetSelect && sourceSelect.value === targetSelect.value) {
             targetSelect.value = '';
           }
@@ -4034,21 +5073,83 @@
       });
 
       if (conditionSelect) {
-        conditionSelect.addEventListener('change', () => {
+        bind(conditionSelect, 'change', () => {
           syncBranchThreshold(conditionSelect);
           requestAnimationFrame(drawFlowLines);
         });
       }
 
-      flowModal.addEventListener('shown.bs.modal', () => {
+      bind(flowForm, 'submit', async event => {
+        if (!flowForm) return;
+        event.preventDefault();
+        const submitter = event.submitter;
+        const submitText = submitter ? submitter.innerHTML : '';
+        if (submitter) {
+          submitter.disabled = true;
+          submitter.innerHTML = `<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> ${t('Saving')}`;
+        }
+        setStatus(t('Saving...'), 'saving');
+
+        try {
+          const formData = new FormData(flowForm);
+          if (submitter?.name) {
+            formData.append(submitter.name, submitter.value || '1');
+          }
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json',
+            },
+            body: formData,
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.message || t('Unable to save flow map.'));
+          }
+          if (payload.modal_html) {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = payload.modal_html.trim();
+            const nextForm = wrapper.querySelector('[data-flow-mapper]');
+            if (nextForm) {
+              flowForm.innerHTML = nextForm.innerHTML;
+            }
+          }
+          initializeFlowMapper();
+          const nextStatus = document.querySelector('#adaptiveBranchingFlowModal [data-flow-save-status]');
+          if (nextStatus) {
+            nextStatus.textContent = payload.message || t('Saved');
+            nextStatus.classList.add('is-saved');
+            setTimeout(() => {
+              nextStatus.textContent = '';
+              nextStatus.classList.remove('is-saved');
+            }, 2200);
+          }
+        } catch (error) {
+          setStatus(error.message || t('Unable to save flow map.'), 'error');
+          if (submitter) {
+            submitter.disabled = false;
+            submitter.innerHTML = submitText;
+          }
+        }
+      });
+
+      bind(flowModal, 'shown.bs.modal', () => {
         syncNodeSelection();
         requestAnimationFrame(drawFlowLines);
       });
-      if (flowShell) {
-        flowShell.addEventListener('scroll', () => requestAnimationFrame(drawFlowLines), { passive: true });
-      }
-      window.addEventListener('resize', () => requestAnimationFrame(drawFlowLines));
+      bind(flowModal, 'hidden.bs.modal', hideRuleTooltip);
+      bind(flowShell, 'scroll', () => {
+        hideRuleTooltip();
+        requestAnimationFrame(drawFlowLines);
+      }, { passive: true });
+      bind(ruleList, 'scroll', hideRuleTooltip, { passive: true });
+      bind(window, 'resize', () => {
+        if (activeTooltipPath) positionRuleTooltip(activeTooltipPath);
+        requestAnimationFrame(drawFlowLines);
+      });
       syncNodeSelection();
+      requestAnimationFrame(drawFlowLines);
     }
 
     initializeFlowMapper();

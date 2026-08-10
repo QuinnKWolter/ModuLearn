@@ -62,6 +62,19 @@ def log_module_progress_event(
     )
 
 
+def module_accepts_scored_attempt(module_progress, *, provider_attempt: int | None = None) -> bool:
+    """Return whether a scored/progress-producing submission should update state."""
+    module = getattr(module_progress, "module", None)
+    if getattr(module, "allow_resubmission", True):
+        return True
+    current_attempts = module_progress.attempts or 0
+    if current_attempts == 0:
+        return True
+    if provider_attempt is not None:
+        return provider_attempt <= current_attempts
+    return False
+
+
 def recompute_course_progress(enrollment, *, save: bool = True):
     from courses.models import CourseProgress, Module, ModuleProgress
 

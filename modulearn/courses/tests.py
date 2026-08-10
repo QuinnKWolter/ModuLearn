@@ -1,10 +1,10 @@
 from unittest.mock import MagicMock, patch
 import json
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase, override_settings
-from django.urls import reverse
+from django.urls import resolve, reverse
 
 from accounts.models import User
 from courses.models import (
@@ -31,12 +31,18 @@ from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_pos
 from modulearn.learning.selectors.courses import build_course_detail_context
 from modulearn.views_proxy import (
     _cache_pcex_activity_metadata,
+    _capture_acos_pcex_event_if_possible,
     _capture_pcex_activity_if_possible,
     _capture_pcex_explanation_if_possible,
+    _annotate_material_icon_fallbacks,
+    _inject_activity_api_rewrite_script,
+    _rewrite_acos_pcex_javascript,
+    forward_acos_pcex,
     http_get_proxy_path,
 )
+from courses.views import is_pcex_url, should_proxy_intercepted_activity_url
 from courses.demo_courses import create_adaptive_branching_demo_course, create_intro_python_demo_course
-from courses.utils import create_course_from_json
+from courses.utils import create_course_from_json, export_course_to_json
 
 LEGACY_SLC_URL = (
     'http://pawscomp2.sis.pitt.edu/pcex/index.html?'
@@ -230,6 +236,37 @@ class CourseProgressTests(TestCase):
             HttpResponse('{}'),
         )
 
+    def _acos_pcex_referer(self):
+        return (
+            'http://testserver/proxy/https/acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/'
+            'artithmetic_inc_dec_operators__68bdb308f6cc3d7a9cc096da?'
+            f'index=1&grp={self.instance.group_name}&usr={self.student.username}'
+            f'&sid=test-session&cid={self.course.id}&module_id={self.module_a.id}'
+        )
+
+    def _post_acos_pcex_event(self, event_name, payload, protocol_data=None):
+        request = self.factory.post(
+            '/proxy/https/acos.cs.vt.edu/pitt/acos-pcex/acos-pcex-examples/event',
+            data={
+                'event': event_name,
+                'payload': json.dumps(payload),
+                'protocolData': json.dumps(protocol_data or {
+                    'usr': self.student.username,
+                    'grp': self.instance.group_name,
+                    'sid': 'test-session',
+                    'example-id': 'artithmetic_inc_dec_operators__68bdb308f6cc3d7a9cc096da',
+                }),
+            },
+            HTTP_REFERER=self._acos_pcex_referer(),
+        )
+        request.session = DummySession()
+        _capture_acos_pcex_event_if_possible(
+            request,
+            'acos.cs.vt.edu',
+            'pitt/acos-pcex/acos-pcex-examples/event',
+            HttpResponse('{}'),
+        )
+
     def test_pcex_worked_example_explanation_clicks_update_progress(self):
         self.module_a.content_url = (
             'http://pawscomp2.sis.pitt.edu/pcex/pcex_v2/index.html?'
@@ -298,6 +335,160 @@ class CourseProgressTests(TestCase):
         self.assertTrue(module_progress.is_complete)
         self.assertEqual(module_progress.state_data['completed_explanation_steps'], 8)
         self.assertEqual(module_progress.state_data['explanation_step_count'], 8)
+
+    def test_acos_pcex_urls_are_proxied_as_intercepted_pcex(self):
+        self.assertTrue(is_pcex_url(MODERN_SLC_SPLICE_URL))
+        self.assertTrue(should_proxy_intercepted_activity_url(MODERN_SLC_SPLICE_URL))
+
+    def test_acos_pcex_example_static_path_uses_proxy_forwarder(self):
+        match = resolve('/static/acos-pcex-examples/data/68bdb308f6cc3d7a9cc096da.json')
+
+        self.assertEqual(match.func, forward_acos_pcex)
+        self.assertEqual(match.kwargs['prefix'], 'static/acos-pcex-examples')
+
+    def test_acos_pcex_javascript_rewrites_static_example_data_path(self):
+        script = b"$.ajax(`/static/acos-pcex-examples/data/${exampleId}.json`);"
+
+        rewritten = _rewrite_acos_pcex_javascript(script)
+
+        self.assertIn(
+            b"`/proxy/https/acos.cs.vt.edu/static/acos-pcex-examples/data/${exampleId}.json",
+            rewritten,
+        )
+
+    @override_settings(FORCE_SCRIPT_NAME='/modulearn')
+    def test_acos_pcex_javascript_rewrite_respects_script_name(self):
+        script = b'url = "/static/acos-pcex-examples/data/example.json";'
+
+        rewritten = _rewrite_acos_pcex_javascript(script)
+
+        self.assertIn(
+            b'"/modulearn/proxy/https/acos.cs.vt.edu/static/acos-pcex-examples/data/example.json',
+            rewritten,
+        )
+
+    def test_activity_proxy_injects_material_icon_fallbacks(self):
+        injected = _inject_activity_api_rewrite_script(
+            '<html><head></head><body><i class="material-icons">help</i></body></html>'
+        )
+
+        self.assertIn("materialIconFallbacks", injected)
+        self.assertIn('"help"', injected)
+        self.assertIn('"undo"', injected)
+        self.assertIn('"redo"', injected)
+        self.assertIn('"play_circle_outline"', injected)
+        self.assertIn("materialIconMarkup", injected)
+        self.assertIn("'modu-slc-icon-' + name", injected)
+        self.assertIn("<svg viewBox", injected)
+        self.assertIn('modu-material-icon-button', injected)
+        self.assertIn("classList.remove('material-icons')", injected)
+        self.assertIn("icon.closest('.btn')", injected)
+
+    def test_activity_proxy_annotates_existing_material_icon_fallbacks(self):
+        html = (
+            '<i class="material-icons">help</i>'
+            '<i class="material-icons left">undo</i>'
+            '<i class="material-icons right">redo</i>'
+            '<i class="material-icons right">play_circle_outline</i>'
+        )
+
+        annotated = _annotate_material_icon_fallbacks(html)
+
+        self.assertIn('data-modu-icon="help"', annotated)
+        self.assertIn('data-modu-icon="undo"', annotated)
+        self.assertIn('data-modu-icon="redo"', annotated)
+        self.assertIn('data-modu-icon="play_circle_outline"', annotated)
+
+    def test_acos_pcex_grade_records_completion_and_raw_payload(self):
+        self.module_a.content_url = MODERN_SLC_SPLICE_URL
+        self.module_a.provider_id = 'pcex'
+        self.module_a.save(update_fields=['content_url', 'provider_id'])
+
+        self._post_acos_pcex_event('grade', {
+            'points': 1,
+            'max_points': 1,
+            'event_data': {
+                'event_type': 'result',
+                'tracking_id': 'tracking-1',
+                'activity_set_name': 'artithmetic.inc_dec_operators__68bdb308f6cc3d7a9cc096da',
+                'activity_type': 'ch',
+                'goal_name': 'Increment/Decrement Operators (Case 2)',
+                'goal_index': 1,
+                'result_type': 'correct',
+                'attempt_count': 2,
+                'result': 1,
+            },
+        })
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(module_progress.progress, 1.0)
+        self.assertEqual(module_progress.score, 100.0)
+        self.assertTrue(module_progress.is_complete)
+        self.assertTrue(module_progress.success)
+        self.assertEqual(module_progress.attempts, 2)
+        self.assertEqual(module_progress.state_data['acos_pcex_event']['event'], 'grade')
+        self.assertEqual(module_progress.state_data['acos_pcex_event']['payload']['event_data']['tracking_id'], 'tracking-1')
+        self.assertTrue(
+            ModuleProgressEvent.objects.filter(
+                module_progress=module_progress,
+                source='acos_pcex',
+                event_type='outcome',
+                payload__acos_pcex_event__payload__event_data__tracking_id='tracking-1',
+            ).exists()
+        )
+        self.assertTrue(
+            ModuleProgressEvent.objects.filter(module_progress=module_progress, event_type='completion').exists()
+        )
+
+    def test_acos_pcex_failed_grade_records_outcome_without_completion(self):
+        self.module_a.content_url = MODERN_SLC_SPLICE_URL
+        self.module_a.provider_id = 'pcex'
+        self.module_a.save(update_fields=['content_url', 'provider_id'])
+
+        self._post_acos_pcex_event('grade', {
+            'points': 0,
+            'max_points': 1,
+            'event_data': {
+                'event_type': 'result',
+                'tracking_id': 'tracking-wrong',
+                'activity_type': 'ch',
+                'goal_index': 1,
+                'result_type': 'wrong_output',
+                'attempt_count': 1,
+                'result': 0,
+                'wrong_answers': 'System.out.println(a++ + b++);',
+            },
+        })
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(module_progress.progress, 0.0)
+        self.assertEqual(module_progress.score, 0.0)
+        self.assertFalse(module_progress.is_complete)
+        self.assertFalse(module_progress.success)
+        self.assertEqual(module_progress.attempts, 1)
+        event = ModuleProgressEvent.objects.get(module_progress=module_progress, source='acos_pcex')
+        self.assertEqual(event.event_type, 'outcome')
+        self.assertFalse(event.success)
+        self.assertEqual(event.payload['acos_pcex_event']['payload']['event_data']['wrong_answers'], 'System.out.println(a++ + b++);')
+
+    def test_acos_pcex_interaction_event_is_captured_without_branching_progress(self):
+        self.module_a.content_url = MODERN_SLC_SPLICE_URL
+        self.module_a.provider_id = 'pcex'
+        self.module_a.save(update_fields=['content_url', 'provider_id'])
+
+        self._post_acos_pcex_event('log', {
+            'event_type': 'tile-drop',
+            'tracking_id': 'tracking-drag',
+            'activity_type': 'ch',
+            'goal_index': 1,
+            'tile_content': 'System.out.println(a++ + b++);',
+        })
+
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        self.assertEqual(module_progress.progress, 0.0)
+        event = ModuleProgressEvent.objects.get(module_progress=module_progress, source='acos_pcex_event')
+        self.assertEqual(event.event_type, 'iframe_load')
+        self.assertEqual(event.payload['acos_pcex_event']['payload']['event_type'], 'tile-drop')
 
     def test_pcrs_legacy_feedback_image_paths_redirect_to_local_assets(self):
         red_response = self.client.get('/mgrids/static/problems/img/red-sad-face.jpg')
@@ -671,9 +862,15 @@ class CourseProgressTests(TestCase):
     def test_pcrs_run_response_updates_module_progress(self):
         self.module_a.content_url = 'https://pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed?act=PCRS&sub=py_avg_two_int_es'
         self.module_a.save(update_fields=['content_url'])
+        submitted_code = '# Calcular el promedio\npromedio = (primer_num + segundo_num) / 2\n'
         request = RequestFactory().post(
             '/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/run',
-            data='csrftoken=token&act=PCRS&sub=py_avg_two_int_es',
+            data=urlencode({
+                'csrftoken': 'token',
+                'submission': submitted_code,
+                'act': 'PCRS',
+                'sub': 'py_avg_two_int_es',
+            }),
             content_type='application/x-www-form-urlencoded',
         )
         request.META['HTTP_REFERER'] = (
@@ -699,13 +896,15 @@ class CourseProgressTests(TestCase):
         self.assertEqual(progress.score, 100.0)
         self.assertTrue(progress.is_complete)
         self.assertEqual(progress.attempts, 1)
-        self.assertTrue(
-            ModuleProgressEvent.objects.filter(
-                module_progress=progress,
-                source='pcrs',
-                event_type='completion',
-            ).exists()
+        event = ModuleProgressEvent.objects.get(
+            module_progress=progress,
+            source='pcrs',
+            event_type='completion',
         )
+        self.assertEqual(event.payload['pcrs_result']['score'], 5)
+        self.assertEqual(event.payload['pcrs_submission']['form']['submission'], submitted_code)
+        self.assertIn('submission=', event.payload['pcrs_submission']['raw_body'])
+        self.assertEqual(event.payload['pcrs_submission']['referer_params']['sub'], 'py_avg_two_int_es')
 
     def test_pcrs_partial_score_records_partial_progress(self):
         self.module_a.content_url = 'https://pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed?act=PCRS&sub=py_avg_two_int_es'
@@ -951,6 +1150,51 @@ class CourseProgressTests(TestCase):
         self.assertEqual(self.module_a.unit, second_unit)
         self.assertEqual(self.module_a.order, 10)
         self.assertEqual(self.module_b.unit, self.unit)
+
+    def test_configuration_can_delete_module_and_clear_dependent_unlocks(self):
+        self.module_b.is_locked = True
+        self.module_b.unlock_rule = {
+            'mode': 'all',
+            'conditions': [{'type': 'module_completed', 'target_id': self.module_a.id}],
+        }
+        self.module_b.save(update_fields=['is_locked', 'unlock_rule'])
+        ModuleBranchRule.objects.create(
+            course=self.course,
+            source_module=self.module_a,
+            target_module=self.module_b,
+            condition_type=ModuleBranchRule.CONDITION_COMPLETED,
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'update_structure',
+                f'unit_{self.unit.id}_title': self.unit.title,
+                f'unit_{self.unit.id}_description': self.unit.description,
+                f'unit_{self.unit.id}_order': self.unit.order,
+                f'unit_{self.unit.id}_visible': '1',
+                f'unit_{self.unit.id}_locked': '0',
+                f'unit_{self.unit.id}_rule_type': 'none',
+                f'unit_{self.unit.id}_rule_target': '',
+                f'module_{self.module_a.id}_delete': '1',
+                f'module_{self.module_b.id}_title': self.module_b.title,
+                f'module_{self.module_b.id}_description': self.module_b.description,
+                f'module_{self.module_b.id}_unit_id': self.unit.id,
+                f'module_{self.module_b.id}_order': self.module_b.order,
+                f'module_{self.module_b.id}_visible': '1',
+                f'module_{self.module_b.id}_locked': '1',
+                f'module_{self.module_b.id}_rule_type': 'module_completed',
+                f'module_{self.module_b.id}_rule_target': str(self.module_a.id),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Module.objects.filter(id=self.module_a.id).exists())
+        self.module_b.refresh_from_db()
+        self.assertFalse(self.module_b.is_locked)
+        self.assertEqual(self.module_b.unlock_rule, {})
+        self.assertFalse(ModuleBranchRule.objects.filter(course=self.course).exists())
 
     def test_configuration_rejects_manual_creation_of_study_specific_form_type(self):
         self.client.force_login(self.instructor)
@@ -1525,6 +1769,34 @@ class CourseProgressTests(TestCase):
         self.assertTrue(self.module_b.is_locked)
         self.assertEqual(self.module_b.unlock_rule, {})
 
+    def test_configuration_ajax_adds_branch_rule_without_redirect(self):
+        self.course.plugin_config = {
+            'plugins': {
+                'adaptive_branching': {'enabled': True},
+            },
+        }
+        self.course.save(update_fields=['plugin_config'])
+        self.client.force_login(self.instructor)
+
+        response = self.client.post(
+            reverse('courses:course_configuration', args=[self.instance.id]),
+            {
+                'action': 'update_branching',
+                'branch_commit': '1',
+                'branch_source_module': str(self.module_a.id),
+                'branch_condition_type': ModuleBranchRule.CONDITION_FAILURE,
+                'branch_target_module': str(self.module_b.id),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            HTTP_ACCEPT='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertIn('data-flow-edge', payload['modal_html'])
+        self.assertTrue(ModuleBranchRule.objects.filter(course=self.course).exists())
+
     def test_configuration_renders_adaptive_branching_flow_mapper_when_enabled(self):
         self.course.plugin_config = {
             'plugins': {
@@ -1547,6 +1819,38 @@ class CourseProgressTests(TestCase):
         self.assertContains(response, 'data-flow-module-node')
         self.assertContains(response, 'data-flow-source-select')
         self.assertContains(response, 'data-flow-edge')
+
+    def test_single_attempt_module_ignores_second_splice_progress_update(self):
+        self.module_a.allow_resubmission = False
+        self.module_a.save(update_fields=['allow_resubmission'])
+        module_progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module_a)
+        module_progress.progress = 0.25
+        module_progress.score = 25.0
+        module_progress.attempts = 1
+        module_progress.save(update_fields=['progress', 'score', 'attempts', 'last_accessed'])
+        self.client.force_login(self.student)
+
+        response = self.client.post(
+            reverse('courses:update_module_progress', args=[self.module_a.id]),
+            data=json.dumps({
+                'course_instance_id': self.instance.id,
+                'data': [{
+                    'completion': True,
+                    'score': 100,
+                    'success': True,
+                    'progress': 100,
+                    'response': {'answer': 'second try'},
+                }],
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        module_progress.refresh_from_db()
+        self.assertEqual(module_progress.attempts, 1)
+        self.assertEqual(module_progress.progress, 0.25)
+        self.assertEqual(module_progress.score, 25.0)
+        self.assertFalse(module_progress.is_complete)
 
     @override_settings(
         STORAGES={
@@ -1629,8 +1933,77 @@ class CourseProgressTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload['schema'], 'modulearn-course-export-v1')
+        self.assertEqual(payload['schema'], 'modulearn-course-export-v2')
         self.assertEqual(payload['id'], self.course.id)
         self.assertTrue(payload['plugin_config']['plugins']['static_recommendations']['enabled'])
         self.assertEqual(payload['units'][0]['activities']['JSVEE'][0]['url'], 'https://example.test/module-a')
+        self.assertEqual(payload['units'][0]['modules'][0]['url'], 'https://example.test/module-a')
         self.assertEqual(payload['provider_protocols']['jsvee'], ['splice'])
+
+    def test_course_export_import_round_trips_forms_and_portable_unlock_rules(self):
+        form_module = Module.objects.create(
+            unit=self.unit,
+            title='Reflection Form',
+            module_type=Module.MODULE_TYPE_FORM,
+            order=30,
+            is_locked=True,
+            unlock_rule={'mode': 'all', 'conditions': [{'type': 'module_completed', 'target_id': self.module_a.id}]},
+            allow_resubmission=False,
+        )
+        module_form = ModuleForm.objects.create(
+            module=form_module,
+            instructions='Reflect carefully.',
+            submit_button_label='Send Reflection',
+            allow_resubmission=False,
+        )
+        ModuleFormQuestion.objects.create(
+            form=module_form,
+            prompt='What helped most?',
+            help_text='One or two sentences.',
+            question_type=ModuleFormQuestion.TYPE_LONG_ANSWER,
+            required=True,
+            order=10,
+        )
+
+        payload = export_course_to_json(self.course)
+        imported_course = create_course_from_json(payload, self.instructor, clone=True)
+        imported_form_module = Module.objects.get(unit__course=imported_course, title='Reflection Form')
+        imported_prerequisite = Module.objects.get(unit__course=imported_course, title=self.module_a.title)
+
+        self.assertNotEqual(imported_course.id, self.course.id)
+        self.assertEqual(imported_form_module.form.instructions, 'Reflect carefully.')
+        self.assertEqual(imported_form_module.form.submit_button_label, 'Send Reflection')
+        self.assertEqual(imported_form_module.form.questions.get().prompt, 'What helped most?')
+        self.assertFalse(imported_form_module.allow_resubmission)
+        self.assertTrue(imported_form_module.is_locked)
+        self.assertEqual(imported_form_module.unlock_rule_type, 'module_completed')
+        self.assertEqual(imported_form_module.unlock_rule_target, imported_prerequisite.id)
+
+    def test_import_normalizes_legacy_study_form_module_types(self):
+        payload = {
+            'id': 'legacy-study-template',
+            'title': 'Legacy Study Template',
+            'units': [
+                {
+                    'title': 'Before Study',
+                    'modules': [
+                        {
+                            'title': 'Consent',
+                            'module_type': Module.MODULE_TYPE_STUDY_CONSENT,
+                            'content_data': {'study_step': 'study_consent'},
+                        },
+                    ],
+                },
+            ],
+        }
+
+        imported_course = create_course_from_json(payload, self.instructor, clone=True)
+        imported_module = Module.objects.get(unit__course=imported_course, title='Consent')
+
+        self.assertEqual(imported_module.module_type, Module.MODULE_TYPE_FORM)
+        self.assertEqual(imported_module.content_data['study_step'], 'consent')
+        self.assertEqual(imported_module.form.submit_button_label, 'I Consent')
+        self.assertEqual(imported_module.form.questions.get().options, ['I agree'])
+
+        exported_payload = export_course_to_json(imported_course)
+        self.assertEqual(exported_payload['units'][0]['modules'][0]['module_type'], Module.MODULE_TYPE_FORM)

@@ -80,7 +80,7 @@ def get_participant_resume_module(participant_session):
     if not participant_session or not participant_session.enrollment:
         return None
 
-    from courses.models import ModuleProgress
+    from courses.models import EnrollmentModuleUnlock, ModuleProgress
     from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
 
     enrollment = participant_session.enrollment
@@ -89,7 +89,7 @@ def get_participant_resume_module(participant_session):
     if not course:
         return None
 
-    first_accessible = None
+    accessible_modules = []
     for unit in course.units.prefetch_related("modules").all():
         unit_state = evaluate_unit_access(unit, enrollment)
         if not unit_state.can_access:
@@ -98,9 +98,59 @@ def get_participant_resume_module(participant_session):
             module_state = evaluate_module_access(module, enrollment, unit_state=unit_state)
             if not module_state.can_access:
                 continue
-            if first_accessible is None:
-                first_accessible = module
-            progress = ModuleProgress.objects.filter(enrollment=enrollment, module=module).first()
+            accessible_modules.append(module)
+
+    if not accessible_modules:
+        return None
+
+    progress_lookup = {
+        progress.module_id: progress
+        for progress in ModuleProgress.objects.filter(
+            enrollment=enrollment,
+            module_id__in=[module.id for module in accessible_modules],
+        )
+    }
+    latest_progress = (
+        ModuleProgress.objects.filter(
+            enrollment=enrollment,
+            module_id__in=[module.id for module in accessible_modules],
+        )
+        .select_related("module", "module__unit")
+        .order_by("-last_accessed", "-id")
+        .first()
+    )
+
+    if latest_progress:
+        ordered_ids = [module.id for module in accessible_modules]
+        latest_index = ordered_ids.index(latest_progress.module_id)
+        for module in accessible_modules[:latest_index]:
+            progress = progress_lookup.get(module.id)
             if not progress or not progress.is_complete:
                 return module
-    return first_accessible
+
+        if latest_progress.is_complete:
+            for module in accessible_modules[latest_index + 1:]:
+                progress = progress_lookup.get(module.id)
+                if not progress or not progress.is_complete:
+                    return module
+        else:
+            dynamic_target = (
+                EnrollmentModuleUnlock.objects.filter(
+                    enrollment=enrollment,
+                    source_module_id=latest_progress.module_id,
+                    module_id__in=ordered_ids,
+                    source_rule__active=True,
+                )
+                .select_related("module", "module__unit", "source_rule")
+                .order_by("source_rule__priority", "module__unit__order", "module__order", "module_id")
+                .first()
+            )
+            if dynamic_target:
+                return dynamic_target.module
+            return latest_progress.module
+
+    for module in accessible_modules:
+        progress = progress_lookup.get(module.id)
+        if not progress or not progress.is_complete:
+            return module
+    return accessible_modules[0]

@@ -1383,8 +1383,16 @@
       if (filePreview) filePreview.classList.add('hidden');
       if (importJsonSubmitBtn) {
         importJsonSubmitBtn.disabled = false;
-        importJsonSubmitBtn.innerHTML = `<i class="bi bi-upload mr-1"></i>${t('Import Course')}`;
+        importJsonSubmitBtn.innerHTML = `<i class="bi bi-upload mr-1"></i>${t('Import JSON')}`;
       }
+    }
+
+    function isSupportedCourseImportPayload(payload) {
+      if (!payload || typeof payload !== 'object') return false;
+      const schema = String(payload.schema || '');
+      if (schema.startsWith('modulearn-course-export') || schema.startsWith('modulearn-study-export')) return true;
+      if (payload.course && typeof payload.course === 'object') return true;
+      return Boolean(payload.id || payload.name || payload.title);
     }
 
     if (importJsonModal) {
@@ -1478,8 +1486,8 @@
           }
         }
 
-        if (!courseData.id && !courseData.name) {
-          jsonImportError.textContent = t('Invalid course structure: missing required fields (id or name).');
+        if (!isSupportedCourseImportPayload(courseData)) {
+          jsonImportError.textContent = t('Invalid JSON structure: expected CAT course JSON, a ModuLearn course export, or a ModuLearn study export.');
           jsonImportError.classList.remove('hidden');
           return;
         }
@@ -1505,7 +1513,7 @@
           jsonImportError.textContent = `${t('Error:')} ${error.message}`;
           jsonImportError.classList.remove('hidden');
           importJsonSubmitBtn.disabled = false;
-          importJsonSubmitBtn.innerHTML = `<i class="bi bi-upload mr-1"></i>${t('Import Course')}`;
+          importJsonSubmitBtn.innerHTML = `<i class="bi bi-upload mr-1"></i>${t('Import JSON')}`;
         }
       });
     }

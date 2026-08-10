@@ -49,6 +49,33 @@ urlpatterns = [
     # Catch-all for external activity API calls (e.g., /pcex/api/track/activity)
     # These are relative URLs from activities that expect to be on pawscomp2.sis.pitt.edu
     path("pcex/<path:rest>", views_proxy.forward_to_adapt2, name="forward_pcex"),
+
+    # ACOS-hosted PCEX pages sometimes emit root-relative requests before
+    # browser-side URL rewriting can normalize them.
+    path(
+        "pitt/acos-pcex/<path:rest>",
+        views_proxy.forward_acos_pcex,
+        {"prefix": "pitt/acos-pcex"},
+        name="forward_acos_pcex_pitt",
+    ),
+    path(
+        "html/acos-pcex/<path:rest>",
+        views_proxy.forward_acos_pcex,
+        {"prefix": "html/acos-pcex"},
+        name="forward_acos_pcex_html",
+    ),
+    path(
+        "static/acos-pcex/<path:rest>",
+        views_proxy.forward_acos_pcex,
+        {"prefix": "static/acos-pcex"},
+        name="forward_acos_pcex_static",
+    ),
+    path(
+        "static/acos-pcex-examples/<path:rest>",
+        views_proxy.forward_acos_pcex,
+        {"prefix": "static/acos-pcex-examples"},
+        name="forward_acos_pcex_examples_static",
+    ),
     
     # Catch-all for CBUM (User Model) API calls (e.g., /cbum/um?app=46&act=...)
     # These are relative URLs from activities that expect to be on pawscomp2.sis.pitt.edu

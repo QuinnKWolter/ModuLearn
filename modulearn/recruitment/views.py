@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
@@ -10,7 +11,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -30,7 +31,12 @@ from recruitment.services.prolific import (
     verify_submission_api,
 )
 from recruitment.services.sona import SonaCreditError, client_credit_url, grant_credit_server_side
-from recruitment.services.studies import clear_study_participation, create_study_for_instructor
+from recruitment.services.studies import (
+    clear_study_participation,
+    create_study_for_instructor,
+    delete_study_completely,
+    export_study_to_json,
+)
 from modulearn.core.roles import get_user_role_snapshot
 from modulearn.learning.services.limits import CapacityLimitError, ensure_session_student_capacity
 
@@ -408,9 +414,17 @@ def consent(request, session_uuid):
     return render(request, "recruitment/consent.html", {"participant_session": participant_session})
 
 
-@login_required
+@require_http_methods(["GET"])
 def already_completed(request, session_uuid):
-    participant_session = get_object_or_404(ParticipantSession, uuid=session_uuid)
+    participant_session = get_object_or_404(
+        ParticipantSession.objects.select_related("recruitment_source", "recruitment_source__study"),
+        uuid=session_uuid,
+        status__in=[
+            ParticipantSession.STATUS_COMPLETED,
+            ParticipantSession.STATUS_SCREENED_OUT,
+            ParticipantSession.STATUS_ATTENTION_FAILED,
+        ],
+    )
     return render(request, "recruitment/already_completed.html", {"participant_session": participant_session})
 
 
@@ -582,6 +596,19 @@ def _sync_study_conditions(study: Study, raw_labels: str):
         )
 
 
+def _uploaded_study_template(request):
+    upload = request.FILES.get("study_template_json")
+    raw_text = request.POST.get("study_template_text", "").strip()
+    if not upload and not raw_text:
+        return None
+    try:
+        if upload:
+            return json.loads(upload.read().decode("utf-8"))
+        return json.loads(raw_text)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Study template JSON could not be parsed: {exc}") from exc
+
+
 @login_required
 @require_POST
 def create_study(request):
@@ -589,17 +616,38 @@ def create_study(request):
         raise PermissionDenied("Only instructors can create studies.")
 
     try:
+        template_data = _uploaded_study_template(request)
         study = create_study_for_instructor(
             request.user,
             title=request.POST.get("title", ""),
             description=request.POST.get("description", ""),
             version_label=request.POST.get("version_label", "v1.0"),
             condition_labels=request.POST.get("condition_labels", ""),
+            template_data=template_data,
         )
         messages.success(request, f"Created study '{study.title}'. Its Prolific study URL is ready to copy from Manage Studies.")
     except Exception as exc:
         messages.error(request, f"The study could not be created: {exc}")
     return redirect("dashboard:instructor_dashboard")
+
+
+@login_required
+@require_http_methods(["GET"])
+def export_study(request, study_id):
+    study = get_object_or_404(
+        Study.objects.select_related("course_instance", "course_instance__course"),
+        id=study_id,
+    )
+    if not _user_can_manage_study(request.user, study):
+        raise PermissionDenied("Only this study's instructors can export it.")
+
+    safe_slug = "".join(
+        character if character.isalnum() or character in {"-", "_"} else "-"
+        for character in study.slug
+    ).strip("-") or "study"
+    response = JsonResponse(export_study_to_json(study), json_dumps_params={"indent": 2})
+    response["Content-Disposition"] = f'attachment; filename="{safe_slug}-modulearn-study-export.json"'
+    return response
 
 
 @login_required
@@ -672,6 +720,29 @@ def reset_study_participation(request, study_id):
             f"{'' if counts['participants'] == 1 else 's'} and "
             f"{counts['progress_rows']} progress row"
             f"{'' if counts['progress_rows'] == 1 else 's'} for {study.title}."
+        ),
+    )
+    return redirect("dashboard:instructor_dashboard")
+
+
+@login_required
+@require_POST
+def delete_study(request, study_id):
+    study = get_object_or_404(Study.objects.select_related("course_instance", "course_instance__course"), id=study_id)
+    if not _user_can_manage_study(request.user, study):
+        raise PermissionDenied("Only this study's instructors can delete it.")
+
+    if request.POST.get("confirm_delete", "").strip().upper() != "DELETE":
+        messages.error(request, "Study deletion was not confirmed. Type DELETE to remove the study.")
+        return redirect("dashboard:instructor_dashboard")
+
+    title = study.title
+    counts = delete_study_completely(study)
+    messages.success(
+        request,
+        (
+            f"Deleted study '{title}' with {counts['participants']} participant session"
+            f"{'' if counts['participants'] == 1 else 's'} and its backing course session."
         ),
     )
     return redirect("dashboard:instructor_dashboard")

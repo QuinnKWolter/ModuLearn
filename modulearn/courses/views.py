@@ -23,7 +23,13 @@ from django.contrib.auth import get_user_model
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import json
 import hashlib
-from .utils import fetch_course_details, create_course_from_json, export_course_to_json
+from .utils import (
+    create_course_from_json,
+    ensure_module_form,
+    export_course_to_json,
+    fetch_course_details,
+    should_clone_import_payload,
+)
 import logging
 import traceback
 from django.urls import reverse
@@ -37,6 +43,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import xml.etree.ElementTree as ET
 from django.contrib.auth import login
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST, require_GET
 import os
 from django.core.serializers.json import DjangoJSONEncoder
@@ -122,6 +129,14 @@ def is_pcex_url(url: str) -> bool:
         u.path.startswith('/pcex/')
         or u.path == '/pcex'
         or u.path.startswith('/pcex-authoring/')
+        or (
+            u.hostname == 'acos.cs.vt.edu'
+            and (
+                u.path.startswith('/html/acos-pcex/')
+                or u.path.startswith('/pitt/acos-pcex/')
+                or u.path.startswith('/static/acos-pcex/')
+            )
+        )
     )
 
 def should_proxy_intercepted_activity_url(url: str) -> bool:
@@ -364,37 +379,89 @@ def course_configuration(request, instance_id):
         | Q(study__recruitment_sources__participant_sessions__isnull=False)
     ).exists()
     if request.method == "POST":
+        wants_json = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("accept", "")
+        )
         if course.is_locked_for_research and research_has_participants:
-            messages.error(request, "This course protocol is locked because recruitment has started. Duplicate the course before changing structure.")
+            error_message = "This course protocol is locked because recruitment has started. Duplicate the course before changing structure."
+            if not wants_json:
+                messages.error(request, error_message)
+            if wants_json:
+                return JsonResponse({"success": False, "message": error_message}, status=400)
             return redirect("courses:course_configuration", instance_id=course_instance.id)
         action = request.POST.get("action")
+        success = True
+        message_text = ""
         try:
             if action == "update_structure":
-                _update_course_structure_controls(request, course)
-                messages.success(request, "Course visibility and locking controls were updated.")
+                deleted_count = _update_course_structure_controls(request, course)
+                message_text = "Course visibility and locking controls were updated."
+                if deleted_count:
+                    message_text = (
+                        f"Course structure updated and {deleted_count} module"
+                        f"{'' if deleted_count == 1 else 's'} removed."
+                    )
+                if not wants_json:
+                    messages.success(request, message_text)
             elif action == "add_unit":
                 _create_manual_unit(request, course)
-                messages.success(request, "Unit added to the course structure.")
+                message_text = "Unit added to the course structure."
+                if not wants_json:
+                    messages.success(request, message_text)
             elif action == "add_module":
                 _create_custom_module(request, course)
-                messages.success(request, "Module added to the course structure.")
+                message_text = "Module added to the course structure."
+                if not wants_json:
+                    messages.success(request, message_text)
             elif action == "update_plugins":
                 _update_course_plugins(request, course)
-                messages.success(request, "Course plugin settings were updated.")
+                message_text = "Course plugin settings were updated."
+                if not wants_json:
+                    messages.success(request, message_text)
             elif action == "update_branching":
                 _update_branching_rules(request, course)
-                messages.success(request, "Adaptive branching rules were updated.")
+                message_text = "Adaptive branching rules were updated."
+                if not wants_json:
+                    messages.success(request, message_text)
             else:
-                messages.error(request, "Unknown course configuration action.")
+                success = False
+                message_text = "Unknown course configuration action."
+                if not wants_json:
+                    messages.error(request, message_text)
         except Exception as exc:
             logger.error("Course configuration update failed: %s", exc, exc_info=True)
-            messages.error(request, str(exc))
+            success = False
+            message_text = str(exc)
+            if not wants_json:
+                messages.error(request, message_text)
+        if wants_json and action == "update_branching":
+            context = _course_configuration_context(course_instance, research_has_participants)
+            modal_html = render_to_string(
+                "courses/components/adaptive_branching_flow_modal.html",
+                context,
+                request=request,
+            )
+            return JsonResponse(
+                {
+                    "success": success,
+                    "message": message_text,
+                    "modal_html": modal_html,
+                },
+                status=200 if success else 400,
+            )
         return redirect("courses:course_configuration", instance_id=course_instance.id)
 
+    context = _course_configuration_context(course_instance, research_has_participants)
+    return render(request, "courses/course_configuration.html", context)
+
+
+def _course_configuration_context(course_instance, research_has_participants):
+    course = course_instance.course
     plugin_flags = enabled_course_plugins(course)
     study = getattr(course_instance, "study", None)
 
-    context = {
+    return {
         "course": course,
         "course_instance": course_instance,
         "unit_groups": _module_rule_context(course),
@@ -413,7 +480,6 @@ def course_configuration(request, instance_id):
         ],
         "study": study,
     }
-    return render(request, "courses/course_configuration.html", context)
 
 
 @login_required
@@ -422,12 +488,23 @@ def export_course(request, instance_id):
     if not _is_course_instructor(request.user, course_instance):
         raise PermissionDenied("Only instructors can export this course.")
 
-    course_data = export_course_to_json(course_instance.course)
-    safe_course_id = "".join(
-        character if character.isalnum() or character in {"-", "_"} else "-"
-        for character in str(course_instance.course.id)
-    ).strip("-") or "course"
-    filename = f"{safe_course_id}-modulearn-export.json"
+    study = getattr(course_instance, "study", None)
+    if study:
+        from recruitment.services.studies import export_study_to_json
+
+        course_data = export_study_to_json(study)
+        safe_course_id = "".join(
+            character if character.isalnum() or character in {"-", "_"} else "-"
+            for character in str(study.slug)
+        ).strip("-") or "study"
+        filename = f"{safe_course_id}-modulearn-study-export.json"
+    else:
+        course_data = export_course_to_json(course_instance.course, course_instance=course_instance)
+        safe_course_id = "".join(
+            character if character.isalnum() or character in {"-", "_"} else "-"
+            for character in str(course_instance.course.id)
+        ).strip("-") or "course"
+        filename = f"{safe_course_id}-modulearn-course-export.json"
     response = JsonResponse(course_data, json_dumps_params={"indent": 2})
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
@@ -521,6 +598,12 @@ def _update_course_structure_controls(request, course):
     rule_context = _module_rule_context(course)
     valid_conditions = set(_course_research_conditions(course))
     valid_unit_ids = {group["unit"].id for group in rule_context}
+    deleted_module_ids = {
+        module.id
+        for group in rule_context
+        for module in group["modules"]
+        if _parse_bool(request.POST.get(f"module_{module.id}_delete"))
+    }
 
     for group in rule_context:
         unit = group["unit"]
@@ -541,10 +624,14 @@ def _update_course_structure_controls(request, course):
 
         for module in group["modules"]:
             module_prefix = f"module_{module.id}"
+            if module.id in deleted_module_ids:
+                module.delete()
+                continue
             module.title = request.POST.get(f"{module_prefix}_title", module.title).strip() or module.title
             module.description = request.POST.get(f"{module_prefix}_description", module.description)
             module.order = int(request.POST.get(f"{module_prefix}_order") or module.order or 0)
             module.is_visible = _parse_bool(request.POST.get(f"{module_prefix}_visible"))
+            module.allow_resubmission = _parse_bool(request.POST.get(f"{module_prefix}_allow_resubmission", "1"))
             target_unit_id = request.POST.get(f"{module_prefix}_unit_id")
             if target_unit_id:
                 try:
@@ -569,6 +656,7 @@ def _update_course_structure_controls(request, course):
                 "order",
                 "is_visible",
                 "is_locked",
+                "allow_resubmission",
                 "unlock_rule",
                 "content_url",
                 "content_file",
@@ -580,6 +668,33 @@ def _update_course_structure_controls(request, course):
                 "content_data",
             ])
             _update_module_form_configuration(request, module)
+
+    if deleted_module_ids:
+        _remove_deleted_module_unlock_references(course, deleted_module_ids)
+    return len(deleted_module_ids)
+
+
+def _remove_deleted_module_unlock_references(course, deleted_module_ids):
+    deleted_targets = {str(module_id) for module_id in deleted_module_ids}
+
+    def rule_references_deleted_module(rule):
+        for condition in (rule or {}).get("conditions") or []:
+            if condition.get("type") in {"module_accessed", "module_completed"}:
+                if str(condition.get("target_id", "")) in deleted_targets:
+                    return True
+        return False
+
+    for unit in course.units.all():
+        if rule_references_deleted_module(unit.unlock_rule):
+            unit.is_locked = False
+            unit.unlock_rule = {}
+            unit.save(update_fields=["is_locked", "unlock_rule"])
+
+    for module in Module.objects.filter(unit__course=course):
+        if rule_references_deleted_module(module.unlock_rule):
+            module.is_locked = False
+            module.unlock_rule = {}
+            module.save(update_fields=["is_locked", "unlock_rule"])
 
 
 def _parse_protocol_list(raw_value):
@@ -670,7 +785,7 @@ def _update_module_form_configuration(request, module):
         or module_form.submit_button_label
         or "Submit"
     )
-    module_form.allow_resubmission = _parse_bool(request.POST.get(f"{prefix}_allow_resubmission"))
+    module_form.allow_resubmission = bool(getattr(module, "allow_resubmission", True))
     module_form.save(update_fields=["instructions", "submit_button_label", "allow_resubmission", "updated_at"])
 
     valid_types = {choice[0] for choice in ModuleFormQuestion.TYPE_CHOICES}
@@ -824,6 +939,13 @@ def _update_branching_rules(request, course):
     condition_type = (request.POST.get("branch_condition_type") or "").strip()
     threshold_value = request.POST.get("branch_threshold")
     required_study_condition = (request.POST.get("branch_required_study_condition") or "").strip()
+    should_create_rule = (
+        _parse_bool(request.POST.get("branch_commit"))
+        or request.headers.get("x-requested-with") != "XMLHttpRequest"
+    )
+
+    if not should_create_rule:
+        return
 
     if not any([source_id, target_id, condition_type, threshold_value, required_study_condition]):
         return
@@ -964,6 +1086,7 @@ def _create_custom_module(request, course):
         supported_protocols = replacement.supported_protocols
         content_data = apply_replacement_metadata(content_data, replacement)
 
+    allow_resubmission = _parse_bool(request.POST.get("allow_resubmission", "1"))
     module = Module.objects.create(
         unit=unit,
         title=title,
@@ -975,6 +1098,7 @@ def _create_custom_module(request, course):
         content_data=content_data,
         is_visible=True,
         is_locked=False,
+        allow_resubmission=allow_resubmission,
         supported_protocols=supported_protocols,
     )
 
@@ -982,7 +1106,7 @@ def _create_custom_module(request, course):
         module_form = ModuleForm.objects.create(
             module=module,
             instructions=request.POST.get("form_instructions", ""),
-            allow_resubmission=_parse_bool(request.POST.get("allow_resubmission")),
+            allow_resubmission=allow_resubmission,
             submit_button_label=request.POST.get("submit_button_label") or "Submit",
         )
         _create_form_questions(module_form, request.POST.get("questions_json") or "[]")
@@ -1082,8 +1206,11 @@ def create_course(request):
         if not course_data:
             return JsonResponse({'error': 'Course data is required'}, status=400)
 
-        # Assuming create_course_from_json is a function that handles the course creation logic
-        course = create_course_from_json(course_data, request.user)
+        course = create_course_from_json(
+            course_data,
+            request.user,
+            clone=should_clone_import_payload(course_data),
+        )
 
         return JsonResponse({'success': True, 'course_id': course.id})
 
@@ -1449,7 +1576,9 @@ def launch_iframe_module(request, instance_id, module_id):
 
 
 def _handle_form_module(request, course_instance, module, module_progress, is_instructor):
-    module_form = get_object_or_404(ModuleForm, module=module)
+    module_form = ensure_module_form(module)
+    if module_form is None:
+        module_form = get_object_or_404(ModuleForm, module=module)
     enrollment = module_progress.enrollment
     questions = list(module_form.questions.all())
     existing_submission = None
@@ -1459,9 +1588,20 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
             .prefetch_related("answers")
             .first()
         )
+    allows_resubmission = bool(getattr(module, "allow_resubmission", module_form.allow_resubmission))
+    participant_mode = getattr(request.user, "is_anonymous_participant", False)
+
+    if (
+        request.method == "GET"
+        and participant_mode
+        and existing_submission
+        and not allows_resubmission
+        and module_progress.is_complete
+    ):
+        return _redirect_after_module_completion(request.user, course_instance, module)
 
     if request.method == "POST" and not is_instructor:
-        if existing_submission and not module_form.allow_resubmission:
+        if existing_submission and not allows_resubmission:
             messages.info(request, "This form has already been submitted.")
             return _redirect_after_module_completion(request.user, course_instance, module)
 
@@ -1513,6 +1653,8 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
                 payload=answers_payload,
                 event_type="completion",
             )
+            module_progress.attempts = (module_progress.attempts or 0) + 1
+            module_progress.save(update_fields=["attempts", "last_accessed"])
             log_module_access(
                 request.user,
                 module,
@@ -1530,9 +1672,9 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
         "questions": questions,
         "progress": module_progress,
         "existing_submission": existing_submission,
+        "allows_resubmission": allows_resubmission,
         "is_instructor": is_instructor,
-        "next_module": _get_next_accessible_module(request.user, course_instance, module),
-        "participant_mode": getattr(request.user, "is_anonymous_participant", False),
+        "participant_mode": participant_mode,
     })
 
 

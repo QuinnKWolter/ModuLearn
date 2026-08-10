@@ -144,10 +144,388 @@
     border-bottom-color: rgba(71, 85, 105, 0.5);
   }
 
+  .module-capture-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(14, 165, 233, 0.36);
+    border-radius: 999px;
+    background: rgba(14, 165, 233, 0.08);
+    color: #0369a1;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0.35rem 0.55rem;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+
+  .module-capture-btn:hover,
+  .module-capture-btn:focus-visible {
+    background: rgba(14, 165, 233, 0.16);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.16);
+    color: #075985;
+    transform: translateY(-1px);
+  }
+
+  .dark .module-capture-btn {
+    border-color: rgba(125, 211, 252, 0.34);
+    background: rgba(14, 165, 233, 0.14);
+    color: #bae6fd;
+  }
+
+  .study-condition-badge,
+  .study-condition-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(37, 99, 235, 0.26);
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 0.72rem;
+    font-weight: 850;
+    line-height: 1;
+    padding: 0.32rem 0.56rem;
+    white-space: nowrap;
+  }
+
+  .study-condition-badge {
+    gap: 0.35rem;
+  }
+
+  .study-condition-badge::before {
+    content: "";
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
+
+  .study-condition-count {
+    min-width: 1.75rem;
+    background: #f8fafc;
+    color: #334155;
+    border-color: rgba(148, 163, 184, 0.34);
+  }
+
+  .dark .study-condition-badge,
+  .dark .study-condition-count {
+    border-color: rgba(96, 165, 250, 0.32);
+    background: rgba(37, 99, 235, 0.16);
+    color: #bfdbfe;
+  }
+
+  .dark .study-condition-badge::before {
+    background: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+  }
+
+  .dark .study-condition-count {
+    background: rgba(15, 23, 42, 0.72);
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.22);
+  }
+
+  .raw-history-modal-panel {
+    position: relative;
+    display: flex;
+    width: 100%;
+    max-width: 64rem;
+    max-height: 90vh;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 1rem;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.34);
+  }
+
+  .dark .raw-history-modal-panel {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: #0f172a;
+    color: #e2e8f0;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+  }
+
+  .raw-history-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #ffffff;
+    padding: 1rem 1.25rem;
+  }
+
+  .dark .raw-history-modal-header {
+    border-bottom-color: rgba(148, 163, 184, 0.18);
+    background: linear-gradient(135deg, #020617, #172554);
+  }
+
+  .raw-history-modal-heading {
+    min-width: 0;
+  }
+
+  .raw-history-modal-eyebrow {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .raw-history-modal-title {
+    margin: 0.16rem 0 0;
+    overflow: hidden;
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 850;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .raw-history-modal-meta {
+    margin-top: 0.22rem;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .raw-history-modal-close {
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 1.85rem;
+    line-height: 1;
+    padding: 0.1rem 0.2rem;
+  }
+
+  .raw-history-modal-close:hover,
+  .raw-history-modal-close:focus-visible {
+    color: #ffffff;
+  }
+
+  .raw-history-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    color: #0f172a;
+    padding: 1.15rem;
+  }
+
+  .dark .raw-history-modal-body {
+    background: linear-gradient(180deg, #0f172a, #020617);
+    color: #e2e8f0;
+  }
+
+  .raw-history-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .raw-history-summary span {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.8);
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .dark .raw-history-summary span {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(30, 41, 59, 0.72);
+    color: #e2e8f0;
+  }
+
+  .raw-history-list {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .raw-history-item {
+    display: block;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-left: 4px solid #64748b;
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.82);
+    overflow: hidden;
+  }
+
+  .dark .raw-history-item {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(15, 23, 42, 0.66);
+  }
+
+  .raw-history-item.is-progress-event { border-left-color: #2563eb; }
+  .raw-history-item.is-access-log { border-left-color: #7c3aed; }
+  .raw-history-item.is-form-submission { border-left-color: #16a34a; }
+
+  .raw-history-item summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    align-items: center;
+    cursor: pointer;
+    list-style: none;
+    padding: 0.85rem;
+  }
+
+  .raw-history-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .raw-history-caret {
+    color: #64748b;
+    transition: transform 160ms ease, color 160ms ease;
+  }
+
+  .dark .raw-history-caret {
+    color: #cbd5e1;
+  }
+
+  .raw-history-item[open] .raw-history-caret {
+    color: #2563eb;
+    transform: rotate(90deg);
+  }
+
+  .raw-history-body {
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+    padding: 0 0.85rem 0.85rem 3.8rem;
+  }
+
+  .dark .raw-history-body {
+    border-top-color: rgba(148, 163, 184, 0.14);
+  }
+
+  .raw-history-icon {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+  }
+
+  .dark .raw-history-icon {
+    background: rgba(148, 163, 184, 0.14);
+    color: #f8fafc;
+  }
+
+  .raw-history-item-label {
+    color: #0f172a;
+    font-weight: 850;
+  }
+
+  .dark .raw-history-item-label {
+    color: #f8fafc;
+  }
+
+  .raw-history-item-meta {
+    margin-top: 0.16rem;
+    color: #64748b;
+    font-size: 0.74rem;
+  }
+
+  .dark .raw-history-item-meta {
+    color: #cbd5e1;
+  }
+
+  .raw-history-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .raw-history-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  .raw-history-metrics span {
+    border-radius: 999px;
+    background: rgba(100, 116, 139, 0.12);
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.22rem 0.5rem;
+  }
+
+  .dark .raw-history-metrics span {
+    background: rgba(148, 163, 184, 0.14);
+    color: #e2e8f0;
+  }
+
+  .raw-history-json {
+    max-height: 22rem;
+    overflow: auto;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.6rem;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 0.76rem;
+    line-height: 1.48;
+    padding: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .dark .raw-history-json {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: #020617;
+    color: #dbeafe;
+  }
+
+  .raw-history-empty {
+    border: 1px dashed rgba(148, 163, 184, 0.42);
+    border-radius: 0.85rem;
+    background: rgba(248, 250, 252, 0.72);
+    color: #475569;
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  .dark .raw-history-empty {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: rgba(15, 23, 42, 0.62);
+    color: #cbd5e1;
+  }
+
   @media (max-width: 760px) {
     .study-analytics-toolbar,
     .study-participant summary {
       grid-template-columns: 1fr;
+    }
+
+    .raw-history-topline {
+      grid-template-columns: 1fr;
+    }
+
+    .raw-history-metrics {
+      justify-content: flex-start;
+    }
+
+    .raw-history-item summary,
+    .raw-history-topline {
+      grid-template-columns: 1fr;
+    }
+
+    .raw-history-body {
+      padding-left: 0.85rem;
     }
   }
 </style>
@@ -211,7 +589,7 @@
                 <div class="stat-kicker">Condition</div>
                 <h3 class="text-base font-bold mt-1 mb-0">{{ condition.label }}</h3>
               </div>
-              <span class="badge badge-secondary">{{ condition.count }}</span>
+              <span class="study-condition-count">{{ condition.count }}</span>
             </div>
             <div class="mt-3 study-progress" aria-label="{{ condition.avg_progress_percent }} percent average progress">
               <span style="width: {{ condition.avg_progress_percent }}%"></span>
@@ -250,7 +628,7 @@
                         <span class="flex flex-wrap items-center gap-2">
                           <strong class="text-slate-900 dark:text-white">{{ participant.participant_label }}</strong>
                           <span class="badge badge-secondary">{{ participant.status_label }}</span>
-                          <span class="badge bg-blue-100 text-blue-800 dark:bg-blue-400/15 dark:text-blue-200">{{ participant.condition }}</span>
+                          <span class="study-condition-badge">{{ participant.condition }}</span>
                         </span>
                         <span class="block mt-1 text-xs text-slate-500 dark:text-slate-300">
                           Entered {{ participant.entered_at|date:"M d, Y g:i A" }}
@@ -280,6 +658,7 @@
                               <th>Score</th>
                               <th>Attempts</th>
                               <th>Last Access</th>
+                              <th>Captures</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -297,6 +676,19 @@
                                 <td>{% if module.score is not None %}{{ module.score|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>{{ module.attempts }}</td>
                                 <td>{% if module.last_accessed %}{{ module.last_accessed|date:"M d, g:i A" }}{% else %}-{% endif %}</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    class="module-capture-btn"
+                                    data-study-module-capture
+                                    data-module-id="{{ module.module_id }}"
+                                    data-participant-session-uuid="{{ participant.session.uuid }}"
+                                    title="View raw capture history"
+                                    aria-label="View raw capture history">
+                                    <i class="fas fa-code" aria-hidden="true"></i>
+                                    <span>Raw</span>
+                                  </button>
+                                </td>
                               </tr>
                             {% endfor %}
                           </tbody>
@@ -320,4 +712,154 @@
       {% endif %}
     </section>
   </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const instanceId = "{{ course_instance.id|escapejs }}";
+  const historyEndpoint = "{% url 'dashboard:fetch_module_capture_history' %}";
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatDateTime(value) {
+    if (!value) return 'No timestamp';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'No timestamp';
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  function prettyJson(value) {
+    if (value === undefined || value === null || value === '') return '{}';
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  function rawHistoryKindMeta(kind) {
+    if (kind === 'progress_event') return { label: 'Progress event', icon: 'fa-chart-line', cls: 'is-progress-event' };
+    if (kind === 'access_log') return { label: 'Access log', icon: 'fa-door-open', cls: 'is-access-log' };
+    if (kind === 'form_submission') return { label: 'Form submission', icon: 'fa-clipboard-check', cls: 'is-form-submission' };
+    return { label: 'Captured item', icon: 'fa-code', cls: 'is-neutral' };
+  }
+
+  function renderRawHistoryItem(item) {
+    const meta = rawHistoryKindMeta(item.kind);
+    const metrics = [];
+    if (item.progress_percent !== undefined && item.progress_percent !== null) metrics.push(`${item.progress_percent}% progress`);
+    if (item.score !== undefined && item.score !== null) metrics.push(`Score ${Math.round(item.score)}%`);
+    if (item.success) metrics.push('Successful');
+    if (item.source) metrics.push(item.source);
+
+    return `
+      <details class="raw-history-item ${meta.cls}">
+        <summary>
+          <div class="raw-history-icon"><i class="fas ${meta.icon}" aria-hidden="true"></i></div>
+          <div class="raw-history-topline">
+            <div>
+              <div class="raw-history-item-label">${escapeHtml(item.label || meta.label)}</div>
+              <div class="raw-history-item-meta">${escapeHtml(meta.label)} · ${formatDateTime(item.timestamp || item.created_at)}</div>
+            </div>
+            ${metrics.length ? `<div class="raw-history-metrics">${metrics.map(metric => `<span>${escapeHtml(metric)}</span>`).join('')}</div>` : ''}
+          </div>
+          <i class="fas fa-chevron-right raw-history-caret" aria-hidden="true"></i>
+        </summary>
+        <div class="raw-history-body">
+          <pre class="raw-history-json mt-3" data-no-ui-translate>${escapeHtml(prettyJson(item.payload))}</pre>
+        </div>
+      </details>
+    `;
+  }
+
+  async function fetchRawHistory(moduleId, participantSessionUuid) {
+    const params = new URLSearchParams({
+      instance_id: instanceId,
+      module_id: moduleId,
+      participant_session_uuid: participantSessionUuid
+    });
+    const response = await fetch(`${historyEndpoint}?${params}`, { headers: { Accept: 'application/json' } });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new Error(data.error || `Request failed: ${response.status}`);
+    }
+    return data;
+  }
+
+  function showRawHistoryModal(data) {
+    const modalId = 'studyRawHistoryModal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    const items = data.items || [];
+    const counts = data.summary?.counts || {};
+    const html = `
+      <div class="modal-overlay hidden fixed inset-0 z-[80] items-center justify-center bg-black/55 p-4" id="${modalId}" aria-hidden="true">
+        <div class="modal-backdrop-close absolute inset-0"></div>
+        <div class="raw-history-modal-panel">
+          <div class="raw-history-modal-header">
+            <div class="raw-history-modal-heading">
+              <div class="raw-history-modal-eyebrow">Raw Captured Data</div>
+              <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Module')}</h5>
+              <div class="raw-history-modal-meta">${escapeHtml(data.learner?.name || data.learner?.id || '')} · ${escapeHtml(data.module?.unit_title || '')}</div>
+            </div>
+            <button type="button" data-bs-dismiss="modal" class="raw-history-modal-close">&times;</button>
+          </div>
+          <div class="raw-history-modal-body">
+            <div class="raw-history-summary mb-4">
+              <span><strong>${items.length}</strong> captured item${items.length === 1 ? '' : 's'}</span>
+              <span><strong>${counts.progress_event || 0}</strong> progress</span>
+              <span><strong>${counts.access_log || 0}</strong> access</span>
+              <span><strong>${counts.form_submission || 0}</strong> form</span>
+              <span><strong>${data.progress?.attempts || 0}</strong> attempts</span>
+            </div>
+            ${items.length
+              ? `<div class="raw-history-list">${items.map(renderRawHistoryItem).join('')}</div>`
+              : '<div class="raw-history-empty">No captured events or submissions are available for this module yet.</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+    new bootstrap.Modal(document.getElementById(modalId)).show();
+  }
+
+  document.addEventListener('click', async function(event) {
+    const button = event.target.closest('[data-study-module-capture]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const moduleId = button.getAttribute('data-module-id') || '';
+    const participantSessionUuid = button.getAttribute('data-participant-session-uuid') || '';
+    document.body.style.cursor = 'progress';
+    try {
+      const data = await fetchRawHistory(moduleId, participantSessionUuid);
+      showRawHistoryModal(data);
+    } catch (error) {
+      const message = `Could not load raw capture history: ${error.message || error}`;
+      if (window.showError) {
+        window.showError(message);
+      } else {
+        alert(message);
+      }
+    } finally {
+      document.body.style.cursor = '';
+    }
+  });
+})();
+</script>
 {% endblock %}

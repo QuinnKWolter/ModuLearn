@@ -544,6 +544,127 @@ async function fetchStudentEngagement(learnerId) {
   return data;
 }
 
+async function fetchModuleCaptureHistory({ learnerId, moduleId, participantSessionUuid }) {
+  const instanceId = currentModulearnInstanceId();
+  if (!instanceId) {
+    throw new Error('No course session is selected.');
+  }
+  if (!moduleId) {
+    throw new Error('No module was selected.');
+  }
+
+  const params = new URLSearchParams({ instance_id: instanceId, module_id: moduleId });
+  if (participantSessionUuid) {
+    params.set('participant_session_uuid', participantSessionUuid);
+  } else if (learnerId) {
+    params.set('learner_id', learnerId);
+  }
+
+  const response = await fetch(`{% url 'dashboard:fetch_module_capture_history' %}?${params}`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || `Request failed: ${response.status}`);
+  }
+  return data;
+}
+
+function rawHistoryKindMeta(kind) {
+  if (kind === 'progress_event') return { label: 'Progress event', icon: 'fa-chart-line', cls: 'is-progress-event' };
+  if (kind === 'access_log') return { label: 'Access log', icon: 'fa-door-open', cls: 'is-access-log' };
+  if (kind === 'form_submission') return { label: 'Form submission', icon: 'fa-clipboard-check', cls: 'is-form-submission' };
+  return { label: 'Captured item', icon: 'fa-code', cls: 'is-neutral' };
+}
+
+function prettyJson(value) {
+  if (value === undefined || value === null || value === '') return '{}';
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function renderRawHistoryItem(item) {
+  const meta = rawHistoryKindMeta(item.kind);
+  const metrics = [];
+  if (item.progress_percent !== undefined && item.progress_percent !== null) metrics.push(`${item.progress_percent}% progress`);
+  if (item.score !== undefined && item.score !== null) metrics.push(`Score ${Math.round(item.score)}%`);
+  if (item.success) metrics.push('Successful');
+  if (item.source) metrics.push(item.source);
+
+  return `
+    <details class="raw-history-item ${meta.cls}">
+      <summary>
+        <div class="raw-history-icon"><i class="fas ${meta.icon}" aria-hidden="true"></i></div>
+        <div class="raw-history-topline">
+          <div>
+            <div class="raw-history-item-label">${escapeHtml(item.label || meta.label)}</div>
+            <div class="raw-history-item-meta">${escapeHtml(meta.label)} · ${formatDateTime(item.timestamp || item.created_at)}</div>
+          </div>
+          ${metrics.length ? `<div class="raw-history-metrics">${metrics.map(metric => `<span>${escapeHtml(metric)}</span>`).join('')}</div>` : ''}
+        </div>
+        <i class="fas fa-chevron-right raw-history-caret" aria-hidden="true"></i>
+      </summary>
+      <div class="raw-history-body">
+        <pre class="raw-history-json mt-3" data-no-ui-translate>${escapeHtml(prettyJson(item.payload))}</pre>
+      </div>
+    </details>
+  `;
+}
+
+function showModuleCaptureHistoryModal(data) {
+  const modalId = 'moduleCaptureHistoryModal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const items = data.items || [];
+  const counts = data.summary?.counts || {};
+  const modalHtml = `
+    <div class="modal-overlay hidden fixed inset-0 z-[80] items-center justify-center bg-black/55 p-4" id="${modalId}" aria-hidden="true">
+      <div class="modal-backdrop-close absolute inset-0"></div>
+      <div class="raw-history-modal-panel">
+        <div class="raw-history-modal-header">
+          <div class="raw-history-modal-heading">
+            <div class="raw-history-modal-eyebrow">Raw Captured Data</div>
+            <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Module')}</h5>
+            <div class="raw-history-modal-meta">${escapeHtml(data.learner?.name || data.learner?.id || '')} · ${escapeHtml(data.module?.unit_title || '')}</div>
+          </div>
+          <button type="button" data-bs-dismiss="modal" class="raw-history-modal-close">&times;</button>
+        </div>
+        <div class="raw-history-modal-body">
+          <div class="raw-history-summary mb-4">
+            <span><strong>${items.length}</strong> captured item${items.length === 1 ? '' : 's'}</span>
+            <span><strong>${counts.progress_event || 0}</strong> progress</span>
+            <span><strong>${counts.access_log || 0}</strong> access</span>
+            <span><strong>${counts.form_submission || 0}</strong> form</span>
+            <span><strong>${data.progress?.attempts || 0}</strong> attempts</span>
+          </div>
+          ${items.length
+            ? `<div class="raw-history-list">${items.map(renderRawHistoryItem).join('')}</div>`
+            : '<div class="raw-history-empty">No captured events or submissions are available for this module yet.</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = new bootstrap.Modal(document.getElementById(modalId));
+  modal.show();
+}
+
+async function openModuleCaptureHistory(params) {
+  document.body.style.cursor = 'progress';
+  try {
+    const history = await fetchModuleCaptureHistory(params);
+    showModuleCaptureHistoryModal(history);
+  } catch (error) {
+    showError(`Could not load raw capture history: ${error.message || error}`);
+  } finally {
+    document.body.style.cursor = '';
+  }
+}
+
 function renderStudentProgressSummary(learner) {
   const summary = computeLearnerSummary(learner);
   const sortedTopics = (responseData.topics || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -603,7 +724,21 @@ function renderStudentProgressSummary(learner) {
                                 <div class="font-semibold truncate">${escapeHtml(activity.name || activity.id)}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">${activityPct >= 100 ? 'Completed' : activityPct > 0 ? 'In progress' : 'Not started'}</div>
                               </div>
-                              <div class="text-right font-bold">${activityPct}%</div>
+                              <div class="student-activity-actions">
+                                <button
+                                  type="button"
+                                  class="module-capture-btn"
+                                  data-module-capture
+                                  data-learner-id="${escapeHtml(learner.id)}"
+                                  data-module-id="${escapeHtml(activity.id)}"
+                                  data-participant-session-uuid="${escapeHtml(learner.participant_session_uuid || '')}"
+                                  title="View raw capture history"
+                                  aria-label="View raw capture history">
+                                  <i class="fas fa-code" aria-hidden="true"></i>
+                                  <span>Raw</span>
+                                </button>
+                                <div class="text-right font-bold">${activityPct}%</div>
+                              </div>
                             </div>
                           `;
                         }).join('') : '<div class="text-sm text-gray-500 dark:text-gray-400">No modules in this resource group.</div>'}
@@ -711,9 +846,23 @@ function renderStudentEngagementView(data) {
                       <div class="font-bold truncate">${escapeHtml(module.title)}</div>
                       <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(module.module_type || 'Module')}</div>
                     </div>
-                    <div class="text-right">
-                      <div class="font-bold">${module.progress_percent || 0}%</div>
-                      <div class="text-xs text-gray-500 dark:text-gray-400">${module.event_count || 0} events</div>
+                    <div class="engagement-module-actions">
+                      <button
+                        type="button"
+                        class="module-capture-btn"
+                        data-module-capture
+                        data-learner-id="${escapeHtml(data.learner?.id || '')}"
+                        data-module-id="${escapeHtml(module.id)}"
+                        data-participant-session-uuid="${escapeHtml(data.learner?.participant_session_uuid || '')}"
+                        title="View raw capture history"
+                        aria-label="View raw capture history">
+                        <i class="fas fa-code" aria-hidden="true"></i>
+                        <span>Raw</span>
+                      </button>
+                      <div class="text-right">
+                        <div class="font-bold">${module.progress_percent || 0}%</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">${module.event_count || 0} events</div>
+                      </div>
                     </div>
                   </summary>
                   <div class="engagement-module-body">
@@ -998,6 +1147,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  document.addEventListener('click', function(event) {
+    const captureButton = event.target.closest('[data-module-capture]');
+    if (!captureButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openModuleCaptureHistory({
+      learnerId: captureButton.getAttribute('data-learner-id') || '',
+      moduleId: captureButton.getAttribute('data-module-id') || '',
+      participantSessionUuid: captureButton.getAttribute('data-participant-session-uuid') || ''
+    });
+  });
 
   document.addEventListener('click', function(event) {
     const sortButton = event.target.closest('[data-student-sort]');

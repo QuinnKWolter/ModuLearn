@@ -2,8 +2,23 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from accounts.models import User
-from courses.models import Course, CourseInstance, Enrollment, Module, ModuleBranchRule, ModuleProgress, ModuleProgressEvent, Unit
+from courses.models import (
+    Course,
+    CourseInstance,
+    Enrollment,
+    Module,
+    ModuleAccessLog,
+    ModuleBranchRule,
+    ModuleForm,
+    ModuleFormAnswer,
+    ModuleFormQuestion,
+    ModuleFormSubmission,
+    ModuleProgress,
+    ModuleProgressEvent,
+    Unit,
+)
 from modulearn.learning.selectors.timelines import get_course_instance_recent_activity
+from recruitment.models import ParticipantSession, RecruitmentSource, Study
 
 
 @override_settings(
@@ -167,6 +182,141 @@ class DashboardViewTests(TestCase):
         self.assertEqual(data['summary']['blur_count'], 1)
         self.assertEqual(data['units'][0]['modules'][0]['events'][1]['event_type'], 'tab_blur')
         self.assertEqual(data['units'][0]['modules'][0]['events'][1]['payload']['reason'], 'window_blur')
+
+    def test_instructor_can_fetch_module_capture_history_with_raw_payloads(self):
+        unit = Unit.objects.create(course=self.course, title='Unit 1', order=10)
+        module = Module.objects.create(unit=unit, title='PCRS Exercise', order=10)
+        enrollment = Enrollment.objects.get(student=self.student, course_instance=self.instance)
+        module_progress, _created = ModuleProgress.objects.get_or_create(
+            user=self.student,
+            enrollment=enrollment,
+            module=module,
+        )
+        submitted_code = 'promedio = (primer_num + segundo_num) / 2'
+        ModuleProgressEvent.objects.create(
+            module_progress=module_progress,
+            user=self.student,
+            module=module,
+            course_instance=self.instance,
+            event_type='completion',
+            source='pcrs',
+            progress=1.0,
+            score=100.0,
+            success=True,
+            payload={
+                'pcrs_submission': {'form': {'submission': submitted_code}},
+                'pcrs_result': {'score': 5, 'max_score': 5},
+            },
+        )
+        ModuleAccessLog.objects.create(
+            user=self.student,
+            enrollment=enrollment,
+            module=module,
+            course_instance=self.instance,
+            event_type=ModuleAccessLog.EVENT_LAUNCH,
+            metadata={'via': 'test'},
+        )
+        module.module_type = Module.MODULE_TYPE_FORM
+        module.save(update_fields=['module_type'])
+        module_form = ModuleForm.objects.create(module=module, instructions='Answer this.')
+        question = ModuleFormQuestion.objects.create(
+            form=module_form,
+            prompt='What did you notice?',
+            question_type=ModuleFormQuestion.TYPE_SHORT_ANSWER,
+            order=10,
+        )
+        submission = ModuleFormSubmission.objects.create(
+            form=module_form,
+            enrollment=enrollment,
+            user=self.student,
+        )
+        ModuleFormAnswer.objects.create(
+            submission=submission,
+            question=question,
+            value={'answer': 'It worked.'},
+            text_value='It worked.',
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(
+            reverse('dashboard:fetch_module_capture_history'),
+            {
+                'instance_id': self.instance.id,
+                'learner_id': self.student.username,
+                'module_id': module.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['summary']['counts']['progress_event'], 1)
+        self.assertEqual(data['summary']['counts']['access_log'], 1)
+        self.assertEqual(data['summary']['counts']['form_submission'], 1)
+        progress_item = next(item for item in data['items'] if item['kind'] == 'progress_event')
+        self.assertEqual(progress_item['payload']['pcrs_submission']['form']['submission'], submitted_code)
+        form_item = next(item for item in data['items'] if item['kind'] == 'form_submission')
+        self.assertEqual(form_item['payload']['answers'][0]['text_value'], 'It worked.')
+
+    def test_study_instructor_can_fetch_capture_history_by_participant_session_uuid(self):
+        unit = Unit.objects.create(course=self.course, title='Study Unit', order=10)
+        module = Module.objects.create(unit=unit, title='Study Module', order=10)
+        enrollment = Enrollment.objects.get(student=self.student, course_instance=self.instance)
+        study = Study.objects.create(
+            title='Demo Study',
+            course_instance=self.instance,
+        )
+        study.instructors.add(self.instructor)
+        source = RecruitmentSource.objects.create(
+            study=study,
+            platform=RecruitmentSource.PLATFORM_PROLIFIC,
+            condition_labels='A',
+        )
+        participant_session = ParticipantSession.objects.create(
+            recruitment_source=source,
+            user=self.student,
+            enrollment=enrollment,
+            external_pid='participant-1',
+            external_session_id='submission-1',
+            condition='A',
+        )
+        module_progress, _created = ModuleProgress.objects.get_or_create(
+            user=self.student,
+            enrollment=enrollment,
+            module=module,
+            defaults={
+                'study_participant_session': participant_session,
+                'study_condition': 'A',
+            },
+        )
+        ModuleProgressEvent.objects.create(
+            module_progress=module_progress,
+            user=self.student,
+            module=module,
+            course_instance=self.instance,
+            event_type='progress',
+            source='study-test',
+            progress=0.5,
+            payload={'submission': {'code': 'print("halfway")'}},
+            study_participant_session=participant_session,
+            study_condition='A',
+        )
+        self.client.force_login(self.instructor)
+
+        response = self.client.get(
+            reverse('dashboard:fetch_module_capture_history'),
+            {
+                'instance_id': self.instance.id,
+                'participant_session_uuid': participant_session.uuid,
+                'module_id': module.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['participant']['uuid'], str(participant_session.uuid))
+        self.assertEqual(data['participant']['condition'], 'A')
+        self.assertEqual(data['items'][0]['payload']['submission']['code'], 'print("halfway")')
 
     def test_instructor_dashboard_redirects_students(self):
         self.client.force_login(self.student)

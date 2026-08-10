@@ -132,6 +132,7 @@ body {
    Used together with bootstrap-compat.js */
 .modal-overlay {
   /* base hidden state is controlled by .hidden / .flex classes */
+  z-index: 60;
   transition: opacity 0.15s ease;
 }
 
