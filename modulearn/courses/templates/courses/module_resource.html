@@ -13,52 +13,65 @@
 {% endblock %}
 
 {% block content %}
-  {% include 'includes/page_header.html' with eyebrow=module.display_type_label title=module.title description=module.description %}
+  {% if not participant_mode %}
+    {% include 'includes/page_header.html' with eyebrow=module.display_type_label title=module.title description=module.description %}
+  {% endif %}
 
-  <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
-    <section class="card p-6">
-      {% if resource_kind == 'file' %}
-        {% if module.content_file %}
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <div>
-              <div class="stat-kicker">Uploaded Resource</div>
-              <div class="text-lg font-bold mt-1">{{ module.content_file.name }}</div>
-            </div>
-            <a href="{{ module.content_file.url }}" class="btn btn-primary" target="_blank" rel="noopener">Open File</a>
-          </div>
-          {% if module.content_file.url|lower|slice:'-4:' == '.pdf' %}
-            <iframe src="{{ module.content_file.url }}" class="w-full min-h-[75vh] rounded-lg bg-white" title="{{ module.title }}"></iframe>
-          {% else %}
-            <div class="shell-surface p-4 rounded-2xl">
-              <img src="{{ module.content_file.url }}" alt="{{ module.title }}" class="max-w-full rounded-lg mx-auto">
-            </div>
-          {% endif %}
-        {% else %}
-          <div class="empty-state">No file has been uploaded for this module yet.</div>
-        {% endif %}
-      {% else %}
-        <div class="flex flex-col items-start gap-4">
-          <div class="shell-surface p-5 rounded-2xl w-full">
-            <div class="stat-kicker">External Resource</div>
-            <div class="text-lg font-bold mt-2 break-all">{{ module.content_url }}</div>
-          </div>
-          {% if module.content_url %}
-            <a href="{{ module.content_url }}" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
-              Open External Resource
-            </a>
-          {% else %}
-            <div class="empty-state w-full">No link has been configured for this module yet.</div>
+  <div class="{% if participant_mode %}mx-auto max-w-5xl{% else %}grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]{% endif %}">
+    <section class="card module-page-card {% if not participant_mode %}p-6{% endif %}">
+      {% if participant_mode %}
+        <div class="module-page-card-header">
+          <div class="module-page-eyebrow">{{ module.display_type_label }}</div>
+          <h1 class="module-page-title">{{ module.title }}</h1>
+          {% if module.description %}
+            <p class="module-page-description">{{ module.description }}</p>
           {% endif %}
         </div>
       {% endif %}
+      <div class="{% if participant_mode %}module-page-card-body{% endif %}">
+        {% if resource_kind == 'file' %}
+          {% if module.content_file %}
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <div>
+                <div class="stat-kicker">Uploaded Resource</div>
+                <div class="text-lg font-bold mt-1">{{ module.content_file.name }}</div>
+              </div>
+              <a href="{{ module.content_file.url }}" class="btn btn-primary" target="_blank" rel="noopener">Open File</a>
+            </div>
+            {% if module.content_file.url|lower|slice:'-4:' == '.pdf' %}
+              <iframe src="{{ module.content_file.url }}" class="w-full min-h-[75vh] rounded-lg bg-white" title="{{ module.title }}"></iframe>
+            {% else %}
+              <div class="shell-surface p-4 rounded-2xl">
+                <img src="{{ module.content_file.url }}" alt="{{ module.title }}" class="max-w-full rounded-lg mx-auto">
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="empty-state">No file has been uploaded for this module yet.</div>
+          {% endif %}
+        {% else %}
+          <div class="flex flex-col items-start gap-4">
+            <div class="shell-surface p-5 rounded-2xl w-full">
+              <div class="stat-kicker">External Resource</div>
+              <div class="text-lg font-bold mt-2 break-all">{{ module.content_url }}</div>
+            </div>
+            {% if module.content_url %}
+              <a href="{{ module.content_url }}" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+                Open External Resource
+              </a>
+            {% else %}
+              <div class="empty-state w-full">No link has been configured for this module yet.</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
     </section>
 
+    {% if not participant_mode %}
     <aside class="card p-6">
       <div class="stat-kicker">Access</div>
       <div class="text-2xl font-bold mt-2">{{ progress.progress|default:0|floatformat:0 }}%</div>
       <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Opening this resource is recorded in the course access log.</p>
       <div class="mt-5 grid gap-2">
-        {% include 'courses/components/next_module_button.html' with button_class='w-full justify-center' %}
         {% if not participant_mode %}
         <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary w-full justify-center">
           <i class="bi bi-arrow-left" aria-hidden="true"></i>
@@ -67,6 +80,11 @@
         {% endif %}
       </div>
     </aside>
+    {% endif %}
+  </div>
+
+  <div class="module-next-action-row">
+    {% include 'courses/components/next_module_button.html' with button_class='btn-lg' %}
   </div>
 {% endblock %}
 

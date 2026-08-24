@@ -230,19 +230,23 @@ def update_kt_password(kt_login: str, new_password: str) -> Tuple[bool, str]:
         return False, f"Error updating password: {str(e)}"
 
 
-def is_user_instructor_in_aggregate(user_id: str) -> bool:
+def lookup_user_instructor_status_in_aggregate(user_id: str) -> Optional[bool]:
     """
     Check if a user_id exists in aggregate.ent_non_student table.
     If they exist, they are an instructor in ModuLearn (regardless of user_role).
+
+    Returns True/False when the Aggregate lookup succeeds, and None when the
+    lookup could not be completed. Callers that create or mutate users should
+    treat None as "unknown", not as "confirmed student".
     
     Args:
         user_id: KnowledgeTree user_id (Login/username string)
         
     Returns:
-        True if user exists in ent_non_student, False otherwise
+        True if user exists in ent_non_student, False if not, None if unknown
     """
     if not user_id:
-        return False
+        return None
     
     try:
         db_conn = get_paws_db_connection()
@@ -250,7 +254,7 @@ def is_user_instructor_in_aggregate(user_id: str) -> bool:
         
         if not success:
             logger.error(f"Failed to connect to PAWS database: {message}")
-            return False
+            return None
         
         try:
             connection = db_conn.get_connection()
@@ -274,7 +278,15 @@ def is_user_instructor_in_aggregate(user_id: str) -> bool:
             db_conn.disconnect()
     except Exception as e:
         logger.error(f"Error checking ent_non_student for user_id {user_id}: {str(e)}", exc_info=True)
-        return False
+        return None
+
+
+def is_user_instructor_in_aggregate(user_id: str) -> bool:
+    """
+    Backward-compatible boolean wrapper for callers that only need a yes/no
+    instructor check and can safely treat lookup failures as False.
+    """
+    return bool(lookup_user_instructor_status_in_aggregate(user_id))
 
 
 def get_instructor_group_ids(user_id: str) -> List[str]:

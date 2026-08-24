@@ -136,7 +136,7 @@ class KnowledgeTreeBackendRoleTests(TestCase):
     def setUp(self):
         self.backend = KnowledgeTreeBackend()
 
-    @patch('dashboard.kt_utils.is_user_instructor_in_aggregate', return_value=False)
+    @patch('dashboard.kt_utils.lookup_user_instructor_status_in_aggregate', return_value=False)
     def test_existing_instructor_is_not_demoted_by_unconfirmed_aggregate_lookup(self, _lookup):
         user = User.objects.create_user(
             username='kt-instructor',
@@ -160,7 +160,7 @@ class KnowledgeTreeBackendRoleTests(TestCase):
         self.assertTrue(user.is_instructor)
         self.assertFalse(user.is_student)
 
-    @patch('dashboard.kt_utils.is_user_instructor_in_aggregate', return_value=True)
+    @patch('dashboard.kt_utils.lookup_user_instructor_status_in_aggregate', return_value=True)
     def test_confirmed_aggregate_instructor_does_not_promote_existing_student(self, _lookup):
         user = User.objects.create_user(
             username='kt-student',
@@ -200,3 +200,17 @@ class KnowledgeTreeBackendRoleTests(TestCase):
         self.assertTrue(snapshot['effective_is_student'])
         self.assertEqual(snapshot['primary_role'], 'student')
         self.assertEqual(snapshot['legacy_course_groups'], [])
+
+    @patch('dashboard.kt_utils.lookup_user_instructor_status_in_aggregate', return_value=None)
+    def test_new_kt_user_gets_no_role_when_aggregate_lookup_is_unavailable(self, _lookup):
+        user = self.backend._get_or_create_user({
+            'user_id': 1003,
+            'login': 'kt-unknown-role',
+            'name': 'KT Unknown Role',
+            'email': 'kt-unknown-role@example.com',
+            'groups': [],
+        })
+
+        self.assertIsNotNone(user)
+        self.assertFalse(user.is_instructor)
+        self.assertFalse(user.is_student)

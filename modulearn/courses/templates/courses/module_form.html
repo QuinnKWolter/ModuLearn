@@ -54,10 +54,22 @@
 {% endblock %}
 
 {% block content %}
-  {% include 'includes/page_header.html' with eyebrow='Form / Survey' title=module.title description=module.description %}
+  {% if not participant_mode %}
+    {% include 'includes/page_header.html' with eyebrow='Form / Survey' title=module.title description=module.description %}
+  {% endif %}
 
   <div class="{% if participant_mode %}mx-auto max-w-3xl{% else %}grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)]{% endif %}">
-    <section class="card p-6">
+    <section class="card module-page-card {% if not participant_mode %}p-6{% endif %}">
+      {% if participant_mode %}
+        <div class="module-page-card-header">
+          <div class="module-page-eyebrow">Form / Survey</div>
+          <h1 class="module-page-title">{{ module.title }}</h1>
+          {% if module.description %}
+            <p class="module-page-description">{{ module.description }}</p>
+          {% endif %}
+        </div>
+      {% endif %}
+      <div class="{% if participant_mode %}module-page-card-body{% endif %}">
       {% if module_form.instructions %}
         <div class="shell-surface p-4 rounded-2xl mb-5 text-slate-700 dark:text-slate-200">
           {{ module_form.instructions|linebreaksbr }}
@@ -135,6 +147,7 @@
           {% endif %}
         </form>
       {% endif %}
+      </div>
     </section>
 
     {% if not participant_mode %}

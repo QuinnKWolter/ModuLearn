@@ -6,16 +6,13 @@
     {{ state_data|json_script:"state-data" }}
     <input id="module-frame-csrf" type="hidden" value="{{ csrf_token }}">
 
-    {% if not preview_mode and course_instance %}
+    {% if not preview_mode and course_instance and not participant_mode %}
       <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
-          {% if not participant_mode %}
           <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
             Back To Course
           </a>
-          {% endif %}
-          {% include 'courses/components/next_module_button.html' with button_class='btn-sm' %}
         </div>
         <div class="text-sm text-slate-600 dark:text-slate-300">
           <span class="font-semibold text-slate-900 dark:text-slate-100">{{ module.title }}</span>
@@ -51,6 +48,12 @@
         Your browser doesn't support iframes.
       </iframe>
     </div>
+
+    {% if not preview_mode and course_instance %}
+      <div class="module-next-action-row module-frame-next-row">
+        {% include 'courses/components/next_module_button.html' with button_class='btn-lg' %}
+      </div>
+    {% endif %}
   </div>
 {% endblock %}
 

@@ -103,7 +103,7 @@ class LTIRoleTests(TestCase):
         self.assertTrue(user.username.startswith('lti-canvas-no-email-user'))
         self.assertTrue(Enrollment.objects.filter(student=user, course_instance=instance).exists())
 
-    def test_instructor_launch_promotes_existing_student(self):
+    def test_instructor_launch_does_not_promote_existing_student(self):
         user = User.objects.create_user(
             username='lti-student-role',
             is_instructor=False,
@@ -116,8 +116,28 @@ class LTIRoleTests(TestCase):
         )
 
         user.refresh_from_db()
+        self.assertFalse(user.is_instructor)
+        self.assertTrue(user.is_student)
+
+    def test_new_lti_instructor_launch_creates_instructor(self):
+        course = Course.objects.create(id='new-lti-instructor-course', title='New LTI Instructor Course')
+        instance = CourseInstance.objects.create(course=course, group_name='New LTI Instructor Session')
+        request = RequestFactory().get('/lti/launch/')
+        SessionMiddleware(lambda current_request: None).process_request(request)
+        request.session.save()
+
+        response = process_launch_data(request, {
+            'user_id': 'canvas-new-instructor-user',
+            'roles': ['http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor'],
+            'custom_course_id': str(instance.id),
+        })
+
+        self.assertEqual(response.status_code, 302)
+        identity = LTIUserIdentity.objects.get(subject='canvas-new-instructor-user')
+        user = identity.user
         self.assertTrue(user.is_instructor)
         self.assertFalse(user.is_student)
+        self.assertTrue(instance.instructors.filter(pk=user.pk).exists())
 
 
 class InboundLTI13Tests(TestCase):

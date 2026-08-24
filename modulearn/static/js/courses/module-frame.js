@@ -91,6 +91,12 @@
       });
     }
 
+    function notifyProgressMaybeUpdated(detail) {
+      document.dispatchEvent(new CustomEvent('moduLearn:module-progress-updated', {
+        detail: detail || {},
+      }));
+    }
+
     function setAttentionState(nextState, reason) {
       if (nextState === attentionState) {
         return;
@@ -232,9 +238,17 @@
               response: messageData.state || null,
             }],
           }),
-        }).catch(function (error) {
-          console.error('Error updating module progress:', error);
-        });
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error('Progress update failed');
+            return response.json();
+          })
+          .then(function (data) {
+            notifyProgressMaybeUpdated(data);
+          })
+          .catch(function (error) {
+            console.error('Error updating module progress:', error);
+          });
       }
     });
   });

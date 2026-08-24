@@ -160,16 +160,27 @@ class KnowledgeTreeBackend(ModelBackend):
         # Create new user - check aggregate.ent_non_student to determine if instructor
         logger.info(f"Creating new ModuLearn user from KnowledgeTree: {username}")
         
-        # Check if user is an instructor in aggregate.ent_non_student
-        from dashboard.kt_utils import is_user_instructor_in_aggregate
-        is_instructor = is_user_instructor_in_aggregate(kt_login)
+        # Check if user is an instructor in aggregate.ent_non_student. A failed
+        # lookup is different from a confirmed student; do not assign a role
+        # from an unavailable legacy database.
+        from dashboard.kt_utils import lookup_user_instructor_status_in_aggregate
+        instructor_status = lookup_user_instructor_status_in_aggregate(kt_login)
+        if instructor_status is None:
+            logger.warning(
+                "Could not confirm KnowledgeTree role for %s; creating local "
+                "account without changing role flags. Set the role in Admin or "
+                "retry when Aggregate is reachable.",
+                kt_login,
+            )
+        is_instructor = instructor_status is True
+        is_student = instructor_status is False
         
         user = User.objects.create_user(
             username=username,
             email=kt_user_data.get('email', '') or f"{username}@knowledgetree.local",
             full_name=kt_user_data.get('name', '') or username,
             is_instructor=is_instructor,
-            is_student=not is_instructor,
+            is_student=is_student,
         )
         
         if kt_user_id:
@@ -178,7 +189,14 @@ class KnowledgeTreeBackend(ModelBackend):
         self._update_user_from_kt(user, kt_user_data)
         user.save()
         
-        logger.info(f"Created new ModuLearn user {username}: is_instructor={is_instructor}, is_student={not is_instructor}")
+        logger.info(
+            "Created new ModuLearn user %s: is_instructor=%s, is_student=%s, "
+            "kt_role_lookup=%s",
+            username,
+            is_instructor,
+            is_student,
+            instructor_status,
+        )
         return user
     
     def _update_user_from_kt(self, user, kt_user_data: dict):

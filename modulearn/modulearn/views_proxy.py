@@ -838,6 +838,43 @@ button.btn.modu-material-icon-button span {{
     return url;
   }}
 
+  function requestUrlString(resource) {{
+    if (typeof resource === 'string') return resource;
+    if (resource && typeof resource.url === 'string') return resource.url;
+    return '';
+  }}
+
+  function requestMethodString(resource, init) {{
+    if (init && init.method) return String(init.method);
+    if (resource && resource.method) return String(resource.method);
+    return 'GET';
+  }}
+
+  function shouldNotifyParentForActivityPost(method, url) {{
+    if (String(method || '').toUpperCase() !== 'POST' || !url) return false;
+    return (
+      /\\/pcex\\/api\\/track\\/(?:activity|explanation|result)\\b/i.test(url)
+      || /\\/pitt\\/acos-pcex\\/acos-pcex-examples\\/event\\b/i.test(url)
+      || /\\/mgrids\\/problems\\/[^/]+\\/\\d+\\/run\\b/i.test(url)
+    );
+  }}
+
+  function notifyParentActivityPost(method, url, status) {{
+    if (!shouldNotifyParentForActivityPost(method, url)) return;
+    try {{
+      if (window.parent && window.parent !== window) {{
+        window.parent.postMessage({{
+          subject: 'ModuLearn.activityProgressMaybeUpdated',
+          url: url,
+          status: status || 0,
+          timestamp: new Date().toISOString()
+        }}, '*');
+      }}
+    }} catch (error) {{
+      // Best-effort UI refresh only; never interrupt the activity itself.
+    }}
+  }}
+
   const imageSrc = Object.getOwnPropertyDescriptor(window.HTMLImageElement.prototype, 'src');
   if (imageSrc && imageSrc.set) {{
     Object.defineProperty(window.HTMLImageElement.prototype, 'src', {{
@@ -861,17 +898,33 @@ button.btn.modu-material-icon-button span {{
   if (window.fetch) {{
     const originalFetch = window.fetch.bind(window);
     window.fetch = function(resource, init) {{
+      const requestMethod = requestMethodString(resource, init);
       if (typeof resource === 'string') {{
         resource = localizeActivityUrl(resource);
+      }} else if (resource && typeof resource.url === 'string') {{
+        const localizedUrl = localizeActivityUrl(resource.url);
+        if (localizedUrl !== resource.url) {{
+          resource = new Request(localizedUrl, resource);
+        }}
       }}
-      return originalFetch(resource, init);
+      const requestUrl = requestUrlString(resource);
+      return originalFetch(resource, init).then(function(response) {{
+        notifyParentActivityPost(requestMethod, response && response.url ? response.url : requestUrl, response ? response.status : 0);
+        return response;
+      }});
     }};
   }}
 
   if (window.XMLHttpRequest && window.XMLHttpRequest.prototype.open) {{
     const originalOpen = window.XMLHttpRequest.prototype.open;
     window.XMLHttpRequest.prototype.open = function(method, url) {{
-      arguments[1] = localizeActivityUrl(url);
+      const localizedUrl = localizeActivityUrl(url);
+      this.__moduLearnActivityMethod = method;
+      this.__moduLearnActivityUrl = localizedUrl;
+      this.addEventListener('loadend', function() {{
+        notifyParentActivityPost(this.__moduLearnActivityMethod, this.__moduLearnActivityUrl, this.status);
+      }});
+      arguments[1] = localizedUrl;
       return originalOpen.apply(this, arguments);
     }};
   }}
@@ -879,7 +932,10 @@ button.btn.modu-material-icon-button span {{
   if (navigator.sendBeacon) {{
     const originalSendBeacon = navigator.sendBeacon.bind(navigator);
     navigator.sendBeacon = function(url, data) {{
-      return originalSendBeacon(localizeActivityUrl(url), data);
+      const localizedUrl = localizeActivityUrl(url);
+      const result = originalSendBeacon(localizedUrl, data);
+      notifyParentActivityPost('POST', localizedUrl, result ? 204 : 0);
+      return result;
     }};
   }}
 

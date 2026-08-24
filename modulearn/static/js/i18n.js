@@ -290,7 +290,6 @@
       'Destructive Reset': 'Restablecimiento destructivo',
       'Type DELETE to confirm': 'Escribe DELETE para confirmar',
       'Type RESET to confirm': 'Escribe RESET para confirmar',
-      'Delete Module': 'Eliminar módulo',
       'Undo Delete': 'Deshacer eliminación',
       'Undo module deletion': 'Deshacer eliminación del módulo',
       'Mark this module for deletion': 'Marcar este módulo para eliminarlo',

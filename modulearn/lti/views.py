@@ -39,7 +39,7 @@ LTI_ROLES_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/roles"
 LTI_TARGET_LINK_URI_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/target_link_uri"
 
 
-def apply_lti_roles(user, roles):
+def get_lti_role_flags(roles):
     normalized_roles = [str(role).lower() for role in roles]
     launch_is_instructor = any(
         'instructor' in role or 'teachingassistant' in role
@@ -51,12 +51,27 @@ def apply_lti_roles(user, roles):
     )
 
     if launch_is_instructor:
-        user.is_instructor = True
-        user.is_student = False
-    elif not user.is_instructor:
-        user.is_student = launch_is_student or not normalized_roles
+        return {'is_instructor': True, 'is_student': False}
+    return {'is_instructor': False, 'is_student': launch_is_student or not normalized_roles}
 
+
+def apply_lti_roles(user, roles, *, preserve_existing=True):
+    if preserve_existing:
+        logger.info(
+            "Preserving ModuLearn role flags for existing LTI user %s "
+            "(is_instructor=%s, is_student=%s). Launch roles were: %s",
+            user.username,
+            user.is_instructor,
+            user.is_student,
+            roles,
+        )
+        return False
+
+    role_flags = get_lti_role_flags(roles)
+    user.is_instructor = role_flags['is_instructor']
+    user.is_student = role_flags['is_student']
     user.save(update_fields=['is_instructor', 'is_student'])
+    return True
 
 
 # ----------------------
@@ -342,6 +357,9 @@ def process_launch_data(request, launch_data):
         or launch_data.get('custom_canvas_user_id')
     )
 
+    roles = _get_roles(launch_data)
+    role_flags = get_lti_role_flags(roles)
+
     if created:
         username = (
             unique_username_for_email(email)
@@ -353,6 +371,8 @@ def process_launch_data(request, launch_data):
             'email': email,
             'first_name': launch_data.get('given_name') or launch_data.get('lis_person_name_given', ''),
             'last_name': launch_data.get('family_name') or launch_data.get('lis_person_name_family', ''),
+            'is_instructor': role_flags['is_instructor'],
+            'is_student': role_flags['is_student'],
         }
         if should_store_canvas_id:
             create_kwargs['canvas_user_id'] = platform_user_id
@@ -372,9 +392,10 @@ def process_launch_data(request, launch_data):
 
     _upsert_lti_identity(user, launch_data, platform_user_id)
 
-    # Update user roles
-    roles = _get_roles(launch_data)
-    apply_lti_roles(user, roles)
+    # LTI roles establish the role for a newly provisioned LTI user. For an
+    # existing local account, the ModuLearn/Admin role is authoritative.
+    if not created:
+        apply_lti_roles(user, roles, preserve_existing=True)
 
     # Log the user in before trying to access enrollments
     # Use ModelBackend since LTI users are created directly, not authenticated through a backend
