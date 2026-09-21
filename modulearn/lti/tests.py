@@ -8,8 +8,8 @@ import os
 import json
 from unittest.mock import patch, MagicMock
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.test import TestCase, Client, RequestFactory, override_settings
-from django.urls import reverse
+from django.test import TestCase, Client, RequestFactory, SimpleTestCase, override_settings
+from django.urls import get_script_prefix, reverse, set_script_prefix
 from django.utils import timezone
 from datetime import timedelta
 
@@ -29,12 +29,40 @@ from lti.services import (
 )
 from lti.config import get_tool_config, is_tool_configured, list_configured_tools
 from lti.views import apply_lti_roles, process_launch_data
-from lti.platforms import get_lti13_config_dict
+from lti.platforms import get_lti13_config_dict, lti_setup_payload
 
 LTI_CUSTOM_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/custom"
 LTI_DEPLOYMENT_ID_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/deployment_id"
 LTI_ROLES_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/roles"
 LTI_TARGET_LINK_URI_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/target_link_uri"
+
+
+class PublicLTIURLTests(SimpleTestCase):
+    @override_settings(FORCE_SCRIPT_NAME='/modulearn')
+    def test_setup_urls_use_public_https_host_and_script_prefix(self):
+        original_prefix = get_script_prefix()
+        self.addCleanup(set_script_prefix, original_prefix)
+        set_script_prefix('/modulearn/')
+        request = RequestFactory().get(
+            '/modulearn/dashboard/',
+            HTTP_HOST='adapt2.sis.pitt.edu',
+            HTTP_X_FORWARDED_PROTO='https',
+        )
+
+        payload = lti_setup_payload(request, course_instance_id=23)
+
+        self.assertEqual(
+            payload['lti_13']['tool_url'],
+            'https://adapt2.sis.pitt.edu/modulearn/lti/launch/?course_id=23',
+        )
+        self.assertEqual(
+            payload['lti_13']['initiate_login_url'],
+            'https://adapt2.sis.pitt.edu/modulearn/lti/login/',
+        )
+        self.assertEqual(
+            payload['lti_11']['cartridge_xml_url'],
+            'https://adapt2.sis.pitt.edu/modulearn/lti/config/?course_id=23',
+        )
 
 
 class LTIRoleTests(TestCase):

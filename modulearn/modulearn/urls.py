@@ -1,8 +1,11 @@
 from django.contrib import admin
-from django.urls import path, include
+import re
+from urllib.parse import urlsplit
+
+from django.urls import path, include, re_path
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.views.static import serve as serve_media
 from modulearn import views_lti, views_proxy
 
 urlpatterns = [
@@ -83,7 +86,18 @@ urlpatterns = [
 ]
 
 if (settings.DEBUG or getattr(settings, 'SERVE_MEDIA_FILES', False)) and settings.MEDIA_URL not in ('', '/'):
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    media_path = urlsplit(settings.MEDIA_URL).path.lstrip('/')
+    script_name = (settings.FORCE_SCRIPT_NAME or '').strip('/')
+    if script_name and media_path.startswith(f'{script_name}/'):
+        media_path = media_path[len(script_name) + 1:]
+    if media_path:
+        urlpatterns += [
+            re_path(
+                rf'^{re.escape(media_path)}(?P<path>.*)$',
+                serve_media,
+                {'document_root': settings.MEDIA_ROOT},
+            ),
+        ]
 
 if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()

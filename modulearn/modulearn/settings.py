@@ -55,11 +55,9 @@ if env_loaded:
 else:
     logger.warning(f".env file not found at: {env_path} - using system environment defaults")
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    'proxy.personalized-learning.org',
-]
+ALLOWED_HOSTS = [host.strip() for host in os.getenv(
+    'ALLOWED_HOSTS', 'adapt2.sis.pitt.edu,localhost,127.0.0.1'
+).split(',') if host.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -334,7 +332,7 @@ LTI_CONSUMER_CONFIG = {
 }
 
 def get_primary_domain():
-    return os.getenv('PRIMARY_DOMAIN', 'http://localhost:8000' if DEBUG else 'https://proxy.personalized-learning.org').rstrip('/')
+    return os.getenv('PRIMARY_DOMAIN', 'http://localhost:8000' if DEBUG else 'https://adapt2.sis.pitt.edu').rstrip('/')
 
 LTI_TOOL_CONFIG = {
     'title': 'ModuLearn',
@@ -358,10 +356,13 @@ LTI_TOOL_CONFIG = {
     ]
 }
 
-CSRF_TRUSTED_ORIGINS = ['https://proxy.personalized-learning.org']
+CSRF_TRUSTED_ORIGINS = [origin.strip().rstrip('/') for origin in os.getenv(
+    'CSRF_TRUSTED_ORIGINS', 'https://adapt2.sis.pitt.edu'
+).split(',') if origin.strip()]
 LTI_11_CONSUMER_KEY = 'modulearn_key'
 LTI_11_CONSUMER_SECRET = 'modulearn_secret'
 USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 UM_SERVICE_URL = os.getenv('UM_SERVICE_URL', 'http://adapt2.sis.pitt.edu/aggregate2/UserActivity')
 LTI_CACHE_TTL_HOURS = int(os.getenv('LTI_CACHE_TTL_HOURS', '24'))
@@ -397,7 +398,7 @@ PROXY_ALLOWED_HOSTS = {
 PROXY_MAX_BYTES = 5 * 1024 * 1024
 PROXY_CORS_ORIGIN = os.getenv(
     'PROXY_CORS_ORIGIN',
-    'https://proxy.personalized-learning.org' if IS_PRODUCTION else '',
+    'https://adapt2.sis.pitt.edu' if IS_PRODUCTION else '',
 ) or None
 
 # =============================================================================
