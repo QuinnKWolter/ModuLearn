@@ -43,7 +43,7 @@ def build_navigation(request):
             )
         return visible
 
-    if getattr(user, "is_anonymous_participant", False):
+    if getattr(user, "is_anonymous_participant", False) and not role_snapshot["effective_is_instructor"]:
         return []
 
     filtered = []

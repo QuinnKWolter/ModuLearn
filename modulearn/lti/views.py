@@ -56,7 +56,7 @@ def get_lti_role_flags(roles):
 
 
 def apply_lti_roles(user, roles, *, preserve_existing=True):
-    if preserve_existing:
+    if preserve_existing or user.is_instructor:
         logger.info(
             "Preserving ModuLearn role flags for existing LTI user %s "
             "(is_instructor=%s, is_student=%s). Launch roles were: %s",

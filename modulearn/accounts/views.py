@@ -76,7 +76,7 @@ def _ensure_kt_user_exists(user, password: str):
             logger.info(f"[KT User Creation] User '{user.username}' found in KnowledgeTree (UserID: {kt_user_data.get('user_id')})")
             user.kt_user_id = kt_user_data.get('user_id')
             user.kt_login = kt_user_data.get('login', user.username)
-            user.save()
+            user.save(update_fields=['kt_user_id', 'kt_login'])
             logger.info(f"[KT User Creation] Linked Django user '{user.username}' to KnowledgeTree account")
         else:
             # User doesn't exist in KnowledgeTree - create them
@@ -98,7 +98,7 @@ def _ensure_kt_user_exists(user, password: str):
                 # Link the accounts
                 user.kt_user_id = kt_user_data.get('user_id')
                 user.kt_login = kt_user_data.get('login', user.username)
-                user.save()
+                user.save(update_fields=['kt_user_id', 'kt_login'])
                 logger.info(f"[KT User Creation] Successfully created KnowledgeTree user '{user.username}' (UserID: {kt_user_data.get('user_id')}) and linked to Django account")
             else:
                 logger.error(f"[KT User Creation] Failed to create KnowledgeTree user for '{user.username}' - create_user_in_database returned None")

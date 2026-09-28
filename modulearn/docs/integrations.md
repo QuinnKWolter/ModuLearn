@@ -40,12 +40,18 @@ Primary files:
 - `lti/views.py`
 - `lti/models.py`
 - `lti/cache_data_storage.py`
+- `lti/platforms.py`
 
 Responsibilities:
 
 - accept LMS launches into ModuLearn
 - serve XML config / JWKS / login endpoints
 - maintain provider-side launch cache and related state
+- manage LTI 1.3 platform registrations and LMS user identity mappings
+
+Setup notes:
+
+- See `docs/inbound-lti.md` for the Canvas LTI 1.1 and Moodle/Canvas LTI 1.3 flows.
 
 ## Outbound LTI tool consumer
 

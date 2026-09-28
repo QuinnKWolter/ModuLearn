@@ -58,6 +58,13 @@ class ProfileEditForm(forms.ModelForm):
         model = User
         fields = ('email', 'full_name')
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if commit:
+            user.save(update_fields=['email', 'full_name'])
+            self.save_m2m()
+        return user
+
     def clean_email(self):
         email = normalize_email_address(self.cleaned_data.get('email'))
         if not email:
@@ -66,7 +73,17 @@ class ProfileEditForm(forms.ModelForm):
             raise forms.ValidationError('An account with this email address already exists.')
         return email
 
-class PasswordChangeFormCustom(PasswordChangeForm):
+class PasswordOnlySaveMixin:
+    """Keep password changes from persisting unrelated, potentially stale roles."""
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if commit:
+            user.save(update_fields=['password'])
+        return user
+
+
+class PasswordChangeFormCustom(PasswordOnlySaveMixin, PasswordChangeForm):
     """Custom password change form with better styling."""
     old_password = forms.CharField(
         label="Current password",
@@ -85,7 +102,7 @@ class PasswordChangeFormCustom(PasswordChangeForm):
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'class': 'form-control'}),
     )
 
-class SetPasswordFormCustom(SetPasswordForm):
+class SetPasswordFormCustom(PasswordOnlySaveMixin, SetPasswordForm):
     """
     Password set form that does NOT require the current password.
     Intended for users who do not yet have a usable password (e.g., Canvas/LTI-provisioned).
@@ -141,7 +158,7 @@ class KnowledgeTreePasswordResetForm(forms.Form):
         password = self.cleaned_data['new_password1']
         # Update ModuLearn password
         self.user.set_password(password)
-        self.user.save()
+        self.user.save(update_fields=['password'])
         return password
 
 

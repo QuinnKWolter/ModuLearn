@@ -50,12 +50,22 @@ class User(AbstractUser):
         update_fields = kwargs.get("update_fields")
         if update_fields is not None:
             update_fields = set(update_fields)
-            if self.is_instructor:
+            # Metadata/password saves must not write stale role flags. Explicit
+            # role changes still enforce instructor/student exclusivity.
+            if self.is_instructor and update_fields.intersection({'is_instructor', 'is_student'}):
                 update_fields.add("is_student")
             if email_changed:
                 update_fields.add("email")
             kwargs["update_fields"] = update_fields
         super().save(*args, **kwargs)
+
+    def get_display_name(self):
+        """Prefer the editable profile name, without displaying numeric provider IDs."""
+        for value in (self.full_name, self.get_full_name()):
+            candidate = (value or '').strip()
+            if any(character.isalpha() for character in candidate):
+                return candidate
+        return self.username
 
     def __str__(self):
         return self.username

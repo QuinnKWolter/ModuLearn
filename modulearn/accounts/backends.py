@@ -107,7 +107,7 @@ class KnowledgeTreeBackend(ModelBackend):
             if user:
                 # User exists and is linked to this KT account
                 self._update_user_from_kt(user, kt_user_data)
-                user.save()
+                self._save_kt_metadata(user)
                 return user
         
         # Try to find by kt_login (username) - primary matching method
@@ -117,7 +117,7 @@ class KnowledgeTreeBackend(ModelBackend):
             if kt_user_id and not user.kt_user_id:
                 user.kt_user_id = kt_user_id
             self._update_user_from_kt(user, kt_user_data)
-            user.save()
+            self._save_kt_metadata(user)
             return user
 
         # KT and local usernames may differ, but a matching email still denotes
@@ -134,7 +134,7 @@ class KnowledgeTreeBackend(ModelBackend):
                 user.kt_user_id = kt_user_id
             user.kt_login = kt_login
             self._update_user_from_kt(user, kt_user_data)
-            user.save()
+            self._save_kt_metadata(user)
             return user
         
         # Try to find by username (ModuLearn username)
@@ -154,7 +154,7 @@ class KnowledgeTreeBackend(ModelBackend):
                     user.kt_user_id = kt_user_id
                 user.kt_login = kt_login
                 self._update_user_from_kt(user, kt_user_data)
-                user.save()
+                self._save_kt_metadata(user)
                 return user
         
         # Create new user - check aggregate.ent_non_student to determine if instructor
@@ -187,7 +187,7 @@ class KnowledgeTreeBackend(ModelBackend):
             user.kt_user_id = kt_user_id
         user.kt_login = kt_login
         self._update_user_from_kt(user, kt_user_data)
-        user.save()
+        self._save_kt_metadata(user)
         
         logger.info(
             "Created new ModuLearn user %s: is_instructor=%s, is_student=%s, "
@@ -199,6 +199,11 @@ class KnowledgeTreeBackend(ModelBackend):
         )
         return user
     
+    def _save_kt_metadata(self, user):
+        # Authentication must not write role/password flags from a stale instance.
+        user.save(update_fields=['kt_user_id', 'kt_login', 'kt_groups', 'full_name', 'email'])
+        user.refresh_from_db(fields=['is_instructor', 'is_student'])
+
     def _update_user_from_kt(self, user, kt_user_data: dict):
         """Update user fields from KnowledgeTree data."""
         # Update name if not set or if KT has better data

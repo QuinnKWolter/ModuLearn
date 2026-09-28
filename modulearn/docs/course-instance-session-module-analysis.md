@@ -1,4 +1,4 @@
-# Course Instances, Sessions, Modules, and Access Control Analysis
+# Course Sessions, Modules, and Access Control Analysis
 
 Date: 2026-05-17
 Repository scope: `modulearn/`
@@ -19,7 +19,7 @@ It is intended to serve as a baseline for upcoming change requests.
 
 - Course structure: `Course` + `Unit` + `Module` (shared blueprint)
 - Course session: `CourseInstance` (named `group_name`, shown as "session" in UI)
-- Enrollment context: `Enrollment` (student in one course instance)
+- Enrollment context: `Enrollment` (student in one course session)
 - Module state: `ModuleProgress` + `ModuleProgressEvent` + `ModuleAccessLog`
 
 Important: configuration UI is opened from a specific `CourseInstance`, but most content controls are stored on `Unit` and `Module` at the course-structure level.

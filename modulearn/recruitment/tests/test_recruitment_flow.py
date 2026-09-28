@@ -31,6 +31,23 @@ from recruitment.services.studies import create_study_for_instructor, export_stu
     }
 )
 class RecruitmentEntryFlowTests(TestCase):
+    def test_participant_provisioning_cannot_repurpose_an_instructor(self):
+        from django.core.exceptions import PermissionDenied
+        from recruitment.views import _participant_username, _provision_participant_user
+
+        source = RecruitmentSource.objects.create(course_instance=self.instance, platform='prolific')
+        self.instructor.username = _participant_username('prolific', source.pk, 'test-collision')
+        self.instructor.save(update_fields=['username'])
+
+        with self.assertRaises(PermissionDenied):
+            _provision_participant_user(source, 'test-collision')
+
+        self.instructor.refresh_from_db()
+        self.assertTrue(self.instructor.is_instructor)
+        self.assertFalse(self.instructor.is_student)
+        self.assertFalse(self.instructor.is_anonymous_participant)
+        self.assertTrue(self.instructor.check_password('pass'))
+
     def setUp(self):
         User = get_user_model()
         self.instructor = User.objects.create_user(username="instructor", password="pass", is_instructor=True)

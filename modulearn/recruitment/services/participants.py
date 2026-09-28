@@ -6,6 +6,8 @@ from recruitment.models import ParticipantSession
 
 
 def get_current_participant_session(user):
+    if getattr(user, "is_instructor", False):
+        return None
     if not getattr(user, "is_authenticated", False):
         return None
     if not getattr(user, "is_anonymous_participant", False):
@@ -31,6 +33,8 @@ def get_current_participant_session(user):
 
 
 def get_participant_sessions(user):
+    if getattr(user, "is_instructor", False):
+        return []
     if not getattr(user, "is_authenticated", False):
         return []
     if not getattr(user, "is_anonymous_participant", False):
@@ -65,6 +69,10 @@ def participant_course_redirect(user):
 
 
 def user_can_access_participant_course(user, course_instance_id) -> bool:
+    # This only bypasses participant confinement; normal course ownership and
+    # enrollment checks still apply at the caller.
+    if getattr(user, "is_instructor", False):
+        return True
     if not getattr(user, "is_anonymous_participant", False):
         return True
     participant_session = get_current_participant_session(user)

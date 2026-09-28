@@ -48,7 +48,7 @@ Timeline/event-ledger record for launches, completions, outcomes, and reopen eve
 
 ### `courses.EnrollmentCode`
 
-Invite/self-enrollment credential tied to a course instance and email address.
+Invite/self-enrollment credential tied to a course session and email address.
 
 ### `courses.StudentScore`
 

@@ -66,6 +66,15 @@ class PublicLTIURLTests(SimpleTestCase):
 
 
 class LTIRoleTests(TestCase):
+    def test_role_sync_cannot_demote_an_instructor_even_when_requested(self):
+        user = User.objects.create_user(username='protected-instructor', is_instructor=True)
+
+        apply_lti_roles(user, ['Learner'], preserve_existing=False)
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_instructor)
+        self.assertFalse(user.is_student)
+
     def test_learner_launch_does_not_demote_existing_instructor(self):
         user = User.objects.create_user(
             username='lti-instructor',

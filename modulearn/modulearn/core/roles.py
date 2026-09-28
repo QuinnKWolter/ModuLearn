@@ -104,9 +104,17 @@ def get_legacy_masterygrids_groups(user):
 
 
 def get_user_role_snapshot(user, *, include_legacy_groups=False):
+    role_flags = (
+        bool(getattr(user, "is_authenticated", False)),
+        bool(getattr(user, "is_instructor", False)),
+        bool(getattr(user, "is_student", False)),
+    )
     if hasattr(user, "_modulearn_role_snapshot"):
         cached_snapshot = user._modulearn_role_snapshot
-        if not include_legacy_groups or cached_snapshot.get("_includes_legacy_groups"):
+        if (
+            getattr(user, "_modulearn_role_snapshot_flags", None) == role_flags
+            and (not include_legacy_groups or cached_snapshot.get("_includes_legacy_groups"))
+        ):
             return cached_snapshot
 
     snapshot = {
@@ -120,6 +128,7 @@ def get_user_role_snapshot(user, *, include_legacy_groups=False):
     if not getattr(user, "is_authenticated", False):
         if not include_legacy_groups:
             user._modulearn_role_snapshot = snapshot
+            user._modulearn_role_snapshot_flags = role_flags
         return snapshot
 
     native_instructor = bool(getattr(user, "is_instructor", False))
@@ -139,4 +148,5 @@ def get_user_role_snapshot(user, *, include_legacy_groups=False):
 
     if not include_legacy_groups:
         user._modulearn_role_snapshot = snapshot
+        user._modulearn_role_snapshot_flags = role_flags
     return snapshot

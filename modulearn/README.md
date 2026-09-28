@@ -26,6 +26,9 @@ ModuLearn is a Django learning platform that blends native course delivery with 
 
 ## Documentation
 
+- [Repository review and maintenance handoff (2026-09-24)](docs/repository-review-2026-09-24.md)
+- [Repository file map](docs/repository-file-map.md)
+- [Sign-in role and display-name diagnostics](docs/account-sign-in-diagnostics.md)
 - [Architecture](docs/architecture.md)
 - [Page Inventory](docs/page-inventory.md)
 - [Progress Timeline](docs/progress-timeline.md)

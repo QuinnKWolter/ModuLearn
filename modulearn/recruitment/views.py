@@ -99,6 +99,8 @@ def _provision_participant_user(source: RecruitmentSource, external_pid: str):
             "email": "",
         },
     )
+    if user.is_instructor:
+        raise PermissionDenied("An instructor account cannot be used as an anonymous participant.")
     changed = []
     if created or user.has_usable_password():
         user.set_unusable_password()
@@ -106,14 +108,11 @@ def _provision_participant_user(source: RecruitmentSource, external_pid: str):
     if not getattr(user, "is_student", False):
         user.is_student = True
         changed.append("is_student")
-    if getattr(user, "is_instructor", False):
-        user.is_instructor = False
-        changed.append("is_instructor")
     if not getattr(user, "is_anonymous_participant", False):
         user.is_anonymous_participant = True
         changed.append("is_anonymous_participant")
     if changed:
-        user.save()
+        user.save(update_fields=changed)
     return user
 
 

@@ -881,7 +881,7 @@ def reset_course_authoring_password(user):
     """
     new_password = str(uuid.uuid4())
     user.course_authoring_password = new_password
-    user.save()
+    user.save(update_fields=['course_authoring_password'])
     logger.info(f"Reset course-authoring password for user {user.email}. New password: {new_password}")
     return new_password
 
@@ -909,7 +909,7 @@ def get_course_auth_token(user, retry_on_mismatch=False):
     # Generate or retrieve stored password
     if not user.course_authoring_password:
         user.course_authoring_password = str(uuid.uuid4())  # Generate a UUID password
-        user.save()
+        user.save(update_fields=['course_authoring_password'])
         logger.info(f"Generated new course-authoring password for user {user_email}: {user.course_authoring_password[:16]}...")
     
     password = user.course_authoring_password

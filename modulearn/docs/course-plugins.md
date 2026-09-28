@@ -96,6 +96,7 @@ ModuleBranchRule
   source_module
   condition_type          # success, failure, score_gte, score_lt, completed, selected_choice later
   threshold               # nullable number for score rules
+  required_study_condition # optional participant condition label, e.g. c1/c2/c3
   target_module
   priority
   active
@@ -126,6 +127,7 @@ Configuration UI:
 - Saving a new branch target makes that target visible and locked, with no ordinary unlock rule, so the branch unlock controls access.
 - Correct/incorrect rules use the normalized event `success` flag. Failure rules require assessment evidence such as a score, so ordinary no-score viewing/progress events do not trigger incorrect-path unlocks.
 - Score rules use a 0-100 threshold.
+- Study-condition-scoped rules can target different paths for participants assigned to different research conditions. For experiments where any non-perfect submission should branch, use `score_lt` with threshold `100` and set `required_study_condition` to the relevant condition label.
 
 This keeps Guided Sequence as the simple linear default and Adaptive Branching as an optional layer that can open alternate paths for individual students.
 
