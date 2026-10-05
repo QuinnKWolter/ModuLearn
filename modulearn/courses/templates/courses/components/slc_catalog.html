@@ -22,11 +22,11 @@
         <label>Delivery format<select data-catalog-filter="protocols"><option value="">Any format</option></select></label>
         <label>License<select data-catalog-filter="license"><option value="">Any license</option></select></label>
       </details>
-      <p class="slc-hint">Choose a card for full metadata. Demos open in a separate window without creating a module.</p>
+      <p class="slc-hint">Available filter choices appear first; unavailable choices stay visible with a zero count. Choose an activity for full metadata and a demo.</p>
       <p class="slc-hint">SPLICE delivery is selected whenever the activity offers it.</p>
     </aside>
     <section class="slc-results-pane" aria-label="Catalog results">
-      <div class="slc-results-heading"><span data-catalog-count role="status" aria-live="polite"></span><button type="button" data-catalog-retry>Reload</button></div>
+      <div class="slc-results-heading"><span data-catalog-count role="status" aria-live="polite"></span><div class="slc-view-controls" role="group" aria-label="Result layout"><button type="button" data-catalog-view="grid" aria-pressed="true">Cards</button><button type="button" data-catalog-view="table" aria-pressed="false">Table</button></div><button type="button" data-catalog-retry>Reload</button></div>
       <p data-catalog-warning class="slc-warning" hidden role="status"></p>
       <div data-catalog-results class="slc-results" aria-busy="false"></div>
       <nav class="slc-pagination" aria-label="Catalog pages"><button type="button" data-catalog-prev>Previous</button><span data-catalog-page></span><button type="button" data-catalog-next>Next</button></nav>

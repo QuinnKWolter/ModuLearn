@@ -6,7 +6,9 @@ record; listing responses intentionally carry just searchable summary metadata.
 import json
 import logging
 import re
+import ssl
 import time
+from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
@@ -26,10 +28,19 @@ class CatalogUnavailable(ValueError):
     pass
 
 
+def _tls_context(url):
+    context = ssl.create_default_context()
+    if urlsplit(url).hostname == urlsplit(PITT_API).hostname:
+        # Pitt currently serves only its leaf certificate. Supply the missing
+        # public intermediates, but still require a system-trusted root.
+        context.load_verify_locations(cafile=str(Path(__file__).with_name('certificates') / 'pitt-intermediates.pem'))
+        context.verify_flags &= ~ssl.VERIFY_X509_PARTIAL_CHAIN
+    return context
+
+
 def _fetch(url):
     request = Request(url, headers={'User-Agent': 'ModuLearn Catalog/1.0', 'Accept': 'application/json,text/html'})
-    # urllib uses the platform's trusted certificate store, including Windows.
-    with urlopen(request, timeout=15) as response:
+    with urlopen(request, timeout=15, context=_tls_context(url)) as response:
         if urlsplit(response.url).hostname != urlsplit(url).hostname:
             raise ValueError('Unexpected catalog redirect')
         data = response.read(MAX_BYTES + 1)
@@ -40,18 +51,26 @@ def _fetch(url):
 
 def _cached(key, loader):
     key = 'slc-catalog:v1:' + key
-    previous = cache.get(key)
+    try:
+        previous = cache.get(key)
+    except Exception:
+        logger.warning('Catalog cache read failed for %s', key, exc_info=True)
+        previous = None
     if previous and time.time() - previous['at'] < FRESH_SECONDS:
         return previous['data'], False
     try:
         data = loader()
-        cache.set(key, {'data': data, 'at': time.time()}, STALE_SECONDS)
-        return data, False
     except Exception:
         logger.warning('Catalog fetch failed for %s', key, exc_info=True)
         if previous:
             return previous['data'], True
         raise CatalogUnavailable('The catalog is temporarily unavailable. Please try again shortly.') from None
+    try:
+        cache.set(key, {'data': data, 'at': time.time()}, STALE_SECONDS)
+    except Exception:
+        # A database/cache write error must not discard a successful fetch.
+        logger.warning('Catalog cache write failed for %s', key, exc_info=True)
+    return data, False
 
 
 def _load_list(source):

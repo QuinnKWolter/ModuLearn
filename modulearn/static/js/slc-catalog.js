@@ -14,13 +14,13 @@
   const prev = find('[data-catalog-prev]');
   const next = find('[data-catalog-next]');
   const selection = form.querySelector('[data-catalog-selection]');
-  let page = 1, pages = 1, listRequest, detailRequest, timer, opener;
+  let page = 1, pages = 1, listRequest, detailRequest, timer, opener, view = 'grid', currentItems = [];
   const moreFilters = find('.slc-filters details');
   filters.forEach(select => { select.dataset.placeholder = select.options[0].textContent; });
   function remember() {
     try {
       sessionStorage.setItem(dialog.dataset.storageKey, JSON.stringify({
-        query: query.value, sort: sort.value, page, moreFilters: moreFilters.open,
+        query: query.value, sort: sort.value, page, view, moreFilters: moreFilters.open,
         filters: Object.fromEntries(filters.map(select => [select.dataset.catalogFilter, select.value])),
       }));
     } catch (_) { /* Browsing still works when browser storage is unavailable. */ }
@@ -31,6 +31,7 @@
       query.value = typeof saved.query === 'string' ? saved.query : '';
       if ([...sort.options].some(option => option.value === saved.sort)) sort.value = saved.sort;
       page = Number.isSafeInteger(saved.page) && saved.page > 0 ? saved.page : 1;
+      view = saved.view === 'table' ? 'table' : 'grid';
       moreFilters.open = saved.moreFilters === true;
       filters.forEach(select => {
         const value = saved.filters?.[select.dataset.catalogFilter];
@@ -74,7 +75,7 @@
   function closeDetail() {
     detailRequest?.abort();
     detail.hidden = true;
-    dialog.querySelector('.slc-card[aria-pressed=true]')?.focus();
+    dialog.querySelector('[data-catalog-item][aria-pressed=true]')?.focus();
   }
   function close() {
     clearTimeout(timer);
@@ -132,19 +133,72 @@
     const card = button('', () => showDetail(item, card), 'slc-card');
     card.setAttribute('aria-label', `View details: ${item.title}`);
     card.setAttribute('aria-pressed', 'false');
+    card.dataset.catalogItem = item.id;
     const eyebrow = node('div', null, 'slc-eyebrow');
     eyebrow.append(node('span', item.provider), node('span', item.source_label));
     card.append(eyebrow, node('h3', item.title), node('p', item.description || item.type));
     card.append(badges([...item.languages, ...item.content_languages, item.protocols.includes('SPLICE') ? 'SPLICE' : item.protocols[0], item.status.startsWith('broken') ? 'Needs repair' : '']));
     return card;
   }
+  function renderResults() {
+    dialog.querySelectorAll('[data-catalog-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.catalogView === view)));
+    results.classList.toggle('slc-table-view', view === 'table');
+    if (view === 'table') {
+      results.tabIndex = 0;
+      results.setAttribute('aria-label', 'Activity table; scroll horizontally for more columns on small screens');
+    } else {
+      results.removeAttribute('tabindex');
+      results.removeAttribute('aria-label');
+    }
+    results.replaceChildren();
+    if (!currentItems.length) {
+      results.append(node('p', 'No activities match these filters. Try another keyword or reset your filters.', 'slc-empty'));
+      return;
+    }
+    if (view === 'table') {
+      const table = node('table', null, 'slc-table');
+      table.append(node('caption', 'Learning activities — select a title for details and import options', 'sr-only'));
+      const head = node('thead'), header = node('tr');
+      ['Activity', 'Provider / catalog', 'Language', 'Delivery', 'Preview'].forEach(label => {
+        const th = node('th', label); th.scope = 'col'; header.append(th);
+      });
+      head.append(header); table.append(head);
+      const body = node('tbody');
+      currentItems.forEach(item => {
+        const row = node('tr'), title = node('td');
+        const open = button(item.title, () => showDetail(item, open), 'slc-table-title');
+        open.dataset.catalogItem = item.id; open.setAttribute('aria-pressed', 'false');
+        title.append(open, node('small', item.type));
+        const provider = node('td', item.provider); provider.append(node('small', item.source_label));
+        const preview = node('td');
+        if (item.demo_url) preview.append(externalLink('Demo ↗', item.demo_url));
+        else preview.append(node('span', '—'));
+        row.append(title, provider, node('td', item.languages.join(', ') || '—'), node('td', item.protocols.join(', ') || '—'), preview);
+        if (item.status.startsWith('broken')) title.append(node('small', 'Needs repair'));
+        body.append(row);
+      });
+      table.append(body); results.append(table);
+    } else {
+      let group = null;
+      currentItems.forEach(item => {
+        if (['provider', 'type'].includes(sort.value) && item[sort.value] !== group) {
+          group = item[sort.value]; results.append(node('h3', group, 'slc-result-group'));
+        }
+        results.append(renderCard(item));
+      });
+    }
+  }
+  dialog.querySelectorAll('[data-catalog-view]').forEach(button => button.addEventListener('click', () => {
+    closeDetail(); view = button.dataset.catalogView; remember(); renderResults();
+  }));
   function fillFacets(facets, totals) {
     filters.forEach(select => {
       const field = select.dataset.catalogFilter;
       if (!facets[field]) return;
       const value = select.value;
       select.replaceChildren(new Option(`${select.dataset.placeholder} (${totals[field].toLocaleString()})`, ''));
-      facets[field].forEach(facet => {
+      [...facets[field]].sort((a, b) => Number(b.count > 0) - Number(a.count > 0) ||
+        (a.label || a.value).localeCompare(b.label || b.value, undefined, {numeric: true, sensitivity: 'base'})).forEach(facet => {
         const option = new Option(`${facet.label || facet.value} (${facet.count.toLocaleString()})`, facet.value);
         option.disabled = facet.count === 0;
         select.add(option);
@@ -175,17 +229,8 @@
       fillFacets(data.facets, data.facet_totals);
       remember();
       count.textContent = `${data.total.toLocaleString()} activities${query.value.trim() ? ' matching your search' : ' to explore'}`;
-      const cards = [];
-      let group = null;
-      data.items.forEach(item => {
-        if (['provider', 'type'].includes(sort.value) && item[sort.value] !== group) {
-          group = item[sort.value];
-          cards.push(node('h3', group, 'slc-result-group'));
-        }
-        cards.push(renderCard(item));
-      });
-      results.replaceChildren(...cards);
-      if (!data.items.length) results.append(node('p', 'No activities match these filters. Try another keyword or reset your filters.', 'slc-empty'));
+      currentItems = data.items;
+      renderResults();
       warning.textContent = data.warnings.join(' ');
       warning.hidden = !data.warnings.length;
       find('[data-catalog-page]').textContent = `Page ${page} of ${pages}`;
@@ -193,6 +238,7 @@
       results.parentElement.scrollTop = 0;
     } catch (error) {
       if (error.name !== 'AbortError') {
+        currentItems = [];
         results.replaceChildren(node('p', error.message, 'slc-empty'));
         count.textContent = 'Unable to load catalog';
         find('[data-catalog-page]').textContent = '';
@@ -217,7 +263,7 @@
     detailRequest?.abort();
     const controller = new AbortController();
     detailRequest = controller;
-    dialog.querySelectorAll('.slc-card').forEach(el => el.setAttribute('aria-pressed', String(el === card)));
+    dialog.querySelectorAll('[data-catalog-item]').forEach(el => el.setAttribute('aria-pressed', String(el === card)));
     detail.hidden = false;
     detail.replaceChildren(button('← Back to results', closeDetail), node('p', 'Loading activity details…'));
     detail.scrollTop = 0;

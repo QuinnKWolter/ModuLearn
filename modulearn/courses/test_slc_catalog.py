@@ -1,5 +1,6 @@
 import copy
 import json
+import ssl
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -41,6 +42,26 @@ TEST_SETTINGS = {
 class CatalogAdapterTests(SimpleTestCase):
     def setUp(self):
         cache.clear()
+
+    def test_pitt_tls_keeps_hostname_and_trusted_root_verification(self):
+        context = catalog._tls_context(catalog.PITT_API)
+        self.assertTrue(context.check_hostname)
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertFalse(context.verify_flags & ssl.VERIFY_X509_PARTIAL_CHAIN)
+
+    @patch.object(catalog.cache, 'set', side_effect=OSError('cache unavailable'))
+    @patch.object(catalog, '_fetch', return_value=json.dumps([PITT]))
+    def test_cache_write_failure_does_not_discard_live_catalog(self, fetch, cache_set):
+        items, warnings = catalog.catalog_items('pitt')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(warnings, [])
+
+    @patch.object(catalog.cache, 'get', side_effect=OSError('cache unavailable'))
+    @patch.object(catalog, '_fetch', return_value=json.dumps([PITT]))
+    def test_cache_read_failure_still_fetches_live_catalog(self, fetch, cache_get):
+        items, warnings = catalog.catalog_items('pitt')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(warnings, [])
 
     def test_splice_preferred_regardless_of_endpoint_order(self):
         for raw, source in ((PITT, 'pitt'), (SPLICE, 'splice')):
