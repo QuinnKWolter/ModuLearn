@@ -13,6 +13,7 @@
 {% endblock %}
 
 {% block content %}
+  {% if course_instance %}{% include 'courses/components/student_recommendations.html' with rec_instance=course_instance %}{% endif %}
   {% if not participant_mode %}
     {% include 'includes/page_header.html' with eyebrow=module.display_type_label title=module.title description=module.description %}
   {% endif %}

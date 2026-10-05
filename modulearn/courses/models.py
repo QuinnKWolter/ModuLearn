@@ -23,6 +23,17 @@ from urllib.parse import quote, urlencode
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+class StaticRecommendationSet(models.Model):
+    course = models.OneToOneField('Course', on_delete=models.CASCADE, related_name='static_recommendations')
+    nodes = models.JSONField(default=dict)
+    edges = models.JSONField(default=list)
+    analysis = models.JSONField(default=dict)
+    bindings = models.JSONField(default=dict)
+    options = models.JSONField(default=dict)
+    provenance = models.JSONField(default=list)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
 class Course(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
     title = models.CharField(max_length=255)

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Configure {% if study %}{{ study.title }}{% else %}{{ course_instance.group_name|default:course.title }}{% endif %} - ModuLearn{% endblock %}
 
@@ -11,6 +12,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/slc-catalog.css' %}">
 <style>
   .cfg-layout {
     display: grid;
@@ -2845,6 +2847,9 @@
                       <h3 class="text-base font-bold mt-1 mb-0">Module sequence and access rules</h3>
                     </div>
                     <div class="cfg-module-window-actions" aria-label="Module display controls">
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-unit-add-module data-unit-id="{{ group.unit.id }}" data-bs-toggle="modal" data-bs-target="#addModuleModal" aria-label="Add module to {{ group.unit.title }}">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Module
+                      </button>
                       <button type="button" class="cfg-icon-button" title="Expand all modules in this unit" aria-label="Expand all modules in this unit" data-expand-unit-modules>
                         <i class="bi bi-arrows-expand" aria-hidden="true"></i>
                       </button>
@@ -3235,6 +3240,11 @@
           </div>
         </form>
 
+        <section class="cfg-branch-panel">
+          <h3 class="font-bold">Static Recommendations</h3>
+          <p class="text-sm mt-2">Upload recommendation CSVs, review activity matches and similarity scores, and configure the student queue.</p>
+          <a class="btn btn-outline-primary btn-sm mt-3" href="{% url 'courses:static_recommendations' course_instance.id %}">Manage Static Recommendations</a>
+        </section>
         {% if adaptive_branching_enabled %}
         <section class="cfg-branch-panel" aria-label="Adaptive branching tools">
           <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -3334,6 +3344,8 @@
           {% csrf_token %}
           <input type="hidden" name="action" value="add_module">
           <input type="hidden" name="questions_json" id="questionsJson" value="[]">
+          <input type="hidden" name="catalog_source" value="">
+          <input type="hidden" name="catalog_item_id" value="">
 
           <div class="cfg-wizard-body">
             <div class="cfg-wizard-steps" aria-label="Module creation steps">
@@ -3393,6 +3405,11 @@
               </label>
 
               <div class="cfg-type-panels">
+                <div data-type-panel="splice_smart_content" hidden class="slc-invitation">
+                  <div><strong>Find your next learning activity</strong><p>Explore Pitt and SPLICE content, try a demo, and bring it into this unit.</p></div>
+                  <button type="button" class="btn btn-primary btn-sm" data-open-slc-catalog><i class="bi bi-search" aria-hidden="true"></i> Browse catalogs</button>
+                  <p data-catalog-selection hidden role="status"></p>
+                </div>
                 <div data-type-panel="external_link splice_smart_content">
                   <label class="stat-kicker">Content URL</label>
                   <input name="content_url" type="url" class="form-control mt-1" placeholder="https://...">
@@ -3632,6 +3649,8 @@
 {% endblock %}
 
 {% block extra_js %}
+{% include 'courses/components/slc_catalog.html' %}
+<script src="{% static 'js/slc-catalog.js' %}" defer></script>
 <script>
   (function() {
     const t = value => window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
@@ -4094,6 +4113,10 @@
       if (!addModuleUnitSelect || !unitId) return;
       addModuleUnitSelect.value = String(unitId);
     }
+
+    document.querySelectorAll('[data-unit-add-module]').forEach(button => {
+      button.addEventListener('click', () => presetAddModuleUnit(button.dataset.unitId));
+    });
 
     function selectUnit(unitId, options = {}) {
       const nextUnitId = unitId ? String(unitId) : '';

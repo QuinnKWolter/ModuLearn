@@ -1,0 +1,8 @@
+{% load static %}
+{% if not preview_mode and not participant_mode and not request.user.is_anonymous_participant %}
+<link rel="stylesheet" href="{% static 'css/static-recommendations.css' %}">
+<section class="rec-student" data-recommendations-url="{% url 'courses:recommendation_queue' rec_instance.id %}" hidden aria-label="Recommended practice">
+  <h2>Recommended practice</h2><p role="status" aria-live="polite"></p><div class="rec-student-list"></div>
+</section>
+<script src="{% static 'js/student-recommendations.js' %}" defer></script>
+{% endif %}

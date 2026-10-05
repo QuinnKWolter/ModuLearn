@@ -83,6 +83,7 @@ from modulearn.learning.services.course_plugins import (
 from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch, record_module_session_event
 from modulearn.learning.services.pcrs_tracking import is_pcrs_url
 from modulearn.learning.services.activity_urls import normalize_activity_launch_url
+from modulearn.learning.services.slc_catalog import catalog_item, module_catalog_fields
 from modulearn.learning.services.limits import (
     CapacityLimitError,
     ensure_course_session_capacity,
@@ -413,7 +414,8 @@ def course_configuration(request, instance_id):
                 if not wants_json:
                     messages.success(request, message_text)
             elif action == "add_module":
-                _create_custom_module(request, course)
+                with transaction.atomic():
+                    _create_custom_module(request, course)
                 message_text = "Module added to the course structure."
                 if not wants_json:
                     messages.success(request, message_text)
@@ -1113,6 +1115,13 @@ def _create_custom_module(request, course):
         content_data = apply_replacement_metadata(content_data, replacement)
 
     allow_resubmission = _parse_bool(request.POST.get("allow_resubmission", "1"))
+    catalog_fields = {}
+    if module_type == Module.MODULE_TYPE_SPLICE_SMART_CONTENT and request.POST.get('catalog_item_id'):
+        item = catalog_item(request.POST.get('catalog_source'), request.POST['catalog_item_id'])
+        catalog_fields = module_catalog_fields(item)
+        content_url = catalog_fields.pop('content_url')
+        supported_protocols = catalog_fields.pop('supported_protocols')
+        content_data = catalog_fields.pop('content_data')
     module = Module.objects.create(
         unit=unit,
         title=title,
@@ -1126,6 +1135,7 @@ def _create_custom_module(request, course):
         is_locked=False,
         allow_resubmission=allow_resubmission,
         supported_protocols=supported_protocols,
+        **catalog_fields,
     )
 
     if module_type in Module.FORM_LIKE_TYPES:

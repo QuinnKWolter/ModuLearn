@@ -15,7 +15,7 @@ AVAILABLE_COURSE_PLUGINS = [
     {
         "key": "static_recommendations",
         "name": "Static Recommendations",
-        "summary": "Prepared module links can feed a recommendation queue after configured triggers.",
+        "summary": "Upload recommendation CSVs, review activity matches, and suggest practice after completion or unsuccessful scored attempts.",
     },
     {
         "key": "dynamic_recommendations",

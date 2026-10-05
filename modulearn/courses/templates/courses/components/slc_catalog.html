@@ -1,0 +1,37 @@
+<dialog id="slcCatalog" class="slc-catalog" aria-labelledby="slcCatalogTitle"
+        data-storage-key="modulearn:slc-catalog:v1:{{ request.user.pk }}"
+        data-search-url="{% url 'courses:catalog_search' course_instance.id %}"
+        data-detail-url="{% url 'courses:catalog_detail' course_instance.id %}">
+  <header class="slc-heading">
+    <div><span class="stat-kicker">A library for curious minds</span><h2 id="slcCatalogTitle">Explore learning content</h2><p>Discover, preview, and choose an activity for your course.</p></div>
+    <button type="button" class="slc-close" data-catalog-close aria-label="Close catalog">&times;</button>
+  </header>
+  <div class="slc-searchbar">
+    <label class="slc-search"><span class="sr-only">Search catalog</span><i class="bi bi-search" aria-hidden="true"></i><input type="search" data-catalog-query placeholder="Search titles, concepts, authors, or keywords…" autocomplete="off"></label>
+    <label>Catalog<select data-catalog-filter="source"><option value="">Both catalogs</option><option value="pitt">Pitt SLC</option><option value="splice">SPLICE</option></select></label>
+    <label>Sort<select data-catalog-sort><option value="title">Title A–Z</option><option value="provider">Provider</option><option value="type">Activity type</option><option value="newest">Recently listed</option></select></label>
+  </div>
+  <div class="slc-workspace">
+    <aside class="slc-filters" aria-label="Catalog filters">
+      <div class="slc-filter-heading"><strong>Refine your search</strong><button type="button" data-catalog-reset>Reset</button></div>
+      <label>Programming language<select data-catalog-filter="languages"><option value="">Any language</option></select></label>
+      <label>Provider<select data-catalog-filter="provider"><option value="">Any provider</option></select></label>
+      <label>Activity type<select data-catalog-filter="type"><option value="">Any type</option></select></label>
+      <details><summary>More filters</summary>
+        <label>Content language<select data-catalog-filter="content_languages"><option value="">Any language</option></select></label>
+        <label>Delivery format<select data-catalog-filter="protocols"><option value="">Any format</option></select></label>
+        <label>License<select data-catalog-filter="license"><option value="">Any license</option></select></label>
+      </details>
+      <p class="slc-hint">Choose a card for full metadata. Demos open in a separate window without creating a module.</p>
+      <p class="slc-hint">SPLICE delivery is selected whenever the activity offers it.</p>
+    </aside>
+    <section class="slc-results-pane" aria-label="Catalog results">
+      <div class="slc-results-heading"><span data-catalog-count role="status" aria-live="polite"></span><button type="button" data-catalog-retry>Reload</button></div>
+      <p data-catalog-warning class="slc-warning" hidden role="status"></p>
+      <div data-catalog-results class="slc-results" aria-busy="false"></div>
+      <nav class="slc-pagination" aria-label="Catalog pages"><button type="button" data-catalog-prev>Previous</button><span data-catalog-page></span><button type="button" data-catalog-next>Next</button></nav>
+    </section>
+    <section class="slc-detail" data-catalog-detail hidden aria-label="Activity details" aria-live="polite"></section>
+  </div>
+  <footer class="slc-footer"><span data-catalog-destination></span><button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-close>Back to module</button></footer>
+</dialog>

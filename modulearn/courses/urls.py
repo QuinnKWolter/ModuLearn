@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import views_catalog
+from . import views_recommendations
 from .views import LTIOutcomesView, CaliperAnalyticsView
 
 app_name = 'courses'
@@ -29,6 +31,11 @@ urlpatterns = [
     path('instance/<int:instance_id>/', views.course_detail, name='course_detail'),
     path('instance/<int:instance_id>/delete/', views.delete_course_instance, name='delete_course_instance'),
     path('instance/<int:instance_id>/configure/', views.course_configuration, name='course_configuration'),
+    path('instance/<int:instance_id>/catalog/', views_catalog.search, name='catalog_search'),
+    path('instance/<int:instance_id>/catalog/item/', views_catalog.detail, name='catalog_detail'),
+    path('instance/<int:instance_id>/recommendations/manage/', views_recommendations.manage, name='static_recommendations'),
+    path('instance/<int:instance_id>/recommendations/', views_recommendations.queue, name='recommendation_queue'),
+    path('instance/<int:instance_id>/recommendations/<int:module_id>/launch/', views_recommendations.launch, name='recommended_module'),
     path('instance/<int:instance_id>/export/', views.export_course, name='export_course'),
     path('instance/<int:instance_id>/instructors/', views.course_instructors, name='course_instructors'),
     path('instance/<int:instance_id>/instructors/add/', views.add_course_instructor, name='add_course_instructor'),

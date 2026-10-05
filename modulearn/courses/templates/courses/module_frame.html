@@ -50,6 +50,7 @@
     </div>
 
     {% if not preview_mode and course_instance %}
+      {% include 'courses/components/student_recommendations.html' with rec_instance=course_instance %}
       <div class="module-next-action-row module-frame-next-row">
         {% include 'courses/components/next_module_button.html' with button_class='btn-lg' %}
       </div>
