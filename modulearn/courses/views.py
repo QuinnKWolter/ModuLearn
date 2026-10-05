@@ -396,7 +396,9 @@ def course_configuration(request, instance_id):
         message_text = ""
         try:
             if action == "update_structure":
-                deleted_count = _update_course_structure_controls(request, course)
+                _unpack_structure_controls(request)
+                with transaction.atomic():
+                    deleted_count = _update_course_structure_controls(request, course)
                 message_text = "Course visibility and locking controls were updated."
                 if deleted_count:
                     message_text = (
@@ -593,6 +595,29 @@ def remove_course_instructor(request, instance_id, user_id):
         "removed_self": user.id == request.user.id,
         "instructors": _course_instructor_payload(course, current_user=request.user),
     })
+
+
+def _unpack_structure_controls(request):
+    """Expand the compact browser payload after normal multipart/CSRF parsing."""
+    packed = request.POST.get("structure_controls")
+    if packed is None:
+        return  # Keep ordinary form submissions compatible.
+    try:
+        fields = json.loads(packed)
+        if not isinstance(fields, list) or not all(
+            isinstance(field, list) and len(field) == 2
+            and all(isinstance(value, str) for value in field)
+            and field[0].startswith(("unit_", "module_"))
+            for field in fields
+        ):
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ValueError("The configuration could not be read. Reload the page and try again.") from None
+    data = request.POST.copy()
+    del data["structure_controls"]
+    for name, value in fields:
+        data.appendlist(name, value)
+    request.POST = data
 
 
 def _update_course_structure_controls(request, course):

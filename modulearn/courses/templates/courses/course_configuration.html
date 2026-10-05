@@ -2741,7 +2741,7 @@
         </div>
       {% endif %}
 
-      <form method="post" id="structureControlsForm" class="cfg-stack">
+      <form method="post" enctype="multipart/form-data" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_structure">
 
@@ -4047,6 +4047,20 @@
       const select = event.target.closest('[data-config-question-type]');
       if (!select) return;
       syncConfigQuestionControls(select.closest('[data-config-question]'));
+    });
+
+    // Large catalogs exceed Django's field-count limit even when only one
+    // setting changes. Pack text controls while retaining normal file uploads,
+    // CSRF validation, browser validation, and the usual redirect after saving.
+    document.getElementById('structureControlsForm')?.addEventListener('formdata', event => {
+      const fields = [];
+      for (const [name, value] of event.formData.entries()) {
+        if (typeof value === 'string' && /^(unit_|module_)/.test(name)) {
+          fields.push([name, value]);
+        }
+      }
+      for (const [name] of fields) event.formData.delete(name);
+      event.formData.set('structure_controls', JSON.stringify(fields));
     });
 
     const structureWorkbench = document.querySelector('[data-structure-workbench]');
