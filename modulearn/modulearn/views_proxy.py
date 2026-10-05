@@ -1085,9 +1085,12 @@ def _find_pcex_module(course, params: dict):
 
 def _is_pcex_activity_data_response(parsed_url, content_type: str) -> bool:
     return (
-        parsed_url.hostname in {"pawscomp2.sis.pitt.edu", "adapt2.sis.pitt.edu"}
-        and parsed_url.path.startswith("/pcex/")
-        and "/data/" in parsed_url.path
+        (
+            (parsed_url.hostname in {"pawscomp2.sis.pitt.edu", "adapt2.sis.pitt.edu"}
+             and parsed_url.path.startswith("/pcex/") and "/data/" in parsed_url.path)
+            or (parsed_url.hostname == ACOS_PCEX_HOST
+                and parsed_url.path.startswith("/static/acos-pcex-examples/data/"))
+        )
         and parsed_url.path.endswith(".json")
         and "json" in (content_type or "").lower()
     )
@@ -1127,9 +1130,23 @@ def _cache_pcex_activity_metadata(request, parsed_url, content: bytes):
         logger.debug("[PCEX Tracking] Could not parse activity data JSON from %s", parsed_url.path)
         return
 
+    if isinstance(payload, list) and len(payload) == 1:
+        payload = payload[0]
     goals = payload.get("activityGoals") if isinstance(payload, dict) else None
     if not isinstance(goals, list):
         return
+
+    # Catalog links select one goal out of an activity, so examples/challenges
+    # must not share explanation counts or completion denominators.
+    selected_index = _first_query_value(params, "index")
+    if selected_index != "":
+        try:
+            index = int(selected_index)
+        except (TypeError, ValueError):
+            return
+        if index < 0 or index >= len(goals):
+            return
+        goals = [goals[index]]
 
     student_goal_count = sum(
         1 for goal in goals
@@ -1148,6 +1165,8 @@ def _cache_pcex_activity_metadata(request, parsed_url, content: bytes):
     existing.setdefault("attempts", 0)
     if worked_examples:
         existing["worked_examples"] = worked_examples
+        if selected_index != "" and goals[0].get("fullyWorkedOut"):
+            existing["active_worked_goal_name"] = str(goals[0].get("fileName") or goals[0].get("name") or goals[0].get("id") or "")
         existing.setdefault("viewed_explanation_steps", [])
     state[context_key] = existing
     request.session["pcex_tracking_state"] = state
@@ -1700,6 +1719,26 @@ def _capture_acos_pcex_event_if_possible(request, host: str, rest: str, response
                 },
             }
         }
+
+        example_state = _session_pcex_state(request).get(_pcex_context_key(params), {})
+        if (
+            event_name == 'log' and payload.get('event_type') == 'explanation'
+            and isinstance(example_state, dict) and example_state.get('worked_examples')
+        ):
+            completed, total, progress, is_complete, goal_name, viewed_steps = _pcex_worked_example_state(
+                request, params, payload,
+            )
+            progress = max(progress, module_progress.progress or 0.0)
+            is_complete = bool(module_progress.is_complete or is_complete)
+            apply_progress_snapshot(
+                module_progress, source='acos_pcex_worked_example',
+                progress=progress, score=max(progress * 100, module_progress.score or 0),
+                success=is_complete, is_complete=is_complete, event_type='progress',
+                payload={**raw_payload, 'worked_example_goal': goal_name,
+                         'viewed_explanation_steps': viewed_steps,
+                         'completed_explanation_steps': completed, 'explanation_step_count': total},
+            )
+            return
 
         score_snapshot = _acos_pcex_score_snapshot(event_name, payload)
         if score_snapshot:

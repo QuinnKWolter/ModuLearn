@@ -82,6 +82,7 @@ from modulearn.learning.services.course_plugins import (
 )
 from modulearn.learning.services.progress import apply_progress_snapshot, record_module_launch, record_module_session_event
 from modulearn.learning.services.pcrs_tracking import is_pcrs_url
+from modulearn.learning.services.activity_urls import normalize_activity_launch_url
 from modulearn.learning.services.limits import (
     CapacityLimitError,
     ensure_course_session_capacity,
@@ -1277,8 +1278,8 @@ def launch_iframe_module(request, instance_id, module_id):
         })
     
     # Get the module's content URL and selected protocol
-    content_url = module.content_url
-    original_content_url = content_url  # Keep original for logging
+    content_url = normalize_activity_launch_url(module.content_url)
+    original_content_url = module.content_url  # Keep original for logging
     selected_protocol = module.select_launch_protocol()
     
     logger.info(f"Module {module.id}: Original content_url: {original_content_url}")
@@ -1776,7 +1777,7 @@ def preview_iframe_module(request, module_id):
         return HttpResponseForbidden("Preview is limited to instructors")
 
     # Get the module's content URL and selected protocol
-    content_url = module.content_url
+    content_url = normalize_activity_launch_url(module.content_url)
     selected_protocol = module.select_launch_protocol()
     
     # Parse URL for LTI parameters
