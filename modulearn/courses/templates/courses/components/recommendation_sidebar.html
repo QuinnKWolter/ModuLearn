@@ -1,0 +1,20 @@
+{% load static ui_i18n %}
+<aside id="practice-sidebar" hidden data-no-ui-translate
+       data-queue="{% url 'courses:recommendation_queue' course_instance.id %}?source={{ module.id }}">
+  <details open>
+    <summary>{% ui 'Recommended practice' %}</summary>
+    <div class="practice-sidebar-body">
+      <button type="button" id="practice-original" class="btn btn-outline-primary">← {% ui 'Return to the original problem' %}</button>
+      <p class="practice-note">{% ui 'Optional practice. Your scores here do not count toward your course grade or completion.' %}</p>
+      <div id="practice-items"></div>
+      <p id="practice-error" role="status"></p>
+    </div>
+  </details>
+</aside>
+<div id="practice-feedback" hidden role="region" aria-live="polite" aria-label="{% ui 'Recommendation feedback' %}" data-no-ui-translate>
+  <strong>{% ui 'Was this helpful?' %}</strong>
+  <p id="practice-feedback-title"></p>
+  <p>{% ui 'Your feedback helps us improve these recommendations.' %}</p>
+  <div><button type="button" data-feedback="up">👍 {% ui 'Yes' %}</button><button type="button" data-feedback="down">👎 {% ui 'No' %}</button><button type="button" data-feedback="skipped">{% ui 'Skip' %}</button></div>
+</div>
+<script src="{% static 'js/recommendation-sidebar.js' %}" defer></script>

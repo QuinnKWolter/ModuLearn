@@ -176,7 +176,7 @@ def catalog_items(source=''):
         except CatalogUnavailable:
             warnings.append(f'{SOURCES[key]} is temporarily unavailable. Retry shortly or use the other catalog.')
     if not items:
-        raise CatalogUnavailable(' '.join(warnings))
+        raise CatalogUnavailable('The catalogs are temporarily unavailable. Please try again shortly.')
     return items, warnings
 
 

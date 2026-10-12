@@ -241,7 +241,7 @@ def fetch_modulearn_instance_analytics(request):
 
         course = course_instance.course
         units = list(Unit.objects.filter(course=course).order_by('id'))
-        modules = list(Module.objects.filter(unit__in=units).select_related('unit').order_by('id'))
+        modules = list(Module.objects.filter(unit__in=units, is_recommendation_only=False).select_related('unit').order_by('id'))
 
         def _module_type_key(m):
             # Best-effort bucketing for "module type" columns.
@@ -781,7 +781,7 @@ def fetch_modulearn_student_engagement(request):
 
         units = list(Unit.objects.filter(course=course_instance.course).order_by('order', 'id'))
         modules = list(
-            Module.objects.filter(unit__in=units)
+            Module.objects.filter(unit__in=units, is_recommendation_only=False)
             .select_related('unit')
             .order_by('unit__order', 'unit__id', 'order', 'id')
         )

@@ -21,6 +21,7 @@ def build_navigation(request):
     user = getattr(request, "user", None)
     is_authenticated = bool(user and user.is_authenticated)
     current_path = getattr(request, "path", "") or ""
+    home_paths = {reverse('main:home_' + audience) for audience in ('overview', 'students', 'teachers', 'researchers')}
     role_snapshot = get_user_role_snapshot(user)
 
     items = [
@@ -38,6 +39,7 @@ def build_navigation(request):
         visible = [item for item in items if not item["requires_auth"] and (not item["requires_guest"] or not is_authenticated)]
         for item in visible:
             item["is_active"] = (
+                (item["key"] == "home" and current_path in home_paths) or
                 current_path == item["url"] or
                 (item["match_prefix"] and item["url"] != "/" and current_path.startswith(item["url"]))
             )
@@ -55,6 +57,7 @@ def build_navigation(request):
         if item["key"] in {"instructor", "analytics"} and not role_snapshot["effective_is_instructor"]:
             continue
         item["is_active"] = (
+            (item["key"] == "home" and current_path in home_paths) or
             current_path == item["url"] or
             (item["match_prefix"] and item["url"] != "/" and current_path.startswith(item["url"]))
         )

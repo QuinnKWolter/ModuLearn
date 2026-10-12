@@ -1,0 +1,22 @@
+#practice-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; }
+#practice-layout.has-practice { grid-template-columns:220px minmax(0,1fr); }
+#practice-workspace { min-width:0; }
+#practice-sidebar { border:1px solid var(--color-border); border-radius:.75rem; background:var(--color-surface); align-self:start; overflow:hidden; }
+#practice-sidebar summary { cursor:pointer; padding:.65rem .7rem; font-size:.82rem; font-weight:650; }
+.practice-sidebar-body { padding:0 .6rem .6rem; }
+#practice-original { padding:.35rem .5rem; font-size:.73rem; width:100%; }
+.practice-note { font-size:.68rem; line-height:1.35; color:var(--color-ink-soft); margin:.5rem 0; }
+#practice-items h3 { font-size:.7rem; font-weight:650; margin:.65rem 0 .25rem; }
+.practice-item { display:block; width:100%; min-width:0; text-align:left; padding:.4rem .5rem; margin:.2rem 0; border:1px solid var(--color-border); border-radius:.35rem; color:var(--color-ink); background:var(--color-surface-strong); }
+.practice-item:hover,.practice-item[aria-current] { border-color:#16877b; background:color-mix(in srgb,#16877b 12%,var(--color-surface)); }
+.practice-item span { display:block; font-size:.75rem; font-weight:550; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.practice-item small { display:block; font-size:.65rem; margin-top:.1rem; color:var(--color-ink-soft); }
+.practice-frame { width:100%; min-height:82vh; border:0; border-radius:.75rem; }
+#practice-feedback { position:fixed; bottom:2rem; right:1.5rem; z-index:100; width:min(340px,calc(100vw - 2rem)); padding:1.2rem; border:1px solid #16877b; border-radius:1rem; background:var(--color-surface-strong); color:var(--color-ink); box-shadow:0 10px 35px #0003; }
+#practice-feedback p { font-size:.8rem; margin:.5rem 0; }
+#practice-feedback div { display:flex; gap:.5rem; margin-top:1rem; }
+#practice-feedback button { border:1px solid var(--color-border); border-radius:.5rem; padding:.5rem .7rem; }
+#practice-feedback button:hover { background:color-mix(in srgb,#16877b 15%,var(--color-surface)); }
+#practice-error { font-size:.8rem; color:var(--color-ink-soft); }
+#practice-layout [hidden],#practice-feedback[hidden] { display:none !important; }
+@media(max-width:800px) { #practice-layout.has-practice { grid-template-columns:minmax(0,1fr); } #practice-items { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; } }

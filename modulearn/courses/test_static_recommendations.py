@@ -51,6 +51,19 @@ class RecommendationImportTests(SimpleTestCase):
         data = parse_uploads([rec_file(quizjet_rank_1_item='', quizjet_rank_1_similarity='')])
         self.assertEqual(len(data['edges']), 1)
 
+    def test_same_name_different_code_targets_remain_distinct_and_stable(self):
+        rows = [dict(query_item='Question '+str(n), query_provider='pcrs', query_topic='Basics',
+                     quizjet_rank_1_item='Comparing Strings', quizjet_rank_1_code=code,
+                     quizjet_rank_1_similarity='.8')
+                for n, code in enumerate(['String x="A";', 'String x="a";', 'String x="A";'])]
+        first = parse_uploads([upload('recs.csv', rows)])
+        keys = [edge['target'] for edge in first['edges']]
+        self.assertEqual(keys[0], keys[2])
+        self.assertNotEqual(keys[0], keys[1])
+        self.assertEqual(first['analysis']['code'][keys[0]], 'String x="A";')
+        second = parse_uploads([upload('recs.csv', rows[::-1])])
+        self.assertEqual(set(first['nodes']), set(second['nodes']))
+
     def test_rejects_invalid_similarity_and_rank(self):
         for value in ('NaN', 'inf', '1.2', ''):
             with self.subTest(value=value), self.assertRaises(ValueError):
@@ -96,6 +109,37 @@ class RecommendationWorkflowTests(TestCase):
         apply_progress_snapshot(progress, progress=1, success=True, source='test', event_type='completion')
         return progress
 
+    def test_practice_library_creates_matches_and_edits_without_course_configuration(self):
+        key = self.dataset.edges[0]['target']
+        response = self.client.post(self.manage, {'action': 'binding', 'revision': self.dataset.updated_at.isoformat(),
+            'node': key, 'module': '0', 'new_content_url': 'https://example.org/practice'})
+        self.assertEqual(response.status_code, 302)
+        self.dataset.refresh_from_db()
+        module = Module.objects.get(pk=self.dataset.bindings[key])
+        self.assertTrue(module.is_recommendation_only)
+        from courses.views import _module_rule_context
+        self.assertNotIn(module.pk, [m.pk for g in _module_rule_context(self.course) for m in g['modules']])
+        self.client.post(self.manage, {'action': 'practice', 'revision': self.dataset.updated_at.isoformat(),
+            'module': module.pk, 'content_url': 'https://example.org/updated', 'visible': 'on'})
+        module.refresh_from_db(); self.assertEqual(module.content_url, 'https://example.org/updated')
+        self.assertTrue(module.is_visible)
+
+    def test_variant_needs_explicit_binding_even_with_single_title_match(self):
+        key = self.dataset.edges[0]['target']
+        self.dataset.nodes[key]['code_variant'] = 'example-variant'
+        resolved, issues, _ = resolve_nodes(self.dataset, self.course)
+        self.assertNotIn(key, resolved)
+        self.assertTrue(any(issue['key'] == key for issue in issues))
+        self.dataset.bindings[key] = self.target.pk
+        resolved, _, _ = resolve_nodes(self.dataset, self.course)
+        self.assertEqual(resolved[key], self.target)
+
+    def fail_twice(self):
+        progress = ModuleProgress.objects.get(user=self.student, enrollment=self.enrollment, module=self.source)
+        for _ in range(2):
+            apply_progress_snapshot(progress, source='pcrs', score=0, success=False,
+                payload={'pcrs_result': {'score': 0, 'max_score': 1}})
+
     def test_upload_render_download_and_enable(self):
         self.assertEqual(self.client.get(self.manage).status_code, 200)
         response = self.client.post(self.manage, {'action': 'upload', 'files': [rec_file(), assignment_file(), medoid_file()]}, follow=True)
@@ -119,35 +163,25 @@ class RecommendationWorkflowTests(TestCase):
             self.assertEqual(self.client.get(self.manage, {'download': '1'}).status_code, 403)
             self.assertEqual(self.client.post(self.manage, {'action': 'upload', 'files': [rec_file()]}).status_code, 403)
 
-    def test_queue_updates_after_completion_and_click_uses_existing_tracking(self):
+    def test_queue_retains_practice_after_course_completion(self):
         self.client.force_login(self.student)
         self.assertEqual(self.client.get(self.queue).json()['items'], [])
-        self.complete(self.source)
+        self.fail_twice()
         items = self.client.get(self.queue).json()['items']
         self.assertEqual([r['module_id'] for r in items], [self.target.pk])
-        response = self.client.get(items[0]['url'])
-        self.assertRedirects(response, reverse('courses:launch_iframe_module', args=[self.instance.pk, self.target.pk]), fetch_redirect_response=False)
-        event = ModuleAccessLog.objects.get(metadata__source='static_recommendations')
-        self.assertEqual(event.enrollment, self.enrollment)
-        self.assertEqual(event.metadata['query_module_id'], self.source.pk)
+        self.assertIn('/practice/', items[0]['url'])
         self.complete(self.target)
-        self.assertEqual(self.client.get(self.queue).json()['items'], [])
+        self.assertEqual(len(self.client.get(self.queue).json()['items']), 1)
         self.assertRedirects(self.client.get(self.click), reverse('courses:course_detail', args=[self.instance.pk]), fetch_redirect_response=False)
 
-    def test_no_hidden_locked_or_completed_targets_and_no_access_bypass(self):
-        self.complete(self.source)
-        for field in ('is_visible', 'is_locked'):
-            setattr(self.target, field, field == 'is_locked')
-            self.target.save()
-            self.assertEqual(recommendations_for(self.enrollment), [])
-            setattr(self.target, field, field != 'is_locked')
+    def test_hidden_targets_are_excluded_when_assigning_practice(self):
+        self.target.is_visible = False
         self.target.save()
-        self.unit.is_visible = False
-        self.unit.save()
+        self.fail_twice()
         self.assertEqual(recommendations_for(self.enrollment), [])
 
     def test_disabled_plugin_and_other_enrollment_receive_no_recommendations(self):
-        self.complete(self.source)
+        self.fail_twice()
         other_instance = CourseInstance.objects.create(course=self.course, group_name='Other session')
         other = Enrollment.objects.create(student=self.student, course_instance=other_instance)
         self.assertEqual(recommendations_for(other), [])
@@ -165,12 +199,11 @@ class RecommendationWorkflowTests(TestCase):
         progress.attempts = 1
         progress.save()
         self.assertEqual(recommendations_for(self.enrollment), [])
-        progress.score = 20
-        progress.save()
+        self.fail_twice()
         self.assertEqual(len(recommendations_for(self.enrollment)), 1)
         progress.success = True
         progress.save()
-        self.assertEqual(recommendations_for(self.enrollment), [])
+        self.assertEqual(len(recommendations_for(self.enrollment)), 1)
 
     def test_ambiguous_names_require_binding_and_cross_course_binding_rejected(self):
         Module.objects.create(unit=self.unit, title='Example', provider_id='pcex')
@@ -187,10 +220,12 @@ class RecommendationWorkflowTests(TestCase):
         self.assertEqual(resolve_nodes(self.dataset, self.course)[0][key].pk, self.target.pk)
 
     def test_cutoff_and_duplicate_targets(self):
-        self.complete(self.source)
         self.dataset.edges *= 2
-        self.dataset.save()
-        self.assertEqual(len(recommendations_for(self.enrollment)), 1)
         self.dataset.options = {'minimum_similarity': .9}
         self.dataset.save()
+        self.fail_twice()
         self.assertEqual(recommendations_for(self.enrollment), [])
+        self.dataset.options = {}
+        self.dataset.save()
+        self.fail_twice()
+        self.assertEqual(len(recommendations_for(self.enrollment)), 1)

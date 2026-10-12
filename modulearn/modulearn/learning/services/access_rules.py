@@ -102,6 +102,8 @@ def evaluate_unit_access(unit, enrollment, *, include_hidden: bool = False) -> A
 
 
 def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None = None, include_hidden: bool = False) -> AccessState:
+    if module.is_recommendation_only and not include_hidden:
+        return AccessState(False, False, "Available through recommendations only")
     if not module.is_visible and not include_hidden:
         return AccessState(False, False, "Hidden by instructor")
     has_dynamic_unlock = _has_dynamic_module_unlock(enrollment, module)
@@ -227,7 +229,7 @@ def _module_completed(enrollment, module_id) -> bool:
 def _unit_modules(unit_id):
     from courses.models import Module
 
-    return Module.objects.filter(unit_id=unit_id, is_visible=True).order_by("order", "id")
+    return Module.objects.filter(unit_id=unit_id, is_visible=True, is_recommendation_only=False).order_by("order", "id")
 
 
 def _unit_accessed(enrollment, unit_id) -> bool:

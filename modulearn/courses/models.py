@@ -34,6 +34,83 @@ class StaticRecommendationSet(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class RecommendationActivation(models.Model):
+    """A durable recommendation assignment for one learner and original problem."""
+    enrollment = models.ForeignKey('Enrollment', on_delete=models.CASCADE, related_name='recommendation_activations')
+    source_module = models.ForeignKey('Module', on_delete=models.CASCADE)
+    failures = models.PositiveIntegerField(default=0)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    configuration = models.JSONField(default=dict)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['enrollment', 'source_module'], name='unique_recommendation_activation')]
+
+
+class RecommendationProgress(models.Model):
+    """Practice only. Deliberately separate from ModuleProgress and course credit."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    activation = models.ForeignKey(RecommendationActivation, on_delete=models.CASCADE, related_name='items')
+    module = models.ForeignKey('Module', on_delete=models.CASCADE)
+    provider = models.CharField(max_length=40)
+    rank = models.PositiveIntegerField()
+    similarity = models.FloatField()
+    progress = models.FloatField(default=0)
+    score = models.FloatField(null=True, blank=True)
+    success = models.BooleanField(default=False)
+    is_complete = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+    state_data = models.JSONField(null=True, blank=True)
+    last_response = models.TextField(blank=True)
+    last_accessed = models.DateTimeField(auto_now=True)
+    feedback = models.CharField(max_length=12, blank=True)
+    feedback_prompted_at = models.DateTimeField(null=True, blank=True)
+    retired_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['activation', 'module'], name='unique_recommendation_target')]
+
+    @property
+    def enrollment(self):
+        return self.activation.enrollment
+
+    @property
+    def enrollment_id(self):
+        return self.activation.enrollment_id
+
+    @property
+    def user(self):
+        return self.enrollment.student
+
+    @property
+    def user_id(self):
+        return self.enrollment.student_id
+
+    def attach_participant_session(self, *args, **kwargs):
+        return False
+
+    def update_from_activity_attempt(self, data):
+        return ModuleProgress.update_from_activity_attempt(self, data)
+
+
+class RecommendationEvent(models.Model):
+    activation = models.ForeignKey(RecommendationActivation, on_delete=models.CASCADE, related_name='events')
+    recommendation = models.ForeignKey(RecommendationProgress, null=True, blank=True, on_delete=models.CASCADE, related_name='events')
+    event_type = models.CharField(max_length=40)
+    source = models.CharField(max_length=64, blank=True)
+    event_key = models.CharField(max_length=100, null=True, blank=True)
+    score = models.FloatField(null=True, blank=True)
+    progress = models.FloatField(null=True, blank=True)
+    success = models.BooleanField(null=True, blank=True)
+    payload = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['activation', 'event_type', 'created_at'])]
+        constraints = [models.UniqueConstraint(fields=['activation', 'event_key'], name='unique_recommendation_event_key')]
+
+
 class Course(models.Model):
     id = models.CharField(max_length=255, primary_key=True)
     title = models.CharField(max_length=255)
@@ -47,7 +124,7 @@ class Course(models.Model):
 
     def total_modules(self):
         """Return the total number of modules in the course."""
-        return Module.objects.filter(unit__course=self).count()
+        return Module.objects.filter(unit__course=self, is_recommendation_only=False).count()
 
     def is_plugin_enabled(self, plugin_key):
         from modulearn.learning.services.course_plugins import is_course_plugin_enabled
@@ -117,6 +194,7 @@ class Unit(models.Model):
         ordering = ['order', 'id']
 
 class Module(models.Model):
+    is_recommendation_only = models.BooleanField(default=False, help_text="Available only as isolated recommendation practice; excluded from course requirements.")
     MODULE_TYPE_IMPORTED = 'imported'
     MODULE_TYPE_EXTERNAL_LINK = 'external_link'
     MODULE_TYPE_SPLICE_SMART_CONTENT = 'splice_smart_content'
@@ -874,6 +952,8 @@ class ModuleAccessLog(models.Model):
 
 class ModuleProgressEvent(models.Model):
     EVENT_TYPE_CHOICES = [
+        ('provider_event', 'Provider Interaction'),
+        ('attempt', 'Scored Attempt'),
         ('launch', 'Launch'),
         ('iframe_load', 'Iframe Load'),
         ('tab_blur', 'Tab Blur'),
@@ -928,7 +1008,7 @@ def create_module_progress_records(sender, instance, created, **kwargs):
     """
     if created:
         # Get total modules for the course
-        total_modules = Module.objects.filter(unit__course=instance.course_instance.course).count()
+        total_modules = Module.objects.filter(unit__course=instance.course_instance.course, is_recommendation_only=False).count()
         
         # Create or update CourseProgress with correct total_modules
         CourseProgress.objects.get_or_create(
@@ -941,7 +1021,7 @@ def create_module_progress_records(sender, instance, created, **kwargs):
         
         # Create ModuleProgress records
         module_progress_list = []
-        modules = Module.objects.filter(unit__course=instance.course_instance.course)
+        modules = Module.objects.filter(unit__course=instance.course_instance.course, is_recommendation_only=False)
         
         participant_session = ModuleProgress.participant_session_for_enrollment(instance)
         for module in modules:

@@ -120,6 +120,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / '../modulearn-storage/db/db.sqlite3',
+        # Acquire the write reservation before reading inside atomic blocks.
+        # Deferred lock upgrades can otherwise fail immediately when provider
+        # telemetry and recommendation interactions arrive concurrently.
+        'OPTIONS': {'transaction_mode': 'IMMEDIATE', 'timeout': 20},
     }
 }
 

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}{% load ui_i18n static %}
+{% block body_class %}recommendation-logs-page{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/static-recommendations.css' %}">{% endblock %}
+{% block title %}{% ui 'Recommendation research logs' %}{% endblock %}
+{% block content %}
+<div data-no-ui-translate>
+<a class="btn btn-outline-secondary" href="{% url 'courses:static_recommendations' course_instance.id %}">← {% ui 'Static Recommendations' %}</a>
+<h1 class="text-3xl font-bold mt-5">{% ui 'Recommendation research logs' %}</h1>
+<p class="mt-2">{{ course_instance.course.title }} · {{ course_instance.title }}</p>
+<p class="mt-3">{% ui 'Assigned' %}: {{ assigned }} · {% ui 'Completed' %}: {{ completed }} · {% ui 'Rated' %}: {{ rated }}</p>
+<p class="mt-2 text-sm">{% ui 'Recommendation scores are practice only and never contribute to course grades or completion.' %}</p>
+<form method="get" class="flex flex-wrap gap-3 mt-5 mb-5">
+  <label>{% ui 'Student or activity' %}<input class="form-control" name="q" value="{{ q }}"></label>
+  <label>{% ui 'Event' %}<select name="event" class="form-control"><option value="">{% ui 'All events' %}</option>{% for event in event_types %}<option value="{{ event }}" {% if event == kind %}selected{% endif %}>{{ event }}</option>{% endfor %}</select></label>
+  <button class="btn btn-primary" type="submit">{% ui 'Filter' %}</button>
+  <a class="btn btn-outline-primary" href="?{{ filters }}&download=csv">{% ui 'Download filtered CSV' %}</a>
+  <a class="btn btn-outline-secondary" href="?{{ filters }}&download=summary">{% ui 'Download practice summary' %}</a>
+</form>
+<details class="card p-4 mb-5" id="course-activity" {% if request.GET.course_page %}open{% endif %}><summary>{% ui 'Normal course activity' %}</summary>
+<p class="text-sm mt-2">{% ui 'Course attempts and scores are separate from recommendation practice. The student and event filters apply to both.' %}</p>
+<a class="btn btn-outline-secondary mt-3" href="?{{ filters }}&download=course_csv">{% ui 'Download course activity CSV' %}</a>
+<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr><th>{% ui 'Time (UTC)' %}</th><th>{% ui 'Student' %}</th><th>{% ui 'Activity' %}</th><th>{% ui 'Event' %}</th><th>{% ui 'Score' %}</th><th>{% ui 'Details' %}</th></tr></thead><tbody>
+{% for event in course_page %}<tr><td>{{ event.created_at|date:'Y-m-d H:i:s' }}</td><td>{{ event.user.username }}</td><td>{{ event.module.title }}</td><td>{{ event.event_type }}</td><td>{{ event.score|floatformat:1|default:'—' }}</td><td><details><summary>{% ui 'Inspect event' %}</summary><pre style="max-width:32rem;max-height:18rem;overflow:auto">{{ event.payload|pprint }}</pre></details></td></tr>{% empty %}<tr><td colspan="6">{% ui 'No course activity matches these filters.' %}</td></tr>{% endfor %}
+</tbody></table></div><nav class="flex gap-4 mt-3">{% if course_page.has_previous %}<a href="?{{ filters }}&course_page={{ course_page.previous_page_number }}#course-activity">{% ui 'Previous' %}</a>{% endif %}<span>{% ui 'Page {page} of {pages}' page=course_page.number pages=course_page.paginator.num_pages %}</span>{% if course_page.has_next %}<a href="?{{ filters }}&course_page={{ course_page.next_page_number }}#course-activity">{% ui 'Next' %}</a>{% endif %}</nav></details>
+<details class="card p-4 mb-5" open><summary>{% ui 'Assigned practice, including unvisited recommendations' %}</summary>
+<div class="overflow-x-auto"><table class="w-full text-sm mt-4"><thead><tr><th>{% ui 'Student' %}</th><th>{% ui 'Original problem' %}</th><th>{% ui 'Recommended activity' %}</th><th>{% ui 'Views / visits' %}</th><th>{% ui 'Score' %}</th><th>{% ui 'Completed' %}</th><th>{% ui 'Feedback' %}</th></tr></thead><tbody>
+{% for item in assignment_page %}<tr class="border-t"><td class="p-3">{{ item.activation.enrollment.student.username }}</td><td>{{ item.activation.source_module.title }}</td><td>{{ item.module.title }}<small class="block">{{ item.provider }}{% if item.retired_at %} · {% ui 'Retired from recommendations' %}{% endif %}</small></td><td>{{ item.impressions }} / {{ item.visits }}</td><td>{{ item.score|floatformat:1|default:'—' }}</td><td>{% if item.is_complete %}✓{% else %}—{% endif %}</td><td>{% if item.feedback == 'up' %}👍{% elif item.feedback == 'down' %}👎{% elif item.feedback == 'skipped' %}{% ui 'Skipped' %}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="p-4">{% ui 'No recommendations assigned yet.' %}</td></tr>{% endfor %}
+</tbody></table></div>
+<nav class="flex gap-4 mt-3">{% if assignment_page.has_previous %}<a href="?{{ filters }}&assignments_page={{ assignment_page.previous_page_number }}">{% ui 'Previous' %}</a>{% endif %}<span>{% ui 'Page {page} of {pages}' page=assignment_page.number pages=assignment_page.paginator.num_pages %}</span>{% if assignment_page.has_next %}<a href="?{{ filters }}&assignments_page={{ assignment_page.next_page_number }}">{% ui 'Next' %}</a>{% endif %}</nav>
+</details>
+<div class="card overflow-x-auto"><table class="w-full text-sm"><thead><tr><th class="p-3">{% ui 'Time (UTC)' %}</th><th>{% ui 'Student' %}</th><th>{% ui 'Original problem' %}</th><th>{% ui 'Recommended activity' %}</th><th>{% ui 'Event' %}</th><th>{% ui 'Score' %}</th><th>{% ui 'Details' %}</th></tr></thead>
+<tbody>{% for event in page %}<tr class="border-t"><td class="p-3">{{ event.created_at|date:'Y-m-d H:i:s' }}</td><td>{{ event.activation.enrollment.student.username }}</td><td>{{ event.activation.source_module.title }}</td><td>{% if event.recommendation %}{{ event.recommendation.module.title }}<small class="block">{{ event.recommendation.provider }} · #{{ event.recommendation.rank }}</small>{% else %}—{% endif %}</td><td>{{ event.event_type }}</td><td>{{ event.score|floatformat:1|default:'—' }}</td><td class="p-3"><details><summary>{% ui 'Inspect event' %}</summary><pre class="whitespace-pre-wrap" style="max-width:32rem;max-height:18rem;overflow:auto">{{ event.payload|pprint }}</pre></details></td></tr>{% empty %}<tr><td colspan="7" class="p-6">{% ui 'No recommendation events match these filters.' %}</td></tr>{% endfor %}</tbody></table></div>
+<nav class="flex gap-4 mt-5" aria-label="{% ui 'Pagination' %}">{% if page.has_previous %}<a href="?{{ filters }}&page={{ page.previous_page_number }}">{% ui 'Previous' %}</a>{% endif %}<span>{% ui 'Page {page} of {pages}' page=page.number pages=page.paginator.num_pages %}</span>{% if page.has_next %}<a href="?{{ filters }}&page={{ page.next_page_number }}">{% ui 'Next' %}</a>{% endif %}</nav>
+</div>
+{% endblock %}

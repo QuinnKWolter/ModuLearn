@@ -142,6 +142,9 @@ def is_pcex_url(url: str) -> bool:
     )
 
 def should_proxy_intercepted_activity_url(url: str) -> bool:
+    from modulearn.learning.services.quizjet_tracking import is_quizjet_url
+    if is_quizjet_url(url):
+        return True
     """Only proxy outcome-intercepted URLs whose host is explicitly allowlisted."""
     if not (is_pcex_url(url) or is_pcrs_url(url)):
         return False
@@ -279,7 +282,7 @@ def _module_rule_context(course):
     prior_modules = []
     units = list(course.units.prefetch_related("modules").all())
     for index, unit in enumerate(units):
-        modules = list(unit.modules.all())
+        modules = [module for module in unit.modules.all() if not module.is_recommendation_only]
         for module in modules:
             try:
                 module.config_form = module.form
@@ -1271,21 +1274,24 @@ def launch_iframe_module(request, instance_id, module_id):
     if not (is_instructor or is_enrolled):
         return HttpResponseForbidden("You don't have access to this module")
 
-    allowed, reason = _user_can_access_module(request.user, course_instance, module)
+    from modulearn.learning.services.recommendation_tracking import practice_for_request
+    practice = practice_for_request(request, module=module, course_instance=course_instance)
+    allowed, reason = (True, '') if practice else _user_can_access_module(request.user, course_instance, module)
     if not allowed:
         log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_UNLOCK_DENIED)
         messages.error(request, reason or "That module is locked.")
         return redirect("courses:course_detail", instance_id=course_instance.id)
     
     # Use the get_or_create_progress class method instead of direct get_or_create
-    module_progress, created = ModuleProgress.get_or_create_progress(
-        user=request.user,
-        module=module,
-        course_instance=course_instance
-    )
+    if practice:
+        module_progress = practice
+    else:
+        module_progress, created = ModuleProgress.get_or_create_progress(
+            user=request.user, module=module, course_instance=course_instance)
     if not is_instructor:
         record_module_launch(module_progress, source='iframe_launch')
-        log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_LAUNCH)
+        if not practice:
+            log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_LAUNCH)
 
     if module.module_type in Module.FORM_LIKE_TYPES:
         return _handle_form_module(request, course_instance, module, module_progress, is_instructor)
@@ -1522,9 +1528,12 @@ def launch_iframe_module(request, instance_id, module_id):
             existing_params['sid'] = [sid]
         if 'cid' not in existing_params and cid:
             existing_params['cid'] = [cid]
-        if (is_pcex_activity or is_pcrs_activity) and 'module_id' not in existing_params:
+        if 'module_id' not in existing_params:
             existing_params['module_id'] = [str(module.id)]
+        existing_params['course_instance_id'] = [str(course_instance.pk)]
         
+        if practice:
+            existing_params['recommendation'] = [str(practice.pk)]
         # Rebuild URL with all parameters
         new_query = urlencode(existing_params, doseq=True)
         activity_url_with_params = urlunparse((
@@ -1566,6 +1575,8 @@ def launch_iframe_module(request, instance_id, module_id):
             if refuses_iframe:
                 logger.warning(f"Module {module.id}: Tool '{lti_tool}' refuses iframe embedding: {refuses_iframe_reason}")
     
+    if practice and selected_protocol == 'lti':
+        raise PermissionDenied('Recommendation practice requires a directly tracked delivery URL.')
     # Generate iframe src based on protocol
     if selected_protocol == 'lti':
         # Route through our LTI consumer which handles OAuth signing
@@ -1590,6 +1601,7 @@ def launch_iframe_module(request, instance_id, module_id):
             logger.info(f"Module {module.id}: Final iframe_src (direct, https): {iframe_src}")
 
     context = {
+        'recommendation_practice': practice,
         'module': module,
         'is_instructor': is_instructor,
         'progress': module_progress,
@@ -1602,7 +1614,7 @@ def launch_iframe_module(request, instance_id, module_id):
         'iframe_src': iframe_src,
         'refuses_iframe': refuses_iframe,
         'refuses_iframe_reason': refuses_iframe_reason,
-        'next_module': _get_next_accessible_module(request.user, course_instance, module),
+        'next_module': None if practice else _get_next_accessible_module(request.user, course_instance, module),
         'participant_mode': getattr(request.user, "is_anonymous_participant", False),
     }
     
@@ -2253,6 +2265,7 @@ def update_module_progress(request, module_id):
         course_instance_query = CourseInstance.objects.filter(
             course=course,
             enrollments__student=request.user,
+            enrollments__active=True,
             active=True
         )
         if course_instance_id:
@@ -2272,7 +2285,16 @@ def update_module_progress(request, module_id):
             module=module,
             course_instance=course_instance
         )
-        module_progress.update_from_activity_attempt(data)
+        if 'provider_event' in data:
+            from modulearn.learning.services.cupcake_tracking import record_cupcake_event
+            record_cupcake_event(module_progress, data['provider_event'])
+            # Passive interaction logs do not require a course-grade recompute.
+            # Scored/completion updates are already handled by the adapter.
+            return JsonResponse({'success': True, 'module_progress': {
+                'progress': module_progress.progress, 'score': module_progress.score,
+                'is_complete': module_progress.is_complete}})
+        else:
+            module_progress.update_from_activity_attempt(data)
         
         # Get updated course progress through the enrollment
         course_progress = CourseProgress.objects.get(
@@ -2306,6 +2328,8 @@ def update_module_progress(request, module_id):
         })
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid activity event'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -2528,7 +2552,7 @@ def get_course_enrollments(request, course_instance_id):
             return JsonResponse({'error': 'Not authorized'}, status=403)
         
         # Get total modules count for the course
-        total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
         
         enrollments_data = [
             _enrollment_response_payload(enrollment, total_modules)
@@ -2655,14 +2679,14 @@ def bulk_enroll_students(request, course_instance_id):
                 
                 if enrollment_created:
                     remaining_slots -= 1
-                    total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
                     new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 elif not enrollment.active:
                     enrollment.active = True
                     enrollment.save(update_fields=['active'])
                     remaining_slots -= 1
-                    total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
                     new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 else:
@@ -2746,7 +2770,7 @@ def generate_anonymous_students(request, course_instance_id):
         prefix = (data.get('prefix') or 'anon').strip() or 'anon'
         password_mode = (data.get('password_mode') or 'username').strip().lower()
         use_username_password = password_mode != 'random'
-        total_modules = Module.objects.filter(unit__course=course_instance.course).count()
+        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
         generated_accounts = []
         enrollments_data = []
 

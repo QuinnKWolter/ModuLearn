@@ -2873,6 +2873,7 @@
                             <button type="button" class="cfg-chip cfg-chip-toggle {% if module.is_visible %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="visible" aria-pressed="{% if module.is_visible %}true{% else %}false{% endif %}" title="Toggle student visibility">
                               <i class="fa-solid {% if module.is_visible %}fa-eye{% else %}fa-eye-slash{% endif %}" data-chip-icon></i>
                               <span data-chip-label>{% if module.is_visible %}Visible{% else %}Hidden{% endif %}</span>
+                              {% if module.is_recommendation_only %}<span data-i18n="Recommendation practice only">Recommendation practice only</span>{% endif %}
                             </button>
                             <input type="hidden" name="module_{{ module.id }}_locked" value="{% if module.is_locked or module.unlock_rule_type != 'none' %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="lock" data-lock-input>
                             <button type="button" class="cfg-chip cfg-chip-toggle {% if module.is_locked or module.unlock_rule_type != 'none' %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="lock" aria-pressed="{% if module.is_locked or module.unlock_rule_type != 'none' %}true{% else %}false{% endif %}" title="Toggle lock state">

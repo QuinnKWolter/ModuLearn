@@ -1,6 +1,21 @@
-.rec-admin { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.5rem; }
+.rec-admin { display:grid; grid-template-columns:minmax(0,1fr); gap:.8rem; max-width:1080px; margin:auto; }
+.rec-admin summary { cursor:pointer; font-weight:600; }
+.rec-page-heading { max-width:1080px; margin:0 auto 1rem; }
+.rec-page-heading h1 { font-size:1.6rem; font-weight:700; }
+.rec-page-heading p { font-size:.9rem; color:var(--color-ink-soft); }
+.rec-library-row { padding:.6rem 0; border-bottom:1px solid var(--color-border); font-size:.85rem; }
+.rec-admin .rec-source { padding:.7rem; border-radius:.5rem; background:var(--color-surface); }
+.rec-admin .rec-target { padding:.6rem; border-radius:.5rem; margin-bottom:.35rem; }
+.rec-admin .rec-target h4 { font-size:.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rec-admin .rec-arrow { font-size:.8rem; }
 .rec-wide { grid-column:1/-1; }
 .rec-settings { display:grid; gap:1rem; }
+.rec-admin .rec-settings { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem 1.5rem; }
+.rec-settings > label:first-of-type,.rec-settings > p { grid-column:1/-1; }
+.rec-settings input[type=number] { max-width:8rem; }
+.rec-settings > button { justify-self:start; }
+.rec-settings > details { grid-column:2; grid-row:2; font-size:.8rem; }
+@media(max-width:600px) { .rec-admin .rec-settings { grid-template-columns:1fr; } .rec-settings > details { grid-column:1; grid-row:auto; } }
 .rec-settings label { display:block; font-weight:600; font-size:.9rem; }
 .rec-map-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
 .rec-source { padding:1.4rem; border:1px solid var(--color-border); border-radius:1rem; background:radial-gradient(ellipse at top right,#14b8a620,transparent 65%); }
@@ -26,3 +41,11 @@
 .rec-student-list small { display:block; font-size:.78rem; color:var(--color-ink-soft); margin-top:.4rem; }
 .rec-student [role=status] { font-size:.85rem; color:var(--color-ink-soft); margin-top:.5rem; }
 @media(max-width:800px) { .rec-admin,.rec-groups { grid-template-columns:1fr; } }
+.recommendation-logs-page { display:flex; flex-direction:column; padding-bottom:0; }
+.recommendation-logs-page > main { flex:1; width:100%; }
+.recommendation-logs-page .footer-shell { position:static; margin-top:2rem; }
+.recommendation-logs-page table { min-width:960px; text-align:left; }
+.recommendation-logs-page th,.recommendation-logs-page td { padding:.75rem; vertical-align:top; }
+.recommendation-logs-page th { color:var(--color-ink-soft); font-size:.75rem; }
+.recommendation-logs-page tbody tr:hover { background:color-mix(in srgb,#16877b 5%,transparent); }
+.recommendation-logs-page summary { cursor:pointer; }

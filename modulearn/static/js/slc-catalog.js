@@ -1,5 +1,8 @@
 (() => {
   'use strict';
+  const t = (message, parameters) => window.ModuLearnI18n.t(message, parameters);
+  const locale = window.ModuLearnI18n.language;
+  const number = value => value.toLocaleString(locale);
   const dialog = document.getElementById('slcCatalog');
   const form = document.getElementById('customModuleForm');
   if (!dialog || !form) return;
@@ -64,12 +67,15 @@
     return link;
   }
   async function get(url, signal) {
-    const response = await fetch(url, {signal, headers: {'Accept': 'application/json'}});
+    const response = await fetch(url, {signal, headers: {'Accept': 'application/json'}}).catch(error => {
+      if (error.name === 'AbortError') throw error;
+      throw new Error(t('The catalog could not be loaded. Please retry.'));
+    });
     if (response.redirected || !response.headers.get('content-type')?.includes('application/json')) {
-      throw new Error('Your session may have expired. Close the catalog and sign in again.');
+      throw new Error(t('Your session may have expired. Close the catalog and sign in again.'));
     }
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'The catalog could not be loaded. Please retry.');
+    if (!response.ok) throw new Error((data.error ? t(data.error) : '') || t('The catalog could not be loaded. Please retry.'));
     return data;
   }
   function closeDetail() {
@@ -98,7 +104,7 @@
   document.querySelectorAll('[data-open-slc-catalog]').forEach(el => el.addEventListener('click', () => {
     opener = el;
     const unit = form.querySelector('[name=unit_id]');
-    find('[data-catalog-destination]').textContent = `Adding to: ${unit?.selectedOptions[0]?.textContent.trim() || 'your unit'}`;
+    find('[data-catalog-destination]').textContent = t('Adding to: {unit}', {unit: unit?.selectedOptions[0]?.textContent.trim() || t('your unit')});
     dialog.showModal();
     query.focus();
     load();
@@ -117,7 +123,8 @@
     form.elements.content_url.value = item.selected_delivery.url;
     form.elements.catalog_source.value = item.source;
     form.elements.catalog_item_id.value = item.id;
-    selection.textContent = `${item.source_label} · ${item.provider} · ${item.selected_delivery.protocol} delivery selected. Review the details, then choose Add Module.`;
+    selection.textContent = t('{catalog} · {provider} · {protocol} delivery selected. Review the details, then choose Add Module.', {catalog:item.source_label, provider:item.provider, protocol:item.selected_delivery.protocol});
+    selection.dataset.noUiTranslate = '';
     selection.hidden = false;
     close();
     form.elements.title.focus();
@@ -131,7 +138,7 @@
   }
   function renderCard(item) {
     const card = button('', () => showDetail(item, card), 'slc-card');
-    card.setAttribute('aria-label', `View details: ${item.title}`);
+    card.setAttribute('aria-label', t('View details: {title}', {title: item.title}));
     card.setAttribute('aria-pressed', 'false');
     card.dataset.catalogItem = item.id;
     const eyebrow = node('div', null, 'slc-eyebrow');
@@ -145,21 +152,21 @@
     results.classList.toggle('slc-table-view', view === 'table');
     if (view === 'table') {
       results.tabIndex = 0;
-      results.setAttribute('aria-label', 'Activity table; scroll horizontally for more columns on small screens');
+      results.setAttribute('aria-label', t('Activity table; scroll horizontally for more columns on small screens'));
     } else {
       results.removeAttribute('tabindex');
       results.removeAttribute('aria-label');
     }
     results.replaceChildren();
     if (!currentItems.length) {
-      results.append(node('p', 'No activities match these filters. Try another keyword or reset your filters.', 'slc-empty'));
+      results.append(node('p', t('No activities match these filters. Try another keyword or reset your filters.'), 'slc-empty'));
       return;
     }
     if (view === 'table') {
       const table = node('table', null, 'slc-table');
-      table.append(node('caption', 'Learning activities — select a title for details and import options', 'sr-only'));
+      table.append(node('caption', t('Learning activities — select a title for details and import options'), 'sr-only'));
       const head = node('thead'), header = node('tr');
-      ['Activity', 'Provider / catalog', 'Language', 'Delivery', 'Preview'].forEach(label => {
+      [t('Activity'), t('Provider / catalog'), t('Language'), t('Delivery'), t('Preview')].forEach(label => {
         const th = node('th', label); th.scope = 'col'; header.append(th);
       });
       head.append(header); table.append(head);
@@ -171,10 +178,10 @@
         title.append(open, node('small', item.type));
         const provider = node('td', item.provider); provider.append(node('small', item.source_label));
         const preview = node('td');
-        if (item.demo_url) preview.append(externalLink('Demo ↗', item.demo_url));
+        if (item.demo_url) preview.append(externalLink(t('Demo ↗'), item.demo_url));
         else preview.append(node('span', '—'));
         row.append(title, provider, node('td', item.languages.join(', ') || '—'), node('td', item.protocols.join(', ') || '—'), preview);
-        if (item.status.startsWith('broken')) title.append(node('small', 'Needs repair'));
+        if (item.status.startsWith('broken')) title.append(node('small', t('Needs repair')));
         body.append(row);
       });
       table.append(body); results.append(table);
@@ -196,10 +203,10 @@
       const field = select.dataset.catalogFilter;
       if (!facets[field]) return;
       const value = select.value;
-      select.replaceChildren(new Option(`${select.dataset.placeholder} (${totals[field].toLocaleString()})`, ''));
+      select.replaceChildren(new Option(`${select.dataset.placeholder} (${number(totals[field])})`, ''));
       [...facets[field]].sort((a, b) => Number(b.count > 0) - Number(a.count > 0) ||
-        (a.label || a.value).localeCompare(b.label || b.value, undefined, {numeric: true, sensitivity: 'base'})).forEach(facet => {
-        const option = new Option(`${facet.label || facet.value} (${facet.count.toLocaleString()})`, facet.value);
+        (a.label || a.value).localeCompare(b.label || b.value, locale, {numeric: true, sensitivity: 'base'})).forEach(facet => {
+        const option = new Option(`${facet.label || facet.value} (${number(facet.count)})`, facet.value);
         option.disabled = facet.count === 0;
         select.add(option);
       });
@@ -219,7 +226,7 @@
     const params = new URLSearchParams({q: query.value.trim(), sort: sort.value, page: String(page)});
     filters.forEach(select => { if (select.value) params.set(select.dataset.catalogFilter, select.value); });
     results.setAttribute('aria-busy', 'true');
-    count.textContent = 'Finding learning activities…';
+    count.textContent = t('Finding learning activities…');
     prev.disabled = next.disabled = true;
     warning.hidden = true;
     try {
@@ -228,19 +235,22 @@
       page = data.page; pages = data.pages;
       fillFacets(data.facets, data.facet_totals);
       remember();
-      count.textContent = `${data.total.toLocaleString()} activities${query.value.trim() ? ' matching your search' : ' to explore'}`;
+      const countMessage = query.value.trim()
+        ? (data.total === 1 ? '{count} activity matching your search' : '{count} activities matching your search')
+        : (data.total === 1 ? '{count} activity to explore' : '{count} activities to explore');
+      count.textContent = t(countMessage, {count:number(data.total)});
       currentItems = data.items;
       renderResults();
-      warning.textContent = data.warnings.join(' ');
+      warning.textContent = data.warnings.map(message => t(message)).join(' ');
       warning.hidden = !data.warnings.length;
-      find('[data-catalog-page]').textContent = `Page ${page} of ${pages}`;
+      find('[data-catalog-page]').textContent = t('Page {page} of {pages}', {page:number(page), pages:number(pages)});
       prev.disabled = page <= 1; next.disabled = page >= pages;
       results.parentElement.scrollTop = 0;
     } catch (error) {
       if (error.name !== 'AbortError') {
         currentItems = [];
         results.replaceChildren(node('p', error.message, 'slc-empty'));
-        count.textContent = 'Unable to load catalog';
+        count.textContent = t('Unable to load catalog');
         find('[data-catalog-page]').textContent = '';
       }
     } finally {
@@ -265,20 +275,20 @@
     detailRequest = controller;
     dialog.querySelectorAll('[data-catalog-item]').forEach(el => el.setAttribute('aria-pressed', String(el === card)));
     detail.hidden = false;
-    detail.replaceChildren(button('← Back to results', closeDetail), node('p', 'Loading activity details…'));
+    detail.replaceChildren(button(t('← Back to results'), closeDetail), node('p', t('Loading activity details…')));
     detail.scrollTop = 0;
     detail.querySelector('button').focus();
     try {
       const params = new URLSearchParams({source: summary.source, id: summary.id});
       const item = await get(`${dialog.dataset.detailUrl}?${params}`, controller.signal);
       if (controller.signal.aborted) return;
-      const back = button('← Back to results', closeDetail);
+      const back = button(t('← Back to results'), closeDetail);
       detail.replaceChildren(back, node('h3', item.title), badges([item.source_label, item.provider, item.type]));
-      if (item.stale) detail.append(node('p', 'Showing cached metadata while the catalog is unavailable.', 'slc-warning'));
-      if (item.status.startsWith('broken')) detail.append(node('p', 'The catalog marks this activity as needing repair. It cannot be added until repaired.', 'slc-warning'));
+      if (item.stale) detail.append(node('p', t('Showing cached metadata while the catalog is unavailable.'), 'slc-warning'));
+      if (item.status.startsWith('broken')) detail.append(node('p', t('The catalog marks this activity as needing repair. It cannot be added until repaired.'), 'slc-warning'));
       const actions = node('div', null, 'slc-detail-actions');
-      if (item.demo_url) actions.append(externalLink('Open demo ↗', item.demo_url, 'btn btn-outline-primary btn-sm'));
-      const use = button('Use this activity', () => choose(item), 'btn btn-primary btn-sm');
+      if (item.demo_url) actions.append(externalLink(t('Open demo ↗'), item.demo_url, 'btn btn-outline-primary btn-sm'));
+      const use = button(t('Use this activity'), () => choose(item), 'btn btn-primary btn-sm');
       use.disabled = !item.selected_delivery || item.status.startsWith('broken');
       actions.append(use);
       detail.append(actions, node('p', item.description));
@@ -287,23 +297,23 @@
         'Authors': item.authors.join(', '), 'Programming languages': item.languages.join(', '),
         'Content languages': item.content_languages.join(', '), 'License': item.license,
         'Keywords': item.tags.join(', '), 'Knowledge components': item.concepts.join(', '),
-        'Delivery selected': item.selected_delivery ? `${item.selected_delivery.protocol}${item.selected_delivery.protocol === 'SPLICE' ? ' (preferred)' : ''}` : 'No usable endpoint published',
+        'Delivery selected': item.selected_delivery ? (item.selected_delivery.protocol === 'SPLICE' ? t('{protocol} (preferred)', {protocol:item.selected_delivery.protocol}) : item.selected_delivery.protocol) : 'No usable endpoint published',
       };
-      Object.entries(rows).filter(([,value]) => value).forEach(([label,value]) => metadata.append(node('dt', label), node('dd', value)));
+      Object.entries(rows).filter(([,value]) => value).forEach(([label,value]) => metadata.append(node('dt', t(label)), node('dd', value)));
       detail.append(metadata);
-      const endpoints = node('details'); endpoints.append(node('summary', 'Delivery URLs'));
+      const endpoints = node('details'); endpoints.append(node('summary', t('Delivery URLs')));
       item.delivery.forEach(endpoint => {
         const row = node('p', `${endpoint.protocol}: `);
-        row.append(endpoint.url ? externalLink(endpoint.url, endpoint.url) : node('span', 'URL not published'));
+        row.append(endpoint.url ? externalLink(endpoint.url, endpoint.url) : node('span', t('URL not published')));
         endpoints.append(row);
       });
       const raw = node('details');
-      raw.append(node('summary', 'All catalog metadata'), node('pre', JSON.stringify(item.metadata, null, 2)));
+      raw.append(node('summary', t('All catalog metadata')), node('pre', JSON.stringify(item.metadata, null, 2)));
       detail.append(endpoints, raw, node('p'));
-      detail.lastChild.append(externalLink('View source catalog ↗', item.catalog_url));
+      detail.lastChild.append(externalLink(t('View source catalog ↗'), item.catalog_url));
       back.focus();
     } catch (error) {
-      if (error.name !== 'AbortError') detail.append(node('p', error.message, 'slc-warning'), button('Retry details', () => showDetail(summary, card)));
+      if (error.name !== 'AbortError') detail.append(node('p', error.message, 'slc-warning'), button(t('Retry details'), () => showDetail(summary, card)));
     }
   }
 })();

@@ -1,80 +1,18 @@
 {% extends 'base.html' %}
-
-{% block title %}Info - ModuLearn{% endblock %}
-
+{% load static ui_i18n %}
+{% block body_class %}edition-page{% endblock %}
+{% block title %}{% ui "About ModuLearn" %}{% endblock %}
 {% block breadcrumbs_wrapper %}{% endblock %}
-
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/editorial-pages.css' %}">{% endblock %}
 {% block content %}
-  <div class="public-page public-info-page public-info-page-polished">
-    <header class="public-info-hero">
-      <div class="public-title-row">
-        <p class="public-eyebrow">Project notes</p>
-        <span class="badge badge-primary">Open ecosystem</span>
-      </div>
-      <div class="public-info-hero-grid">
-        <div>
-          <h1>About ModuLearn</h1>
-          <p>ModuLearn is a small, open portal for putting smart-learning content into course sessions and research studies while keeping the local learning record readable.</p>
-        </div>
-        <div class="public-info-pulse" aria-label="ModuLearn responsibilities">
-          <span><i class="bi bi-diagram-3" aria-hidden="true"></i>Structures</span>
-          <span><i class="bi bi-play-circle" aria-hidden="true"></i>Launches</span>
-          <span><i class="bi bi-activity" aria-hidden="true"></i>Progress</span>
-          <span><i class="bi bi-download" aria-hidden="true"></i>Exports</span>
-        </div>
-      </div>
-    </header>
-
-    <section class="public-info-board" aria-label="What ModuLearn does">
-      <article class="public-info-statement">
-        <div class="public-icon public-icon-blue"><i class="bi bi-layers" aria-hidden="true"></i></div>
-        <p class="public-eyebrow">What it owns</p>
-        <h2>The structure around the learning tool.</h2>
-        <p>External modules still do the specialized teaching work. ModuLearn keeps their place in the course clear: who can see them, what unlocks next, what was completed, and what instructors or researchers can export later.</p>
-      </article>
-
-      <aside class="public-info-now">
-        <h2>Useful today</h2>
-        <ul>
-          <li><strong>Course sessions</strong><span>Students, units, modules, locks, and analytics.</span></li>
-          <li><strong>Study sessions</strong><span>Participant links, condition assignment, consent, surveys, and exports.</span></li>
-          <li><strong>Smart content</strong><span>SPLICE, PCEX, PCRS, links, files, forms, and embedded activities.</span></li>
-        </ul>
-      </aside>
-    </section>
-
-    <section class="public-info-flow" aria-label="System flow">
-      <article>
-        <span>01</span>
-        <h2>Build</h2>
-        <p>Import a structure or create units and modules directly.</p>
-      </article>
-      <article>
-        <span>02</span>
-        <h2>Guide</h2>
-        <p>Set visibility, sequence, branching, conditions, and study flow.</p>
-      </article>
-      <article>
-        <span>03</span>
-        <h2>Read</h2>
-        <p>Review progress, events, focus changes, submissions, and exports.</p>
-      </article>
-    </section>
-
-    <section class="public-info-footer-band" aria-label="Practical notes and contact">
-      <div>
-        <p class="public-eyebrow">Worth knowing</p>
-        <ul class="public-info-notes">
-          <li>External modules may have their own language, login, iframe, or browser restrictions.</li>
-          <li>Legacy analytics depend on PAWS and Aggregate database services being reachable.</li>
-          <li>The English and Spanish toggle covers ModuLearn interface text, not third-party content inside modules.</li>
-        </ul>
-      </div>
-      <div class="public-info-contact">
-        <h2>Questions, bugs, or deployment notes?</h2>
-        <p>Send the route, your role, what you expected, and the exact error or screenshot if one exists.</p>
-        <a href="mailto:QuinnKWolter@pitt.edu" class="btn btn-primary">QuinnKWolter@pitt.edu</a>
-      </div>
-    </section>
+<div class="edition info-edition" data-no-ui-translate>
+  <header class="edition-heading"><p class="edition-label">{% ui "About / ModuLearn" %}</p><h1>{% ui "Open educational technology." %}</h1><p class="edition-lead">{% ui "ModuLearn connects learning activities, teaching tools, and research workflows. Our aim is to make educational technology easier to reuse and study." %}</p></header>
+  <section class="info-mission"><p>{% ui "Free and open-source educational technology gives educators and researchers a foundation they can inspect, adapt, and share." %}</p><p>{% ui "We share the SPLICE community’s focus on reusable content, interoperable tools, and research infrastructure for computing education." %} <a class="edition-link" href="https://cssplice.org/" target="_blank" rel="noopener noreferrer">CSSPLICE.org ↗</a></p></section>
+  <div class="info-sections">
+    <section class="info-row"><span class="edition-index" aria-hidden="true">01</span><h2>{% ui "For learning" %}</h2><div><p>{% ui "Open your course, choose an available activity, and work at your pace. Examples, exercises, quizzes, and readings sit alongside one another." %}</p><p>{% ui "Your course page keeps track of completed work. When your instructor enables recommendations, related practice appears as you work." %}</p></div></section>
+    <section class="info-row"><span class="edition-index" aria-hidden="true">02</span><h2>{% ui "For teaching" %}</h2><div><p>{% ui "Import a course or build one unit by unit. Add your own materials, or browse the Pitt and SPLICE catalogs to preview and select activities." %}</p><p>{% ui "Choose the order, control availability, enroll students, and review their progress. Optional plugins add branching paths and recommendations." %}</p></div></section>
+    <section class="info-row"><span class="edition-index" aria-hidden="true">03</span><h2>{% ui "For research" %}</h2><div><p>{% ui "Study sessions support participant entry, condition assignment, consent, forms, and activity records. Researchers can export the data collected by their study." %}</p></div></section>
   </div>
+  <section class="info-footnotes"><div><h2>{% ui "A few practical notes" %}</h2><p>{% ui "Activities from other providers may have their own sign-in requirements and browser restrictions. The progress available depends on what each activity reports." %}</p><p>{% ui "The English and Spanish switch changes ModuLearn’s interface. Course materials and activities keep their original language." %}</p></div><div><h2>{% ui "Something not working?" %}</h2><p>{% ui "Tell us which page or activity you were using, what you expected, and what happened." %}</p><a class="edition-link" href="mailto:QuinnKWolter@pitt.edu">QuinnKWolter@pitt.edu <span aria-hidden="true">↗</span></a></div></section>
+</div>
 {% endblock %}

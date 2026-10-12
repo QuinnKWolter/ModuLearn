@@ -1,5 +1,6 @@
 <!doctype html>
 {% load i18n %}
+{% load ui_i18n %}
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
   <head>
     {% load static %}
@@ -61,6 +62,7 @@
     <script>
       window.ModuLearnLanguage = "{{ LANGUAGE_CODE|default:'en'|escapejs }}";
     </script>
+    {% ui_catalog %}
     <script src="{% static 'js/i18n.js' %}"></script>
     <script src="{% static 'js/bootstrap-compat.js' %}"></script>
     <script src="{% static 'js/app-shell.js' %}"></script>

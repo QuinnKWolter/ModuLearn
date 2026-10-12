@@ -1,12 +1,13 @@
 {% extends 'content_base.html' %}
-{% load static %}
+{% load static ui_i18n %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/recommendation-sidebar.css' %}">{% endblock %}
 
 {% block content %}
   <div id="module-frame-container" class="flex-1 p-4 md:p-6">
     {{ state_data|json_script:"state-data" }}
     <input id="module-frame-csrf" type="hidden" value="{{ csrf_token }}">
 
-    {% if not preview_mode and course_instance and not participant_mode %}
+    {% if not preview_mode and course_instance and not participant_mode and not recommendation_practice %}
       <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
           <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
@@ -37,7 +38,12 @@
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-4">Progress passback may be limited when the tool opens outside the embedded frame.</p>
     </div>
 
-    <div class="card overflow-hidden">
+    <div id="practice-layout">
+      {% if not preview_mode and course_instance and not recommendation_practice and not is_instructor %}
+        {% include 'courses/components/recommendation_sidebar.html' %}
+      {% endif %}
+      <div id="practice-workspace">
+    <div id="original-activity" class="card overflow-hidden">
       <iframe id="content-iframe"
               src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}"
               class="w-full min-h-[80vh] bg-white"
@@ -49,8 +55,8 @@
       </iframe>
     </div>
 
-    {% if not preview_mode and course_instance %}
-      {% include 'courses/components/student_recommendations.html' with rec_instance=course_instance %}
+    </div></div>
+    {% if not preview_mode and course_instance and not recommendation_practice %}
       <div class="module-next-action-row module-frame-next-row">
         {% include 'courses/components/next_module_button.html' with button_class='btn-lg' %}
       </div>
@@ -64,8 +70,8 @@
       moduleId: Number("{{ module.id }}"),
       courseInstanceId: Number("{% if course_instance %}{{ course_instance.id }}{% else %}0{% endif %}"),
       previewMode: "{{ preview_mode|yesno:'true,false' }}" === "true",
-      progressUrl: "{% if not preview_mode %}{% url 'courses:update_module_progress' module.id %}{% endif %}",
-      sessionEventUrl: "{% if not preview_mode and course_instance %}{% url 'courses:record_module_session_event' course_instance.id module.id %}{% endif %}",
+      progressUrl: "{% if not preview_mode %}{% if recommendation_practice %}{% url 'courses:recommendation_practice_progress' course_instance.id recommendation_practice.id %}{% else %}{% url 'courses:update_module_progress' module.id %}{% endif %}{% endif %}",
+      sessionEventUrl: "{% if not preview_mode and course_instance %}{% if recommendation_practice %}{% url 'courses:recommendation_practice_progress' course_instance.id recommendation_practice.id %}{% else %}{% url 'courses:record_module_session_event' course_instance.id module.id %}{% endif %}{% endif %}",
     };
   </script>
   <script src="{% static 'js/courses/next-module-button.js' %}"></script>

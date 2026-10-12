@@ -69,8 +69,17 @@ def parse_uploads(files):
     activity_rows = defaultdict(list)
     for row in assignments:
         activity_rows[(provider(row['provider_id']), normalized(row['item_name']))].append(row)
+    # A provider/title pair can identify several genuinely different exercises.
+    # Preserve each supplied code variant instead of overwriting its source code.
+    target_variants = defaultdict(set)
+    for row in tables['recommendations']:
+        for column, name in row.items():
+            match = re.fullmatch(r'(.+)_rank_(\d+)_item', column)
+            if match and name.strip():
+                snippet = row.get(column[:-5] + '_code', '').replace('\r\n', '\n').strip()
+                target_variants[(provider(match[1]), normalized(name))].add(snippet)
     nodes, code, edges = {}, {}, []
-    def node(name, source, topic='', snippet=''):
+    def node(name, source, topic='', snippet='', *, is_target=False):
         name = name.strip()
         if not name:
             raise ValueError('An activity name is missing.')
@@ -84,9 +93,15 @@ def parse_uploads(files):
         if not topic and len(topics) == 1:
             topic = next(iter(topics))
         identity = '\x1f'.join((source, normalized(name), normalized(topic)))
+        variant = ''
+        if is_target and len(target_variants.get((source, normalized(name)), ())) > 1:
+            variant = hashlib.sha256(snippet.replace('\r\n', '\n').strip().encode()).hexdigest()[:12]
+            identity += '\x1f' + variant
         key = hashlib.sha256(identity.encode()).hexdigest()[:24]
         nodes[key] = {'title': name, 'provider': source, 'topic': topic,
                       'clusters': sorted({r['kc_cluster'] for r in rows if not topic or normalized(r['topic_name']) == normalized(topic)})}
+        if variant:
+            nodes[key]['code_variant'] = variant
         if snippet:
             code[key] = snippet
         return key
@@ -112,7 +127,7 @@ def parse_uploads(files):
                     raise ValueError
             except (KeyError, ValueError):
                 raise ValueError(f'Row {number}: {prefix} needs a cosine similarity between -1 and 1.') from None
-            target = node(row[column], match[1], snippet=row.get(prefix + '_code', ''))
+            target = node(row[column], match[1], snippet=row.get(prefix + '_code', ''), is_target=True)
             edges.append({'source': src, 'target': target, 'rank': int(match[2]), 'similarity': similarity, 'provider': provider(match[1])})
     if not edges:
         raise ValueError('No recommendation links were found.')
@@ -135,59 +150,15 @@ def resolve_nodes(dataset, course):
                 in_topic = [m for m in candidates if normalized(m.unit.title) == normalized(node['topic'])]
                 if in_topic:
                     candidates = in_topic
-        if len(candidates) == 1:
+        needs_variant_match = bool(node.get('code_variant') and key not in dataset.bindings)
+        if len(candidates) == 1 and not needs_variant_match:
             resolved[key] = candidates[0]
         else:
-            issues.append({'key': key, **node, 'reason': 'Ambiguous match' if candidates else 'No matching module',
+            issues.append({'key': key, **node, 'reason': 'Code variant requires explicit match' if candidates and needs_variant_match else 'Ambiguous match' if candidates else 'No matching module',
                            'candidates': [m.pk for m in candidates]})
     return resolved, issues, modules
 
 
 def recommendations_for(enrollment):
-    course = enrollment.course_instance.course
-    if not is_course_plugin_enabled(course, 'static_recommendations'):
-        return []
-    from courses.models import StaticRecommendationSet
-    dataset = StaticRecommendationSet.objects.filter(course=course).defer('analysis').first()
-    if not dataset:
-        return []
-    resolved, _, _ = resolve_nodes(dataset, course)
-    progress = {p.module_id: p for p in ModuleProgress.objects.filter(enrollment=enrollment)}
-    mode = dataset.options.get('trigger', 'completed')
-    minimum = dataset.options.get('minimum_similarity')
-    access, unit_access = {}, {}
-    def can_access(module):
-        if module.pk not in access:
-            if module.unit_id not in unit_access:
-                unit_access[module.unit_id] = evaluate_unit_access(module.unit, enrollment)
-            access[module.pk] = evaluate_module_access(module, enrollment, unit_state=unit_access[module.unit_id]).can_access
-        return access[module.pk]
-    eligible = []
-    for edge in dataset.edges:
-        source, target = resolved.get(edge['source']), resolved.get(edge['target'])
-        if not source or not target or source.pk == target.pk:
-            continue
-        state = progress.get(source.pk)
-        triggered = state and (state.is_complete if mode == 'completed' else state.attempts > 0 and state.score is not None and not state.success)
-        if not triggered or (progress.get(target.pk) and progress[target.pk].is_complete):
-            continue
-        if minimum is not None and edge['similarity'] < minimum:
-            continue
-        # Recommendations never grant access or bypass hidden/locked content.
-        if not can_access(source) or not can_access(target):
-            continue
-        when = state.completed_at or state.last_accessed
-        eligible.append((-(when.timestamp() if when else 0), edge['rank'], -edge['similarity'], target.pk, edge, source, target))
-    eligible.sort(key=lambda row: row[:4])
-    result, seen = [], set()
-    for _, _, _, _, edge, source, target in eligible:
-        if target.pk in seen:
-            continue
-        seen.add(target.pk)
-        result.append({'module_id': target.pk, 'title': target.title, 'provider': edge['provider'],
-                       'reason': ('After completing ' if mode == 'completed' else 'Practice related to ') + source.title,
-                       'source_id': source.pk, 'similarity': edge['similarity'], 'rank': edge['rank'],
-                       'url': reverse('courses:recommended_module', args=[enrollment.course_instance_id, target.pk])})
-        if len(result) >= dataset.options.get('limit', 9):
-            break
-    return result
+    from .recommendation_tracking import practice_items
+    return practice_items(enrollment)

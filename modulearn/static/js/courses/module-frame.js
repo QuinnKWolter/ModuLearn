@@ -15,6 +15,28 @@
     var csrfNode = document.getElementById('module-frame-csrf');
     var browserSessionId = uuid();
     var frameStartedAt = Date.now();
+    var providerQueue = Promise.resolve();
+
+    function recordProviderEvent(message) {
+      if (config.previewMode || !config.progressUrl) return;
+      var body = JSON.stringify({course_instance_id: config.courseInstanceId || null,
+        provider_event: {event_id: uuid(), message: message}});
+      if (body.length > 250000) return;
+      providerQueue = providerQueue.then(async function () {
+        for (var attempt = 0; attempt < 3; attempt++) {
+          try {
+            var response = await fetch(config.progressUrl, {method: 'POST', keepalive: body.length < 60000,
+              headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfNode ? csrfNode.value : ''}, body: body});
+            if (response.ok) { notifyProgressMaybeUpdated(await response.json()); return; }
+            if (response.status < 500) { console.error('Activity event rejected: ' + response.status); return; }
+            throw new Error('Activity event failed: ' + response.status);
+          } catch (error) {
+            if (attempt === 2) { console.error('Activity event could not be saved', error); return; }
+          }
+          await new Promise(function (resolve) { setTimeout(resolve, 300 * (attempt + 1)); });
+        }
+      });
+    }
     var attentionState = (document.hidden || (typeof document.hasFocus === 'function' && !document.hasFocus()))
       ? 'blurred'
       : 'focused';
@@ -174,13 +196,18 @@
         'https://acos.cs.vt.edu',
       ]);
 
-      if (!allowedOrigins.has(event.origin)) {
+      if (event.source !== iframe.contentWindow || !allowedOrigins.has(event.origin)) {
+        return;
+      }
+
+      if (messageData && messageData.type === 'cupcake:log') {
+        recordProviderEvent(messageData);
         return;
       }
 
       if (messageData && messageData.subject === 'SPLICE.getState') {
         var state = getStateData();
-        if (!state || !iframe.contentWindow) {
+        if (!iframe.contentWindow) {
           return;
         }
         iframe.contentWindow.postMessage({
@@ -192,6 +219,9 @@
       }
 
       if (messageData && messageData.subject === 'SPLICE.reportScoreAndState') {
+        // Cupcake also sends its full native log for this same submission.
+        // Accept that once; its mirrored SPLICE grade is not a second attempt.
+        if (messageData.state && messageData.state.activityType && messageData.state.eventName && messageData.state.activityId) return;
         if (config.previewMode || !config.progressUrl) {
           return;
         }

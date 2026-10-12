@@ -1,37 +1,38 @@
-<dialog id="slcCatalog" class="slc-catalog" aria-labelledby="slcCatalogTitle"
+{% load ui_i18n %}
+<dialog data-no-ui-translate id="slcCatalog" class="slc-catalog" aria-labelledby="slcCatalogTitle"
         data-storage-key="modulearn:slc-catalog:v1:{{ request.user.pk }}"
         data-search-url="{% url 'courses:catalog_search' course_instance.id %}"
         data-detail-url="{% url 'courses:catalog_detail' course_instance.id %}">
   <header class="slc-heading">
-    <div><span class="stat-kicker">A library for curious minds</span><h2 id="slcCatalogTitle">Explore learning content</h2><p>Discover, preview, and choose an activity for your course.</p></div>
-    <button type="button" class="slc-close" data-catalog-close aria-label="Close catalog">&times;</button>
+    <div><span class="stat-kicker">{% ui "A library for curious minds" %}</span><h2 id="slcCatalogTitle">{% ui "Explore learning content" %}</h2><p>{% ui "Discover, preview, and choose an activity for your course." %}</p></div>
+    <button type="button" class="slc-close" data-catalog-close aria-label="{% ui 'Close catalog' %}">&times;</button>
   </header>
   <div class="slc-searchbar">
-    <label class="slc-search"><span class="sr-only">Search catalog</span><i class="bi bi-search" aria-hidden="true"></i><input type="search" data-catalog-query placeholder="Search titles, concepts, authors, or keywords…" autocomplete="off"></label>
-    <label>Catalog<select data-catalog-filter="source"><option value="">Both catalogs</option><option value="pitt">Pitt SLC</option><option value="splice">SPLICE</option></select></label>
-    <label>Sort<select data-catalog-sort><option value="title">Title A–Z</option><option value="provider">Provider</option><option value="type">Activity type</option><option value="newest">Recently listed</option></select></label>
+    <label class="slc-search"><span class="sr-only">{% ui "Search catalog" %}</span><i class="bi bi-search" aria-hidden="true"></i><input type="search" data-catalog-query placeholder="{% ui 'Search titles, concepts, authors, or keywords…' %}" autocomplete="off"></label>
+    <label>{% ui "Catalog" %}<select data-catalog-filter="source"><option value="">{% ui "Both catalogs" %}</option><option value="pitt">Pitt SLC</option><option value="splice">SPLICE</option></select></label>
+    <label>{% ui "Sort" %}<select data-catalog-sort><option value="title">{% ui "Title A–Z" %}</option><option value="provider">{% ui "Provider" %}</option><option value="type">{% ui "Activity type" %}</option><option value="newest">{% ui "Recently listed" %}</option></select></label>
   </div>
   <div class="slc-workspace">
-    <aside class="slc-filters" aria-label="Catalog filters">
-      <div class="slc-filter-heading"><strong>Refine your search</strong><button type="button" data-catalog-reset>Reset</button></div>
-      <label>Programming language<select data-catalog-filter="languages"><option value="">Any language</option></select></label>
-      <label>Provider<select data-catalog-filter="provider"><option value="">Any provider</option></select></label>
-      <label>Activity type<select data-catalog-filter="type"><option value="">Any type</option></select></label>
-      <details><summary>More filters</summary>
-        <label>Content language<select data-catalog-filter="content_languages"><option value="">Any language</option></select></label>
-        <label>Delivery format<select data-catalog-filter="protocols"><option value="">Any format</option></select></label>
-        <label>License<select data-catalog-filter="license"><option value="">Any license</option></select></label>
+    <aside class="slc-filters" aria-label="{% ui 'Catalog filters' %}">
+      <div class="slc-filter-heading"><strong>{% ui "Refine your search" %}</strong><button type="button" data-catalog-reset>{% ui "Reset" %}</button></div>
+      <label>{% ui "Programming language" %}<select data-catalog-filter="languages"><option value="">{% ui "Any language" %}</option></select></label>
+      <label>{% ui "Provider" %}<select data-catalog-filter="provider"><option value="">{% ui "Any provider" %}</option></select></label>
+      <label>{% ui "Activity type" %}<select data-catalog-filter="type"><option value="">{% ui "Any type" %}</option></select></label>
+      <details><summary>{% ui "More filters" %}</summary>
+        <label>{% ui "Content language" %}<select data-catalog-filter="content_languages"><option value="">{% ui "Any language" %}</option></select></label>
+        <label>{% ui "Delivery format" %}<select data-catalog-filter="protocols"><option value="">{% ui "Any format" %}</option></select></label>
+        <label>{% ui "License" %}<select data-catalog-filter="license"><option value="">{% ui "Any license" %}</option></select></label>
       </details>
-      <p class="slc-hint">Available filter choices appear first; unavailable choices stay visible with a zero count. Choose an activity for full metadata and a demo.</p>
-      <p class="slc-hint">SPLICE delivery is selected whenever the activity offers it.</p>
+      <p class="slc-hint">{% ui "Available filter choices appear first; unavailable choices stay visible with a zero count. Choose an activity for full metadata and a demo." %}</p>
+      <p class="slc-hint">{% ui "SPLICE delivery is selected whenever the activity offers it." %}</p>
     </aside>
-    <section class="slc-results-pane" aria-label="Catalog results">
-      <div class="slc-results-heading"><span data-catalog-count role="status" aria-live="polite"></span><div class="slc-view-controls" role="group" aria-label="Result layout"><button type="button" data-catalog-view="grid" aria-pressed="true">Cards</button><button type="button" data-catalog-view="table" aria-pressed="false">Table</button></div><button type="button" data-catalog-retry>Reload</button></div>
+    <section class="slc-results-pane" aria-label="{% ui 'Catalog results' %}">
+      <div class="slc-results-heading"><span data-catalog-count role="status" aria-live="polite"></span><div class="slc-view-controls" role="group" aria-label="{% ui 'Result layout' %}"><button type="button" data-catalog-view="grid" aria-pressed="true">{% ui "Cards" %}</button><button type="button" data-catalog-view="table" aria-pressed="false">{% ui "Table" %}</button></div><button type="button" data-catalog-retry>{% ui "Reload" %}</button></div>
       <p data-catalog-warning class="slc-warning" hidden role="status"></p>
       <div data-catalog-results class="slc-results" aria-busy="false"></div>
-      <nav class="slc-pagination" aria-label="Catalog pages"><button type="button" data-catalog-prev>Previous</button><span data-catalog-page></span><button type="button" data-catalog-next>Next</button></nav>
+      <nav class="slc-pagination" aria-label="{% ui 'Catalog pages' %}"><button type="button" data-catalog-prev>{% ui "Previous" %}</button><span data-catalog-page></span><button type="button" data-catalog-next>{% ui "Next" %}</button></nav>
     </section>
-    <section class="slc-detail" data-catalog-detail hidden aria-label="Activity details" aria-live="polite"></section>
+    <section class="slc-detail" data-catalog-detail hidden aria-label="{% ui 'Activity details' %}" aria-live="polite"></section>
   </div>
-  <footer class="slc-footer"><span data-catalog-destination></span><button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-close>Back to module</button></footer>
+  <footer class="slc-footer"><span data-catalog-destination></span><button type="button" class="btn btn-outline-secondary btn-sm" data-catalog-close>{% ui "Back to module" %}</button></footer>
 </dialog>

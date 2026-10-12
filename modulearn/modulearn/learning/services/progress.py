@@ -39,7 +39,11 @@ def log_module_progress_event(
     score: float | None = None,
     success: bool | None = None,
 ):
-    from courses.models import ModuleProgressEvent
+    from courses.models import ModuleProgressEvent, RecommendationProgress
+    if isinstance(module_progress, RecommendationProgress):
+        from .recommendation_tracking import practice_event
+        return practice_event(module_progress, event_type, source=source, payload=payload,
+                              progress=progress, score=score, success=success)
 
     participant_session = getattr(module_progress, "study_participant_session", None)
     if not participant_session and getattr(module_progress, "enrollment_id", None):
@@ -64,7 +68,12 @@ def log_module_progress_event(
 
 def module_accepts_scored_attempt(module_progress, *, provider_attempt: int | None = None) -> bool:
     """Return whether a scored/progress-producing submission should update state."""
+    from courses.models import RecommendationProgress
+    if isinstance(module_progress, RecommendationProgress):
+        return True
     module = getattr(module_progress, "module", None)
+    if getattr(module, "is_recommendation_only", False):
+        return False
     if getattr(module, "allow_resubmission", True):
         return True
     current_attempts = module_progress.attempts or 0
@@ -87,6 +96,7 @@ def recompute_course_progress(enrollment, *, save: bool = True):
         unit__course=enrollment.course_instance.course,
         unit__is_visible=True,
         is_visible=True,
+        is_recommendation_only=False,
     )
     total_modules = all_modules.count()
     progress_rows = ModuleProgress.objects.filter(enrollment=enrollment).select_related("module")
@@ -139,6 +149,13 @@ def apply_progress_snapshot(
     payload: Any = None,
     event_type: str | None = None,
 ):
+    from courses.models import RecommendationProgress
+    from .recommendation_tracking import apply_practice_snapshot, observe_source_attempt
+    if isinstance(module_progress, RecommendationProgress):
+        return apply_practice_snapshot(module_progress, source=source, progress=progress, score=score,
+            success=success, is_complete=is_complete, payload=payload, event_type=event_type)
+    observe_source_attempt(module_progress, source=source, payload=payload, score=score,
+                           success=success, event_type=event_type)
     progress = _coerce_progress(progress if progress is not None else module_progress.progress)
     score = _coerce_score(score if score is not None else module_progress.score)
 

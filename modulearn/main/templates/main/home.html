@@ -1,55 +1,42 @@
 {% extends 'base.html' %}
-
-{% block title %}Home - ModuLearn{% endblock %}
-
-{% block body_class %}home-lock{% endblock %}
-
+{% load static ui_i18n %}
+{% block body_class %}home-viewport{% endblock %}
+{% block title %}{% ui 'Home' %} · ModuLearn{% endblock %}
 {% block breadcrumbs_wrapper %}{% endblock %}
-
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/home.css' %}">{% endblock %}
 {% block content %}
-  <div class="public-page public-home-page public-home-page-minimal">
-    <section class="public-home-stage" aria-label="ModuLearn workspace">
-      <div class="public-home-copy">
-        <p class="public-eyebrow">Open learning workspace</p>
-        <h1>ModuLearn</h1>
-        <p class="public-lead">Organize course sessions, study flows, embedded smart-learning content, and progress records without making the learning tools disappear behind the platform.</p>
-        <div class="public-actions">
-          {% if user.is_authenticated %}
-            {% if effective_is_instructor %}
-              <a class="btn btn-primary btn-lg" href="{% url 'dashboard:instructor_dashboard' %}">Open Instructor Dashboard</a>
-            {% elif effective_is_student %}
-              <a class="btn btn-primary btn-lg" href="{% url 'dashboard:student_dashboard' %}">Open Student Dashboard</a>
-            {% endif %}
-          {% else %}
-            <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">Sign In</a>
-            <a class="btn btn-outline-secondary btn-lg" href="{% url 'accounts:signup' %}">Create Account</a>
-          {% endif %}
-        </div>
+<div class="mission-home" data-no-ui-translate>
+  <section class="home-mission" aria-labelledby="home-title">
+    {% if home_audience == 'students' %}
+      <p class="home-context">{% ui 'Your learning space' %}</p>
+      <h1 id="home-title">{% ui 'Welcome back.' %}</h1>
+      <p class="home-description">{% ui 'Pick up where you left off. Your courses, activities, and progress are in your dashboard.' %}</p>
+      <div class="home-actions">
+        <a class="home-action" href="{% url 'dashboard:student_dashboard' %}">{% ui 'Go to my courses' %}<span aria-hidden="true">→</span></a>
+        <a href="{% url 'accounts:profile' %}">{% ui 'My profile' %}</a>
       </div>
-
-      <aside class="public-snapshot" aria-label="What ModuLearn keeps together">
-        <div class="public-snapshot-header">
-          <span class="public-icon public-icon-blue"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
-          <div>
-            <p class="stat-kicker">What stays connected</p>
-            <h2>Structure, launch, progress</h2>
-          </div>
-        </div>
-        <div class="public-snapshot-list">
-          <div>
-            <span>Course sessions</span>
-            <strong>Reusable structure with live enrollments</strong>
-          </div>
-          <div>
-            <span>Study flows</span>
-            <strong>Participant entry, condition assignment, exports</strong>
-          </div>
-          <div>
-            <span>Smart content</span>
-            <strong>SPLICE, PCEX, PCRS, links, files, and forms</strong>
-          </div>
-        </div>
-      </aside>
-    </section>
-  </div>
+    {% elif home_audience == 'teachers' %}
+      <p class="home-context">{% ui 'Teaching & research' %}</p>
+      <h1 id="home-title">{% ui 'Welcome back.' %}</h1>
+      <p class="home-description">{% ui 'Open your courses to manage activities and follow student progress, or head to your study sessions.' %}</p>
+      <div class="home-actions">
+        <a class="home-action" href="{% url 'dashboard:instructor_dashboard' %}">{% ui 'Go to my courses' %}<span aria-hidden="true">→</span></a>
+        <a href="{% url 'recruitment:sessions' %}">{% ui 'Study sessions' %}</a>
+      </div>
+    {% else %}
+      <p class="home-context">{% ui 'Computing education, together' %}</p>
+      <h1 id="home-title">ModuLearn</h1>
+      <p class="home-description">{% ui 'Free and open-source tools for learning, teaching, and research in computing education.' %}</p>
+      <div class="home-actions">
+        {% if user.is_authenticated %}
+          <a class="home-action" href="{% url 'accounts:profile' %}">{% ui 'View your account' %}<span aria-hidden="true">→</span></a>
+        {% else %}
+          <a class="home-action" href="{% url 'accounts:login' %}">{% ui 'Sign in' %}<span aria-hidden="true">→</span></a>
+          <a href="{% url 'accounts:signup' %}">{% ui 'Create an account' %}</a>
+        {% endif %}
+      </div>
+    {% endif %}
+    <a class="home-about" href="{% url 'main:info' %}">{% ui 'About ModuLearn' %}<span aria-hidden="true">↗</span></a>
+  </section>
+</div>
 {% endblock %}

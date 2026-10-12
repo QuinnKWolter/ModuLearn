@@ -1103,7 +1103,9 @@ def _pcex_context_key(params: dict) -> str:
     set_id = _first_query_value(params, "set")
     challenge_id = _first_query_value(params, "ch")
     example_id = _first_query_value(params, "example-id") or _first_query_value(params, "example_id")
-    return f"{course_id}:{username}:{module_id}:{set_id}:{challenge_id}:{example_id}"
+    recommendation = _first_query_value(params, 'recommendation')
+    context = f"{course_id}:{username}:{module_id}:{set_id}:{challenge_id}:{example_id}"
+    return f"{context}:recommendation:{recommendation}" if recommendation else context
 
 
 def _session_pcex_state(request) -> dict:
@@ -1518,7 +1520,8 @@ def _capture_pcex_explanation_if_possible(request, rest: str, response: HttpResp
             payload,
         )
         score = progress * 100.0
-        module_progress, _ = ModuleProgress.get_or_create_progress(
+        from modulearn.learning.services.recommendation_tracking import proxy_progress
+        module_progress, _ = proxy_progress(request, params,
             user=user,
             module=module,
             course_instance=course_instance,
@@ -1625,7 +1628,7 @@ def _acos_pcex_params(request, protocol_data: dict) -> dict:
             text_value = text_value.replace("+", " ")
         params[target_key] = [text_value]
 
-    for key in ("usr", "grp", "sid", "cid", "module_id"):
+    for key in ("usr", "grp", "sid", "cid", "module_id", "recommendation"):
         set_if_missing(key, protocol_data.get(key))
     set_if_missing("example-id", protocol_data.get("example-id") or protocol_data.get("example_id"))
     return params
@@ -1701,7 +1704,8 @@ def _capture_acos_pcex_event_if_possible(request, host: str, rest: str, response
         )
 
         _course, user, course_instance, module = local_context
-        module_progress, _ = ModuleProgress.get_or_create_progress(
+        from modulearn.learning.services.recommendation_tracking import proxy_progress
+        module_progress, _ = proxy_progress(request, params,
             user=user,
             module=module,
             course_instance=course_instance,
@@ -1854,7 +1858,8 @@ def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse)
         score = progress * 100.0
         is_complete = progress >= 1.0
 
-        module_progress, _ = ModuleProgress.get_or_create_progress(
+        from modulearn.learning.services.recommendation_tracking import proxy_progress
+        module_progress, _ = proxy_progress(request, params,
             user=user,
             module=module,
             course_instance=course_instance,
@@ -2131,7 +2136,8 @@ def http_get_proxy_path(request, rest: str):
                 _capture_pcex_result_if_possible(request, pcex_rest, result)
             _capture_acos_pcex_event_if_possible(request, host, path_rest, result)
             capture_pcrs_result_if_possible(request, host, path_rest, result)
-            return result
+            from modulearn.learning.services.quizjet_tracking import process_quizjet_response
+            return process_quizjet_response(request, host, path_rest, result)
         else:
             # For GET/HEAD, use the query param approach
             class ProxyRequest:
@@ -2151,7 +2157,8 @@ def http_get_proxy_path(request, rest: str):
             result = http_get_proxy(proxy_request, _redirect_depth=redirect_depth)
             if result is None:
                 return HttpResponseServerError("Proxy request returned None")
-            return result
+            from modulearn.learning.services.quizjet_tracking import process_quizjet_response
+            return process_quizjet_response(request, host, path_rest, result)
     except Exception as e:
         logger.error(f"ERROR PROXY PATH: Exception in http_get_proxy_path: {e}")
         logger.exception("Exception in http_get_proxy_path")

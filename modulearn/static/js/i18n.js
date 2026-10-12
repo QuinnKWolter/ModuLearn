@@ -1,6 +1,7 @@
 (function () {
   const catalogs = {
     es: {
+      'Recommendation practice only': 'Solo práctica de recomendaciones',
       'Home': 'Inicio',
       'Student': 'Estudiante',
       'Instructor': 'Instructor',
@@ -1303,7 +1304,8 @@
   };
 
   const language = (window.ModuLearnLanguage || document.documentElement.lang || 'en').toLowerCase().split('-')[0];
-  const catalog = catalogs[language] || {};
+  const featureCatalog = JSON.parse(document.getElementById('modulearn-ui-messages')?.textContent || '{}');
+  const catalog = {...(catalogs[language] || {}), ...featureCatalog};
   const prefixCatalog = prefixCatalogs[language] || {};
   const fragmentCatalog = fragmentCatalogs[language] || {};
   const numericSuffixCatalog = numericSuffixCatalogs[language] || {};
@@ -1510,8 +1512,10 @@
   window.ModuLearnI18n = {
     language,
     catalogs,
-    t: function (value) {
-      return translateString(value);
+    t: function (value, parameters = {}) {
+      // Translate before inserting names, titles, URLs, or other content.
+      const message = Object.prototype.hasOwnProperty.call(catalog, value) ? catalog[value] : translateString(value);
+      return message.replace(/\{(\w+)\}/g, (match, key) => Object.prototype.hasOwnProperty.call(parameters, key) ? String(parameters[key]) : match);
     },
     translateTree
   };
