@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from courses.models import Course, StaticRecommendationSet, RecommendationActivation, RecommendationProgress, RecommendationEvent
 from .recommendation_tracking import select_candidates
-from .static_recommendations import resolve_nodes
+from .static_recommendations import resolve_nodes, source_keys_by_module
 from .recommendation_sessions import resolve_session
 
 
@@ -19,12 +19,16 @@ def transition_recommendations(course_id, *, course_instance_id=None, apply=Fals
         raise ValueError('Research-locked courses cannot be transitioned.')
     instance = resolve_session(course_id, course_instance_id)
     dataset = StaticRecommendationSet.objects.select_for_update().get(course_instance=instance)
-    resolved, issues, _ = resolve_nodes(dataset, course)
+    resolved, issues, modules = resolve_nodes(dataset, course)
     if issues:
         raise ValueError(f'Resolve all {len(issues)} missing or ambiguous activities before transitioning.')
     edges_by_source = defaultdict(list)
+    edges_by_key = defaultdict(list)
     for edge in dataset.edges:
-        edges_by_source[resolved[edge['source']].pk].append(edge)
+        edges_by_key[edge['source']].append(edge)
+    for module_id, keys in source_keys_by_module(dataset, resolved, modules).items():
+        for key in sorted(keys):
+            edges_by_source[module_id].extend(edges_by_key[key])
     configuration = {'options': dataset.options, 'provenance': dataset.provenance,
                      'dataset_revision': dataset.updated_at.isoformat(),
                      'failure_threshold': dataset.options.get('failure_threshold', 2),

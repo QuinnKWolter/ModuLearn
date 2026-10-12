@@ -162,19 +162,26 @@ def install_package(course_id, raw, *, actor, course_instance_id=None, source_sh
             except (ValueError, ValidationError):
                 # Unrelated legacy content may have a non-URL resource location.
                 continue
-    bindings, created = {}, []
+    dataset = StaticRecommendationSet.objects.filter(course_instance=instance).first()
+    previous_bindings = dataset.bindings if dataset else {}
+    bindings, created, source_placements = {}, [], {}
     for key in sorted(activities, key=lambda k: k not in sources):
         item = activities[key]
         identity = canonical_url(item['url'])
         candidates = by_url.get(identity, [])
-        if len(candidates) > 1:
-            candidates = [m for m in candidates if m.unit.title.casefold() == item['unit'].casefold()]
-            if len(candidates) != 1:
-                raise ValueError(f"{item['title']}: multiple placements have this URL. Specify a unique unit placement first.")
         if candidates:
-            module = candidates[0]
-            if key in sources and module.is_recommendation_only:
-                raise ValueError(f"{item['title']}: a triggering problem is currently practice-only.")
+            if key in sources:
+                candidates = [m for m in candidates if not m.is_recommendation_only]
+                if not candidates:
+                    raise ValueError(f"{item['title']}: a triggering problem is currently practice-only.")
+                source_placements[key] = sorted(m.pk for m in candidates)
+            # A URL identifies content; repeated placements are not distinct exercises.
+            # Keep a previous binding stable, otherwise choose deterministically.
+            module = min(candidates, key=lambda m: (
+                m.pk != previous_bindings.get(key),
+                not (m.is_visible and m.unit.is_visible),
+                m.unit.title.casefold() != item['unit'].casefold(),
+                m.is_recommendation_only, m.pk))
         else:
             matching_units = [u for u in units if u.title.casefold() == item['unit'].casefold()]
             if len(matching_units) > 1:
@@ -194,11 +201,14 @@ def install_package(course_id, raw, *, actor, course_instance_id=None, source_sh
                 content_data={'recommendation_package': {'format': FORMAT, 'activity_id': key}})
             existing.append(module); by_url.setdefault(identity, []).append(module); created.append(module.pk)
         bindings[key] = module.pk
+        if key in sources:
+            source_placements.setdefault(key, [module.pk])
     nodes = {key: {'title': a['title'], 'provider': a['provider'], 'topic': a['unit'], 'clusters': []} for key, a in activities.items()}
+    for key, placements in source_placements.items():
+        nodes[key]['source_module_ids'] = placements
     defaults = {'course': course, 'enabled': True, 'nodes': nodes, 'edges': edges, 'bindings': bindings, 'options': options,
                 'analysis': {'code': {k: a.get('code', '') for k, a in activities.items()}},
                 'provenance': [{'kind': 'package', 'name': source_format, 'sha256': digest, 'rows': len(edges), 'ranking': 'explicit_rank'}]}
-    dataset = StaticRecommendationSet.objects.filter(course_instance=instance).first()
     unchanged = dataset is not None and all(getattr(dataset, k) == v for k, v in defaults.items())
     if not unchanged:
         StaticRecommendationSet.objects.update_or_create(course_instance=instance, defaults=defaults)

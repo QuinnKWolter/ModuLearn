@@ -10,7 +10,7 @@ from django.urls import reverse
 
 from courses.models import (ModuleProgress, RecommendationActivation, RecommendationProgress,
                             RecommendationEvent, StaticRecommendationSet)
-from .static_recommendations import resolve_nodes
+from .static_recommendations import resolve_nodes, source_keys_by_module
 from .recommendation_sessions import recommendations_enabled
 
 
@@ -77,8 +77,8 @@ def observe_source_attempt(progress, *, source, payload, score, success, event_t
         dataset = StaticRecommendationSet.objects.filter(course_instance=progress.enrollment.course_instance).defer('analysis').first()
         if not dataset:
             return
-        resolved, _, _ = resolve_nodes(dataset, course)
-        keys = {key for key, module in resolved.items() if module.pk == progress.module_id}
+        resolved, _, modules = resolve_nodes(dataset, course)
+        keys = source_keys_by_module(dataset, resolved, modules).get(progress.module_id, set())
         edges = [edge for edge in dataset.edges if edge['source'] in keys]
         if not edges:
             return

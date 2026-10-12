@@ -33,6 +33,44 @@ class RecommendationPackageTests(TestCase):
 
     def raw(self): return json.dumps(self.data).encode()
 
+    def test_duplicate_url_placements_import_activate_and_transition_independently(self):
+        # Production can have repeats within a unit and across differently named units.
+        other_unit = Unit.objects.create(course=self.course, title='Renamed topic')
+        duplicate = Module.objects.create(unit=self.unit, title='Problem repeated', content_url=self.source.content_url)
+        third = Module.objects.create(unit=other_unit, title='Problem again', content_url=self.source.content_url)
+        target = Module.objects.create(unit=self.unit, title='Example', content_url='https://example.org/example')
+        Module.objects.create(unit=self.unit, title='Example repeated', content_url=target.content_url)
+        before_modules = list(Module.objects.order_by('pk').values())
+        report = install_package(self.course.pk, self.raw(), actor=self.teacher)
+        self.assertEqual(report['created_modules'], [])
+        self.assertEqual(before_modules, list(Module.objects.order_by('pk').values()))
+        dataset = StaticRecommendationSet.objects.get(course_instance=self.instance)
+        self.assertEqual(set(dataset.nodes['problem']['source_module_ids']), {self.source.pk, duplicate.pk, third.pk})
+        for module in [self.source, duplicate, third]:
+            progress, _ = ModuleProgress.objects.get_or_create(module=module, enrollment=self.enrollment, defaults={'user': self.student})
+            apply_progress_snapshot(progress, source='pcrs', score=0, success=False,
+                payload={'pcrs_result': {'score': 0, 'max_score': 1}})
+        items = RecommendationProgress.objects.order_by('activation__source_module_id')
+        self.assertEqual(items.count(), 3)
+        self.assertEqual(set(items.values_list('module_id', flat=True)), {target.pk})
+        first = items.first(); first.score=80; first.feedback='up'; first.save()
+        before = list(RecommendationProgress.objects.order_by('pk').values())
+        self.assertTrue(install_package(self.course.pk, self.raw(), actor=self.teacher)['unchanged'])
+        self.assertEqual(before, list(RecommendationProgress.objects.order_by('pk').values()))
+        # Replacing the graph updates every source placement without merging histories.
+        self.data['activities'][1].update(title='Replacement', url='https://example.org/replacement')
+        install_package(self.course.pk, self.raw(), actor=self.teacher)
+        self.assertEqual(RecommendationProgress.objects.filter(retired_at__isnull=True).count(), 3)
+        first.refresh_from_db(); self.assertEqual((first.score, first.feedback), (80, 'up'))
+        self.assertIsNotNone(first.retired_at)
+
+    def test_duplicate_urls_do_not_require_matching_unit_names(self):
+        Module.objects.create(unit=self.unit, title='Another placement', content_url=self.source.content_url)
+        self.data['activities'][0]['unit'] = 'Catalog topic differs from course'
+        report = install_package(self.course.pk, self.raw(), actor=self.teacher)
+        self.assertEqual(len(report['created_modules']), 1)  # Only the missing recommendation.
+        self.assertFalse(Unit.objects.filter(title='Catalog topic differs from course').exists())
+
     def test_session_import_settings_and_transitions_are_isolated(self):
         from modulearn.learning.services.recommendation_tracking import practice_items
         from modulearn.learning.services.recommendation_sessions import recommendations_enabled

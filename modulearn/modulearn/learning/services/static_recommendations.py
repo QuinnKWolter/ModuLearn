@@ -159,6 +159,18 @@ def resolve_nodes(dataset, course):
     return resolved, issues, modules
 
 
+def source_keys_by_module(dataset, resolved, modules):
+    """URL imports can bind a problem to several placements; attempts stay separate."""
+    ordinary_ids = {m.pk for m in modules if not m.is_recommendation_only}
+    result = defaultdict(set)
+    for key, module in resolved.items():
+        result[module.pk].add(key)
+        for module_id in dataset.nodes[key].get('source_module_ids', []):
+            if module_id in ordinary_ids:
+                result[module_id].add(key)
+    return result
+
+
 def recommendations_for(enrollment):
     from .recommendation_tracking import practice_items
     return practice_items(enrollment)

@@ -107,6 +107,8 @@ def manage(request, instance_id):
                         if module_id and not course.units.filter(modules__id=module_id).exists():
                             raise ValueError('Choose a module in this course.')
                         dataset.bindings[key] = module_id
+                        # An explicit instructor override replaces imported placement aliases.
+                        dataset.nodes[key].pop('source_module_ids', None)
                     else:
                         trigger = request.POST.get('trigger', 'needs_practice')
                         if trigger not in {'completed', 'needs_practice'}:
