@@ -10,8 +10,8 @@ from django.urls import reverse
 
 from courses.models import (ModuleProgress, RecommendationActivation, RecommendationProgress,
                             RecommendationEvent, StaticRecommendationSet)
-from .course_plugins import is_course_plugin_enabled
 from .static_recommendations import resolve_nodes
+from .recommendation_sessions import recommendations_enabled
 
 
 def attempt_snapshot(source, payload, score, success, event_type):
@@ -65,7 +65,7 @@ def observe_source_attempt(progress, *, source, payload, score, success, event_t
     if not progress.enrollment_id:
         return
     course = progress.enrollment.course_instance.course
-    if not is_course_plugin_enabled(course, 'static_recommendations'):
+    if not recommendations_enabled(progress.enrollment.course_instance):
         return
     attempt = attempt_snapshot(source, payload, score, success, event_type)
     if not attempt:
@@ -74,7 +74,7 @@ def observe_source_attempt(progress, *, source, payload, score, success, event_t
     # Frozen assignments need no graph reload, and their follow-up attempts
     # remain research data even if an instructor later replaces the dataset.
     if not activation or not activation.activated_at:
-        dataset = StaticRecommendationSet.objects.filter(course=course).defer('analysis').first()
+        dataset = StaticRecommendationSet.objects.filter(course_instance=progress.enrollment.course_instance).defer('analysis').first()
         if not dataset:
             return
         resolved, _, _ = resolve_nodes(dataset, course)
@@ -119,9 +119,10 @@ def select_candidates(dataset, resolved, edges, source_module_id):
     minimum = dataset.options.get('minimum_similarity')
     candidates, seen, provider_counts = [], set(), {}
     limit = max(1, int(dataset.options.get('limit', 2)))
+    disabled = set(dataset.options.get('disabled_targets', []))
     for edge in sorted(edges, key=lambda e: (-e['similarity'], e['rank'], e['target'])):
         target = resolved.get(edge['target'])
-        if (not target or target.pk == source_module_id or target.pk in seen
+        if (edge['target'] in disabled or not target or target.pk == source_module_id or target.pk in seen
                 or edge['provider'] not in {'animatedexamples', 'pcex', 'quizjet'}
                 or provider_counts.get(edge['provider'], 0) >= limit
                 or not target.is_visible or not target.unit.is_visible
@@ -147,7 +148,7 @@ def practice_for_request(request, *, module=None, course_instance=None, token=No
             or not item.enrollment.course_instance.active
             or (module and item.module_id != module.pk)
             or (course_instance and item.enrollment.course_instance_id != course_instance.pk)
-            or not is_course_plugin_enabled(item.enrollment.course_instance.course, 'static_recommendations')):
+            or not recommendations_enabled(item.enrollment.course_instance)):
         raise PermissionDenied('Recommendation access is unavailable.')
     return item
 
@@ -199,7 +200,7 @@ def apply_practice_snapshot(item, *, source, progress=None, score=None, success=
 
 
 def practice_items(enrollment, source_id=None):
-    if not is_course_plugin_enabled(enrollment.course_instance.course, 'static_recommendations'):
+    if not recommendations_enabled(enrollment.course_instance):
         return []
     query = RecommendationProgress.objects.filter(activation__enrollment=enrollment, activation__failures__gte=1, activation__activated_at__isnull=False, retired_at__isnull=True).select_related('module', 'activation__source_module')
     if source_id:

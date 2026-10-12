@@ -239,6 +239,8 @@ def build_course_detail_context(user, course_instance):
         })
 
     plugin_flags = enabled_course_plugins(course)
+    from modulearn.learning.services.recommendation_sessions import recommendations_enabled
+    plugin_flags['static_recommendations'] = recommendations_enabled(course_instance)
     provider_grid = (
         _build_provider_grid(unit_cards)
         if plugin_flags.get("masterygrids_style") and (is_instructor or is_enrolled)

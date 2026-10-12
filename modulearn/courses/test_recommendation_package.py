@@ -33,6 +33,76 @@ class RecommendationPackageTests(TestCase):
 
     def raw(self): return json.dumps(self.data).encode()
 
+    def test_session_import_settings_and_transitions_are_isolated(self):
+        from modulearn.learning.services.recommendation_tracking import practice_items
+        from modulearn.learning.services.recommendation_sessions import recommendations_enabled
+        other = CourseInstance.objects.create(course=self.course, group_name='Other session')
+        other.instructors.add(self.teacher)
+        enrollment = Enrollment.objects.create(student=self.student, course_instance=other)
+        with self.assertRaises(ValueError):
+            install_package(self.course.pk, self.raw(), actor=self.teacher)
+        install_package(self.course.pk, self.raw(), actor=self.teacher, course_instance_id=self.instance.pk)
+        self.assertFalse(recommendations_enabled(other))
+        self.assertFalse(StaticRecommendationSet.objects.filter(course_instance=other).exists())
+        install_package(self.course.pk, self.raw(), actor=self.teacher, course_instance_id=other.pk)
+        for enrolled in [self.enrollment, enrollment]:
+            progress = ModuleProgress.objects.get(module=self.source, enrollment=enrolled)
+            apply_progress_snapshot(progress, source='pcrs', score=0, success=False, payload={'pcrs_result': {'score': 0, 'max_score': 1}})
+        other_item = RecommendationProgress.objects.get(activation__enrollment=enrollment)
+        other_item.score = 75; other_item.feedback = 'up'; other_item.save()
+        other_dataset = StaticRecommendationSet.objects.get(course_instance=other)
+        old_state = list(RecommendationProgress.objects.filter(pk=other_item.pk).values())
+        old_events = other_item.activation.events.count()
+        self.data['activities'][1].update(title='Replacement', url='https://example.org/replacement')
+        install_package(self.course.pk, self.raw(), actor=self.teacher, course_instance_id=self.instance.pk)
+        self.assertEqual(old_state, list(RecommendationProgress.objects.filter(pk=other_item.pk).values()))
+        self.assertEqual(old_events, other_item.activation.events.count())
+        other_dataset.refresh_from_db()
+        self.assertEqual(other_dataset.bindings['example'], other_item.module_id)
+        self.assertEqual(len(practice_items(enrollment)), 1)
+        self.client.force_login(self.teacher)
+        dataset = StaticRecommendationSet.objects.get(course_instance=self.instance)
+        self.client.post(self.url, {'action':'settings', 'revision':dataset.updated_at.isoformat(),
+            'limit':'1', 'failure_threshold':'3'})
+        self.assertFalse(recommendations_enabled(self.instance))
+        self.assertTrue(recommendations_enabled(other))
+        other_dataset.refresh_from_db(); self.assertEqual(other_dataset.options['limit'],2)
+        self.assertEqual(len(practice_items(enrollment)), 1)
+        # The main configuration toggle uses the same session boundary.
+        self.client.post(reverse('courses:course_configuration', args=[self.instance.pk]),
+            {'action':'update_plugins', 'plugin_static_recommendations_enabled':'on'})
+        self.assertTrue(recommendations_enabled(self.instance))
+        self.client.post(reverse('courses:course_configuration', args=[self.instance.pk]), {'action':'update_plugins'})
+        self.assertFalse(recommendations_enabled(self.instance))
+        self.assertTrue(recommendations_enabled(other))
+        new_session = CourseInstance.objects.create(course=self.course, group_name='New session')
+        self.assertFalse(recommendations_enabled(new_session))
+
+    def test_practice_library_edits_do_not_change_other_sessions_or_history(self):
+        other = CourseInstance.objects.create(course=self.course, group_name='Other session')
+        for instance in [self.instance, other]:
+            install_package(self.course.pk, self.raw(), actor=self.teacher, course_instance_id=instance.pk)
+        original = Module.objects.get(title='Example')
+        dataset = StaticRecommendationSet.objects.get(course_instance=self.instance)
+        self.client.force_login(self.teacher)
+        self.client.post(self.url, {'action':'practice','revision':dataset.updated_at.isoformat(),
+            'module':original.pk,'content_url':'https://example.org/session-example'})
+        dataset.refresh_from_db(); original.refresh_from_db()
+        self.assertEqual(original.content_url, 'https://example.org/example')
+        self.assertTrue(original.is_visible)
+        self.assertNotEqual(dataset.bindings['example'], original.pk)
+        self.assertEqual(dataset.options['disabled_targets'], ['example'])
+        other_dataset = StaticRecommendationSet.objects.get(course_instance=other)
+        self.assertEqual(other_dataset.bindings['example'], original.pk)
+        self.assertNotIn('example', other_dataset.options.get('disabled_targets', []))
+        # Settings preserve session-specific availability choices.
+        self.client.post(self.url, {'action':'settings','revision':dataset.updated_at.isoformat(),
+            'enabled':'on','limit':'2','failure_threshold':'1'})
+        dataset.refresh_from_db(); self.assertEqual(dataset.options['disabled_targets'], ['example'])
+        progress = ModuleProgress.objects.get(module=self.source, enrollment=self.enrollment)
+        apply_progress_snapshot(progress, source='pcrs', score=0, success=False, payload={'pcrs_result': {'score': 0, 'max_score': 1}})
+        self.assertFalse(RecommendationProgress.objects.filter(activation__enrollment=self.enrollment).exists())
+
     def test_one_upload_enables_creates_binds_and_logs_both_contexts(self):
         self.client.force_login(self.teacher)
         response = self.client.post(self.url, {'action': 'upload', 'files': SimpleUploadedFile('ready.json', self.raw())}, follow=True)
@@ -106,3 +176,28 @@ class RecommendationPackageTests(TestCase):
         self.assertFalse(resolve_nodes(dataset,self.course)[1])
         self.assertEqual(Module.objects.filter(unit__course=self.course,is_recommendation_only=False).count(),115)
         self.assertEqual(install_package(self.course.pk,raw,actor=self.teacher)['created_modules'],[])
+
+    def test_linked_csv_upload_matches_every_exercise_and_repeats_safely(self):
+        from modulearn.learning.services.recommendation_package import install_csv_package, csv_to_package
+        raw=(Path(__file__).resolve().parents[2]/'ML_Recs/2026-10-11/CS007.linked-recommendations.csv').read_bytes()
+        self.client.force_login(self.teacher)
+        response=self.client.post(self.url, {'action':'upload','files':SimpleUploadedFile('CS007.linked-recommendations.csv',raw)},follow=True)
+        self.assertContains(response,'Recommendations ready: 247 activities, 684 links.')
+        self.assertNotContains(response,'Unresolved activities (0)')
+        dataset=StaticRecommendationSet.objects.get(course=self.course)
+        resolved,issues,_=resolve_nodes(dataset,self.course)
+        self.assertFalse(issues)
+        for activity in json.loads(csv_to_package(raw))['activities']:
+            self.assertEqual(resolved[activity['id']].content_url,activity['url'])
+        self.assertEqual(install_csv_package(self.course.pk,raw,actor=self.teacher)['created_modules'],[])
+
+    def test_linked_csv_rejects_conflicting_identity_before_writes(self):
+        from modulearn.learning.services.recommendation_package import csv_to_package
+        raw=(Path(__file__).resolve().parents[2]/'ML_Recs/2026-10-11/CS007.linked-recommendations.csv').read_bytes()
+        import csv,io
+        reader=csv.DictReader(io.StringIO(raw.decode('utf-8-sig')));rows=list(reader)
+        rows[0]['source_title']='Different title for same ID'
+        stream=io.StringIO();writer=csv.DictWriter(stream,fieldnames=reader.fieldnames);writer.writeheader();writer.writerows(rows)
+        with self.assertRaisesMessage(ValueError,'conflicting activity details'):
+            csv_to_package(stream.getvalue().encode())
+        self.assertFalse(StaticRecommendationSet.objects.exists())

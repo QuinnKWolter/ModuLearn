@@ -98,7 +98,7 @@ class RecommendationWorkflowTests(TestCase):
         self.source = Module.objects.create(unit=self.unit, title='Challenge', provider_id='pcex_ch')
         self.target = Module.objects.create(unit=self.unit, title='Example', provider_id='pcex')
         self.enrollment = Enrollment.objects.create(student=self.student, course_instance=self.instance)
-        self.dataset = StaticRecommendationSet.objects.create(course=self.course, **parse_uploads([rec_file(), assignment_file(), medoid_file()]))
+        self.dataset = StaticRecommendationSet.objects.create(course=self.course,course_instance=self.instance, **parse_uploads([rec_file(), assignment_file(), medoid_file()]))
         self.manage = reverse('courses:static_recommendations', args=[self.instance.pk])
         self.queue = reverse('courses:recommendation_queue', args=[self.instance.pk])
         self.click = reverse('courses:recommended_module', args=[self.instance.pk, self.target.pk])
@@ -121,7 +121,9 @@ class RecommendationWorkflowTests(TestCase):
         self.assertNotIn(module.pk, [m.pk for g in _module_rule_context(self.course) for m in g['modules']])
         self.client.post(self.manage, {'action': 'practice', 'revision': self.dataset.updated_at.isoformat(),
             'module': module.pk, 'content_url': 'https://example.org/updated', 'visible': 'on'})
-        module.refresh_from_db(); self.assertEqual(module.content_url, 'https://example.org/updated')
+        self.dataset.refresh_from_db()
+        module = Module.objects.get(pk=self.dataset.bindings[key])
+        self.assertEqual(module.content_url, 'https://example.org/updated')
         self.assertTrue(module.is_visible)
 
     def test_variant_needs_explicit_binding_even_with_single_title_match(self):
@@ -185,8 +187,8 @@ class RecommendationWorkflowTests(TestCase):
         other_instance = CourseInstance.objects.create(course=self.course, group_name='Other session')
         other = Enrollment.objects.create(student=self.student, course_instance=other_instance)
         self.assertEqual(recommendations_for(other), [])
-        self.course.plugin_config = {}
-        self.course.save()
+        self.dataset.enabled = False
+        self.dataset.save()
         self.enrollment.course_instance.course = self.course
         self.assertEqual(recommendations_for(self.enrollment), [])
         self.client.force_login(self.teacher)

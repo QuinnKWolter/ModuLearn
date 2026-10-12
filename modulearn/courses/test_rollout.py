@@ -95,7 +95,7 @@ class RecommendationRolloutTests(TestCase):
         self.activation=RecommendationActivation.objects.create(enrollment=self.enrollment,source_module=self.source,activated_at=timezone.now(),failures=2)
         self.old=RecommendationProgress.objects.create(activation=self.activation,module=self.retired,provider='quizjet',rank=1,similarity=.7,score=100,is_complete=True,feedback='up')
         self.event=RecommendationEvent.objects.create(activation=self.activation,recommendation=self.old,event_type='completion',score=100)
-        self.dataset=StaticRecommendationSet.objects.create(course=self.course,**parse_uploads([rec_file()]))
+        self.dataset=StaticRecommendationSet.objects.create(course=self.course,course_instance=instance,**parse_uploads([rec_file()]))
 
     def test_transition_preserves_history_and_rejects_retired_launches(self):
         baseline=list(ModuleProgress.objects.values('id','score','progress','is_complete','attempts'))

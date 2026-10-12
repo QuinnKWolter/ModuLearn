@@ -6,16 +6,16 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/static-recommendations.css' %}">{% endblock %}
 {% block content %}
 <a href="{% url 'courses:course_configuration' course_instance.id %}" class="btn btn-outline-secondary btn-sm mb-4">← Course Configure</a>
-<header class="rec-page-heading"><h1>{% ui 'Static Recommendations' %}</h1><p data-no-ui-translate>{{ course.title }}</p></header>
+<header class="rec-page-heading"><h1>{% ui 'Static Recommendations' %}</h1><p data-no-ui-translate>{{ course.title }} · {{ course_instance.group_name }}</p></header>
 <div class="rec-admin">
   <details class="card p-4" {% if not dataset %}open{% endif %}>
     <summary>{% ui "Upload or replace recommendations" %}</summary>
-    <p class="mt-2 text-sm">{% ui "Upload one recommendation JSON package to install activity links, match problems, enable delivery, and update existing recommendations automatically. CSV imports still require manual review." %}</p>
+    <p class="mt-2 text-sm">{% ui "Upload one linked CSV or JSON package. Exact activity URLs are installed and matched automatically. Older CSVs without URLs require manual review." %}</p>
     <form method="post" enctype="multipart/form-data" class="mt-4">
       {% csrf_token %}<input type="hidden" name="action" value="upload">
-      <label class="block font-semibold" for="recFiles">{% ui 'Recommendation package (JSON) or legacy CSVs' %}</label>
+      <label class="block font-semibold" for="recFiles">{% ui 'Linked recommendations (CSV or JSON)' %}</label>
       <input id="recFiles" type="file" name="files" accept=".json,application/json,.csv,text/csv" multiple required class="form-control mt-2">
-      <p class="text-sm mt-2">Uploading replaces this course’s previous recommendation set and manual matches after validation. Existing modules and student progress remain unchanged.</p>
+      <p class="text-sm mt-2">{% ui "Uploading replaces recommendations and matches for this session only. Student history is preserved. Missing course activities are added to the shared course outline." %}</p>
       <button class="btn btn-primary mt-3" type="submit">Upload and inspect</button>
     </form>
   </details>
@@ -40,11 +40,11 @@
 
   </section>
   <details class="card p-4 rec-wide" {% if visualization.issues %}open{% endif %}>
-    <summary>Review and match activities</summary>
+    <summary>{% if visualization.issues %}{% ui 'Resolve activity links' %}{% else %}{% ui 'Advanced activity matching' %}{% endif %}</summary>
     <p class="mt-2 text-sm">Automatic matching uses activity title, provider, and topic when available. Missing or ambiguous activities are excluded from student delivery until matched. You can override any match.</p>
-    <details class="mt-3" {% if visualization.issues %}open{% endif %}><summary>{% ui 'Unresolved activities ({count})' count=visualization.issues|length %}</summary>
+    {% if visualization.issues %}<details class="mt-3" open><summary>{% ui 'Unresolved activities ({count})' count=visualization.issues|length %}</summary>
       <ul class="rec-issues">{% for issue in visualization.issues %}<li><strong>{{ issue.title }}</strong> · {{ issue.provider }} · {{ issue.topic }} — {{ issue.reason }}</li>{% empty %}<li>All activities matched.</li>{% endfor %}</ul>
-    </details>
+    </details>{% endif %}
     <form method="post" class="rec-binding mt-4">
       {% csrf_token %}<input type="hidden" name="action" value="binding"><input type="hidden" name="revision" value="{{ revision }}">
       <label>Activity in uploaded files<select id="recBindingNode" name="node" class="form-control" required></select></label>
@@ -55,7 +55,7 @@
     <div id="recBindingPreview" class="rec-target mt-3" aria-live="polite"></div>
   </details>
   <section class="card p-4 rec-wide"><h2 class="text-xl font-bold">{% ui "Practice library" %}</h2><p class="text-sm">{% ui "These activities appear only in recommendations, not in the course outline." %}</p>
-  {% for module in practice_modules %}<details class="rec-library-row"><summary>{{ module.title }}</summary><form method="post" class="rec-binding">{% csrf_token %}<input type="hidden" name="action" value="practice"><input type="hidden" name="revision" value="{{ revision }}"><input type="hidden" name="module" value="{{ module.pk }}"><label>{% ui "Content URL" %}<input type="url" name="content_url" value="{{ module.content_url }}" required class="form-control"></label><label><input type="checkbox" name="visible" {% if module.is_visible %}checked{% endif %}> {% ui "Available for recommendations" %}</label><button class="btn btn-outline-primary">{% ui "Save activity" %}</button><a href="{% url 'courses:preview_iframe_module' module.id %}" target="_blank" rel="noopener">{% ui "Preview activity ↗" %}</a></form></details>{% empty %}<p>{% ui "No practice-only activities yet." %}</p>{% endfor %}
+  {% for module in practice_modules %}<details class="rec-library-row"><summary>{{ module.title }}</summary><form method="post" class="rec-binding">{% csrf_token %}<input type="hidden" name="action" value="practice"><input type="hidden" name="revision" value="{{ revision }}"><input type="hidden" name="module" value="{{ module.pk }}"><label>{% ui "Content URL" %}<input type="url" name="content_url" value="{{ module.content_url }}" required class="form-control"></label><label><input type="checkbox" name="visible" {% if module.recommendation_available %}checked{% endif %}> {% ui "Available for recommendations" %}</label><button class="btn btn-outline-primary">{% ui "Save activity" %}</button><a href="{% url 'courses:preview_iframe_module' module.id %}" target="_blank" rel="noopener">{% ui "Preview activity ↗" %}</a></form></details>{% empty %}<p>{% ui "No practice-only activities yet." %}</p>{% endfor %}
   </section>
   {{ visualization|json_script:'rec-visualization' }}
   {% endif %}

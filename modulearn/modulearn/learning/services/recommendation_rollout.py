@@ -9,14 +9,16 @@ from django.utils import timezone
 from courses.models import Course, StaticRecommendationSet, RecommendationActivation, RecommendationProgress, RecommendationEvent
 from .recommendation_tracking import select_candidates
 from .static_recommendations import resolve_nodes
+from .recommendation_sessions import resolve_session
 
 
 @transaction.atomic
-def transition_recommendations(course_id, *, apply=False, expected_plan=None):
+def transition_recommendations(course_id, *, course_instance_id=None, apply=False, expected_plan=None):
     course = Course.objects.select_for_update().get(pk=course_id)
     if course.is_locked_for_research:
         raise ValueError('Research-locked courses cannot be transitioned.')
-    dataset = StaticRecommendationSet.objects.select_for_update().get(course=course)
+    instance = resolve_session(course_id, course_instance_id)
+    dataset = StaticRecommendationSet.objects.select_for_update().get(course_instance=instance)
     resolved, issues, _ = resolve_nodes(dataset, course)
     if issues:
         raise ValueError(f'Resolve all {len(issues)} missing or ambiguous activities before transitioning.')
@@ -29,7 +31,7 @@ def transition_recommendations(course_id, *, apply=False, expected_plan=None):
                      'limit_scope': 'per_activity_type'}
     plans = []
     activations = list(RecommendationActivation.objects.select_for_update().filter(
-        enrollment__course_instance__course=course, activated_at__isnull=False).order_by('pk'))
+        enrollment__course_instance=instance, activated_at__isnull=False).order_by('pk'))
     items_by_activation = defaultdict(list)
     for item in RecommendationProgress.objects.select_for_update().filter(
             activation__in=activations).order_by('pk'):
@@ -49,9 +51,9 @@ def transition_recommendations(course_id, *, apply=False, expected_plan=None):
         plans.append({'activation_id': activation.pk, 'source_module_id': activation.source_module_id,
                       'before_configuration': activation.configuration, 'before': before,
                       'desired': desired})
-    document = {'course_id': course.pk, 'configuration': configuration, 'assignments': plans}
+    document = {'course_id': course.pk, 'course_instance_id': instance.pk, 'configuration': configuration, 'assignments': plans}
     digest = hashlib.sha256(json.dumps(document, sort_keys=True).encode()).hexdigest()
-    report = {'course_id': course.pk, 'dataset_revision': dataset.updated_at.isoformat(),
+    report = {'course_id': course.pk, 'course_instance_id': instance.pk, 'dataset_revision': dataset.updated_at.isoformat(),
               'plan_sha256': digest, 'assignments_changed': len(plans), 'add': 0, 'retire': 0, 'retain': 0, 'restore': 0}
     for plan in plans:
         previous = {i['module_id']: i for i in plan['before']}

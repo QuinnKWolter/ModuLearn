@@ -26,7 +26,7 @@ class PracticeTests(TestCase):
         self.source = Module.objects.create(unit=self.unit, title='Challenge', provider_id='pcex_ch', content_url='https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/demo')
         self.target = Module.objects.create(unit=self.unit, title='Example', provider_id='pcex', content_url='https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/example')
         self.enrollment = Enrollment.objects.create(student=self.student, course_instance=self.instance)
-        self.dataset = StaticRecommendationSet.objects.create(course=self.course, **parse_uploads([rec_file()]))
+        self.dataset = StaticRecommendationSet.objects.create(course=self.course,course_instance=self.instance, **parse_uploads([rec_file()]))
         self.progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.source)
         self.client.force_login(self.student)
 
@@ -121,7 +121,7 @@ class PracticeTests(TestCase):
         item=self.activate()
         other=Enrollment.objects.create(student=self.student,course_instance=CourseInstance.objects.create(course=self.course,group_name='other'))
         self.assertEqual(practice_items(other),[])
-        self.course.plugin_config={};self.course.save()
+        self.dataset.enabled=False;self.dataset.save()
         self.assertEqual(self.client.get(reverse('courses:recommendation_practice',args=[self.instance.pk,item.pk])).status_code,403)
 
     def test_instructor_logs_permissions_filter_and_csv(self):

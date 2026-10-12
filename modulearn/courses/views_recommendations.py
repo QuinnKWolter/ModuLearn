@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from courses.models import CourseInstance, Enrollment, Module, StaticRecommendationSet
 from courses.views import _is_course_instructor, user_can_access_participant_course
 from modulearn.learning.services.access_rules import log_module_access
-from modulearn.learning.services.course_plugins import is_course_plugin_enabled, normalize_course_plugin_config
+from modulearn.learning.services.recommendation_sessions import recommendations_enabled
 from modulearn.learning.services.static_recommendations import parse_uploads, recommendations_for, resolve_nodes
 
 
@@ -25,7 +25,7 @@ def manage(request, instance_id):
     if not _is_course_instructor(request.user, instance):
         raise PermissionDenied
     course = instance.course
-    dataset = StaticRecommendationSet.objects.filter(course=course).first()
+    dataset = StaticRecommendationSet.objects.filter(course_instance=instance).first()
     if request.method == 'POST':
         try:
             if course.is_locked_for_research and course.instances.filter(
@@ -36,17 +36,23 @@ def manage(request, instance_id):
             action = request.POST.get('action')
             if action == 'upload':
                 uploads = request.FILES.getlist('files')
-                if len(uploads) == 1 and uploads[0].name.lower().endswith('.json'):
-                    from modulearn.learning.services.recommendation_package import install_package
+                from modulearn.learning.services.recommendation_package import install_package, install_csv_package, is_linked_csv
+                package_raw = uploads[0].read(10 * 1024 * 1024 + 1) if len(uploads) == 1 else None
+                if len(uploads) == 1:
+                    uploads[0].seek(0)
+                linked_csv = package_raw is not None and is_linked_csv(package_raw)
+                if len(uploads) == 1 and (uploads[0].name.lower().endswith('.json') or linked_csv):
                     from main.templatetags.ui_i18n import ui
-                    report = install_package(course.pk, uploads[0].read(10 * 1024 * 1024 + 1), actor=request.user)
+                    installer = install_csv_package if linked_csv else install_package
+                    report = installer(course.pk, package_raw, actor=request.user, course_instance_id=instance.pk)
                     messages.success(request, ui('Recommendations ready: {activities} activities, {links} links. Created {created} activities; updated {updated} active assignments. The plugin is enabled.',
                         activities=report['activities'], links=report['links'], created=len(report['created_modules']), updated=report['assignments_changed']))
                     return redirect('courses:static_recommendations', instance_id=instance.pk)
                 parsed = parse_uploads(request.FILES.getlist('files'))
                 # Parsing and validation finish before the current dataset changes.
                 with transaction.atomic():
-                    StaticRecommendationSet.objects.update_or_create(course=course, defaults={
+                    StaticRecommendationSet.objects.update_or_create(course_instance=instance, defaults={
+                        'course': course, 'enabled': dataset.enabled if dataset else False,
                         **parsed, 'bindings': {}, 'options': dataset.options if dataset else {},
                     })
                 messages.success(request, 'Recommendation files imported. Review module matches below before enabling the plugin.')
@@ -57,11 +63,27 @@ def manage(request, instance_id):
                         raise ValueError('These recommendations changed in another window. Reload and try again.')
                     if action == 'practice':
                         module = get_object_or_404(Module, pk=request.POST.get('module'), unit__course=course, is_recommendation_only=True)
+                        resolved, _, _ = resolve_nodes(dataset, course)
+                        target_keys = {edge['target'] for edge in dataset.edges}
+                        keys = {key for key, target in resolved.items() if target.pk == module.pk and key in target_keys}
+                        if not keys:
+                            raise ValueError('Choose a practice activity assigned in this session.')
                         url = request.POST.get('content_url', '').strip()
                         URLValidator(schemes=['https', 'http'])(url)
-                        module.content_url = url
-                        module.is_visible = request.POST.get('visible') == 'on'
-                        module.save(update_fields=['content_url', 'is_visible'])
+                        if len(url) > Module._meta.get_field('content_url').max_length:
+                            raise ValueError('This activity URL is too long.')
+                        if module.content_url != url:
+                            # Copy on edit: other sessions and historical events keep their original content.
+                            from copy import copy
+                            replacement = copy(module)
+                            replacement.pk = None
+                            replacement.content_url = url
+                            replacement.save(force_insert=True)
+                            for key in keys:
+                                dataset.bindings[key] = replacement.pk
+                        disabled = set(dataset.options.get('disabled_targets', []))
+                        disabled = disabled - keys if request.POST.get('visible') == 'on' else disabled | keys
+                        dataset.options = {**dataset.options, 'disabled_targets': sorted(disabled)}
                     elif action == 'binding':
                         key = request.POST.get('node')
                         if key not in dataset.nodes:
@@ -101,11 +123,13 @@ def manage(request, instance_id):
                             raise ValueError('Cosine similarity must be between -1 and 1, or blank for no cutoff.')
                         if not 1 <= limit <= 30:
                             raise ValueError('Show between 1 and 30 recommendations per activity type.')
-                        dataset.options = {'trigger': 'needs_practice', 'minimum_similarity': minimum, 'limit': limit, 'failure_threshold': threshold}
-                        course.plugin_config = normalize_course_plugin_config(course.plugin_config)
-                        course.plugin_config['plugins']['static_recommendations']['enabled'] = request.POST.get('enabled') == 'on'
-                        course.save(update_fields=['plugin_config'])
+                        dataset.options = {**dataset.options, 'trigger': 'needs_practice', 'minimum_similarity': minimum, 'limit': limit, 'failure_threshold': threshold}
+                        dataset.enabled = request.POST.get('enabled') == 'on'
                     dataset.save()
+                    if not resolve_nodes(dataset, course)[1]:
+                        from modulearn.learning.services.recommendation_rollout import transition_recommendations
+                        plan = transition_recommendations(course.pk, course_instance_id=instance.pk)
+                        transition_recommendations(course.pk, course_instance_id=instance.pk, apply=True, expected_plan=plan['plan_sha256'])
                 messages.success(request, 'Recommendation settings saved.')
             else:
                 raise ValueError('Upload recommendation files first.')
@@ -113,8 +137,19 @@ def manage(request, instance_id):
             messages.error(request, str(exc))
         return redirect('courses:static_recommendations', instance_id=instance.pk)
     visualization = None
+    practice_modules = []
     if dataset:
         resolved, issues, modules = resolve_nodes(dataset, course)
+        targets = {edge['target'] for edge in dataset.edges}
+        disabled = set(dataset.options.get('disabled_targets', []))
+        practice_by_id = {}
+        for key, module in resolved.items():
+            if key in targets and module.is_recommendation_only:
+                if module.pk not in practice_by_id:
+                    module.recommendation_available = False
+                    practice_by_id[module.pk] = module
+                practice_by_id[module.pk].recommendation_available |= key not in disabled
+        practice_modules = list(practice_by_id.values())
         if request.GET.get('download') == '1':
             response = JsonResponse({'nodes': dataset.nodes, 'edges': dataset.edges, 'analysis': dataset.analysis,
                                      'provenance': dataset.provenance, 'options': dataset.options, 'bindings': dataset.bindings})
@@ -132,8 +167,8 @@ def manage(request, instance_id):
         modules = []
     return render(request, 'courses/static_recommendations.html', {
         'course_instance': instance, 'course': course, 'dataset': dataset, 'visualization': visualization,
-        'modules': modules, 'enabled': is_course_plugin_enabled(course, 'static_recommendations'),
-        'practice_modules': [m for m in modules if m.is_recommendation_only],
+        'modules': modules, 'enabled': recommendations_enabled(instance),
+        'practice_modules': practice_modules,
         'revision': dataset.updated_at.isoformat() if dataset else '',
     })
 
@@ -156,7 +191,7 @@ def queue(request, instance_id):
     source = request.GET.get('source')
     if source and not source.isdecimal():
         return JsonResponse({'error': 'Invalid source module.'}, status=400)
-    response = JsonResponse({'enabled': is_course_plugin_enabled(enrollment.course_instance.course, 'static_recommendations'),
+    response = JsonResponse({'enabled': recommendations_enabled(enrollment.course_instance),
                              'items': practice_items(enrollment, source)})
     response['Cache-Control'] = 'no-store'
     return response

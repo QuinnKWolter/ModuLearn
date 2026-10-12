@@ -2,6 +2,8 @@
 import hashlib
 import json
 import re
+import csv
+import io
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.contrib.admin.models import CHANGE, LogEntry
@@ -13,8 +15,58 @@ from django.db import transaction
 from courses.models import Course, Module, StaticRecommendationSet, Unit
 from .course_plugins import normalize_course_plugin_config
 from .recommendation_rollout import transition_recommendations
+from .recommendation_sessions import resolve_session
 
 FORMAT = 'modulearn.recommendations.v1'
+CSV_FORMAT = 'modulearn.recommendations.csv.v1'
+CSV_COLUMNS = ['format', 'source_id', 'source_title', 'source_unit', 'source_provider', 'source_url', 'source_protocols',
+               'target_id', 'target_title', 'target_unit', 'target_provider', 'target_url', 'target_protocols',
+               'type', 'rank', 'incorrect_attempts', 'per_type']
+
+
+def is_linked_csv(raw):
+    try:
+        header = next(csv.reader(io.StringIO(raw.decode('utf-8-sig'))), [])
+        return bool({'source_url', 'target_url'} & set(header))
+    except (UnicodeError, csv.Error):
+        return False
+
+
+def csv_to_package(raw):
+    """One explicit URL-addressed recommendation per row, no title guessing."""
+    if len(raw) > 10 * 1024 * 1024:
+        raise ValueError('Recommendation files must be under 10 MiB.')
+    try:
+        reader = csv.DictReader(io.StringIO(raw.decode('utf-8-sig'), newline=''))
+        if reader.fieldnames is None or len(reader.fieldnames) != len(set(reader.fieldnames)) or set(reader.fieldnames) != set(CSV_COLUMNS):
+            raise ValueError('Use the linked recommendation CSV columns documented in recommendation-package-format.md.')
+        activities, links, settings = {}, [], None
+        for row in reader:
+            if len(links) >= 20000 or None in row or any(v is None for v in row.values()) or row['format'] != CSV_FORMAT:
+                raise ValueError('Invalid or oversized linked recommendation CSV.')
+            row_settings = {'incorrect_attempts': int(row['incorrect_attempts']), 'per_type': int(row['per_type'])}
+            if settings is not None and settings != row_settings:
+                raise ValueError('Delivery settings must be identical on every row.')
+            settings = row_settings
+            for prefix in ['source', 'target']:
+                activity = {field: row[f'{prefix}_{field}'] for field in ['id', 'title', 'unit', 'provider', 'url']}
+                activity['protocols'] = row[f'{prefix}_protocols'].split('|')
+                key = activity['id']
+                if key in activities and activities[key] != activity:
+                    raise ValueError(f'{key}: conflicting activity details across CSV rows.')
+                activities[key] = activity
+            links.append({'source': row['source_id'], 'target': row['target_id'], 'type': row['type'], 'rank': int(row['rank'])})
+        package = {'format': FORMAT, 'activities': list(activities.values()), 'recommendations': links, 'settings': settings or {}}
+        converted = json.dumps(package, ensure_ascii=False).encode('utf-8')
+        parse_package(converted)
+        return converted
+    except (UnicodeError, csv.Error) as exc:
+        raise ValueError('Expected a valid UTF-8 linked recommendation CSV.') from exc
+
+
+def install_csv_package(course_id, raw, *, actor, course_instance_id=None):
+    return install_package(course_id, csv_to_package(raw), actor=actor, course_instance_id=course_instance_id,
+                           source_sha256=hashlib.sha256(raw).hexdigest(), source_format=CSV_FORMAT)
 
 
 def canonical_url(value):
@@ -93,12 +145,13 @@ def parse_package(raw):
 
 
 @transaction.atomic
-def install_package(course_id, raw, *, actor):
+def install_package(course_id, raw, *, actor, course_instance_id=None, source_sha256=None, source_format=FORMAT):
+    instance = resolve_session(course_id, course_instance_id)
     activities, edges, sources, options = parse_package(raw)
     course = Course.objects.select_for_update().get(pk=course_id)
     if course.is_locked_for_research:
         raise ValueError('Research-locked courses cannot import recommendation packages.')
-    digest = hashlib.sha256(raw).hexdigest()
+    digest = source_sha256 or hashlib.sha256(raw).hexdigest()
     existing = list(Module.objects.filter(unit__course=course).select_related('unit'))
     units = list(course.units.all())
     by_url = {}
@@ -142,19 +195,16 @@ def install_package(course_id, raw, *, actor):
             existing.append(module); by_url.setdefault(identity, []).append(module); created.append(module.pk)
         bindings[key] = module.pk
     nodes = {key: {'title': a['title'], 'provider': a['provider'], 'topic': a['unit'], 'clusters': []} for key, a in activities.items()}
-    defaults = {'nodes': nodes, 'edges': edges, 'bindings': bindings, 'options': options,
+    defaults = {'course': course, 'enabled': True, 'nodes': nodes, 'edges': edges, 'bindings': bindings, 'options': options,
                 'analysis': {'code': {k: a.get('code', '') for k, a in activities.items()}},
-                'provenance': [{'kind': 'package', 'name': FORMAT, 'sha256': digest, 'rows': len(edges), 'ranking': 'explicit_rank'}]}
-    dataset = StaticRecommendationSet.objects.filter(course=course).first()
+                'provenance': [{'kind': 'package', 'name': source_format, 'sha256': digest, 'rows': len(edges), 'ranking': 'explicit_rank'}]}
+    dataset = StaticRecommendationSet.objects.filter(course_instance=instance).first()
     unchanged = dataset is not None and all(getattr(dataset, k) == v for k, v in defaults.items())
     if not unchanged:
-        StaticRecommendationSet.objects.update_or_create(course=course, defaults=defaults)
-    course.plugin_config = normalize_course_plugin_config(course.plugin_config)
-    course.plugin_config['plugins']['static_recommendations']['enabled'] = True
-    course.save(update_fields=['plugin_config'])
-    plan = transition_recommendations(course.pk)
-    transition_recommendations(course.pk, apply=True, expected_plan=plan['plan_sha256'])
-    report = {'sha256': digest, 'created_modules': created, 'activities': len(nodes), 'links': len(edges),
+        StaticRecommendationSet.objects.update_or_create(course_instance=instance, defaults=defaults)
+    plan = transition_recommendations(course.pk, course_instance_id=instance.pk)
+    transition_recommendations(course.pk, course_instance_id=instance.pk, apply=True, expected_plan=plan['plan_sha256'])
+    report = {'course_instance_id': instance.pk, 'sha256': digest, 'created_modules': created, 'activities': len(nodes), 'links': len(edges),
               'assignments_changed': plan['assignments_changed'], 'unchanged': unchanged}
     LogEntry.objects.create(user_id=actor.pk, content_type=ContentType.objects.get_for_model(course),
         object_id=str(course.pk), object_repr=str(course)[:200], action_flag=CHANGE,

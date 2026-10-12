@@ -24,7 +24,9 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 class StaticRecommendationSet(models.Model):
-    course = models.OneToOneField('Course', on_delete=models.CASCADE, related_name='static_recommendations')
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='recommendation_sets')
+    course_instance = models.OneToOneField('CourseInstance', on_delete=models.CASCADE, related_name='static_recommendations', null=True, blank=True)
+    enabled = models.BooleanField(default=True)
     nodes = models.JSONField(default=dict)
     edges = models.JSONField(default=list)
     analysis = models.JSONField(default=dict)

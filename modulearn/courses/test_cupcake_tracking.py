@@ -23,7 +23,7 @@ class CupcakeTests(TestCase):
         self.client.force_login(self.user)
 
     def test_failed_checks_count_once_and_activate_recommendations(self):
-        StaticRecommendationSet.objects.create(course=self.course,**parse_uploads([rec_file()]))
+        StaticRecommendationSet.objects.create(course=self.course,course_instance=self.instance,**parse_uploads([rec_file()]))
         first=envelope(isCorrect=False,blanksSucceededPercent=33.33,blanksStates=[{'choice':'wrong'}])
         record_cupcake_event(self.progress,first);record_cupcake_event(self.progress,first)
         self.assertEqual(self.progress.attempts,1)
@@ -40,6 +40,7 @@ class CupcakeTests(TestCase):
         self.assertTrue(self.progress.is_complete);self.assertIsNone(self.progress.score);self.assertEqual(self.progress.attempts,0)
 
     def test_practice_isolation_and_tracing_completion(self):
+        StaticRecommendationSet.objects.create(course=self.course, course_instance=self.instance)
         a=RecommendationActivation.objects.create(enrollment=self.enrollment,source_module=self.module)
         practice=RecommendationProgress.objects.create(activation=a,module=self.target,provider='quizjet',rank=1,similarity=.9)
         baseline=list(ModuleProgress.objects.values('id','score','progress','attempts'))

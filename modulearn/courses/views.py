@@ -423,7 +423,7 @@ def course_configuration(request, instance_id):
                 if not wants_json:
                     messages.success(request, message_text)
             elif action == "update_plugins":
-                _update_course_plugins(request, course)
+                _update_course_plugins(request, course, course_instance)
                 message_text = "Course plugin settings were updated."
                 if not wants_json:
                     messages.success(request, message_text)
@@ -467,6 +467,8 @@ def course_configuration(request, instance_id):
 def _course_configuration_context(course_instance, research_has_participants):
     course = course_instance.course
     plugin_flags = enabled_course_plugins(course)
+    from modulearn.learning.services.recommendation_sessions import recommendations_enabled
+    plugin_flags['static_recommendations'] = recommendations_enabled(course_instance)
     study = getattr(course_instance, "study", None)
 
     return {
@@ -1026,13 +1028,18 @@ def _update_branching_rules(request, course):
     target_module.save(update_fields=["is_visible", "is_locked", "unlock_rule"])
 
 
-def _update_course_plugins(request, course):
+def _update_course_plugins(request, course, course_instance):
     current_config = normalize_course_plugin_config(course.plugin_config)
     was_guided_sequence_enabled = bool(
         current_config["plugins"].get("guided_sequence", {}).get("enabled")
     )
     for plugin in available_course_plugins():
         plugin_key = plugin["key"]
+        if plugin_key == 'static_recommendations':
+            from courses.models import StaticRecommendationSet
+            StaticRecommendationSet.objects.update_or_create(course_instance=course_instance,
+                defaults={'course': course, 'enabled': _parse_bool(request.POST.get('plugin_static_recommendations_enabled'))})
+            continue
         current_config["plugins"][plugin_key]["enabled"] = _parse_bool(
             request.POST.get(f"plugin_{plugin_key}_enabled")
         )

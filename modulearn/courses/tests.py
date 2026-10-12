@@ -1289,7 +1289,7 @@ class CourseProgressTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.course.refresh_from_db()
-        self.assertTrue(self.course.plugin_config['plugins']['static_recommendations']['enabled'])
+        self.assertTrue(self.instance.static_recommendations.enabled)
         self.assertFalse(self.course.plugin_config['plugins']['dynamic_recommendations']['enabled'])
 
         context = build_course_detail_context(self.student, self.instance)
