@@ -200,6 +200,18 @@
         return;
       }
 
+      // Cupcake hides document overflow and asks its host to size the frame.
+      // Keep the surrounding viewport scrollable instead of clipping its controls.
+      if (messageData && (messageData.type === 'cupcake:resize' ||
+          messageData.subject === 'lti.frameResize' || messageData.messageType === 'resize')) {
+        var requestedHeight = messageData.messageType === 'resize' ? messageData.iframeHeight : messageData.height;
+        if (typeof requestedHeight === 'number' && Number.isFinite(requestedHeight) &&
+            requestedHeight > 0 && requestedHeight <= 100000) {
+          iframe.style.height = Math.ceil(requestedHeight) + 'px';
+        }
+        return;
+      }
+
       if (messageData && messageData.type === 'cupcake:log') {
         recordProviderEvent(messageData);
         return;

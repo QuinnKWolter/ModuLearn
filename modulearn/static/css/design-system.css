@@ -67,6 +67,35 @@ body {
   padding-bottom: calc(var(--site-footer-height) + var(--shell-safe-gap));
 }
 
+html.content-embedded,
+.content-embedded body.content-shell-body {
+  background: transparent;
+}
+
+.content-embedded body.content-shell-body {
+  padding: 0;
+}
+
+.content-embedded .content-shell-body > .shell-background,
+.content-embedded .content-shell-body > .footer-shell {
+  display: none;
+}
+
+.content-embedded #module-frame-container {
+  padding: 0;
+}
+
+.content-embedded #original-activity {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.content-embedded #content-iframe {
+  display: block;
+  min-height: 100vh;
+}
+
 .dark body {
   background:
     radial-gradient(circle at top left, rgba(8, 145, 178, 0.16), transparent 28%),

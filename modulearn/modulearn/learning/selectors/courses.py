@@ -161,6 +161,8 @@ def build_course_detail_context(user, course_instance):
         has_progress = False
 
         for module in unit.modules.all():
+            if module.is_recommendation_only:
+                continue
             provider_key, provider_label, provider_sublabel = _module_provider_identity(module)
             module_state = evaluate_module_access(
                 module,

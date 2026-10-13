@@ -43,7 +43,7 @@
         {% include 'courses/components/recommendation_sidebar.html' %}
       {% endif %}
       <div id="practice-workspace">
-    <div id="original-activity" class="card overflow-hidden">
+    <div id="original-activity" class="card" tabindex="0" aria-label="{{ module.title }}">
       <iframe id="content-iframe"
               src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}"
               class="w-full min-h-[80vh] bg-white"

@@ -33,6 +33,16 @@ class RecommendationPackageTests(TestCase):
 
     def raw(self): return json.dumps(self.data).encode()
 
+    def test_course_outline_excludes_practice_for_instructors_and_students(self):
+        from modulearn.learning.selectors.courses import build_course_detail_context
+        install_package(self.course.pk, self.raw(), actor=self.teacher)
+        target = Module.objects.get(title='Example')
+        for user in [self.teacher, self.student]:
+            context = build_course_detail_context(user, self.instance)
+            cards = context['unit_cards']
+            self.assertEqual(sum(card['module_count'] for card in cards), 1)
+            self.assertNotIn(target.pk, [item['id'] for card in cards for item in card['modules']])
+
     def test_duplicate_url_placements_import_activate_and_transition_independently(self):
         # Production can have repeats within a unit and across differently named units.
         other_unit = Unit.objects.create(course=self.course, title='Renamed topic')
