@@ -16,6 +16,25 @@
     var browserSessionId = uuid();
     var frameStartedAt = Date.now();
     var providerQueue = Promise.resolve();
+    var requestedFrameHeight = 0;
+    var appliedFrameHeight = 0;
+    var resizeFrame = null;
+
+    function growActivityFrame(height) {
+      // Providers may broadcast several measurements for the same layout
+      // (Cupcake sends padded and unpadded heights on three channels).
+      // Coalesce them and never shrink within a launch: shrinking can change
+      // wrapping/scrollbars and trigger another contradictory resize broadcast.
+      requestedFrameHeight = Math.max(requestedFrameHeight, Math.ceil(height));
+      if (resizeFrame !== null || requestedFrameHeight <= appliedFrameHeight) return;
+      resizeFrame = requestAnimationFrame(function () {
+        resizeFrame = null;
+        if (requestedFrameHeight > appliedFrameHeight) {
+          appliedFrameHeight = requestedFrameHeight;
+          iframe.style.height = appliedFrameHeight + 'px';
+        }
+      });
+    }
 
     function recordProviderEvent(message) {
       if (config.previewMode || !config.progressUrl) return;
@@ -207,7 +226,7 @@
         var requestedHeight = messageData.messageType === 'resize' ? messageData.iframeHeight : messageData.height;
         if (typeof requestedHeight === 'number' && Number.isFinite(requestedHeight) &&
             requestedHeight > 0 && requestedHeight <= 100000) {
-          iframe.style.height = Math.ceil(requestedHeight) + 'px';
+          growActivityFrame(requestedHeight);
         }
         return;
       }

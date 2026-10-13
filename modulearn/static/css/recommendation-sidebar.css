@@ -1,7 +1,7 @@
 #practice-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; }
 #practice-layout.has-practice { grid-template-columns:220px minmax(0,1fr); }
 #practice-workspace { min-width:0; }
-#original-activity { max-height:80vh; overflow:auto; }
+#original-activity { max-height:80vh; overflow:auto; scrollbar-gutter:stable; overflow-anchor:none; }
 #content-iframe { display:block; }
 .content-embedded #original-activity { max-height:100vh; }
 #practice-sidebar { border:1px solid var(--color-border); border-radius:.75rem; background:var(--color-surface); align-self:start; overflow:hidden; }
