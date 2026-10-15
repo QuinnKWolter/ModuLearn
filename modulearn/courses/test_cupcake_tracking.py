@@ -78,6 +78,19 @@ class CupcakeTests(TestCase):
         self.assertEqual(self.progress.events.filter(event_type='provider_event').count(), 3)
         self.assertIn('testCasesResults', self.progress.last_response)
 
+    def test_student_free_coding_endpoint_activates_problem_recommendations(self):
+        from modulearn.learning.services.recommendation_tracking import practice_items
+        StaticRecommendationSet.objects.create(course=self.course, course_instance=self.instance,
+            **parse_uploads([rec_file()]))
+        self.assertEqual(practice_items(self.enrollment, self.module.pk), [])
+        response = self.client.post(reverse('courses:update_module_progress', args=[self.module.pk]),
+            {'course_instance_id': self.instance.pk, 'provider_event': envelope(kind='free-coding',
+                identity='student-http-check', isCorrect=False, isPassed=False)}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(practice_items(self.enrollment, self.module.pk)), 1)
+        self.progress.refresh_from_db()
+        self.assertEqual(self.progress.attempts, 1)
+
     def test_free_coding_practice_completion_is_separate_from_course_credit(self):
         from unittest.mock import patch
         from courses.models import CourseProgress

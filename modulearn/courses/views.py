@@ -2262,6 +2262,12 @@ def update_module_progress(request, module_id):
         data = json.loads(request.body)
         
         course_instance_id = data.get('course_instance_id')
+        # Preview launches are authorized by session instructor membership, not
+        # student enrollment. Acknowledge their telemetry without student credit.
+        if course_instance_id and CourseInstance.objects.filter(
+                pk=course_instance_id, course=course, active=True,
+                instructors=request.user).exists():
+            return JsonResponse({'success': True, 'message': 'Progress not tracked for instructors'})
         course_instance_query = CourseInstance.objects.filter(
             course=course,
             enrollments__student=request.user,

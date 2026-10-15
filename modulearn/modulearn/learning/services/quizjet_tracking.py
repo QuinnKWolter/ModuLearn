@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden
 
-from courses.models import Enrollment, Module, ModuleProgress
+from courses.models import CourseInstance, Enrollment, Module, ModuleProgress
 from .recommendation_tracking import practice_for_request
 from .progress import apply_progress_snapshot, module_accepts_scored_attempt
 
@@ -34,13 +34,18 @@ def process_quizjet_response(request, host, path, response):
         return response
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
         return HttpResponseForbidden('Sign in to record this activity.')
-    enrollment = Enrollment.objects.select_related('course_instance__course').filter(
-        student=request.user, active=True, course_instance_id=context['course_instance_id']).first()
-    module = Module.objects.filter(pk=context['module_id'], unit__course=enrollment.course_instance.course).first() if enrollment else None
-    if not module:
+    try:
+        instance = CourseInstance.objects.filter(pk=context['course_instance_id']).first()
+        module = Module.objects.filter(pk=context['module_id'], unit__course_id=instance.course_id).first() if instance else None
+    except (ValueError, TypeError):
+        return HttpResponseForbidden('Invalid activity context.')
+    instructor_preview = bool(instance and instance.instructors.filter(pk=request.user.pk).exists())
+    enrollment = Enrollment.objects.filter(student=request.user, active=True,
+        course_instance=instance).first() if instance else None
+    if not module or not (enrollment or instructor_preview):
         return HttpResponseForbidden('Activity enrollment not found.')
     try:
-        practice = practice_for_request(request, token=context.get('recommendation'), module=module, course_instance=enrollment.course_instance)
+        practice = practice_for_request(request, token=context.get('recommendation'), module=module, course_instance=instance)
     except PermissionDenied:
         return HttpResponseForbidden('Invalid recommendation context.')
     html = response.content.decode('utf-8', errors='replace')
@@ -48,7 +53,7 @@ def process_quizjet_response(request, host, path, response):
     # "Try Again" requests do not increment the counter.
     correct = bool(re.search(r'>\s*(?:CORRECT|Correct)\s*!\s*<', html))
     wrong = bool(re.search(r'>\s*(?:WRONG|Wrong)\s*!\s*<', html))
-    if request.method == 'POST' and request.POST.get('inputans') is not None and (correct or wrong):
+    if (practice or not instructor_preview) and request.method == 'POST' and request.POST.get('inputans') is not None and (correct or wrong):
         if practice:
             progress = practice
         else:

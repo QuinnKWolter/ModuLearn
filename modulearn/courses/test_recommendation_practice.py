@@ -51,6 +51,33 @@ class PracticeTests(TestCase):
         self.assertEqual(item.events.filter(source='splice',event_type='provider_event').count(),1)
         self.assertEqual(before,list(ModuleProgress.objects.values('id','score','attempts','progress','is_complete')))
 
+    def test_quizjet_session_instructor_can_preview_without_student_enrollment(self):
+        from modulearn.learning.services.quizjet_tracking import process_quizjet_response
+        before = list(ModuleProgress.objects.order_by('pk').values())
+        for method in ['get', 'post']:
+            request = getattr(RequestFactory(), method)('/proxy/quizjet/', {
+                'module_id': self.source.pk, 'course_instance_id': self.instance.pk, 'inputans': '42'})
+            request.user = self.teacher
+            response = process_quizjet_response(request, 'pawscomp2.sis.pitt.edu', 'quizjet/EvaluateAnswer',
+                HttpResponse('<form><b>CORRECT!</b></form>', content_type='text/html'))
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b'name="course_instance_id"', response.content)
+        self.assertEqual(before, list(ModuleProgress.objects.order_by('pk').values()))
+        self.assertFalse(Enrollment.objects.filter(student=self.teacher).exists())
+        self.assertFalse(self.source.progress_events.exists())
+
+    def test_quizjet_preview_rejects_outsider_and_invalid_practice_token(self):
+        from modulearn.learning.services.quizjet_tracking import process_quizjet_response
+        outsider = User.objects.create_user(username='quizjet-outsider', is_instructor=True)
+        for user, extra in [(outsider, {}), (self.teacher, {'recommendation': 'invalid'}),
+                            (self.teacher, {'module_id': 'invalid'})]:
+            request = RequestFactory().get('/proxy/quizjet/', {
+                'module_id': self.source.pk, 'course_instance_id': self.instance.pk, **extra})
+            request.user = user
+            response = process_quizjet_response(request, 'pawscomp2.sis.pitt.edu', 'quizjet/displayQuiz.jsp',
+                HttpResponse('<form></form>', content_type='text/html'))
+            self.assertEqual(response.status_code, 403)
+
     def pcrs_practice_callback(self, item, score, **context):
         from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_possible
         path = 'mgrids/problems/python/337/run'

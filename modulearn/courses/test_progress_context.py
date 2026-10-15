@@ -63,6 +63,21 @@ class ProgressContextTests(TestCase):
         self.assertIsNone(preview.enrollment_id)
         self.assertFalse(ModuleProgress.objects.get(enrollment=self.enrollment,module=self.module).is_complete)
 
+    def test_instructor_without_enrollment_can_send_preview_events(self):
+        teacher = User.objects.create_user(username='preview-teacher', is_instructor=True)
+        self.first.instructors.add(teacher)
+        self.client.force_login(teacher)
+        before = list(ModuleProgress.objects.order_by('pk').values())
+        endpoint = reverse('courses:update_module_progress', args=[self.module.pk])
+        response = self.client.post(endpoint, {'course_instance_id': self.first.pk,
+            'provider_event': {'message': {'type': 'cupcake:log'}}}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['message'], 'Progress not tracked for instructors')
+        self.assertEqual(before, list(ModuleProgress.objects.order_by('pk').values()))
+        self.assertFalse(Enrollment.objects.filter(student=teacher).exists())
+        response = self.client.post(endpoint, {'course_instance_id': self.second.pk}, content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
     def test_animation_interactions_are_logged_once_without_awarding_credit(self):
         from modulearn.learning.services.splice_tracking import record_splice_event
         progress=ModuleProgress.objects.get(enrollment=self.enrollment,module=self.module)
