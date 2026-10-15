@@ -1,7 +1,9 @@
 import json
+from urllib.parse import urlencode
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.http import HttpResponse
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.core.exceptions import PermissionDenied
 
@@ -38,6 +40,77 @@ class PracticeTests(TestCase):
     def activate(self):
         self.attempt(); self.attempt()
         return RecommendationProgress.objects.get(activation__enrollment=self.enrollment)
+
+    def test_splice_interaction_logs_stay_in_practice_and_are_retry_safe(self):
+        item=self.activate()
+        before=list(ModuleProgress.objects.values('id','score','attempts','progress','is_complete'))
+        url=reverse('courses:recommendation_practice_progress',args=[self.instance.pk,item.pk])
+        payload={'splice_event':{'event_id':'steps-1','message':{'subject':'SPLICE.sendEvent','data':{'log':[[1,'step',1]]}}}}
+        for _ in range(2):
+            self.assertEqual(self.client.post(url,payload,content_type='application/json').status_code,200)
+        self.assertEqual(item.events.filter(source='splice',event_type='provider_event').count(),1)
+        self.assertEqual(before,list(ModuleProgress.objects.values('id','score','attempts','progress','is_complete')))
+
+    def pcrs_practice_callback(self, item, score, **context):
+        from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_possible
+        path = 'mgrids/problems/python/337/run'
+        params = {'cid': self.course.pk, 'usr': self.student.username,
+                  'course_instance_id': self.instance.pk, 'module_id': self.target.pk,
+                  'recommendation': str(item.pk), **context}
+        request = RequestFactory().post('/proxy/https/pcrs.utm.utoronto.ca/' + path,
+            data=urlencode({'submission': 'print(42)'}),
+            content_type='application/x-www-form-urlencoded')
+        request.user = self.student
+        request.META['HTTP_REFERER'] = (
+            'http://testserver/proxy/https/pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed?'
+            + urlencode(params))
+        response = HttpResponse(json.dumps({'score': score, 'max_score': 5,
+            'results': [{'passed': score == 5}]}), content_type='application/json')
+        capture_pcrs_result_if_possible(request, 'pcrs.utm.utoronto.ca', path, response)
+
+    def test_pcrs_callback_records_practice_attempts_without_course_credit(self):
+        from courses.models import ModuleProgressEvent
+        item = self.activate()
+        self.target.provider_id = 'pcrs'
+        self.target.content_url = 'https://pcrs.utm.utoronto.ca/mgrids/problems/python/337/embed'
+        self.target.save()
+        normal_before = list(ModuleProgress.objects.order_by('pk').values())
+        course_before = list(CourseProgress.objects.order_by('pk').values())
+        events_before = ModuleProgressEvent.objects.count()
+        with patch.object(CourseProgress, 'submit_grade_to_canvas') as submit:
+            self.pcrs_practice_callback(item, 2)
+            item.refresh_from_db()
+            self.assertEqual((item.score, item.progress, item.attempts, item.is_complete),
+                             (40, .4, 1, False))
+            self.pcrs_practice_callback(item, 5)
+            item.refresh_from_db()
+            self.assertEqual((item.score, item.progress, item.attempts, item.is_complete),
+                             (100, 1, 2, True))
+            submit.assert_not_called()
+        attempts = list(item.events.filter(source='pcrs', event_type='attempt').order_by('pk'))
+        self.assertEqual([event.score for event in attempts], [40, 100])
+        self.assertEqual([event.success for event in attempts], [False, True])
+        self.assertEqual(item.events.filter(event_type='completion').count(), 1)
+        for event in attempts:
+            self.assertEqual(event.payload['pcrs_submission']['form']['submission'], 'print(42)')
+            self.assertIn('results', event.payload['pcrs_result'])
+        self.assertEqual(normal_before, list(ModuleProgress.objects.order_by('pk').values()))
+        self.assertEqual(course_before, list(CourseProgress.objects.order_by('pk').values()))
+        self.assertEqual(events_before, ModuleProgressEvent.objects.count())
+
+    def test_pcrs_callback_invalid_practice_context_never_falls_back_to_coursework(self):
+        item = self.activate()
+        before = list(ModuleProgress.objects.order_by('pk').values())
+        event_count = RecommendationEvent.objects.count()
+        for context in ({'recommendation': 'invalid'}, {'module_id': self.source.pk}):
+            with self.subTest(context=context), self.assertLogs(
+                    'modulearn.learning.services.pcrs_tracking', level='ERROR'):
+                self.pcrs_practice_callback(item, 5, **context)
+        item.refresh_from_db()
+        self.assertEqual(item.attempts, 0)
+        self.assertFalse(item.is_complete)
+        self.assertEqual(before, list(ModuleProgress.objects.order_by('pk').values()))
+        self.assertEqual(event_count, RecommendationEvent.objects.count())
 
     def test_two_failures_activate_and_success_never_removes_assignments(self):
         self.dataset.options = {'failure_threshold': 2}; self.dataset.save()

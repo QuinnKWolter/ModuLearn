@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static ui_i18n %}
 
 {% block title %}Configure {% if study %}{{ study.title }}{% else %}{{ course_instance.group_name|default:course.title }}{% endif %} - ModuLearn{% endblock %}
 
@@ -2922,8 +2922,9 @@
                                     </label>
                                     <div class="grid gap-2 md:grid-cols-2">
                                       <label class="grid gap-1">
-                                        <span class="stat-kicker">Type Label</span>
-                                        <input name="module_{{ module.id }}_platform_name" value="{{ module.platform_name }}" class="form-control" placeholder="{{ module.get_module_type_display }}">
+                                        <span class="stat-kicker">{% ui "Content type label" %}</span>
+                                        <input name="module_{{ module.id }}_platform_name" value="{{ module.platform_name }}" maxlength="255" class="form-control" placeholder="{{ module.get_module_type_display }}" aria-describedby="module-{{ module.id }}-type-help">
+                                        <span id="module-{{ module.id }}-type-help" class="text-xs text-slate-500 dark:text-slate-300">{% ui "Shown beneath the module name in the course. Leave blank to use the default type." %}</span>
                                       </label>
                                       <label class="grid gap-1">
                                         <span class="stat-kicker">Provider ID</span>

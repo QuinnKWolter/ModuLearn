@@ -527,7 +527,7 @@
         <div class="course-view-panel" data-course-view-panel="sequence">
           <div class="course-unit-list">
           {% for card in unit_cards %}
-            <details class="course-unit" {% if card.is_expanded %}open{% endif %}>
+            <details class="course-unit">
               <summary class="course-unit-summary">
                 <span class="course-unit-chevron" aria-hidden="true">
                   <i class="fa-solid fa-chevron-right text-xs"></i>
@@ -766,6 +766,10 @@
 
 {% block extra_js %}
 <script>
+  // Start closed on navigation and on restoration from the browser's back cache.
+  window.addEventListener('pageshow', () => {
+    document.querySelectorAll('details.course-unit').forEach(unit => { unit.open = false; });
+  });
   document.addEventListener('DOMContentLoaded', () => {
     const toggles = Array.from(document.querySelectorAll('[data-course-view-toggle]'));
     const panels = Array.from(document.querySelectorAll('[data-course-view-panel]'));

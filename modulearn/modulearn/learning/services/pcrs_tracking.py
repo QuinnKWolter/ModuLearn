@@ -69,10 +69,8 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
             logger.warning("[PCRS Tracking] Could not find course/user for cid=%s usr=%s", course_id, username)
             return
 
-        instance_qs = CourseInstance.objects.filter(course=course, enrollments__student=user)
-        if group_name:
-            instance_qs = instance_qs.filter(group_name=group_name)
-        course_instance = instance_qs.order_by("-active", "-id").first()
+        from .tracking_context import enrolled_tracking_session
+        course_instance = enrolled_tracking_session(course, user, params)
         module = _find_pcrs_module(course, params, path_rest)
         if not course_instance or not module:
             logger.warning(
@@ -87,7 +85,8 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
         raw_progress = max(0.0, min(1.0, score / max_score))
         percent_score = raw_progress * 100.0
 
-        module_progress, _ = ModuleProgress.get_or_create_progress(
+        from .recommendation_tracking import proxy_progress
+        module_progress, _ = proxy_progress(request, params,
             user=user,
             module=module,
             course_instance=course_instance,

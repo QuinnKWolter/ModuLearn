@@ -234,7 +234,10 @@ def practice_progress(request, instance_id, recommendation_id):
         data = json.loads(request.body)
         if not isinstance(data, dict):
             raise ValueError('Invalid payload.')
-        if 'provider_event' in data:
+        if 'splice_event' in data:
+            from modulearn.learning.services.splice_tracking import record_splice_event
+            record_splice_event(item, data['splice_event'])
+        elif 'provider_event' in data:
             from modulearn.learning.services.cupcake_tracking import record_cupcake_event
             record_cupcake_event(item, data['provider_event'])
         elif 'event_type' in data:

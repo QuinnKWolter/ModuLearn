@@ -149,7 +149,7 @@ def build_course_detail_context(user, course_instance):
 
     units = list(course.units.prefetch_related("modules", "modules__form").all())
     unit_cards = []
-    for unit_index, unit in enumerate(units):
+    for unit in units:
         unit_state = evaluate_unit_access(unit, enrollment, include_hidden=is_instructor)
         if not is_instructor and not unit_state.is_visible:
             continue
@@ -158,7 +158,6 @@ def build_course_detail_context(user, course_instance):
         module_count = 0
         completed_count = 0
         progress_sum = 0.0
-        has_progress = False
 
         for module in unit.modules.all():
             if module.is_recommendation_only:
@@ -182,8 +181,6 @@ def build_course_detail_context(user, course_instance):
             progress_value = max(0.0, min(progress_value, 1.0))
             progress_percent = round(progress_value * 100)
 
-            if progress_value > 0:
-                has_progress = True
             if not module_state.can_access and not is_instructor:
                 status = "Locked"
                 status_class = "is-locked"
@@ -233,7 +230,6 @@ def build_course_detail_context(user, course_instance):
             "completed_count": completed_count,
             "progress_percent": unit_percent,
             "is_complete": is_unit_complete,
-            "is_expanded": (unit_index == 0 or has_progress) and not is_unit_complete and (is_instructor or unit_state.can_access),
             "is_visible": unit.is_visible,
             "is_locked": unit.is_locked,
             "can_access": is_instructor or unit_state.can_access,

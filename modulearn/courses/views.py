@@ -2258,13 +2258,6 @@ def update_module_progress(request, module_id):
     module = get_object_or_404(Module, id=module_id)
     course = module.unit.course
     
-    # Don't update progress for instructors of this course
-    if course.instructors.filter(id=request.user.id).exists():
-        return JsonResponse({
-            'success': True,
-            'message': 'Progress not tracked for instructors'
-        })
-    
     try:
         data = json.loads(request.body)
         
@@ -2277,10 +2270,16 @@ def update_module_progress(request, module_id):
         )
         if course_instance_id:
             course_instance_query = course_instance_query.filter(id=course_instance_id)
-        course_instance = course_instance_query.first()
+        matches = list(course_instance_query.distinct()[:2])
+        if len(matches) > 1:
+            return JsonResponse({'error': 'Specify the course session for this activity'}, status=400)
+        course_instance = matches[0] if matches else None
 
         if not course_instance:
             return JsonResponse({'error': 'No active enrollment found for this course session'}, status=404)
+
+        if course_instance.instructors.filter(pk=request.user.pk).exists():
+            return JsonResponse({'success': True, 'message': 'Progress not tracked for instructors'})
 
         allowed, reason = _user_can_access_module(request.user, course_instance, module)
         if not allowed:
@@ -2292,6 +2291,10 @@ def update_module_progress(request, module_id):
             module=module,
             course_instance=course_instance
         )
+        if 'splice_event' in data:
+            from modulearn.learning.services.splice_tracking import record_splice_event
+            record_splice_event(module_progress, data['splice_event'])
+            return JsonResponse({'success': True})
         if 'provider_event' in data:
             from modulearn.learning.services.cupcake_tracking import record_cupcake_event
             record_cupcake_event(module_progress, data['provider_event'])

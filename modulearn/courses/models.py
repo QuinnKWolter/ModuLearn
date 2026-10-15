@@ -478,6 +478,7 @@ class ModuleProgress(models.Model):
             return cls.objects.get_or_create(
                 user=user,
                 module=module,
+                enrollment=None,
                 defaults={
                     'enrollment': None,
                     'progress': 1.0,

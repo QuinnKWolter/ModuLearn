@@ -38,8 +38,9 @@
 
     function recordProviderEvent(message) {
       if (config.previewMode || !config.progressUrl) return;
+      var eventField = message.subject === 'SPLICE.sendEvent' ? 'splice_event' : 'provider_event';
       var body = JSON.stringify({course_instance_id: config.courseInstanceId || null,
-        provider_event: {event_id: uuid(), message: message}});
+        [eventField]: {event_id: uuid(), message: message}});
       if (body.length > 250000) return;
       providerQueue = providerQueue.then(async function () {
         for (var attempt = 0; attempt < 3; attempt++) {
@@ -228,6 +229,11 @@
             requestedHeight > 0 && requestedHeight <= 100000) {
           growActivityFrame(requestedHeight);
         }
+        return;
+      }
+
+      if (messageData && messageData.subject === 'SPLICE.sendEvent') {
+        recordProviderEvent(messageData);
         return;
       }
 

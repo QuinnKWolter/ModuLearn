@@ -1364,10 +1364,8 @@ def _pcex_local_progress_context(params: dict):
         logger.warning("[PCEX Tracking] Could not find course/user for cid=%s usr=%s", course_id, username)
         return None
 
-    instance_qs = CourseInstance.objects.filter(course=course, enrollments__student=user)
-    if group_name:
-        instance_qs = instance_qs.filter(group_name=group_name)
-    course_instance = instance_qs.order_by("-active", "-id").first()
+    from modulearn.learning.services.tracking_context import enrolled_tracking_session
+    course_instance = enrolled_tracking_session(course, user, params)
     module = _find_pcex_module(course, params)
     if not course_instance or not module:
         logger.warning(
@@ -1840,10 +1838,8 @@ def _capture_pcex_result_if_possible(request, rest: str, response: HttpResponse)
             logger.warning("[PCEX Tracking] Could not find course/user for cid=%s usr=%s", course_id, username)
             return
 
-        instance_qs = CourseInstance.objects.filter(course=course, enrollments__student=user)
-        if group_name:
-            instance_qs = instance_qs.filter(group_name=group_name)
-        course_instance = instance_qs.order_by("-active", "-id").first()
+        from modulearn.learning.services.tracking_context import enrolled_tracking_session
+        course_instance = enrolled_tracking_session(course, user, params)
         module = _find_pcex_module(course, params)
         if not course_instance or not module:
             logger.warning(
