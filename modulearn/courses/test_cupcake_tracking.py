@@ -58,6 +58,131 @@ class CupcakeTests(TestCase):
         self.assertEqual(self.progress.attempts,0);self.assertIsNone(self.progress.score)
         self.assertEqual(ModuleProgressEvent.objects.filter(event_type='provider_event').count(),2)
 
+    def test_free_coding_checks_track_attempts_and_activate_recommendations(self):
+        StaticRecommendationSet.objects.create(course=self.course, course_instance=self.instance,
+            **parse_uploads([rec_file()]))
+        for identity, correct in [('failed', False), ('passed', True)]:
+            data = envelope(kind='free-coding', identity=identity, isCorrect=correct,
+                isPassed=correct, testCasesResults=[{'title': 'Hidden test', 'passed': correct}])
+            record_cupcake_event(self.progress, data)
+            record_cupcake_event(self.progress, data)
+        # runResultReceived accompanies answerChecked; it must not count twice.
+        record_cupcake_event(self.progress, envelope('runResultReceived', 'free-coding', 'run',
+            testCasesResults=[{'passed': True}]))
+        self.assertEqual(self.progress.attempts, 2)
+        self.assertTrue(self.progress.is_complete)
+        self.assertEqual(self.progress.score, 100)
+        self.assertEqual(RecommendationActivation.objects.get().failures, 1)
+        self.assertEqual(list(self.progress.events.filter(event_type='attempt').order_by('id')
+            .values_list('score', flat=True)), [0, 100])
+        self.assertEqual(self.progress.events.filter(event_type='provider_event').count(), 3)
+        self.assertIn('testCasesResults', self.progress.last_response)
+
+    def test_free_coding_practice_completion_is_separate_from_course_credit(self):
+        from unittest.mock import patch
+        from courses.models import CourseProgress
+        StaticRecommendationSet.objects.create(course=self.course, course_instance=self.instance)
+        activation = RecommendationActivation.objects.create(enrollment=self.enrollment, source_module=self.module)
+        practice = RecommendationProgress.objects.create(activation=activation, module=self.target,
+            provider='cupcake', rank=1, similarity=.9)
+        before = list(ModuleProgress.objects.order_by('id').values())
+        totals = list(CourseProgress.objects.values())
+        with patch.object(CourseProgress, 'submit_grade_to_canvas') as submit:
+            for identity, correct in [('wrong', False), ('right', True)]:
+                event = envelope(kind='free-coding', identity=identity, isCorrect=correct,
+                    isPassed=correct, testCasesResults=[{'passed': correct}])
+                record_cupcake_event(practice, event)
+                record_cupcake_event(practice, event)
+            submit.assert_not_called()
+        self.assertEqual(practice.attempts, 2)
+        self.assertTrue(practice.is_complete)
+        self.assertEqual(list(practice.events.filter(event_type='attempt').order_by('id')
+            .values_list('score', flat=True)), [0, 100])
+        self.assertEqual(before, list(ModuleProgress.objects.order_by('id').values()))
+        self.assertEqual(totals, list(CourseProgress.objects.values()))
+
+    def test_historical_free_coding_repair_preview_apply_and_repeat(self):
+        import json
+        from io import StringIO
+        from unittest.mock import patch
+        from datetime import timedelta
+        from django.core.management import call_command
+        from django.utils import timezone
+        from courses.models import CourseProgress
+        when = timezone.now() - timedelta(days=2)
+        raw_ids = []
+        for identity, correct in [('old-wrong', False), ('old-right', True)]:
+            event = ModuleProgressEvent.objects.create(module_progress=self.progress, user=self.user,
+                module=self.module, course_instance=self.instance, event_type='provider_event', source='cupcake',
+                payload={'transport_id': identity, 'cupcake': envelope(kind='free-coding',
+                    identity=identity, isCorrect=correct, isPassed=correct)['message']})
+            ModuleProgressEvent.objects.filter(pk=event.pk).update(created_at=when)
+            raw_ids.append(event.pk)
+        def run(apply=False):
+            out = StringIO()
+            call_command('repair_cupcake_progress', sessions=[self.instance.pk], modules=[self.module.pk],
+                apply=apply, stdout=out)
+            return json.loads(out.getvalue())
+        before = list(ModuleProgress.objects.values())
+        totals = list(CourseProgress.objects.values())
+        events = list(ModuleProgressEvent.objects.order_by('id').values())
+        preview = run()
+        self.assertEqual(preview['restored_attempts'], 2)
+        self.assertEqual(preview['new_completions'], 1)
+        self.assertEqual(before, list(ModuleProgress.objects.values()))
+        self.assertEqual(totals, list(CourseProgress.objects.values()))
+        self.assertEqual(events, list(ModuleProgressEvent.objects.order_by('id').values()))
+        with patch.object(CourseProgress, 'submit_grade_to_canvas') as submit:
+            applied = run(True)
+            submit.assert_not_called()
+        self.assertEqual(applied['changes'], preview['changes'])
+        self.progress.refresh_from_db()
+        self.assertEqual(self.progress.attempts, 2)
+        self.assertTrue(self.progress.is_complete)
+        self.assertEqual(self.progress.score, 100)
+        self.assertEqual(self.progress.completed_at, when)
+        self.assertEqual(CourseProgress.objects.get(enrollment=self.enrollment).modules_completed, 1)
+        self.assertEqual(list(self.progress.events.filter(event_type='attempt').order_by('id')
+            .values_list('score', flat=True)), [0, 100])
+        self.assertEqual(list(ModuleProgressEvent.objects.filter(pk__in=raw_ids).order_by('id').values()), events)
+        self.assertEqual(run(True)['restored_attempts'], 0)
+        # Transport retries of original events cannot create new attempts after repair.
+        record_cupcake_event(self.progress, envelope(kind='free-coding', identity='old-right', isCorrect=True))
+        self.assertEqual(self.progress.attempts, 2)
+
+    def test_historical_repair_skips_ambiguous_existing_attempts(self):
+        import json
+        from io import StringIO
+        from django.core.management import call_command
+        self.progress.attempts = 1
+        self.progress.save()
+        ModuleProgressEvent.objects.create(module_progress=self.progress, user=self.user,
+            module=self.module, course_instance=self.instance, event_type='provider_event', source='cupcake',
+            payload={'transport_id': 'old', 'cupcake': envelope(kind='free-coding', isCorrect=True)['message']})
+        out = StringIO()
+        call_command('repair_cupcake_progress', sessions=[self.instance.pk], modules=[self.module.pk], apply=True, stdout=out)
+        result = json.loads(out.getvalue())
+        self.assertEqual(result['restored_attempts'], 0)
+        self.assertEqual(len(result['skipped']), 1)
+        self.progress.refresh_from_db()
+        self.assertFalse(self.progress.is_complete)
+
+    def test_historical_repair_failure_rolls_back_all_writes(self):
+        from io import StringIO
+        from unittest.mock import patch
+        from django.core.management import call_command
+        event = ModuleProgressEvent.objects.create(module_progress=self.progress, user=self.user,
+            module=self.module, course_instance=self.instance, event_type='provider_event', source='cupcake',
+            payload={'transport_id': 'old', 'cupcake': envelope(kind='free-coding', isCorrect=True)['message']})
+        with patch('courses.management.commands.repair_cupcake_progress.recompute_course_progress',
+                side_effect=RuntimeError('Simulated failure')), self.assertRaises(RuntimeError):
+            call_command('repair_cupcake_progress', sessions=[self.instance.pk], modules=[self.module.pk],
+                apply=True, stdout=StringIO())
+        self.progress.refresh_from_db()
+        self.assertEqual(self.progress.attempts, 0)
+        self.assertFalse(self.progress.is_complete)
+        self.assertEqual(list(self.progress.events.values_list('id', flat=True)), [event.pk])
+
     def test_bad_score_is_rejected_before_any_writes(self):
         for score in [float('nan'),float('inf'),-1,101,'100',True]:
             with self.subTest(score=score),self.assertRaises(ValueError):

@@ -20,7 +20,7 @@ def attempt_snapshot(source, payload, score, success, event_type):
     identity = None
     if source == 'cupcake':
         message = data.get('cupcake', {})
-        if message.get('eventName') != 'answerChecked' or message.get('activityType') not in {'code-completion', 'parameterized-code-tracing'}:
+        if message.get('eventName') != 'answerChecked' or message.get('activityType') not in {'code-completion', 'parameterized-code-tracing', 'free-coding'}:
             return None
         identity = data.get('transport_id')
     elif source == 'pcex' and isinstance(data.get('pcex_result'), dict):

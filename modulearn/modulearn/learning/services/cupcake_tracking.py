@@ -37,7 +37,7 @@ def record_cupcake_event(progress, envelope):
         progress.refresh_from_db()
         return
     score = value = None
-    attempt = name == 'answerChecked' and kind in {'code-completion', 'parameterized-code-tracing'}
+    attempt = name == 'answerChecked' and kind in {'code-completion', 'parameterized-code-tracing', 'free-coding'}
     if attempt:
         if not isinstance(data.get('isCorrect'), bool):
             raise ValueError('Answer checks must include boolean isCorrect.')
