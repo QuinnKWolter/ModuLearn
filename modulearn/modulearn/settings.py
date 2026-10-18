@@ -391,6 +391,7 @@ def LTI_URL_BUILDER(tool: str, base: str, sub: str) -> str:
     return base
 
 PROXY_ALLOWED_HOSTS = {
+    "codesmell.org",
     "columbus.exp.sis.pitt.edu",
     "pawscomp2.sis.pitt.edu",
     "adapt2.sis.pitt.edu",

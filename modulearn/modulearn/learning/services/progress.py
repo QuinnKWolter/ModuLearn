@@ -206,6 +206,7 @@ def apply_progress_snapshot(
             course_progress = recompute_course_progress(module_progress.enrollment)
             if (
                 course_progress.lis_result_sourcedid
+                and not module_progress.enrollment.is_instructor_preview
                 and course_progress.enrollment.course_instance.lis_outcome_service_url
             ):
                 course_progress.submit_grade_to_canvas()

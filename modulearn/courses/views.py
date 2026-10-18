@@ -142,6 +142,9 @@ def is_pcex_url(url: str) -> bool:
     )
 
 def should_proxy_intercepted_activity_url(url: str) -> bool:
+    from modulearn.learning.services.sqlknot_tracking import is_sqlknot_url
+    if is_sqlknot_url(url):
+        return True
     from modulearn.learning.services.quizjet_tracking import is_quizjet_url
     if is_quizjet_url(url):
         return True
@@ -1295,8 +1298,8 @@ def launch_iframe_module(request, instance_id, module_id):
     else:
         module_progress, created = ModuleProgress.get_or_create_progress(
             user=request.user, module=module, course_instance=course_instance)
+    record_module_launch(module_progress, source='iframe_launch')
     if not is_instructor:
-        record_module_launch(module_progress, source='iframe_launch')
         if not practice:
             log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_LAUNCH)
 
@@ -1350,6 +1353,9 @@ def launch_iframe_module(request, instance_id, module_id):
     ) or (
         url_tool and url_tool.lower() == 'codecheck'
     )
+    # A declared LTI endpoint must not silently become an unsigned HTML launch.
+    if parsed_url and parsed_url.path.startswith('/lti/problem/') and selected_protocol == 'lti':
+        is_codecheck = False
     is_direct_codecheck_file = bool(
         parsed_url
         and parsed_url.hostname
@@ -1400,8 +1406,7 @@ def launch_iframe_module(request, instance_id, module_id):
             logger.info(f"Module {module.id}: Transformed Parson's Problems URL from {parsed.geturl()} to: {content_url}")
     
     # SPECIAL HANDLING: WebEx exercises URL transformation
-    # Transform from: http://adapt2.sis.pitt.edu/web_ex_NV0FGdaHzy/Dissection2?act=pyt4.7&svc=progvis&sid=demo
-    # To: http://adapt2.sis.pitt.edu/web_ex_NV0FGdaHzy/Dissection2?act=pyt4.1&svc=progvis
+    # Preserve the exact activity identifier; never substitute another exercise.
     # Also handles URLs with additional parameters (grp, usr, sid, cid) - removes them
     if content_url and '/web_ex_' in content_url:
         parsed = urlparse(content_url)
@@ -1409,11 +1414,6 @@ def launch_iframe_module(request, instance_id, module_id):
         
         # Check if this is a WebEx exercise (has act and svc parameters)
         if 'act' in query_params and 'svc' in query_params:
-            # Change act parameter: pyt4.7 -> pyt4.1 (or keep other act values as-is if not pyt4.7)
-            act_value = query_params.get('act', [''])[0]
-            if act_value.startswith('pyt4.'):
-                # Change to pyt4.1
-                query_params['act'] = ['pyt4.1']
             # Keep only act and svc parameters, remove all others (grp, usr, sid, cid, etc.)
             new_query_params = {
                 'act': query_params['act'],
@@ -1511,7 +1511,7 @@ def launch_iframe_module(request, instance_id, module_id):
     is_pcex_activity = is_pcex_url(content_url)
     is_pcrs_activity = is_pcrs_url(content_url)
     
-    if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url and not is_webex:
+    if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'html', 'pitt', None)) and not is_lti_launch_url and not is_webex:
         # Build session parameters matching the working codebase pattern
         # grp: group_name (or course_instance.id as fallback)
         grp = course_instance.group_name if course_instance and course_instance.group_name else (str(course_instance.id) if course_instance else 'default')
@@ -1574,7 +1574,8 @@ def launch_iframe_module(request, instance_id, module_id):
     refuses_iframe = False
     refuses_iframe_reason = ''
     if selected_protocol == 'lti' and lti_tool:
-        from lti.config import get_tool_config
+        from lti.config import get_tool_config, resolve_tool_name
+        lti_tool = resolve_tool_name(lti_tool)
         tool_config = get_tool_config(lti_tool)
         if tool_config:
             refuses_iframe = tool_config.get('refuses_iframe', False)
@@ -1590,10 +1591,10 @@ def launch_iframe_module(request, instance_id, module_id):
         # Include module_id so outcomes can update ModuleProgress
         grp_id = course_instance.id if course_instance else 'default'
         
-        iframe_src = (
-            f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
-            f"&usr={request.user.id}&grp={grp_id}&module_id={module.id}"
-        )
+        iframe_src = reverse('lti_launch') + '?' + urlencode({
+            'tool': lti_tool, 'sub': lti_sub or content_url,
+            'usr': request.user.id, 'grp': grp_id, 'module_id': module.id,
+        })
         logger.info(
             f"LTI Launch URL generated: module={module.id}, tool={lti_tool}, "
             f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
@@ -1655,7 +1656,7 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
     ):
         return _redirect_after_module_completion(request.user, course_instance, module)
 
-    if request.method == "POST" and not is_instructor:
+    if request.method == "POST":
         if existing_submission and not allows_resubmission:
             messages.info(request, "This form has already been submitted.")
             return _redirect_after_module_completion(request.user, course_instance, module)
@@ -1774,9 +1775,6 @@ def record_module_session_event_view(request, instance_id, module_id):
     if not (is_instructor or enrollment):
         return JsonResponse({"success": False, "error": "You are not enrolled in this course session."}, status=403)
 
-    if is_instructor:
-        return JsonResponse({"success": True, "tracked": False, "message": "Session events are not tracked for instructors."})
-
     allowed, reason = _user_can_access_module(request.user, course_instance, module)
     if not allowed:
         return JsonResponse({"success": False, "error": reason or "Module is locked."}, status=403)
@@ -1848,6 +1846,9 @@ def preview_iframe_module(request, module_id):
     ) or (
         url_tool and url_tool.lower() == 'codecheck'
     )
+    # A declared LTI endpoint must not silently become an unsigned HTML launch.
+    if parsed_url and parsed_url.path.startswith('/lti/problem/') and selected_protocol == 'lti':
+        is_codecheck = False
     is_direct_codecheck_file = bool(
         parsed_url
         and parsed_url.hostname
@@ -1925,7 +1926,7 @@ def preview_iframe_module(request, module_id):
     is_pcex_activity = is_pcex_url(content_url)
     is_pcrs_activity = is_pcrs_url(content_url)
     
-    if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'pitt', None)) and not is_lti_launch_url_check:
+    if content_url and (is_pcex_activity or is_pcrs_activity or is_codecheck or selected_protocol in ('splice', 'html', 'pitt', None)) and not is_lti_launch_url_check:
         # Build session parameters for preview (minimal since no course session)
         # grp: 'preview' for instructor previews
         grp = 'preview'
@@ -1981,7 +1982,8 @@ def preview_iframe_module(request, module_id):
     refuses_iframe = False
     refuses_iframe_reason = ''
     if selected_protocol == 'lti' and lti_tool:
-        from lti.config import get_tool_config
+        from lti.config import get_tool_config, resolve_tool_name
+        lti_tool = resolve_tool_name(lti_tool)
         tool_config = get_tool_config(lti_tool)
         if tool_config:
             refuses_iframe = tool_config.get('refuses_iframe', False)
@@ -1994,10 +1996,10 @@ def preview_iframe_module(request, module_id):
         # Route through our LTI consumer which handles OAuth signing
         # Include module_id but use 'preview' grp since no course session
         
-        iframe_src = (
-            f"{reverse('lti_launch')}?tool={lti_tool}&sub={lti_sub or content_url}"
-            f"&usr={request.user.id}&grp=preview&module_id={module.id}"
-        )
+        iframe_src = reverse('lti_launch') + '?' + urlencode({
+            'tool': lti_tool, 'sub': lti_sub or content_url,
+            'usr': request.user.id, 'grp': 'preview', 'module_id': module.id,
+        })
         logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}, sub={lti_sub}")
     else:
         iframe_src = to_path_style_proxy(activity_url_with_params) if use_proxy else force_https_url(activity_url_with_params)
@@ -2262,18 +2264,10 @@ def update_module_progress(request, module_id):
         data = json.loads(request.body)
         
         course_instance_id = data.get('course_instance_id')
-        # Preview launches are authorized by session instructor membership, not
-        # student enrollment. Acknowledge their telemetry without student credit.
-        if course_instance_id and CourseInstance.objects.filter(
-                pk=course_instance_id, course=course, active=True,
-                instructors=request.user).exists():
-            return JsonResponse({'success': True, 'message': 'Progress not tracked for instructors'})
         course_instance_query = CourseInstance.objects.filter(
             course=course,
-            enrollments__student=request.user,
-            enrollments__active=True,
             active=True
-        )
+        ).filter(Q(enrollments__student=request.user, enrollments__active=True, enrollments__is_instructor_preview=False) | Q(instructors=request.user))
         if course_instance_id:
             course_instance_query = course_instance_query.filter(id=course_instance_id)
         matches = list(course_instance_query.distinct()[:2])
@@ -2283,9 +2277,6 @@ def update_module_progress(request, module_id):
 
         if not course_instance:
             return JsonResponse({'error': 'No active enrollment found for this course session'}, status=404)
-
-        if course_instance.instructors.filter(pk=request.user.pk).exists():
-            return JsonResponse({'success': True, 'message': 'Progress not tracked for instructors'})
 
         allowed, reason = _user_can_access_module(request.user, course_instance, module)
         if not allowed:
@@ -2500,7 +2491,7 @@ def course_details(request, course_id):
         
         # Get all instances of this course
         instances = CourseInstance.objects.filter(course=course).annotate(
-            enrollment_count=Count('enrollments')
+            enrollment_count=Count('enrollments', filter=Q(enrollments__is_instructor_preview=False))
         )
         
         # Prepare the response data

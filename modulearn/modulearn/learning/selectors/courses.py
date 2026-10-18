@@ -120,8 +120,8 @@ def build_course_detail_context(user, course_instance):
     timeline = []
     participant_session = None
 
-    if getattr(user, "is_authenticated", False) and not is_instructor:
-        enrollment = Enrollment.objects.filter(
+    if getattr(user, "is_authenticated", False):
+        enrollment = Enrollment.all_objects.filter(
             student=user,
             course_instance=course_instance,
             active=True,

@@ -51,6 +51,39 @@ class PracticeTests(TestCase):
         self.assertEqual(item.events.filter(source='splice',event_type='provider_event').count(),1)
         self.assertEqual(before,list(ModuleProgress.objects.values('id','score','attempts','progress','is_complete')))
 
+    def test_instructor_recommendations_save_separate_scores_and_student_still_needs_failure(self):
+        self.client.force_login(self.teacher)
+        before = list(ModuleProgress.objects.order_by('pk').values())
+        url = reverse('courses:recommendation_queue', args=[self.instance.pk])
+        response = self.client.get(url, {'source': self.source.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['instructor_testing'])
+        item = response.json()['items'][0]
+        self.assertEqual(item['module_id'], self.target.pk)
+        practice = RecommendationProgress.objects.get(pk=item['id'])
+        self.assertTrue(practice.enrollment.is_instructor_preview)
+        self.assertIn('event_url', item)
+        self.assertEqual(practice.activation.failures, 0)
+        self.assertFalse(RecommendationEvent.objects.exists())
+        apply_progress_snapshot(practice, source='splice', score=100, progress=1, is_complete=True)
+        self.assertEqual(self.client.get(url, {'source': self.source.pk}).json()['items'][0]['score'], 100)
+        self.assertEqual(before, list(ModuleProgress.objects.filter(user=self.student).order_by('pk').values()))
+        self.assertFalse(Enrollment.objects.filter(student=self.teacher).exists())
+        # Instructor practice must never appear in student research exports.
+        for download in ('course_csv', 'csv', 'summary'):
+            exported = self.client.get(reverse('courses:recommendation_logs', args=[self.instance.pk]), {'download': download})
+            content = b''.join(exported.streaming_content) if exported.streaming else exported.content
+            self.assertNotIn(b'teacher,', content)
+        self.client.force_login(self.student)
+        self.assertEqual(self.client.get(url, {'source': self.source.pk}).json()['items'], [])
+        outsider = User.objects.create_user(username='preview-outsider', is_instructor=True)
+        self.client.force_login(outsider)
+        self.assertEqual(self.client.get(url, {'source': self.source.pk}).status_code, 403)
+        self.client.force_login(self.teacher)
+        self.dataset.enabled = False
+        self.dataset.save()
+        self.assertEqual(self.client.get(url, {'source': self.source.pk}).json()['items'], [])
+
     def test_quizjet_session_instructor_can_preview_without_student_enrollment(self):
         from modulearn.learning.services.quizjet_tracking import process_quizjet_response
         before = list(ModuleProgress.objects.order_by('pk').values())
@@ -62,9 +95,11 @@ class PracticeTests(TestCase):
                 HttpResponse('<form><b>CORRECT!</b></form>', content_type='text/html'))
             self.assertEqual(response.status_code, 200)
             self.assertIn(b'name="course_instance_id"', response.content)
-        self.assertEqual(before, list(ModuleProgress.objects.order_by('pk').values()))
+        self.assertEqual(before, list(ModuleProgress.objects.filter(user=self.student).order_by('pk').values()))
         self.assertFalse(Enrollment.objects.filter(student=self.teacher).exists())
-        self.assertFalse(self.source.progress_events.exists())
+        self.assertTrue(ModuleProgress.objects.get(user=self.teacher, module=self.source).is_complete)
+        from modulearn.learning.selectors.timelines import get_course_instance_recent_activity
+        self.assertEqual(get_course_instance_recent_activity(self.instance), [])
 
     def test_quizjet_preview_rejects_outsider_and_invalid_practice_token(self):
         from modulearn.learning.services.quizjet_tracking import process_quizjet_response

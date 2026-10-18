@@ -19,10 +19,12 @@ INTEGRATION:
 import os
 import logging
 import requests
-from urllib.parse import urlparse
+import uuid
+from urllib.parse import urlparse, parse_qs
 
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.db import transaction
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -69,6 +71,7 @@ def _get_outcome_service_url(request) -> str:
         return f"{request.scheme}://{request.get_host()}/lti/outcome/"
 
 
+@transaction.atomic
 def _update_module_progress(user_id: int, module_id: int, course_instance_id: int, 
                             score: float, source_id: str) -> bool:
     """
@@ -103,30 +106,21 @@ def _update_module_progress(user_id: int, module_id: int, course_instance_id: in
             logger.warning(f"[LTI→Progress] Module {module_id} not found for {source_id}")
             return False
         
-        # Find or create progress record
-        if course_instance_id:
-            try:
-                course_instance = CourseInstance.objects.get(id=course_instance_id)
-                progress, created = ModuleProgress.get_or_create_progress(
-                    user=user, 
-                    module=module, 
-                    course_instance=course_instance
-                )
-            except CourseInstance.DoesNotExist:
-                logger.warning(f"[LTI→Progress] CourseInstance {course_instance_id} not found for {source_id}")
-                # Try without course session
-                progress = ModuleProgress.objects.filter(user=user, module=module).first()
-                if not progress:
-                    logger.warning(f"[LTI→Progress] No existing progress record for user={user_id}, module={module_id}")
-                    return False
-                created = False
-        else:
-            # No course session (preview mode or external launch)
-            progress = ModuleProgress.objects.filter(user=user, module=module).first()
-            if not progress:
-                logger.info(f"[LTI→Progress] No progress record for preview/external launch: {source_id}")
-                return False
-            created = False
+        # A callback must identify its exact course session; never credit an
+        # arbitrary enrollment when context is missing or stale.
+        from modulearn.learning.services.tracking_context import enrolled_tracking_session
+        if not course_instance_id:
+            return False
+        course_instance = enrolled_tracking_session(module.unit.course, user,
+            {'course_instance_id': str(course_instance_id)})
+        if not course_instance:
+            return False
+        import math
+        if not math.isfinite(score) or not 0 <= score <= 1:
+            return False
+        progress, created = ModuleProgress.get_or_create_progress(
+            user=user, module=module, course_instance=course_instance)
+        progress = ModuleProgress.objects.select_for_update().get(pk=progress.pk)
 
         if not module_accepts_scored_attempt(progress):
             logger.info(
@@ -134,38 +128,23 @@ def _update_module_progress(user_id: int, module_id: int, course_instance_id: in
             )
             return False
         
-        # Only update if new score is better (or no score yet)
-        if progress.score is None or score > progress.score:
-            progress.attempts += 1
-            progress.save(update_fields=['attempts', 'last_accessed'])
+        progress.attempts += 1
+        progress.save(update_fields=['attempts', 'last_accessed'])
+        # Preserve the best grade, while retaining every reported score in the
+        # event payload, including unsuccessful and repeated submissions.
+        best_score = max(progress.score or 0, score * 100.0)
+        from modulearn.learning.services.progress import log_module_progress_event
+        log_module_progress_event(progress, source='lti_outcome', event_type='outcome',
+            score=score * 100, progress=score, success=score >= 0.7,
+            payload={'source_id': source_id, 'attempt_score': score * 100.0})
+        apply_progress_snapshot(
+            progress, source='lti_outcome',
+            progress=max(progress.progress or 0, score), score=best_score,
+            success=best_score >= 70, is_complete=progress.is_complete or score >= 1,
+            payload={'source_id': source_id, 'attempt_score': score * 100.0},
+            event_type=None)
+        return True
 
-            previous_score = progress.score
-            previous_progress = progress.progress
-            apply_progress_snapshot(
-                progress,
-                source='lti_outcome',
-                progress=score,
-                score=score * 100.0,
-                success=score >= 0.7,
-                is_complete=score >= 1.0,
-                payload={'source_id': source_id},
-                event_type='outcome',
-            )
-            
-            logger.info(
-                f"[LTI→Progress] ✓ Updated: module={module_id} ({module.title}), "
-                f"user={user_id}, score={previous_score}→{progress.score:.1f}%, "
-                f"progress={previous_progress:.2f}→{progress.progress:.2f}, "
-                f"complete={progress.is_complete}"
-            )
-            return True
-        else:
-            logger.info(
-                f"[LTI→Progress] Skipped (score not better): module={module_id}, "
-                f"user={user_id}, existing={progress.score:.1f}%, new={score*100:.1f}%"
-            )
-            return False
-            
     except Exception as e:
         logger.exception(f"[LTI→Progress] Error updating progress for {source_id}: {e}")
         return False
@@ -208,7 +187,12 @@ def launch(request):
     # Extract parameters
     try:
         tool = validate_identifier(request.GET.get('tool', ''), 'tool', max_length=64)
-        sub = validate_identifier(request.GET.get('sub', ''), 'sub', max_length=512)
+        raw_sub = request.GET.get('sub', '')
+        if tool in {'codecheck', 'paws_codecheck'} and raw_sub.startswith('https://') and len(raw_sub) <= 512:
+            from lti.config import codecheck_url_modifier
+            sub = codecheck_url_modifier('', raw_sub)
+        else:
+            sub = validate_identifier(raw_sub, 'sub', max_length=512)
         usr = validate_identifier(request.GET.get('usr', ''), 'usr', max_length=255)
         grp = validate_identifier(request.GET.get('grp', ''), 'grp', max_length=255)
     except ValueError as e:
@@ -229,6 +213,11 @@ def launch(request):
         except (ValueError, TypeError):
             logger.warning(f"[LTI Launch] Invalid module_id: {module_id}")
             module_id = None
+
+    # Imported PAWS URLs remain portable: when registered locally, use our
+    # signed launch and outcome endpoint instead of PAWS's hardcoded callback.
+    if tool.startswith('paws_') and is_tool_configured(tool[5:]):
+        tool = tool[5:]
     
     # Verify tool is configured
     if not is_tool_configured(tool):
@@ -242,8 +231,28 @@ def launch(request):
             f"Set env vars: {tool.upper()}_KEY, {tool.upper()}_SECRET, {tool.upper()}_LAUNCH"
         )
     
-    # Generate source_id and cache launch context
-    source_id = generate_source_id(usr, grp, sub)
+    # A signed launch is an authenticated operation, bound to this exact module
+    # and course session. Query parameters must not impersonate another learner.
+    from courses.models import Module
+    from modulearn.learning.services.tracking_context import enrolled_tracking_session
+    if not request.user.is_authenticated or usr != str(request.user.pk):
+        return HttpResponseForbidden('Sign in as the launching user.')
+    module = Module.objects.filter(pk=module_id).select_related('unit__course').first() if module_id else None
+    if not module:
+        return HttpResponseBadRequest('A valid module is required.')
+    from lti.config import resolve_tool_name
+    resource_params = parse_qs(urlparse(module.content_url or '').query)
+    expected_sub = resource_params.get('sub', [module.content_url])[0]
+    expected_tool = resource_params.get('tool', [module.provider_id])[0]
+    if (module.select_launch_protocol() != 'lti' or sub != expected_sub
+            or tool != resolve_tool_name(expected_tool)):
+        return HttpResponseForbidden('The LTI activity does not match this module.')
+    if grp == 'preview':
+        if not module.unit.course.instructors.filter(pk=request.user.pk).exists():
+            return HttpResponseForbidden('Instructor preview access required.')
+    elif not enrolled_tracking_session(module.unit.course, request.user, {'course_instance_id': grp}):
+        return HttpResponseForbidden('Activity enrollment not found.')
+    source_id = 'ml-' + uuid.uuid4().hex
     
     # Get outcome service URL
     outcome_service_url = _get_outcome_service_url(request)
@@ -284,7 +293,7 @@ def launch(request):
         logger.info(f"[LTI Launch] Cache stored: {source_id} (expires in {LTI_CACHE_TTL_HOURS}h)")
     except Exception as e:
         logger.error(f"[LTI Launch] ✗ Failed to cache launch context: {e}")
-        # Continue anyway - outcome forwarding will fail but launch should work
+        return HttpResponseBadRequest('Unable to save the launch context. Please retry.')
     
     logger.info(
         f"[LTI Launch] ✓ Launching: tool={tool}, sub={sub}, "
@@ -296,6 +305,13 @@ def launch(request):
     # Check if this is a PAWS proxy tool
     tool_config = get_tool_config(tool)
     is_paws_proxy = tool_config.get('is_paws_proxy', False) if tool_config else False
+
+    if tool == 'paws_dbqa':
+        # Keep DBQA's result and interaction APIs in the local tracking path.
+        # PAWS signs the launch; its remote outcome alone cannot update a
+        # localhost ModuLearn instance.
+        from modulearn.views_proxy import _to_path_style
+        return redirect(_to_path_style(launch_url))
     
     # Check for mixed content issues (HTTP tool in HTTPS context)
     parsed = urlparse(launch_url)
@@ -334,11 +350,18 @@ def launch(request):
             response = redirect(launch_url)
     else:
         # Direct LTI tools use form POST with OAuth-signed params
+        if tool == 'dbqa':
+            from modulearn.views_proxy import _to_path_style
+            launch_url = _to_path_style(launch_url)
         context = {
             'action': launch_url,
             'params': signed_params,
         }
         response = render(request, 'lti/auto_submit.html', context)
+        # OpenDSA identifies the consumer from Referer. Send only our origin,
+        # never launch query parameters, when submitting its signed form.
+        if tool in {'opendsa_problems', 'opendsa_slideshows'}:
+            response['Referrer-Policy'] = 'origin'
     
     # Set headers to allow iframe embedding
     if 'X-Frame-Options' in response:
@@ -351,6 +374,7 @@ def launch(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@transaction.atomic
 def outcome(request):
     """
     LTI Outcome Service endpoint.
@@ -393,17 +417,15 @@ def outcome(request):
         
         # Validate score format (should be 0.0-1.0)
         try:
+            import math
             score_float = float(score)
-            if score_float < 0:
-                logger.warning(f"[LTI Outcome] Score clamped from {score_float} to 0.0")
-                score_float = 0.0
-            elif score_float > 1:
-                logger.warning(f"[LTI Outcome] Score clamped from {score_float} to 1.0")
-                score_float = 1.0
+            if not math.isfinite(score_float) or not 0 <= score_float <= 1:
+                raise ValueError('Score must be finite and between zero and one.')
             log_entry.score_normalized = score_float
         except (ValueError, TypeError):
-            logger.warning(f"[LTI Outcome] ⚠ Non-numeric score: '{score}'")
-            score_float = 0.0
+            log_entry.error_message = 'Invalid outcome score'
+            log_entry.save()
+            return HttpResponse(create_outcome_response(False, log_entry.error_message), content_type='text/xml', status=400)
         
         # Look up cached launch context
         cache_entry = LTILaunchCache.get_valid_cache(source_id)
@@ -417,6 +439,17 @@ def outcome(request):
             )
         
         log_entry.tool = cache_entry.tool
+        cache_entry = LTILaunchCache.objects.select_for_update().get(pk=cache_entry.pk)
+
+        from lti.outcome_auth import authenticate_outcome
+        authenticated, duplicate = authenticate_outcome(request, get_tool_config(cache_entry.tool) or {})
+        if not authenticated:
+            log_entry.error_message = 'Invalid LTI outcome signature or body hash'
+            log_entry.save()
+            return HttpResponse(create_outcome_response(False, log_entry.error_message),
+                                content_type='text/xml', status=401)
+        if duplicate:
+            return HttpResponse(create_outcome_response(True, 'Outcome already received'), content_type='text/xml')
         
         logger.info(
             f"[LTI Outcome] Cache hit: tool={cache_entry.tool}, "
@@ -446,7 +479,11 @@ def outcome(request):
         # STEP 2: Forward to UM Service (if enabled)
         # ============================================================
         um_success = False
-        if LTI_FORWARD_TO_UM:
+        from courses.models import CourseInstance
+        instructor_testing = CourseInstance.objects.filter(
+            pk=cache_entry.course_instance_id, instructors__pk=cache_entry.user_id).exists()
+        forward_to_um = LTI_FORWARD_TO_UM and not instructor_testing
+        if forward_to_um:
             try:
                 um_url = build_um_url(
                     base_um_url=UM_SERVICE_URL,
@@ -491,15 +528,18 @@ def outcome(request):
         # Final Result
         # ============================================================
         # Success if either local progress was updated OR UM accepted the score
-        overall_success = progress_updated or um_success
+        overall_success = progress_updated or (forward_to_um and um_success)
         log_entry.success = overall_success
         log_entry.save()
+        if overall_success:
+            from lti.outcome_auth import remember_outcome
+            remember_outcome(request)
         
         if overall_success:
             result_msg = f"Score {score} recorded"
             if progress_updated:
                 result_msg += " (local progress updated)"
-            if um_success and LTI_FORWARD_TO_UM:
+            if um_success and forward_to_um:
                 result_msg += " (UM notified)"
             logger.info(f"[LTI Outcome] ✓ Success: {result_msg}")
         else:

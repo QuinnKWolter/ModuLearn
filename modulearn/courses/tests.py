@@ -150,7 +150,7 @@ class CourseProgressTests(TestCase):
         self.assertEqual(event.payload['browser_session_id'], 'session-123')
         self.assertEqual(event.payload['reason'], 'window_blur')
 
-    def test_module_session_event_ignores_instructor(self):
+    def test_module_session_event_saves_instructor_testing_separately(self):
         self.client.force_login(self.instructor)
 
         response = self.client.post(
@@ -160,8 +160,10 @@ class CourseProgressTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.json()['tracked'])
-        self.assertFalse(ModuleProgressEvent.objects.filter(event_type='tab_focus').exists())
+        self.assertTrue(response.json()['tracked'])
+        event = ModuleProgressEvent.objects.get(event_type='tab_focus')
+        self.assertTrue(event.module_progress.enrollment.is_instructor_preview)
+        self.assertFalse(Enrollment.objects.filter(student=self.instructor, course_instance=self.instance).exists())
 
     def _pcex_worked_example_referer(self):
         return (

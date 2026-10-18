@@ -179,7 +179,9 @@ def _enrollment(request, instance_id):
     instance = get_object_or_404(CourseInstance.objects.select_related('course'), pk=instance_id)
     if not user_can_access_participant_course(request.user, instance.pk):
         raise PermissionDenied
-    enrollment = Enrollment.objects.filter(student=request.user, course_instance=instance, active=True).first()
+    from modulearn.learning.services.instructor_testing import testing_enrollment
+    enrollment = testing_enrollment(request.user, instance) or Enrollment.objects.filter(
+        student=request.user, course_instance=instance, active=True).first()
     if not enrollment:
         raise PermissionDenied
     return enrollment
@@ -188,11 +190,24 @@ def _enrollment(request, instance_id):
 @login_required
 @require_GET
 def queue(request, instance_id):
-    enrollment = _enrollment(request, instance_id)
     from modulearn.learning.services.recommendation_tracking import practice_items
     source = request.GET.get('source')
     if source and not source.isdecimal():
         return JsonResponse({'error': 'Invalid source module.'}, status=400)
+    instance = get_object_or_404(CourseInstance, pk=instance_id)
+    if instance.instructors.filter(pk=request.user.pk).exists():
+        from modulearn.learning.services.instructor_testing import testing_enrollment, prepare_recommendations
+        enabled = recommendations_enabled(instance)
+        enrollment = testing_enrollment(request.user, instance)
+        if enabled and source:
+            module = get_object_or_404(Module, pk=source, unit__course=instance.course)
+            dataset = StaticRecommendationSet.objects.get(course_instance=instance)
+            prepare_recommendations(enrollment, module, dataset)
+        response = JsonResponse({'enabled': enabled, 'instructor_testing': True,
+            'items': practice_items(enrollment, source)})
+        response['Cache-Control'] = 'no-store'
+        return response
+    enrollment = _enrollment(request, instance_id)
     response = JsonResponse({'enabled': recommendations_enabled(enrollment.course_instance),
                              'items': practice_items(enrollment, source)})
     response['Cache-Control'] = 'no-store'
@@ -310,11 +325,11 @@ def research_logs(request, instance_id):
     instance = get_object_or_404(CourseInstance.objects.select_related('course'), pk=instance_id)
     if not _is_course_instructor(request.user, instance):
         raise PermissionDenied
-    events = RecommendationEvent.objects.filter(activation__enrollment__course_instance=instance).select_related(
+    events = RecommendationEvent.objects.filter(activation__enrollment__course_instance=instance, activation__enrollment__is_instructor_preview=False).exclude(activation__enrollment__student__in=instance.instructors.all()).select_related(
         'activation__enrollment__student', 'activation__source_module', 'recommendation__module')
     query = request.GET.get('q', '').strip()
     kind = request.GET.get('event', '').strip()
-    course_events = ModuleProgressEvent.objects.filter(module_progress__enrollment__course_instance=instance).select_related(
+    course_events = ModuleProgressEvent.objects.filter(module_progress__enrollment__course_instance=instance, module_progress__enrollment__is_instructor_preview=False).exclude(user__in=instance.instructors.all()).select_related(
         'user', 'module', 'module_progress__enrollment').order_by('-created_at', '-id')
     if query:
         course_events = course_events.filter(Q(user__username__icontains=query) | Q(module__title__icontains=query))
@@ -340,7 +355,7 @@ def research_logs(request, instance_id):
             Q(activation__source_module__title__icontains=query) | Q(recommendation__module__title__icontains=query))
     if kind:
         events = events.filter(event_type=kind)
-    assignments = RecommendationProgress.objects.filter(activation__enrollment__course_instance=instance).select_related(
+    assignments = RecommendationProgress.objects.filter(activation__enrollment__course_instance=instance, activation__enrollment__is_instructor_preview=False).exclude(activation__enrollment__student__in=instance.instructors.all()).select_related(
         'activation__source_module', 'activation__enrollment__student', 'module').annotate(
         visits=Count('events', filter=Q(events__event_type='visit')),
         impressions=Count('events', filter=Q(events__event_type='impression')),

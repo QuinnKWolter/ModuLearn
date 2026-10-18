@@ -323,7 +323,7 @@ def http_get_proxy(request, _redirect_depth=0):
         headers["Cookie"] = cookie_header
     host_cookies = _host_cookies(request, u.hostname)
     host_cookie_header = "; ".join(f"{name}={value}" for name, value in host_cookies.items())
-    if u.hostname == PCRS_HOST:
+    if u.hostname in {PCRS_HOST, 'codesmell.org'}:
         # PCRS uses Django session and CSRF cookies whose names collide with
         # ModuLearn's own cookies. Keep the upstream cookie namespace isolated.
         if host_cookie_header:
@@ -368,6 +368,10 @@ def http_get_proxy(request, _redirect_depth=0):
             # KnowledgeTree will redirect. We handle that redirect server-side.
 
     logger.debug(f"DEBUG PROXY: Making {request.method} request to (IPv4): {target} Host={u.hostname}")
+    client = requests
+    if u.scheme == "https" and u.hostname in {"adapt2.sis.pitt.edu", "pawscomp2.sis.pitt.edu"} and u.path.startswith(("/sqlknot/", "/sqlknotserver/", "/lti/launch", "/quizjet/", "/quizpet/", "/web_ex_")):
+        from modulearn.learning.services.upstream_http import pitt_session
+        client = pitt_session()
     try:
         # Handle POST requests
         if request.method == "POST":
@@ -381,7 +385,7 @@ def http_get_proxy(request, _redirect_depth=0):
                 headers['Content-Type'] = 'application/json'
                 logger.debug(f"DEBUG PROXY: POST JSON body (length: {len(json_data)} bytes)")
                 timeout = 30 if 'j_security_check' in target else 8
-                with requests.post(target, headers=headers, data=json_data, stream=True, timeout=timeout, allow_redirects=False) as r:
+                with client.post(target, headers=headers, data=json_data, stream=True, timeout=timeout, allow_redirects=False) as r:
                     return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
             else:
                 # For form data, parse as form-encoded
@@ -400,11 +404,11 @@ def http_get_proxy(request, _redirect_depth=0):
                 logger.debug(f"DEBUG PROXY: POST form data: {data}")
                 # Use longer timeout for authentication endpoints (j_security_check)
                 timeout = 30 if 'j_security_check' in target else 8
-                with requests.post(target, headers=headers, data=data, stream=True, timeout=timeout, allow_redirects=False) as r:
+                with client.post(target, headers=headers, data=data, stream=True, timeout=timeout, allow_redirects=False) as r:
                     return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
         else:
             # GET or HEAD request
-            with requests.get(target, headers=headers, stream=True, timeout=8, allow_redirects=False) as r:
+            with client.get(target, headers=headers, stream=True, timeout=8, allow_redirects=False) as r:
                 return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
     except requests.Timeout as e:
         logger.warning(f"Proxy request timed out: {e}")
@@ -412,6 +416,10 @@ def http_get_proxy(request, _redirect_depth=0):
     except requests.RequestException as e:
         logger.error(f"Proxy request failed: {e}")
         return HttpResponseBadRequest(f"Upstream fetch failed: {str(e)}")
+
+    finally:
+        if client is not requests:
+            client.close()
 
 
 def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0):
@@ -642,6 +650,12 @@ def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5
         if _is_paws_activity_page(u):
             content_str = _annotate_material_icon_fallbacks(content_str)
             content_str = _inject_activity_api_rewrite_script(content_str)
+        if u.hostname == 'adapt2.sis.pitt.edu' and u.path == '/lti/launch' and parse_qs(u.query).get('tool') == ['dbqa']:
+            # PAWS creates its signed form in JavaScript, rather than an HTML
+            # action attribute. Preserve the signed upstream destination while
+            # keeping the browser in our DBQA tracking proxy.
+            content_str = content_str.replace('https://codesmell.org/dbqa/',
+                _to_path_style('https://codesmell.org/dbqa/'))
         
         content = content_str.encode('utf-8')
         logger.debug(f"DEBUG PROXY HTML: Rewrote {rewrite_count} URLs, {original_length} -> {len(content)} bytes")
@@ -663,7 +677,7 @@ def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5
     # If there are multiple Set-Cookie headers, requests typically only exposes one
     # Domain restrictions may prevent some cookies from working, but this helps
     set_cookie_header = r.headers.get("Set-Cookie")
-    if set_cookie_header and u.hostname != PCRS_HOST:
+    if set_cookie_header and u.hostname not in {PCRS_HOST, 'codesmell.org'}:
         resp["Set-Cookie"] = set_cookie_header
     
     if getattr(settings, "PROXY_CORS_ORIGIN", None):
@@ -672,6 +686,10 @@ def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5
 
 
 def _is_paws_activity_page(parsed_url) -> bool:
+    if parsed_url.hostname == 'codesmell.org' and parsed_url.path.startswith('/dbqa/'):
+        return True
+    if parsed_url.hostname == 'adapt2.sis.pitt.edu' and parsed_url.path.startswith('/sqlknot/'):
+        return True
     if (
         parsed_url.hostname in {"pawscomp2.sis.pitt.edu", "adapt2.sis.pitt.edu"}
         and (
@@ -816,6 +834,8 @@ button.btn.modu-material-icon-button span {{
   }}
   function localizeActivityUrl(url) {{
     if (typeof url !== 'string') return url;
+    if (url.startsWith('/dbqa/')) return moduLearnPrefix + '/proxy/https/codesmell.org' + url;
+    if (url.startsWith('/sqlknotserver/')) return moduLearnPrefix + '/proxy/https/adapt2.sis.pitt.edu' + url;
     if (pcrsFeedbackAssets[url]) return pcrsFeedbackAssets[url];
     const absoluteMatch = url.match(/^https?:\\/\\/pawscomp2\\.sis\\.pitt\\.edu(\\/(?:pcex|cbum)\\/.*)$/i);
     if (absoluteMatch) return moduLearnPrefix + absoluteMatch[1];
@@ -852,6 +872,8 @@ button.btn.modu-material-icon-button span {{
 
   function shouldNotifyParentForActivityPost(method, url) {{
     if (String(method || '').toUpperCase() !== 'POST' || !url) return false;
+    if (url.includes('/sqlknotserver/CheckAnswer')) return true;
+    if (url.includes('/dbqa/lti/1.1/result/send')) return true;
     return (
       /\\/pcex\\/api\\/track\\/(?:activity|explanation|result)\\b/i.test(url)
       || /\\/pitt\\/acos-pcex\\/acos-pcex-examples\\/event\\b/i.test(url)
@@ -1297,6 +1319,10 @@ def _pcex_result_state(request, params: dict, payload: dict) -> tuple[int, int, 
 
 
 def _infer_pcex_goal_count_from_remote(params: dict) -> int | None:
+    from modulearn.learning.services.pcex_metadata import catalog_goals
+    catalog = catalog_goals(params)
+    if catalog:
+        return sum(not bool(goal.get('fullyWorkedOut')) for goal in catalog) or len(catalog)
     set_id = _first_query_value(params, "set")
     language = _first_query_value(params, "lang", "PYTHON") or "PYTHON"
     if not set_id:
@@ -1322,6 +1348,10 @@ def _infer_pcex_goal_count_from_remote(params: dict) -> int | None:
 
 
 def _infer_pcex_worked_examples_from_remote(params: dict) -> dict:
+    from modulearn.learning.services.pcex_metadata import catalog_goals
+    catalog = catalog_goals(params)
+    if catalog:
+        return _pcex_worked_example_metadata(catalog)
     set_id = _first_query_value(params, "set")
     language = _first_query_value(params, "lang", "PYTHON") or "PYTHON"
     if not set_id:
@@ -1433,6 +1463,10 @@ def _pcex_worked_example_state(request, params: dict, payload: dict) -> tuple[in
             entry["worked_examples"] = worked_examples
 
     active_goal_name = str(entry.get("active_worked_goal_name") or "").strip()
+    reported_goal = str(tracking_payload.get('goal_name') or '').strip()
+    if reported_goal in worked_examples:
+        active_goal_name = reported_goal
+        entry['active_worked_goal_name'] = reported_goal
     if active_goal_name not in worked_examples and len(worked_examples) == 1:
         active_goal_name = next(iter(worked_examples))
         entry["active_worked_goal_name"] = active_goal_name
@@ -2132,6 +2166,10 @@ def http_get_proxy_path(request, rest: str):
                 _capture_pcex_result_if_possible(request, pcex_rest, result)
             _capture_acos_pcex_event_if_possible(request, host, path_rest, result)
             capture_pcrs_result_if_possible(request, host, path_rest, result)
+            from modulearn.learning.services.sqlknot_tracking import capture_sqlknot_result
+            capture_sqlknot_result(request, host, path_rest, result)
+            from modulearn.learning.services.dbqa_tracking import capture_dbqa_result
+            capture_dbqa_result(request, host, path_rest, result)
             from modulearn.learning.services.quizjet_tracking import process_quizjet_response
             return process_quizjet_response(request, host, path_rest, result)
         else:

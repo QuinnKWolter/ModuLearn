@@ -71,9 +71,9 @@ def create_base_lti_body(source_id: str, usr: str, grp: str,
         'ext_lti_assignment_id': f'modulearn_{sub}',
         
         # Context (course/group) identification
-        'context_id': source_id,
-        'context_title': source_id,
-        'context_label': source_id,
+        'context_id': f'modulearn_{grp}',
+        'context_title': f'ModuLearn {grp}',
+        'context_label': f'ModuLearn {grp}',
         
         # Default person sourcedid
         'lis_person_sourcedid': 'modulearn',
@@ -131,7 +131,7 @@ def create_lti_body(tool_name: str, source_id: str, sub: str,
     # Apply tool-specific overrides from config
     overrides = tool_config.get('lti_body_overrides', {})
     for key, value in overrides.items():
-        if isinstance(value, str) and '{' in value:
+        if isinstance(value, str) and re.search(r'\{(?:usr|grp|sub|cid|source_id)\}', value):
             # Template string - format it with our variables
             try:
                 body[key] = value.format(**format_vars)
@@ -143,7 +143,7 @@ def create_lti_body(tool_name: str, source_id: str, sub: str,
     
     # Format any remaining template strings in base body
     for key, value in list(body.items()):
-        if isinstance(value, str) and '{' in value:
+        if isinstance(value, str) and re.search(r'\{(?:usr|grp|sub|cid|source_id)\}', value):
             try:
                 body[key] = value.format(**format_vars)
             except KeyError:

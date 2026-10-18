@@ -144,12 +144,21 @@ def resolve_nodes(dataset, course):
             module = by_id.get(dataset.bindings[key])
             candidates = [module] if module else []
         else:
-            candidates = [m for m in modules if normalized(m.title) == normalized(node['title'])
-                          and provider(m.provider_id or m.platform_name) == node['provider']]
+            titled = [m for m in modules if normalized(m.title) == normalized(node['title'])]
+            candidates = [m for m in titled
+                          if provider(m.provider_id or m.platform_name) == node['provider']]
             if node['topic']:
                 in_topic = [m for m in candidates if normalized(m.unit.title) == normalized(node['topic'])]
                 if in_topic:
                     candidates = in_topic
+            # Keep specific matches authoritative. Only relax provider metadata
+            # when it found nothing; never select an arbitrary duplicate.
+            if not candidates:
+                candidates = titled
+                if node['topic']:
+                    in_topic = [m for m in titled if normalized(m.unit.title) == normalized(node['topic'])]
+                    if in_topic:
+                        candidates = in_topic
         needs_variant_match = bool(node.get('code_variant') and key not in dataset.bindings)
         if len(candidates) == 1 and not needs_variant_match:
             resolved[key] = candidates[0]

@@ -45,6 +45,12 @@ def attempt_snapshot(source, payload, score, success, event_type):
         success = score >= 100
         if raw.get('attempt_count') or raw.get('event_data', {}).get('attempt_count'):
             identity = raw
+    elif source == 'sqlknot' and type(data.get('sqlknot_result', {}).get('checkResult')) is bool:
+        success = data['sqlknot_result']['checkResult']
+        score = 100.0 if success else 0.0
+    elif source == 'lti_outcome' and data.get('attempt_score') is not None:
+        score = data['attempt_score']
+        success = score >= 100
     elif source == 'quizjet' and score is not None:
         pass
     elif source == 'splice' and score is not None:
@@ -145,6 +151,7 @@ def practice_for_request(request, *, module=None, course_instance=None, token=No
     except (RecommendationProgress.DoesNotExist, ValidationError, ValueError):
         raise PermissionDenied('Invalid recommendation context.')
     if (item.retired_at or not request.user.is_authenticated or item.user_id != request.user.pk or not item.enrollment.active
+            or (item.enrollment.is_instructor_preview and not item.enrollment.course_instance.instructors.filter(pk=request.user.pk).exists())
             or not item.enrollment.course_instance.active
             or (module and item.module_id != module.pk)
             or (course_instance and item.enrollment.course_instance_id != course_instance.pk)
@@ -202,7 +209,9 @@ def apply_practice_snapshot(item, *, source, progress=None, score=None, success=
 def practice_items(enrollment, source_id=None):
     if not recommendations_enabled(enrollment.course_instance):
         return []
-    query = RecommendationProgress.objects.filter(activation__enrollment=enrollment, activation__failures__gte=1, activation__activated_at__isnull=False, retired_at__isnull=True).select_related('module', 'activation__source_module')
+    query = RecommendationProgress.objects.filter(activation__enrollment=enrollment, activation__activated_at__isnull=False, retired_at__isnull=True).select_related('module', 'activation__source_module')
+    if not enrollment.is_instructor_preview:
+        query = query.filter(activation__failures__gte=1)
     if source_id:
         query = query.filter(activation__source_module_id=source_id)
     return [{'id': str(item.pk), 'module_id': item.module_id, 'title': item.module.title,

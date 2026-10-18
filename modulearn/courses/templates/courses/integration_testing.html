@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% block title %}{% ui 'Integration testing' %} · {{ instance.group_name }}{% endblock %}
+{% block content %}
+<section class="space-y-6">
+  <header>
+    <a href="{% url 'courses:course_configuration' instance.pk %}">{% ui 'Back to configuration' %}</a>
+    <h1 class="text-3xl font-bold mt-4">{% ui 'Integration testing' %}</h1>
+    <p class="mt-2">{{ instance.course.title }} · {{ instance.group_name }}</p>
+    <p class="mt-3">{% ui 'Your instructor test activity only. Opening this page never changes progress or grades.' %}</p>
+  </header>
+  <div class="rounded-xl border border-slate-400 p-4 space-y-3">
+    <p>{% ui 'Launch an activity, submit an answer, then refresh this page to inspect the saved result.' %}</p>
+    <p>{% ui 'LTI callback URL' %}: <code class="break-all">{{ report.callback_url }}</code></p>
+    <p>{% ui 'External LTI grade delivery requires a reachable public HTTPS callback. A launch or an empty result does not prove a tracking failure.' %}</p>
+    <div class="flex gap-6"><a href="?">{% ui 'Refresh evidence' %}</a><a href="?format=json">{% ui 'Download evidence (JSON)' %}</a></div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left">
+      <thead><tr class="border-b border-slate-400"><th class="p-3">{% ui 'Activity' %}</th><th class="p-3">{% ui 'Provider / protocol' %}</th><th class="p-3">{% ui 'Saved progress' %}</th><th class="p-3">{% ui 'Evidence' %}</th></tr></thead>
+      <tbody>{% for row in report.modules %}
+        <tr class="border-b border-slate-400/30 align-top">
+          <td class="p-3"><a href="{{ row.launch_url }}" target="_blank" rel="noopener">{{ row.title }} ↗</a><div class="text-xs mt-1">{{ row.content_type }}</div></td>
+          <td class="p-3">{{ row.provider }}<div>{{ row.protocol|upper }}</div></td>
+          <td class="p-3 whitespace-nowrap">{% ui 'Score' %}: {{ row.score|default_if_none:'—' }}<br>{% ui 'Progress' %}: {{ row.progress }}%<br>{% ui 'Attempts' %}: {{ row.attempts }}{% if row.complete %}<br>✓ {% ui 'Complete' %}{% endif %}</td>
+          <td class="p-3"><details><summary>{% ui 'Events and LTI outcomes' %}</summary>
+            <ul class="mt-2">{% for event, count in row.event_counts.items %}<li>{{ event }}: {{ count }}</li>{% empty %}<li>{% ui 'No saved events yet' %}</li>{% endfor %}</ul>
+            <p class="mt-2">{% ui 'LTI launches' %}: {{ row.lti_launches }}</p>
+            {% for outcome in row.outcomes %}<p>{{ outcome.received_at }} · {% if outcome.success %}{% ui 'Accepted' %}{% else %}{% ui 'Rejected' %}{% endif %} · {{ outcome.score|default_if_none:'—' }}</p>{% empty %}<p>{% ui 'No LTI callbacks recorded' %}</p>{% endfor %}
+          </details></td>
+        </tr>
+      {% endfor %}</tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

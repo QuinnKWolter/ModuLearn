@@ -82,6 +82,10 @@ class CupcakeTests(TestCase):
         from modulearn.learning.services.recommendation_tracking import practice_items
         StaticRecommendationSet.objects.create(course=self.course, course_instance=self.instance,
             **parse_uploads([rec_file()]))
+        self.module.provider_id = 'Coding Problems'
+        self.module.save()
+        self.target.provider_id = 'Programming Examples'
+        self.target.save()
         self.assertEqual(practice_items(self.enrollment, self.module.pk), [])
         response = self.client.post(reverse('courses:update_module_progress', args=[self.module.pk]),
             {'course_instance_id': self.instance.pk, 'provider_event': envelope(kind='free-coding',

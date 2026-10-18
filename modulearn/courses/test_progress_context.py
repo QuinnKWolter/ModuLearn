@@ -60,7 +60,7 @@ class ProgressContextTests(TestCase):
     def test_instructor_preview_cannot_reuse_another_sessions_student_record(self):
         self.second.instructors.add(self.user)
         preview,_=ModuleProgress.get_or_create_progress(self.user,self.module,self.second)
-        self.assertIsNone(preview.enrollment_id)
+        self.assertTrue(preview.enrollment.is_instructor_preview)
         self.assertFalse(ModuleProgress.objects.get(enrollment=self.enrollment,module=self.module).is_complete)
 
     def test_instructor_without_enrollment_can_send_preview_events(self):
@@ -70,10 +70,11 @@ class ProgressContextTests(TestCase):
         before = list(ModuleProgress.objects.order_by('pk').values())
         endpoint = reverse('courses:update_module_progress', args=[self.module.pk])
         response = self.client.post(endpoint, {'course_instance_id': self.first.pk,
-            'provider_event': {'message': {'type': 'cupcake:log'}}}, content_type='application/json')
+            'provider_event': {'event_id': 'teacher-check', 'message': {'type': 'cupcake:log',
+                'activityType': 'free-coding', 'eventName': 'answerChecked', 'eventData': {'isCorrect': True}}}}, content_type='application/json')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['message'], 'Progress not tracked for instructors')
-        self.assertEqual(before, list(ModuleProgress.objects.order_by('pk').values()))
+        self.assertEqual(response.json()['module_progress']['score'], 100)
+        self.assertEqual(before, list(ModuleProgress.objects.filter(user=self.user).order_by('pk').values()))
         self.assertFalse(Enrollment.objects.filter(student=teacher).exists())
         response = self.client.post(endpoint, {'course_instance_id': self.second.pk}, content_type='application/json')
         self.assertEqual(response.status_code, 404)

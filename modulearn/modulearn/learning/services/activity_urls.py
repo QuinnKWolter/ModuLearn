@@ -9,6 +9,13 @@ def normalize_activity_launch_url(url: str) -> str:
         return url
     parsed = urlsplit(url)
     params = parse_qs(parsed.query, keep_blank_values=True)
+    # ACOS's Pitt transport reads example-id from the query, unlike HTML's
+    # path-based entry point. Preserve the exact example and challenge index.
+    pcex = re.fullmatch(r'/pitt/acos-pcex/acos-pcex-examples/([\w.-]+)/?', parsed.path)
+    if parsed.hostname == 'acos.cs.vt.edu' and pcex and not params.get('example-id'):
+        params['example-id'] = [pcex[1]]
+        return urlunsplit((parsed.scheme, parsed.netloc, '/pitt/acos-pcex/acos-pcex-examples/',
+                           urlencode(params, doseq=True), parsed.fragment))
     if (
         parsed.hostname in {'pawscomp2.sis.pitt.edu', 'adapt2.sis.pitt.edu'}
         and parsed.path == '/pcex-authoring/preview/index.html'

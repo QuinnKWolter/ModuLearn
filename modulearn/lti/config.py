@@ -12,6 +12,7 @@ To add a new tool:
 """
 import os
 import logging
+from urllib.parse import quote, urlencode, urlsplit, urlunsplit, parse_qsl
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,22 @@ def ctat_score_processor(score: str, sub: str) -> tuple:
 
 def opendsa_url_modifier(base_url: str, sub: str) -> str:
     """OpenDSA requires custom_ex_settings and custom_ex_short_name in URL."""
-    return f"{base_url}?custom_ex_settings=%7B%7D&custom_ex_short_name={sub}"
+    parsed = urlsplit(base_url)
+    query = dict(parse_qsl(parsed.query))
+    query.update(custom_ex_settings='{}', custom_ex_short_name=sub)
+    return urlunsplit(parsed._replace(query=urlencode(query)))
+
+
+def codecheck_url_modifier(base_url: str, sub: str) -> str:
+    """Use the catalog's resource path without allowing arbitrary signing hosts."""
+    parsed = urlsplit(sub)
+    if parsed.scheme:
+        if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.fragment or parsed.hostname not in {'codecheck.io', 'codecheck.me'} or not parsed.path.startswith('/lti/problem/files/'):
+            raise ValueError('Unsupported CodeCheck LTI resource URL.')
+        return sub
+    if urlsplit(base_url).path.rstrip('/') == '/lti':
+        return base_url  # Explicit legacy registration with a generic endpoint.
+    return base_url.rstrip('/') + '/' + quote(sub.strip('/'), safe='/')
 
 
 def dbqa_url_modifier(base_url: str, sub: str) -> str:
@@ -57,6 +73,7 @@ def dbqa_act_modifier(act: str) -> str:
 
 # Registry of processor functions (avoids lambdas in config for serializability)
 PROCESSORS = {
+    'codecheck_url_modifier': codecheck_url_modifier,
     'ctat_url_modifier': ctat_url_modifier,
     'ctat_score_processor': ctat_score_processor,
     'opendsa_url_modifier': opendsa_url_modifier,
@@ -127,6 +144,15 @@ def get_tool_configs() -> dict:
             'is_paws_proxy': True,
             'paws_tool': 'codecheck',
         },
+        'paws_dbqa': {
+            'consumer_key': '',
+            'consumer_secret': '',
+            'launch_url': os.getenv('PAWS_LTI_URL', 'https://adapt2.sis.pitt.edu/lti/launch'),
+            'app_id': '53',
+            'act': 'dbqa',
+            'is_paws_proxy': True,
+            'paws_tool': 'dbqa',
+        },
         # Note: PCEX is NOT an LTI tool - it's a standalone web app that reports
         # directly to PAWS's UM service. It cannot be routed through PAWS LTI.
         
@@ -137,7 +163,8 @@ def get_tool_configs() -> dict:
         'codecheck': {
             'consumer_key': os.getenv('CODECHECK_KEY', ''),
             'consumer_secret': os.getenv('CODECHECK_SECRET', ''),
-            'launch_url': os.getenv('CODECHECK_LAUNCH', 'https://codecheck.io/lti'),
+            'launch_url': os.getenv('CODECHECK_LAUNCH', 'https://codecheck.io/lti/problem/files'),
+            'launch_url_modifier': 'codecheck_url_modifier',
             'app_id': '56',
             'act': 'codecheck',
             'lti_body_overrides': {
@@ -154,10 +181,10 @@ def get_tool_configs() -> dict:
             'act': 'codeworkout',
             'lti_body_overrides': {
                 'lis_person_sourcedid': 'mastery_grids',
-                'custom_course_name': 'Introduction to Java Programming',
-                'custom_course_number': 'IS 0017',
-                'custom_label': 'SPLICE',
-                'custom_term': 'spring-2019',
+                'custom_course_name': os.getenv('CODEWORKOUT_COURSENAME', 'Introduction to Java Programming'),
+                'custom_course_number': os.getenv('CODEWORKOUT_COURSENUMBER', 'IS 0017'),
+                'custom_label': os.getenv('CODEWORKOUT_COURSELABEL', 'SPLICE'),
+                'custom_term': os.getenv('CODEWORKOUT_COURSETERM', 'spring-2019'),
             },
         },
         
@@ -225,6 +252,8 @@ def get_tool_configs() -> dict:
         },
         
         'opendsa_problems': {
+            'refuses_iframe': True,
+            'refuses_iframe_reason': 'OpenDSA requires its activity to open in a separate window.',
             'consumer_key': os.getenv('OPENDSA_PROBLEMS_KEY', ''),
             'consumer_secret': os.getenv('OPENDSA_PROBLEMS_SECRET', ''),
             'launch_url': os.getenv('OPENDSA_PROBLEMS_LAUNCH', 'https://opendsa-server.cs.vt.edu/lti/launch'),
@@ -239,6 +268,8 @@ def get_tool_configs() -> dict:
         },
         
         'opendsa_slideshows': {
+            'refuses_iframe': True,
+            'refuses_iframe_reason': 'OpenDSA requires its activity to open in a separate window.',
             'consumer_key': os.getenv('OPENDSA_SLIDESHOWS_KEY', ''),
             'consumer_secret': os.getenv('OPENDSA_SLIDESHOWS_SECRET', ''),
             'launch_url': os.getenv('OPENDSA_SLIDESHOWS_LAUNCH', 'https://opendsa-server.cs.vt.edu/lti/launch'),
@@ -252,6 +283,12 @@ def get_tool_configs() -> dict:
             'launch_url_modifier': 'opendsa_url_modifier',
         },
     }
+
+
+def resolve_tool_name(tool_name: str) -> str:
+    if tool_name and tool_name.startswith('paws_') and is_tool_configured(tool_name[5:]):
+        return tool_name[5:]
+    return tool_name
 
 
 def get_tool_config(tool_name: str) -> dict | None:

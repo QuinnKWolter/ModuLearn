@@ -39,7 +39,7 @@
     </div>
 
     <div id="practice-layout">
-      {% if not preview_mode and course_instance and not recommendation_practice and not is_instructor %}
+      {% if not preview_mode and course_instance and not recommendation_practice %}
         {% include 'courses/components/recommendation_sidebar.html' %}
       {% endif %}
       <div id="practice-workspace">

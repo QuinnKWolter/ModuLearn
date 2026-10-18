@@ -37,6 +37,15 @@ LTI_ROLES_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/roles"
 LTI_TARGET_LINK_URI_CLAIM = "https://purl.imsglobal.org/spec/lti/claim/target_link_uri"
 
 
+def outcome_authorization(xml, key='k', secret='s'):
+    from oauthlib.oauth1 import Client as OAuthClient
+    _, headers, _ = OAuthClient(key, client_secret=secret).sign(
+        'http://testserver' + reverse('lti_outcome'), http_method='POST',
+        body=xml.decode() if isinstance(xml, bytes) else xml,
+        headers={'Content-Type': 'application/xml'})
+    return headers['Authorization']
+
+
 class PublicLTIURLTests(SimpleTestCase):
     @override_settings(FORCE_SCRIPT_NAME='/modulearn')
     def test_setup_urls_use_public_https_host_and_script_prefix(self):
@@ -627,11 +636,20 @@ class LTILaunchViewTestCase(TestCase):
     })
     def test_launch_success(self):
         """Test successful launch returns HTML form."""
+        user = User.objects.create_user(username='launch-student')
+        course = Course.objects.create(id='launch-test', title='Launch test')
+        instance = CourseInstance.objects.create(course=course)
+        unit = Unit.objects.create(course=course, title='Unit')
+        module = Module.objects.create(unit=unit, title='Example', provider_id='codecheck',
+                                       content_url='activity1', supported_protocols=['lti'])
+        Enrollment.objects.create(student=user, course_instance=instance)
+        self.client.force_login(user)
         response = self.client.get(reverse('lti_launch'), {
             'tool': 'codecheck',
             'sub': 'activity1',
-            'usr': 'user1',
-            'grp': 'group1'
+            'usr': str(user.pk),
+            'grp': str(instance.pk),
+            'module_id': module.pk,
         })
         
         self.assertEqual(response.status_code, 200)
@@ -640,7 +658,7 @@ class LTILaunchViewTestCase(TestCase):
         
         # Check cache entry was created
         self.assertTrue(LTILaunchCache.objects.filter(
-            source_id='user1_group1_activity1'
+            module_id=module.pk, usr=str(user.pk), grp=str(instance.pk)
         ).exists())
 
 
@@ -738,7 +756,7 @@ class LTIOutcomeViewTestCase(TestCase):
         response = self.client.post(
             reverse('lti_outcome'),
             data=xml,
-            content_type='application/xml'
+            content_type='application/xml', HTTP_AUTHORIZATION=outcome_authorization(xml)
         )
         
         self.assertEqual(response.status_code, 200)
@@ -811,7 +829,7 @@ class LTIOutcomeProgressIntegrationTestCase(TestCase):
           </imsx_POXBody>
         </imsx_POXEnvelopeRequest>'''.encode('utf-8')
 
-        response = self.client.post(reverse('lti_outcome'), data=xml, content_type='application/xml')
+        response = self.client.post(reverse('lti_outcome'), data=xml, content_type='application/xml', HTTP_AUTHORIZATION=outcome_authorization(xml))
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'success', response.content)
 
@@ -860,3 +878,24 @@ class LTIConfigTestCase(TestCase):
         """Test list_configured_tools includes configured tools."""
         tools = list_configured_tools()
         self.assertIn('codecheck', tools)
+
+
+class LTIGradeImprovementTests(LTIOutcomeProgressIntegrationTestCase):
+    def test_partial_then_complete_and_lower_attempt_are_logged(self):
+        from modulearn.views_lti import _update_module_progress
+        for value in (0.5, 1.0, 0.2):
+            self.assertTrue(_update_module_progress(self.user.pk, self.module.pk,
+                self.instance.pk, value, self.source_id))
+        row = ModuleProgress.objects.get(enrollment=self.enrollment, module=self.module)
+        self.assertEqual(row.score, 100)
+        self.assertTrue(row.is_complete)
+        self.assertEqual(row.attempts, 3)
+        self.assertEqual(list(row.events.filter(event_type='outcome').order_by('id')
+            .values_list('payload__attempt_score', flat=True)), [50, 100, 20])
+
+    def test_missing_or_wrong_session_does_not_credit_other_enrollment(self):
+        from modulearn.views_lti import _update_module_progress
+        for session in (None, 999999):
+            self.assertFalse(_update_module_progress(self.user.pk, self.module.pk,
+                session, 1.0, self.source_id))
+        self.assertFalse(ModuleProgress.objects.filter(user=self.user, is_complete=True).exists())

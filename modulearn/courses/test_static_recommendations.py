@@ -128,6 +128,8 @@ class RecommendationWorkflowTests(TestCase):
 
     def test_variant_needs_explicit_binding_even_with_single_title_match(self):
         key = self.dataset.edges[0]['target']
+        self.target.provider_id = 'Wrong provider label'
+        self.target.save()
         self.dataset.nodes[key]['code_variant'] = 'example-variant'
         resolved, issues, _ = resolve_nodes(self.dataset, self.course)
         self.assertNotIn(key, resolved)
@@ -135,6 +137,35 @@ class RecommendationWorkflowTests(TestCase):
         self.dataset.bindings[key] = self.target.pk
         resolved, _, _ = resolve_nodes(self.dataset, self.course)
         self.assertEqual(resolved[key], self.target)
+
+    def test_unique_title_fallback_tolerates_wrong_provider_and_topic(self):
+        key = self.dataset.edges[0]['target']
+        self.target.provider_id = 'Worked Examples'
+        self.target.save()
+        self.dataset.nodes[key]['topic'] = 'Old topic label'
+        resolved, issues, _ = resolve_nodes(self.dataset, self.course)
+        self.assertEqual(resolved[key], self.target)
+        self.assertFalse(any(i['key'] == key for i in issues))
+
+    def test_fallback_topic_disambiguates_but_duplicate_titles_never_guess(self):
+        key = self.dataset.edges[0]['target']
+        self.target.provider_id = 'Worked Examples'
+        self.target.save()
+        other_unit = Unit.objects.create(course=self.course, title='Other topic')
+        Module.objects.create(unit=other_unit, title=self.target.title, provider_id='Worked Examples')
+        resolved, _, _ = resolve_nodes(self.dataset, self.course)
+        self.assertEqual(resolved[key], self.target)
+        self.dataset.nodes[key]['topic'] = ''
+        resolved, issues, _ = resolve_nodes(self.dataset, self.course)
+        self.assertNotIn(key, resolved)
+        self.assertEqual(next(i['reason'] for i in issues if i['key'] == key), 'Ambiguous match')
+        self.dataset.bindings[key] = 0
+        self.assertNotIn(key, resolve_nodes(self.dataset, self.course)[0])
+
+    def test_provider_match_takes_priority_over_fallback(self):
+        key = self.dataset.edges[0]['target']
+        Module.objects.create(unit=self.target.unit, title=self.target.title, provider_id='Wrong provider')
+        self.assertEqual(resolve_nodes(self.dataset, self.course)[0][key], self.target)
 
     def fail_twice(self):
         progress = ModuleProgress.objects.get(user=self.student, enrollment=self.enrollment, module=self.source)
@@ -192,7 +223,10 @@ class RecommendationWorkflowTests(TestCase):
         self.enrollment.course_instance.course = self.course
         self.assertEqual(recommendations_for(self.enrollment), [])
         self.client.force_login(self.teacher)
-        self.assertEqual(self.client.get(self.queue).status_code, 403)
+        response = self.client.get(self.queue)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['items'], [])
+        self.assertFalse(response.json()['enabled'])
 
     def test_unsuccessful_trigger_requires_scored_attempt(self):
         self.dataset.options = {'trigger': 'needs_practice'}

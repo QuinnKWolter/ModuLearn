@@ -58,7 +58,7 @@ def _visible_timeline_events(queryset):
 
 
 def get_student_timeline(user, *, limit: int = 12, event_types=DEFAULT_TIMELINE_EVENTS):
-    queryset = _base_queryset().filter(user=user)
+    queryset = _base_queryset().filter(user=user).exclude(module_progress__enrollment__is_instructor_preview=True)
     if event_types:
         queryset = queryset.filter(event_type__in=event_types)
     queryset = _visible_timeline_events(queryset)
@@ -74,7 +74,9 @@ def get_course_timeline_for_student(course_instance, user, *, limit: int = 12, e
 
 
 def get_course_instance_recent_activity(course_instance, *, limit: int = 12, event_types=DEFAULT_TIMELINE_EVENTS):
-    queryset = _base_queryset().filter(course_instance=course_instance)
+    queryset = _base_queryset().filter(course_instance=course_instance).exclude(
+        module_progress__enrollment__is_instructor_preview=True).exclude(
+        user__in=course_instance.instructors.all())
     if event_types:
         queryset = queryset.filter(event_type__in=event_types)
     queryset = _visible_timeline_events(queryset)

@@ -294,14 +294,18 @@ class Module(models.Model):
     def select_launch_protocol(self, preferred_order=None):
         """Return the best-supported protocol for this module.
 
-        Priority default: ['splice', 'lti', 'pitt']
+        Priority default: ['splice', 'html', 'lti', 'pitt']
         Returns the protocol string or None if none are available.
         """
         if preferred_order is None:
-            preferred_order = ['splice', 'lti', 'pitt']
+            preferred_order = ['splice', 'html', 'lti', 'pitt']
 
-        available = self.supported_protocols or []
+        def canonical(value):
+            value = str(value).strip().lower()
+            return 'lti' if value == 'lti 1.1' else value
+        available = {canonical(value) for value in self.supported_protocols or []}
         for protocol in preferred_order:
+            protocol = canonical(protocol)
             if protocol in available:
                 return protocol
         return None
@@ -358,14 +362,25 @@ class ModuleBranchRule(models.Model):
         return f"If {self.source_module.title} {self.get_condition_type_display()}{condition} unlock {self.target_module.title}"
 
 
+class StudentEnrollmentManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_instructor_preview=False).exclude(
+            course_instance__instructors=models.F('student_id'))
+
+
 class Enrollment(models.Model):
+    objects = StudentEnrollmentManager()
+    all_objects = models.Manager()
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')
     course_instance = models.ForeignKey(CourseInstance, on_delete=models.CASCADE, related_name='enrollments')
     created_at = models.DateTimeField(auto_now_add=True)
     active = models.BooleanField(default=True)
 
+    is_instructor_preview = models.BooleanField(default=False)
+
     class Meta:
         unique_together = ('student', 'course_instance')
+        base_manager_name = 'all_objects'
 
     def __str__(self):
         return f"{self.student.username} - {self.course_instance}"
@@ -475,15 +490,15 @@ class ModuleProgress(models.Model):
         is_instructor = course_instance.instructors.filter(id=user.id).exists()
         
         if is_instructor:
+            enrollment, _ = Enrollment.all_objects.get_or_create(student=user, course_instance=course_instance,
+                defaults={'is_instructor_preview': True})
+            if not enrollment.is_instructor_preview:
+                enrollment.is_instructor_preview = True
+                enrollment.save(update_fields=['is_instructor_preview'])
             return cls.objects.get_or_create(
                 user=user,
                 module=module,
-                enrollment=None,
-                defaults={
-                    'enrollment': None,
-                    'progress': 1.0,
-                    'is_complete': True
-                }
+                enrollment=enrollment,
             )
         else:
             try:
@@ -561,6 +576,8 @@ class ModuleProgress(models.Model):
 
     def submit_grade_to_canvas(self):
         """Submit grade to Canvas via LTI 1.1 or 1.3"""
+        if self.enrollment_id and self.enrollment.is_instructor_preview:
+            return False
         if not (self.lis_result_sourcedid and self.lis_outcome_service_url):
             logger.warning("Missing LTI grade passback credentials")
             return False
@@ -730,6 +747,8 @@ class CourseProgress(models.Model):
 
     def submit_grade_to_canvas(self):
         """Submit the overall course grade back to Canvas"""
+        if self.enrollment.is_instructor_preview:
+            return False
         if not (self.lis_result_sourcedid and self.enrollment.course_instance.lis_outcome_service_url):
             logger.warning("Missing LTI grade passback credentials")
             return False

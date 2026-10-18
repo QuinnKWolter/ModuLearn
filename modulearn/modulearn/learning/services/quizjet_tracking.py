@@ -16,11 +16,11 @@ CONTEXT_KEYS = ('module_id', 'course_instance_id', 'recommendation')
 
 def is_quizjet_url(url):
     parsed = urlparse(url or '')
-    return parsed.hostname in HOSTS and parsed.path.startswith('/quizjet/')
+    return parsed.hostname in HOSTS and parsed.path.startswith(('/quizjet/', '/quizpet/'))
 
 
 def process_quizjet_response(request, host, path, response):
-    if host not in HOSTS or not path.startswith('quizjet/') or response.status_code >= 400:
+    if host not in HOSTS or not path.startswith(('quizjet/', 'quizpet/')) or response.status_code >= 400:
         return response
     if 'text/html' not in response.get('Content-Type', ''):
         return response
@@ -53,17 +53,18 @@ def process_quizjet_response(request, host, path, response):
     # "Try Again" requests do not increment the counter.
     correct = bool(re.search(r'>\s*(?:CORRECT|Correct)\s*!\s*<', html))
     wrong = bool(re.search(r'>\s*(?:WRONG|Wrong)\s*!\s*<', html))
-    if (practice or not instructor_preview) and request.method == 'POST' and request.POST.get('inputans') is not None and (correct or wrong):
+    if request.method == 'POST' and request.POST.get('inputans') is not None and (correct or wrong):
         if practice:
             progress = practice
         else:
-            progress, _ = ModuleProgress.get_or_create_progress(user=request.user, module=module, course_instance=enrollment.course_instance)
+            progress, _ = ModuleProgress.get_or_create_progress(user=request.user, module=module, course_instance=instance)
         if module_accepts_scored_attempt(progress):
-            apply_progress_snapshot(progress, source='quizjet', score=100 if correct else 0,
+            apply_progress_snapshot(progress, source='quizpet' if path.startswith('quizpet/') else 'quizjet',
+                score=max(progress.score or 0, 100 if correct else 0),
                 progress=1 if correct else progress.progress, is_complete=progress.is_complete or correct,
                 success=correct, event_type='outcome',
                 payload={'answer': request.POST.get('inputans'), 'code': request.POST.get('code', ''),
-                         'rdfID': request.POST.get('rdfID', ''), 'correct': correct})
+                         'rdfID': request.POST.get('rdfID', ''), 'correct': correct, 'attempt_score': 100 if correct else 0})
             progress.attempts += 1
             progress.save(update_fields=['attempts', 'last_accessed'])
     fields = ''.join(f'<input type="hidden" name="{key}" value="{escape(value, quote=True)}">' for key,value in context.items())

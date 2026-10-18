@@ -12,6 +12,7 @@
   let items = [], selected = null, feedbackItem = null, busy = false, eventQueue = Promise.resolve();
   const error = message => { document.getElementById('practice-error').textContent = message; };
   function record(item, event_type, value = '') {
+    if (item.preview) return Promise.resolve();
     const body=JSON.stringify({event_type,value,event_id:crypto.randomUUID()});
     const send=async()=>{
       for(let attempt=0;attempt<3;attempt++) {
@@ -93,7 +94,7 @@
         title.textContent=item.title;button.title=item.title;button.setAttribute('aria-label',item.title);button.append(title,status);group.append(button);buttons.set(item.id,button);
         button.addEventListener('click',()=>visit(items.find(row=>row.id===item.id)));
       }
-      const state=item.is_complete?t('Completed'):item.progress>0?t('In progress'):t('Not started');
+      const state=item.preview?t('Preview'):item.is_complete?t('Completed'):item.progress>0?t('In progress'):t('Not started');
       const score=item.score===null?'':new Intl.NumberFormat(window.ModuLearnLanguage||'en',{maximumFractionDigits:0}).format(item.score)+'%';
       button.querySelector('small').textContent=[state,score].filter(Boolean).join(' · ');
       if (!seen.has(item.id)) {seen.add(item.id);record(item,'impression').catch(e=>error(e.message));}
