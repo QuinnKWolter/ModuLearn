@@ -1,8 +1,34 @@
-# Research Recruitment Links
+# Courses, analytics and studies
+
+## Course configuration
+
+Course structure is shared across its sessions; enrollments, grades and recommendation settings are session-specific. Units/modules support ordering, visibility, locks and access rules. Student course lists load collapsed. Server-side access checks enforce hidden/locked content even when a launch URL is copied directly.
+
+Add Module is available in the structure sidebar and beside each unit's expand/collapse controls. Supported authoring choices include external links, files, forms/quizzes and Smart Learning Content. SLC metadata (including the displayed content-type label) is editable. The catalog supports cards/table views, search, sorting, full metadata, demos in separate windows and prospective filter counts. Zero-count options disable and available choices sort first. Per-user browser session storage retains filter/layout choices. Catalog selection fills the module form; save to create the module.
+
+Configuration packs text controls into `structure_controls`, leaving CSRF/action/files as normal form fields. This prevents large courses exceeding Django's field-count limit without raising that limit globally. Save validation and writes remain atomic; preserve multipart handling and research locks.
+
+## Plugins
+
+The registry and normalization helpers live in `modulearn.learning.services.course_plugins`. General course plugin settings use `Course.plugin_config`; **static recommendations are the session-scoped exception**, stored in `StaticRecommendationSet`. See [the recommendation guide](recommendation-package-format.md). Dynamic recommendation registry entries are not evidence of an implemented personalized ranking service.
+
+Guided Sequence applies initial linear visibility/unlock defaults only on disabled→enabled transition. Subsequent normal saves do not overwrite instructor customization. The next-module control uses existing access evaluation.
+
+Adaptive Branching uses `ModuleBranchRule` and durable `EnrollmentModuleUnlock` rows. Source events may match success/failure, score thresholds or completion, optionally scoped to study condition. Scores use 0–100; ordinary unscored viewing must not count as failure. Rules execute through the canonical progress service and `adaptive_branching.handle_progress_event()`. Course exports preserve normalized plugin config and branch rules; recommendation datasets are installed separately. Review the outstanding access-policy work in [development](development.md) before changing branch/denominator behavior.
+
+## Analytics and logs
+
+The native class-average grid opens details for one unit/type intersection. Search students, expand a student to see exercises, and select Raw for recorded history. Rows are built lazily; data queries are batched. Saved score, attempts, completion and class-average comparison are available. A null score means ungraded, distinct from 0%; attempts with zero progress are still Attempted.
+
+Per-student and aggregate views share status semantics. Instructor testing and recommendation-only content stay out of student class aggregates. Legacy KT analytics is a separate data path. Recommendation research logs provide separate normal-course events, practice events and practice summaries with filtered CSV exports.
+
+A launch, iframe load or saved state does not prove a successful submission. Diagnose reported missing credit with session, user, module, timestamp and actual attempt/provider payloads; do not infer lost grades from launch-only flags. Audit/repair commands are documented in [development](development.md).
+
+## Research studies
 
 ModuLearn research recruitment is Study-owned. A `Study` has a backing course session for module playback, but courses and ordinary course sessions no longer expose Prolific setup directly.
 
-## Study Setup
+### Study setup
 
 Instructors create and manage studies from:
 
@@ -21,7 +47,7 @@ Creating a study also creates a dedicated backing course/session with default mo
 
 Those modules are edited from the study row's **Modules** button, which opens the normal course-structure editor for the backing study session.
 
-## Prolific Entry Flow
+### Prolific entry
 
 Prolific settings live in the Instructor Dashboard **Studies** modal. A Prolific Study ID is not required to generate the ModuLearn URL; leave it blank until Prolific creates the study if needed.
 
@@ -53,7 +79,7 @@ On accepted entry, ModuLearn:
 
 Anonymous participants are intentionally restricted. They are redirected away from profiles and dashboards, cannot browse the normal course hub, cannot enroll in other sessions, and can only resume assigned study sessions/modules.
 
-## Conditions
+### Conditions
 
 Study conditions are configured on the Study, not on a course session. Current assignment strategies are:
 
@@ -63,7 +89,7 @@ Study conditions are configured on the Study, not on a course session. Current a
 
 Module unlock rules can still target participant conditions through the course-structure editor, but the condition comes from the Study-owned `ParticipantSession`.
 
-## Completion
+### Completion
 
 The Study modal shows the end-of-study credit URL:
 
@@ -85,11 +111,11 @@ For Prolific credit to work end to end:
 
 The legacy `/r/prolific/<source_id>/` and `/r/complete-current/<course_instance_id>/` routes remain as compatibility fallbacks for older rows, but new UI should use Study routes only.
 
-## SONA
+### SONA
 
 SONA configuration is temporarily disabled in the instructor UI and rejected by the source-creation endpoint. Existing SONA model fields and services remain in place, but new SONA sources should not be created until the SONA flow is re-enabled.
 
-## Local Testing
+### Local testing
 
 Use the generated Study launch URL and replace the placeholders with stable 24-character hex values, for example:
 

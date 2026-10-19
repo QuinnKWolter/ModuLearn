@@ -1,11 +1,11 @@
-#practice-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; }
+#practice-layout { position:relative; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr); gap:1rem; flex:1; min-height:0; }
 #practice-layout.has-practice { grid-template-columns:290px minmax(0,1fr); }
-#practice-workspace { min-width:0; }
+#practice-workspace { min-width:0; min-height:0; height:100%; overflow:hidden; }
 .practice-available .module-frame-heading { padding-left:7rem; min-height:3rem; }
-#original-activity { max-height:80vh; overflow:auto; scrollbar-gutter:stable; overflow-anchor:none; }
-#content-iframe { display:block; }
-.content-embedded #original-activity { max-height:100vh; }
-#practice-sidebar { border:1px solid var(--color-border); border-radius:1rem; background:var(--color-surface); align-self:start; overflow:hidden; color:var(--color-ink); }
+#original-activity { height:100%; min-height:0; overflow:auto; scrollbar-gutter:stable; overflow-anchor:none; }
+#content-iframe { display:block; width:100%; height:100%; min-height:100%; }
+
+#practice-sidebar { border:1px solid var(--color-border); border-radius:1rem; background:var(--color-surface); align-self:start; max-height:100%; overflow:auto; color:var(--color-ink); }
 .practice-heading { display:flex; align-items:center; gap:.75rem; justify-content:space-between; padding:1rem; }
 .practice-heading h2 { margin:0; font-size:1.05rem; font-weight:750; line-height:1.35; }
 #practice-minimize { min-width:2.5rem; min-height:2.5rem; border:1px solid var(--color-border); border-radius:.65rem; font-size:1.5rem; }
@@ -25,27 +25,37 @@
 #practice-launcher { position:fixed; top:1rem; left:1rem; z-index:90; display:flex; align-items:center; gap:.45rem; min-height:3rem; padding:.45rem .7rem; border:1px solid #c49a28; border-radius:1rem; background:var(--color-surface-strong); color:var(--color-ink); box-shadow:0 5px 20px #0003; }
 #practice-launcher span:first-child { font-size:1.5rem; }
 .practice-launcher-label { font-size:.9rem; font-weight:650; }
-#practice-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.7rem; margin-bottom:.8rem; font-size:.9rem; color:var(--color-ink-soft); padding-left:7rem; min-height:3rem; }
 #practice-original { border:1px solid var(--color-border); border-radius:.65rem; padding:.6rem .9rem; font-size:.95rem; font-weight:650; color:var(--color-ink); background:var(--color-surface); }
-#practice-original:disabled { opacity:.65; cursor:default; }
-#practice-error { flex-basis:100%; margin:0; }
 #practice-dialog { padding:0; border:0; border-radius:1.25rem; width:min(760px,calc(100vw - 2rem)); max-height:85dvh; overflow:auto; color:var(--color-ink); background:var(--color-surface); box-shadow:0 20px 80px #0005; }
 #practice-dialog::backdrop { background:rgb(9 19 32 / .55); backdrop-filter:blur(4px); }
-#practice-dialog #practice-sidebar { border:0; }
+#practice-dialog #practice-sidebar { border:0; max-height:none; }
 #practice-dialog .practice-heading { padding:1.3rem 1.3rem .7rem; }
 #practice-dialog .practice-heading h2 { font-size:1.3rem; }
 #practice-dialog .practice-sidebar-body { padding:0 1.3rem 1.3rem; }
 #practice-dialog #practice-items { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:0 1rem; }
-.practice-frame { width:100%; min-height:82vh; border:0; border-radius:.75rem; }
+.practice-frame { width:100%; height:100%; min-height:0; border:0; border-radius:.75rem; }
 #practice-feedback { position:fixed; bottom:2rem; right:1.5rem; z-index:100; width:min(340px,calc(100vw - 2rem)); padding:1.2rem; border:1px solid #16877b; border-radius:1rem; background:var(--color-surface-strong); color:var(--color-ink); box-shadow:0 10px 35px #0003; }
 #practice-feedback p { font-size:.8rem; margin:.5rem 0; }
 #practice-feedback div { display:flex; gap:.5rem; margin-top:1rem; }
 #practice-feedback button { border:1px solid var(--color-border); border-radius:.5rem; padding:.5rem .7rem; }
 #practice-feedback button:hover { background:color-mix(in srgb,#16877b 15%,var(--color-surface)); }
-#practice-error { font-size:.8rem; color:var(--color-ink-soft); }
 #practice-layout [hidden],#practice-feedback[hidden],.module-frame-next-row[hidden] { display:none !important; }
-@media(max-width:800px) { #practice-layout.has-practice { grid-template-columns:minmax(0,1fr); } #practice-items { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; } }
+@media(max-width:800px) { #practice-layout.has-practice { grid-template-columns:minmax(0,1fr); } #practice-layout.has-practice > #practice-sidebar { position:absolute; inset:0 auto 0 0; width:min(320px,85%); z-index:30; box-shadow:8px 0 30px #0003; } }
 
-#practice-launcher[hidden],#practice-toolbar[hidden],#practice-sidebar[hidden] { display:none !important; }
+#practice-launcher[hidden],#practice-original[hidden],#practice-sidebar[hidden] { display:none !important; }
 @media(prefers-reduced-motion:reduce) { .practice-item { transition:none; } }
-@media(max-width:600px) { #practice-launcher { top:.5rem; left:.5rem; } .practice-launcher-label { display:none; } #practice-toolbar,.practice-available .module-frame-heading { padding-left:3.5rem; } }
+@media(max-width:600px) { #practice-launcher { top:.5rem; left:.5rem; } .practice-launcher-label { display:none; } .practice-available .module-frame-heading { padding-left:3.5rem; } }
+/* The player owns one viewport; provider content scrolls within its activity pane. */
+html.module-player, .module-player body { height:100%; overflow:hidden; }
+.module-player body { height:100dvh; min-height:0; display:flex; flex-direction:column; }
+.module-player body > main { flex:1; min-height:0; overflow:hidden; }
+.module-player body > footer { flex:none; }
+#module-frame-container { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.module-frame-heading { flex:none; }
+.module-frame-next-row { flex:none; margin-top:.5rem; padding:0; }
+#practice-original { margin-bottom:.7rem; }
+#iframe-blocked-notice { flex:none; max-height:50%; overflow:auto; }
+
+#practice-sidebar { background:#f8fafc; }
+.dark #practice-sidebar { background:#111827; }
+.practice-heading { position:sticky; top:0; z-index:1; background:inherit; }

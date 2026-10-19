@@ -1,95 +1,45 @@
-# Architecture
+# Architecture and data ownership
 
-## Current shape
+Maintained against the repository on 2026-10-19. Start at [the documentation index](../README.md).
 
-The live Django project is the `modulearn/` repository root. The external `modulearn-storage` directory is only used for persisted storage such as SQLite files.
+## Source map
 
-The application keeps Django app labels stable for migration safety, but the internal source of truth is moving toward three domain packages:
+| Area | Responsibility / entry points |
+| --- | --- |
+| `accounts/` | Custom User, login/signup/profile, KnowledgeTree linkage |
+| `courses/` | Reusable course structure, sessions, enrollment, configuration, progress, recommendation management |
+| `dashboard/` | Instructor/student dashboards, native analytics, legacy KT/MasteryGrids analytics |
+| `recruitment/` | Studies, participant sessions, conditions and recruitment entry/credit |
+| `lti/` | Inbound LMS launches, platform registrations and identity mappings; shared launch cache/outcome models |
+| `modulearn/views_lti.py` | Outbound external-tool launches and signed outcome handling |
+| `modulearn/views_proxy.py` | Allowlisted upstream proxy and provider response capture |
+| `modulearn/core/` | Navigation, role snapshots, shared context |
+| `modulearn/learning/services/` | Progress, provider adapters, access rules, plugins, recommendations, catalog |
+| `modulearn/learning/selectors/` | Course/dashboard/analytics/timeline read models |
+| `modulearn/integrations/` | External configuration and course-authoring helpers |
+| `main/` | Public pages and interface translation catalogs |
 
-- `modulearn.core`
-- `modulearn.learning`
-- `modulearn.integrations`
+Paths above are relative to the Django project (`modulearn/`). Keep Django app labels and public route names stable when reorganizing internals.
 
-## Django apps
+## Ownership and invariants
 
-### `accounts`
+- `Course → Unit → Module` is the reusable, shared outline. Editing a session's configuration changes that course's shared structure, including order, visibility and locks.
+- `CourseInstance` is one offering/section; `Enrollment` binds a user to that exact session. Never resolve an ambiguous callback to an arbitrary enrollment.
+- `ModuleProgress` stores normalized progress (0–1), score (0–100), attempts, completion timestamps and state; `CourseProgress` stores the rollup. `ModuleProgressEvent` preserves the event ledger, including individual attempt scores and raw payloads. Access logs and form answers are separate records.
+- Normal progress writes use `modulearn.learning.services.progress.apply_progress_snapshot()`. Selectors shape reads; templates should not reconstruct tracking semantics.
+- `StaticRecommendationSet` belongs to a session. `RecommendationActivation`, `RecommendationProgress`, and `RecommendationEvent` isolate practice by enrollment and original problem. Recommendation-only modules never contribute course credit. See [recommendations](recommendation-package-format.md).
+- Instructor testing enrollments use `is_instructor_preview`; their saved grades/practice must stay out of student rosters, analytics, research exports and external grade forwarding. An instructor enrolled as a student in another session retains normal student tracking there.
+- `Study`, `StudyCondition`, `ParticipantSession`, `RecruitmentSource` and assignment slots govern research participation. Study-owned backing courses use the same delivery engine, with participant confinement and research edit locks.
+- `LTIUserIdentity` and `LTIPlatformRegistration` handle inbound identity/trust. `LTILaunchCache` and `LTIOutcomeLog` bind outbound callbacks to launches. Keep the two LTI directions separate.
 
-- Custom `User` model
-- Signup, login, logout, profile
-- KnowledgeTree account linkage and password synchronization
+## Identity and roles
 
-### `courses`
+`User.is_instructor` is authoritative for instructor navigation and takes precedence over student and participant flags. Django group names and KT group membership do not choose the navbar dashboard. Automated KT/LTI synchronization must not demote existing instructors; metadata/password/profile updates use field-scoped saves to avoid overwriting concurrent Admin role edits.
 
-- Native course structures: `Course`, `Unit`, `Module`
-- Teaching sessions: `CourseInstance`
-- Enrollment and invite codes
-- Progress storage and launch flows
-- LTI outcomes and Caliper endpoints tied to courses
+`User.get_display_name()` prefers profile `full_name`, then first/last names, then username. Numeric-only name candidates are treated as identifiers. Stored external identity fields are not rewritten to repair display issues.
 
-### `dashboard`
+When Admin and the browser disagree, compare the exact Profile username and role first, then deployed revision, database mount, workers and proxy destination. Do not merge accounts or infer instructor access from an email/display name.
 
-- Student dashboard
-- Instructor dashboard
-- Native ModuLearn analytics
-- Legacy MasteryGrids analytics
-- KnowledgeTree helper/API views
+## UI boundaries
 
-### `lti`
-
-- Inbound LMS-to-ModuLearn launch provider
-- LTI 1.1 and 1.3 configuration/login/launch helpers
-- Launch cache and outcome logging models
-
-### `main`
-
-- Marketing and static pages
-
-## Internal domain packages
-
-### `modulearn.core`
-
-- `context_processors.py`: app-shell metadata, script-name awareness, primary navigation
-- `navigation.py`: user-aware primary nav definitions
-
-### `modulearn.learning`
-
-- `services/progress.py`: canonical progress mutation logic, course rollups, event-ledger emission
-- `selectors/dashboard.py`: student/instructor dashboard context shaping
-- `selectors/courses.py`: course detail shaping
-- `selectors/timelines.py`: event-ledger read models for students and instructors
-
-### `modulearn.integrations`
-
-- `config.py`: script-prefix and external-host helpers
-- `course_authoring.py`: course-authoring URLs and redirect targets
-
-## UI system
-
-The UI is now organized around:
-
-- `templates/base.html`: marketing + authenticated shell
-- `templates/content_base.html`: embedded/iframe shell
-- `static/css/design-system.css`: tokens, layout primitives, cards, forms, badges, tables, timeline styling
-- `static/js/app-shell.js`: theme toggle and mobile nav
-
-Shared reusable UI partials live under `templates/includes/`.
-
-## Data flow
-
-### Progress mutations
-
-Progress updates should flow through `modulearn.learning.services.progress.apply_progress_snapshot()` so that:
-
-- module progress stays normalized
-- completion timestamps are durable
-- reopen events are recorded when progress regresses
-- `CourseProgress` rollups stay in sync
-- `ModuleProgressEvent` entries are emitted consistently
-
-### Timeline reads
-
-Timeline UI reads should come from `modulearn.learning.selectors.timelines`, not from hand-built view logic.
-
-## Compatibility boundaries
-
-Public route names and route entry points remain stable. Thin Django views may delegate to new selectors and services, but templates, LMS configurations, invite workflows, and integration endpoints should keep working while internals are reorganized.
+`templates/base.html` provides the full shell; `templates/content_base.html` provides embedded activity pages. Reuse shared includes and `static/css/design-system.css`. Home is role-aware; audience information belongs on Info. Embedded recommendation frames suppress duplicate application chrome. See [development](development.md) for localization and extension rules, and [courses](courses.md) for instructor workflows.

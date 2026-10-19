@@ -30,6 +30,10 @@ COPY --from=frontend /build/static/css/tailwind.generated.css ./static/css/tailw
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=modulearn.settings
+# Use the OS-maintained trust store, including the InCommon/emSign chain used
+# by ACOS. Environment overrides remain available; TLS verification stays on.
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+RUN test -s "$REQUESTS_CA_BUNDLE"
 
 # Expose the port that Django runs on
 EXPOSE 8000

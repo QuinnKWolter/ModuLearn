@@ -27,7 +27,7 @@ services:
       - ./.env:/.env:ro
     extra_hosts:
       # Same-host Pitt services: override in the deployment .env only after
-      # checking reachability from this container. See quizjet-networking.md.
+      # checking reachability from this container. See ../modulearn/docs/deployment-adapt2.md.
       - "host.docker.internal:${MODULEARN_HOST_GATEWAY:-host-gateway}"
       - "adapt2.sis.pitt.edu:${MODULEARN_HOST_GATEWAY:-host-gateway}"
       - "pawscomp2.sis.pitt.edu:${MODULEARN_HOST_GATEWAY:-host-gateway}"

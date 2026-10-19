@@ -1,0 +1,13 @@
+{
+  "Upload one linked CSV or JSON package. Exact activity URLs are installed and matched automatically. Older CSVs without URLs require manual review.": "Carga un CSV con enlaces o un paquete JSON. Las URL exactas de las actividades se instalan y vinculan automáticamente. Los CSV anteriores sin URL requieren revisión manual.",
+  "Linked recommendations (CSV or JSON)": "Recomendaciones con enlaces (CSV o JSON)",
+  "Resolve activity links": "Resolver enlaces de actividades",
+  "Advanced activity matching": "Correspondencias avanzadas de actividades",
+  "Recommendations ready: {activities} activities, {links} links. Created {created} activities; updated {updated} active assignments. The plugin is enabled.": "Recomendaciones listas: {activities} actividades, {links} enlaces. Se crearon {created} actividades y se actualizaron {updated} asignaciones activas. El complemento está activado.",
+  "Upload one recommendation JSON package to install activity links, match problems, enable delivery, and update existing recommendations automatically. CSV imports still require manual review.": "Carga un paquete JSON de recomendaciones para instalar enlaces, vincular problemas, activar la entrega y actualizar automáticamente las recomendaciones existentes. Las importaciones CSV aún requieren revisión manual.",
+  "Recommendation package (JSON) or legacy CSVs": "Paquete de recomendaciones (JSON) o archivos CSV anteriores",
+  "Normal course activity": "Actividad normal del curso",
+  "Course attempts and scores are separate from recommendation practice. The student and event filters apply to both.": "Los intentos y las puntuaciones del curso están separados de la práctica recomendada. Los filtros de estudiante y evento se aplican a ambos.",
+  "Download course activity CSV": "Descargar CSV de actividad del curso",
+  "No course activity matches these filters.": "Ninguna actividad del curso coincide con estos filtros."
+}

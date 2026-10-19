@@ -1,0 +1,16 @@
+{
+  "Worked Examples": "Ejemplos resueltos",
+  "Completion Problems": "Problemas para completar",
+  "Upload or replace recommendations": "Cargar o reemplazar recomendaciones",
+  "Upload your recommendations CSV, then check the activity matches below.": "Carga tu CSV de recomendaciones y revisa las correspondencias de actividades abajo.",
+  "Advanced filtering": "Filtros avanzados",
+  "Practice appears beside a problem after an incorrect attempt. It never counts toward course grades.": "La práctica aparece junto al problema después de un intento incorrecto. Nunca cuenta para la nota del curso.",
+  "Practice library": "Biblioteca de práctica",
+  "These activities appear only in recommendations, not in the course outline.": "Estas actividades aparecen solo en las recomendaciones, no en el contenido del curso.",
+  "Content URL": "URL del contenido",
+  "Available for recommendations": "Disponible para recomendaciones",
+  "Save activity": "Guardar actividad",
+  "No practice-only activities yet.": "Aún no hay actividades exclusivas de práctica.",
+  "Or add a new practice activity by URL": "O añade una nueva actividad de práctica mediante su URL",
+  "Choose Leave unmatched above to create a practice-only activity and match it automatically.": "Selecciona Sin correspondencia arriba para crear una actividad exclusiva de práctica y vincularla automáticamente."
+}

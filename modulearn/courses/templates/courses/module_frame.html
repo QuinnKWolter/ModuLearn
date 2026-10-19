@@ -1,6 +1,6 @@
 {% extends 'content_base.html' %}
 {% load static ui_i18n %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/recommendation-sidebar.css' %}">{% endblock %}
+{% block extra_css %}<script>document.documentElement.classList.add("module-player");</script><link rel="stylesheet" href="{% static 'css/recommendation-sidebar.css' %}">{% endblock %}
 
 {% block content %}
   <div id="module-frame-container" class="flex-1 p-4 md:p-6">
@@ -46,7 +46,7 @@
     <div id="original-activity" class="card" tabindex="0" aria-label="{{ module.title }}">
       <iframe id="content-iframe"
               src="{% if not refuses_iframe %}{{ iframe_src }}{% endif %}"
-              class="w-full min-h-[80vh] bg-white"
+              class="w-full bg-white"
               frameborder="0"
               allowfullscreen
               allow="clipboard-write *"

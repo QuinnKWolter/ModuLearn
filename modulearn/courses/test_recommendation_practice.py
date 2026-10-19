@@ -27,15 +27,15 @@ class PracticeTests(TestCase):
                    'limit':2, 'failure_threshold':1, 'display_mode':'modal', 'auto_open':'false', 'animate':'false'}
         self.client.post(url, payload)
         self.dataset.refresh_from_db(); other_dataset.refresh_from_db()
-        self.assertEqual(self.dataset.options['display_mode'], 'modal')
-        self.assertFalse(self.dataset.options['auto_open'])
+        self.assertNotIn('display_mode', self.dataset.options)
+        self.assertNotIn('auto_open', self.dataset.options)
         self.assertNotIn('display_mode', other_dataset.options)
         response = self.client.get(reverse('courses:recommendation_queue', args=[self.instance.pk]), {'source':self.source.pk})
-        self.assertEqual(response.json()['presentation'], {'mode':'modal','auto_open':False,'animate':False})
-        payload.update(revision=self.dataset.updated_at.isoformat(), display_mode='invalid')
+        self.assertEqual(response.json()['presentation'], {'mode':'modal_then_sidebar','animate':False})
+        payload.update(revision=self.dataset.updated_at.isoformat(), animate='invalid')
         self.client.post(url, payload)
         self.dataset.refresh_from_db()
-        self.assertEqual(self.dataset.options['display_mode'], 'modal')
+        self.assertNotIn('display_mode', self.dataset.options)
 
     def test_modal_events_keep_context_and_are_deduplicated(self):
         self.attempt(number=1)

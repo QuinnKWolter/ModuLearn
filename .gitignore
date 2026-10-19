@@ -45,3 +45,13 @@ Thumbs.db
 # Local handoff/scratch artifacts
 weekendchanges.diff
 _tmp_slc_catalog_crawl_*/
+
+# Disposable diagnostic exports (keep fixtures and deployment packages tracked)
+docker/modulearn-progress-*.json
+docker/modulearn-progress-*.errors.txt
+docker/modulearn-progress-*.stderr.txt
+paws-catalog_course-export_*.json
+modulearn/docs/catalog-testing-*/catalog-list.json
+modulearn/docs/catalog-testing-*/selected-records.json
+modulearn/docs/catalog-testing-*/progress-evidence.json
+modulearn/docs/catalog-testing-*/coverage.json

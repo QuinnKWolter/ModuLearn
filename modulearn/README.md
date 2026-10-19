@@ -1,51 +1,19 @@
 # ModuLearn
 
-ModuLearn is a Django learning platform that blends native course delivery with external-tool launches, legacy analytics, and instructor workflow tooling. The current refactor keeps all public routes stable while consolidating behavior into tighter internal packages and a cleaner template/static-asset system.
+Free and open-source tools for learning, teaching and research in computing education. The Django project is in this directory; deployment scripts live in `../docker`.
 
-## Project layout
+## Maintained guides
 
-- `accounts/`: authentication, profile management, KnowledgeTree account linking, password sync.
-- `courses/`: native course structures, course sessions, enrollments, progress, invite-code enrollment, module launching.
-- `dashboard/`: student and instructor dashboards, native analytics, legacy MasteryGrids analytics, KnowledgeTree helper views.
-- `lti/`: inbound ModuLearn-as-tool provider for LMS launches.
-- `main/`: marketing/static pages.
-- `modulearn/`: project settings, root URLs, outbound LTI consumer views, proxy views, and the new internal domain packages.
+| Area | Guide |
+| --- | --- |
+| Architecture, models and ownership | [Architecture](docs/architecture.md) |
+| Production deployment, static assets, networking and CA trust | [Operations](docs/deployment-adapt2.md) |
+| Course configuration, plugins, analytics and studies | [Courses](docs/courses.md) |
+| Recommendation setup, file contracts, presentation and logs | [Recommendations](docs/recommendation-package-format.md) |
+| KnowledgeTree, catalog, provider tracking and LTI | [Integrations](docs/integrations.md) |
+| Regression tests, provider coverage and HTTPS lab handoff | [Testing](docs/testing.md) |
+| UI/localization, diagnostics and outstanding maintenance | [Development](docs/development.md) |
 
-## Internal domain packages
+These seven guides replace dated investigation notes and duplicate app READMEs. Certificate provenance stays beside its PEM bundle. Provider coverage CSVs are dated evidence, not guarantees of current upstream availability. Functional JSON fixtures, translation catalogs and recommendation deployment packages remain in their owning directories.
 
-- `modulearn.core`: app-shell helpers, navigation, shared context, design-system glue.
-- `modulearn.learning`: selectors and services for dashboards, progress, analytics, and timelines.
-- `modulearn.integrations`: course-authoring, KnowledgeTree, LTI, and URL/config helpers for external services.
-
-## Key refactor outcomes
-
-- Shared design system and responsive application shells now live in `static/css/design-system.css`, `templates/base.html`, and `templates/content_base.html`.
-- Progress tracking has durable completion timestamps and an event ledger through `ModuleProgressEvent`.
-- Student and instructor timelines are available through `modulearn.learning.selectors.timelines`.
-- Dashboard and profile pages now use static JavaScript modules instead of large inline scripts for several high-traffic workflows.
-
-## Documentation
-
-- [Repository review and maintenance handoff (2026-09-24)](docs/repository-review-2026-09-24.md)
-- [Repository file map](docs/repository-file-map.md)
-- [Sign-in role and display-name diagnostics](docs/account-sign-in-diagnostics.md)
-- [Architecture](docs/architecture.md)
-- [Page Inventory](docs/page-inventory.md)
-- [Progress Timeline](docs/progress-timeline.md)
-- [Model Glossary](docs/model-glossary.md)
-- [Integrations](docs/integrations.md)
-- [Testing](docs/testing.md)
-- [Compatibility Checklist](docs/compatibility-checklist.md)
-- [Extending ModuLearn](docs/extending-moduLearn.md)
-
-## Testing
-
-Test coverage is intentionally focused on smoke access, progress/timeline behavior, invite enrollment, dashboard rendering, and LTI outcome compatibility.
-
-Run the Django test suite with your configured Python environment:
-
-```bash
-python manage.py test
-```
-
-If Python is not configured locally, use the project’s containerized runtime or your normal deployment environment.
+From a configured development environment, run `python manage.py check` and `python manage.py test`; see the testing/development guides for boundaries and asset builds. Do not use production student data as a test fixture.

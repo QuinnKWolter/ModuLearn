@@ -119,10 +119,8 @@ def manage(request, instance_id):
                             minimum = None
                         limit = int(request.POST.get('limit', 2))
                         threshold = int(request.POST.get('failure_threshold', 1))
-                        display_mode = request.POST.get('display_mode', dataset.options.get('display_mode', 'sidebar'))
-                        auto_open = request.POST.get('auto_open', str(dataset.options.get('auto_open', True)).lower())
                         animate = request.POST.get('animate', str(dataset.options.get('animate', True)).lower())
-                        if display_mode not in {'sidebar', 'modal'} or auto_open not in {'true', 'false'} or animate not in {'true', 'false'}:
+                        if animate not in {'true', 'false'}:
                             raise ValueError('Choose valid practice presentation settings.')
                         if not 1 <= threshold <= 100:
                             raise ValueError('Choose between 1 and 100 unsuccessful attempts.')
@@ -131,7 +129,9 @@ def manage(request, instance_id):
                         if not 1 <= limit <= 30:
                             raise ValueError('Show between 1 and 30 recommendations per activity type.')
                         dataset.options = {**dataset.options, 'trigger': 'needs_practice', 'minimum_similarity': minimum, 'limit': limit, 'failure_threshold': threshold,
-                                           'display_mode': display_mode, 'auto_open': auto_open == 'true', 'animate': animate == 'true'}
+                                           'animate': animate == 'true'}
+                        dataset.options.pop('display_mode', None)
+                        dataset.options.pop('auto_open', None)
                         dataset.enabled = request.POST.get('enabled') == 'on'
                     dataset.save()
                     if not resolve_nodes(dataset, course)[1]:
@@ -202,9 +202,7 @@ def queue(request, instance_id):
         return JsonResponse({'error': 'Invalid source module.'}, status=400)
     instance = get_object_or_404(CourseInstance, pk=instance_id)
     options = StaticRecommendationSet.objects.filter(course_instance=instance).values_list('options', flat=True).first() or {}
-    presentation = {'mode': 'modal' if options.get('display_mode') == 'modal' else 'sidebar',
-                    'auto_open': options.get('auto_open', True) is not False,
-                    'animate': options.get('animate', True) is not False}
+    presentation = {'mode': 'modal_then_sidebar', 'animate': options.get('animate', True) is not False}
     if instance.instructors.filter(pk=request.user.pk).exists():
         from modulearn.learning.services.instructor_testing import testing_enrollment, prepare_recommendations
         enabled = recommendations_enabled(instance)
