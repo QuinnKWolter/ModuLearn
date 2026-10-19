@@ -216,7 +216,6 @@ class KnowledgeTreeAuthService:
     def authenticate_via_database(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """
         Authenticate user via direct database access to KnowledgeTree.
-        Uses SSH tunneling if configured (for development).
         
         Returns user data dict if successful, None if failed.
         """
@@ -229,7 +228,7 @@ class KnowledgeTreeAuthService:
             
             password_hash = self._md5_hash(password)
             
-            # Get database connection (handles SSH tunneling if needed)
+            # Get a direct database connection
             db_conn = get_paws_db_connection()
             success, message = db_conn.connect()
             
@@ -349,7 +348,6 @@ class KnowledgeTreeAuthService:
     def check_user_exists_in_database(self, username: str) -> Optional[Dict[str, Any]]:
         """
         Check if a user exists in KnowledgeTree database (without password verification).
-        Uses SSH tunneling if configured (for development).
         
         Returns user data dict if found, None if not found.
         """
@@ -360,7 +358,7 @@ class KnowledgeTreeAuthService:
             from dashboard.kt_db_connection import get_paws_db_connection
             from django.conf import settings
             
-            # Get database connection (handles SSH tunneling if needed)
+            # Get a direct database connection
             db_conn = get_paws_db_connection()
             success, message = db_conn.connect()
             
@@ -404,7 +402,6 @@ class KnowledgeTreeAuthService:
     def create_user_in_database(self, username: str, password: str, email: str = '', full_name: str = '') -> Optional[Dict[str, Any]]:
         """
         Create a new user in KnowledgeTree database (ent_user table).
-        Uses SSH tunneling if configured (for development).
         
         This is called when a user successfully authenticates with Django but doesn't exist in KnowledgeTree.
         
@@ -428,7 +425,7 @@ class KnowledgeTreeAuthService:
             from django.conf import settings
             import pymysql
             
-            # Get database connection (handles SSH tunneling if needed)
+            # Get a direct database connection
             db_conn = get_paws_db_connection()
             success, message = db_conn.connect()
             

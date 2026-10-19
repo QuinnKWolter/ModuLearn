@@ -17,6 +17,43 @@ from modulearn.learning.services.recommendation_tracking import practice_items, 
 
 @override_settings(STORAGES={'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}})
 class PracticeTests(TestCase):
+    def test_presentation_settings_are_validated_and_session_scoped(self):
+        other = CourseInstance.objects.create(course=self.course, group_name='other-presentation')
+        other_dataset = StaticRecommendationSet.objects.create(course=self.course, course_instance=other,
+            **parse_uploads([rec_file()]))
+        self.client.force_login(self.teacher)
+        url = reverse('courses:static_recommendations', args=[self.instance.pk])
+        payload = {'action':'settings', 'revision':self.dataset.updated_at.isoformat(), 'enabled':'on',
+                   'limit':2, 'failure_threshold':1, 'display_mode':'modal', 'auto_open':'false', 'animate':'false'}
+        self.client.post(url, payload)
+        self.dataset.refresh_from_db(); other_dataset.refresh_from_db()
+        self.assertEqual(self.dataset.options['display_mode'], 'modal')
+        self.assertFalse(self.dataset.options['auto_open'])
+        self.assertNotIn('display_mode', other_dataset.options)
+        response = self.client.get(reverse('courses:recommendation_queue', args=[self.instance.pk]), {'source':self.source.pk})
+        self.assertEqual(response.json()['presentation'], {'mode':'modal','auto_open':False,'animate':False})
+        payload.update(revision=self.dataset.updated_at.isoformat(), display_mode='invalid')
+        self.client.post(url, payload)
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.options['display_mode'], 'modal')
+
+    def test_modal_events_keep_context_and_are_deduplicated(self):
+        self.attempt(number=1)
+        self.attempt(number=2)
+        item = RecommendationProgress.objects.get(activation__enrollment=self.enrollment)
+        url = reverse('courses:recommendation_event', args=[self.instance.pk, item.pk])
+        for event_type in ('modal_open','modal_close','launcher_open'):
+            data = {'event_type':event_type,'event_id':event_type,'presentation':'modal','value':'minimize'}
+            for _ in range(2):
+                self.assertEqual(self.client.post(url, json.dumps(data), content_type='application/json').status_code, 200)
+            event = RecommendationEvent.objects.get(recommendation=item,event_type=event_type)
+            self.assertEqual(event.source,'modal')
+            self.assertEqual(event.payload['presentation'],'modal')
+        item.refresh_from_db(); self.progress.refresh_from_db()
+        self.assertFalse(item.is_complete)
+        self.assertFalse(self.progress.is_complete)
+        self.assertEqual(self.client.post(url, json.dumps({'event_type':'modal_open','presentation':'invalid'}), content_type='application/json').status_code,400)
+
     def setUp(self):
         self.teacher = User.objects.create_user(username='teacher', is_instructor=True)
         self.student = User.objects.create_user(username='student', is_student=True)

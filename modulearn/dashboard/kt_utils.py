@@ -338,7 +338,7 @@ def get_instructor_group_ids(user_id: str) -> List[str]:
 def get_user_groups_from_kt_db(kt_user_id: int) -> List[Dict[str, Any]]:
     """
     Query KnowledgeTree database (portal_test2 schema) to get user's groups.
-    Uses direct database connection with SSH tunnel support.
+    Uses the shared direct MySQL connection.
     
     Args:
         kt_user_id: KnowledgeTree UserID
@@ -559,7 +559,7 @@ def get_masterygrids_node_ids_batch(group_logins: List[str], user_kt_user_id: Op
     3. Find any MasteryGrids node that might work (fallback)
     
     This is much more efficient than querying one group at a time, especially
-    when SSH tunneling is involved.
+    when database latency is significant.
     
     Args:
         group_logins: List of group login strings (e.g., ["CMPINF0401Fall2024", ...])

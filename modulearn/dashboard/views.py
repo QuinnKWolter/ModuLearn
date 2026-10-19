@@ -311,7 +311,7 @@ def fetch_modulearn_instance_analytics(request):
         progress_qs = ModuleProgress.objects.filter(
             enrollment_id__in=enrollment_ids,
             module_id__in=module_ids,
-        ).values('enrollment_id', 'module_id', 'progress', 'score')
+        ).values('enrollment_id', 'module_id', 'progress', 'score', 'attempts', 'is_complete')
 
         progress_by_enrollment = {}
         for row in progress_qs:
@@ -361,7 +361,9 @@ def fetch_modulearn_instance_analytics(request):
                             'id': str(m.id),
                             'name': m.title,
                             'url': m.content_url or '',
-                            'values': {'k': kk, 'p': p}
+                            'values': {'k': kk, 'p': p, 'score': score,
+                                       'attempts': mp.get('attempts', 0),
+                                       'is_complete': bool(mp.get('is_complete', False))}
                         }
 
             participant_session = sessions_by_enrollment.get(e.id)

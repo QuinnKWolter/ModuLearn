@@ -119,13 +119,19 @@ def manage(request, instance_id):
                             minimum = None
                         limit = int(request.POST.get('limit', 2))
                         threshold = int(request.POST.get('failure_threshold', 1))
+                        display_mode = request.POST.get('display_mode', dataset.options.get('display_mode', 'sidebar'))
+                        auto_open = request.POST.get('auto_open', str(dataset.options.get('auto_open', True)).lower())
+                        animate = request.POST.get('animate', str(dataset.options.get('animate', True)).lower())
+                        if display_mode not in {'sidebar', 'modal'} or auto_open not in {'true', 'false'} or animate not in {'true', 'false'}:
+                            raise ValueError('Choose valid practice presentation settings.')
                         if not 1 <= threshold <= 100:
                             raise ValueError('Choose between 1 and 100 unsuccessful attempts.')
                         if minimum is not None and (not math.isfinite(minimum) or not -1 <= minimum <= 1):
                             raise ValueError('Cosine similarity must be between -1 and 1, or blank for no cutoff.')
                         if not 1 <= limit <= 30:
                             raise ValueError('Show between 1 and 30 recommendations per activity type.')
-                        dataset.options = {**dataset.options, 'trigger': 'needs_practice', 'minimum_similarity': minimum, 'limit': limit, 'failure_threshold': threshold}
+                        dataset.options = {**dataset.options, 'trigger': 'needs_practice', 'minimum_similarity': minimum, 'limit': limit, 'failure_threshold': threshold,
+                                           'display_mode': display_mode, 'auto_open': auto_open == 'true', 'animate': animate == 'true'}
                         dataset.enabled = request.POST.get('enabled') == 'on'
                     dataset.save()
                     if not resolve_nodes(dataset, course)[1]:
@@ -195,6 +201,10 @@ def queue(request, instance_id):
     if source and not source.isdecimal():
         return JsonResponse({'error': 'Invalid source module.'}, status=400)
     instance = get_object_or_404(CourseInstance, pk=instance_id)
+    options = StaticRecommendationSet.objects.filter(course_instance=instance).values_list('options', flat=True).first() or {}
+    presentation = {'mode': 'modal' if options.get('display_mode') == 'modal' else 'sidebar',
+                    'auto_open': options.get('auto_open', True) is not False,
+                    'animate': options.get('animate', True) is not False}
     if instance.instructors.filter(pk=request.user.pk).exists():
         from modulearn.learning.services.instructor_testing import testing_enrollment, prepare_recommendations
         enabled = recommendations_enabled(instance)
@@ -203,12 +213,12 @@ def queue(request, instance_id):
             module = get_object_or_404(Module, pk=source, unit__course=instance.course)
             dataset = StaticRecommendationSet.objects.get(course_instance=instance)
             prepare_recommendations(enrollment, module, dataset)
-        response = JsonResponse({'enabled': enabled, 'instructor_testing': True,
+        response = JsonResponse({'enabled': enabled, 'instructor_testing': True, 'presentation': presentation,
             'items': practice_items(enrollment, source)})
         response['Cache-Control'] = 'no-store'
         return response
     enrollment = _enrollment(request, instance_id)
-    response = JsonResponse({'enabled': recommendations_enabled(enrollment.course_instance),
+    response = JsonResponse({'enabled': recommendations_enabled(enrollment.course_instance), 'presentation': presentation,
                              'items': practice_items(enrollment, source)})
     response['Cache-Control'] = 'no-store'
     return response
@@ -278,9 +288,12 @@ def practice_event_view(request, instance_id, recommendation_id):
     try:
         data = json.loads(request.body)
         event = data['event_type']
-        if event not in {'impression', 'visit', 'return_to_problem', 'sidebar_open', 'sidebar_close', 'feedback_shown', 'feedback'}:
+        if event not in {'impression', 'visit', 'return_to_problem', 'sidebar_open', 'sidebar_close', 'modal_open', 'modal_close', 'launcher_open', 'feedback_shown', 'feedback'}:
             raise ValueError
         value = data.get('value', '')
+        presentation = data.get('presentation', 'sidebar')
+        if presentation not in {'sidebar', 'modal'} or not isinstance(value, str) or len(value) > 100:
+            raise ValueError
         if event.startswith('feedback') and not item.is_complete:
             raise ValueError
         if event == 'feedback' and value not in {'up', 'down', 'skipped'}:
@@ -303,7 +316,7 @@ def practice_event_view(request, instance_id, recommendation_id):
                 item.feedback_prompted_at = timezone.now()
                 item.save(update_fields=['feedback_prompted_at'])
             client_id = str(data.get('event_id', ''))[:48]
-            practice_event(item, event, source='sidebar', payload={'value': value},
+            practice_event(item, event, source=presentation, payload={'value': value, 'presentation': presentation},
                            event_key=(str(item.pk)+client_id) if client_id else None)
     except (ValueError, TypeError, KeyError):
         return JsonResponse({'error': 'Invalid recommendation event.'}, status=400)
@@ -409,6 +422,6 @@ def research_logs(request, instance_id):
         'course_page': Paginator(course_events, 50).get_page(request.GET.get('course_page')),
         'assignment_page': Paginator(assignments, 25).get_page(request.GET.get('assignments_page')),
         'q': query, 'kind': kind, 'event_types': ['activated', 'source_attempt', 'impression', 'visit', 'launch', 'attempt',
-        'completion', 'return_to_problem', 'sidebar_open', 'sidebar_close', 'feedback_shown', 'feedback', 'tab_focus', 'tab_blur', 'iframe_load', 'dataset_transition', 'provider_event'],
+        'completion', 'return_to_problem', 'sidebar_open', 'sidebar_close', 'modal_open', 'modal_close', 'launcher_open', 'feedback_shown', 'feedback', 'tab_focus', 'tab_blur', 'iframe_load', 'dataset_transition', 'provider_event'],
         'assigned': items.count(), 'completed': items.filter(is_complete=True).count(),
         'rated': items.filter(feedback__in=['up', 'down']).count()})

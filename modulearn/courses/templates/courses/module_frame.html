@@ -8,7 +8,7 @@
     <input id="module-frame-csrf" type="hidden" value="{{ csrf_token }}">
 
     {% if not preview_mode and course_instance and not participant_mode and not recommendation_practice %}
-      <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="module-frame-heading max-w-7xl mx-auto mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
           <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>

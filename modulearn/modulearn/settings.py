@@ -12,7 +12,6 @@ except Exception:  # pragma: no cover
 
 # Suppress deprecation warnings from third-party libraries
 warnings.filterwarnings('ignore', category=UserWarning, module='pkg_resources')
-warnings.filterwarnings('ignore', category=DeprecationWarning, module='paramiko')
 warnings.filterwarnings('ignore', category=DeprecationWarning, module='cryptography')
 if CryptographyDeprecationWarning is not None:
     warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
@@ -208,16 +207,7 @@ PAWS_DATABASE = {
     'PASSWORD': os.getenv('PAWS_DB_PASSWORD', ''),
     'KNOWLEDGETREE_SCHEMA': os.getenv('PAWS_DB_KT_SCHEMA', 'portal_test2'),
     'AGGREGATE_SCHEMA': os.getenv('PAWS_DB_AGGREGATE_SCHEMA', 'aggregate'),
-    'SSH_HOST': os.getenv('PAWS_DB_SSH_HOST', ''),
-    'SSH_PORT': int(os.getenv('PAWS_DB_SSH_PORT', '22')),
-    'SSH_USER': os.getenv('PAWS_DB_SSH_USER', ''),
-    'SSH_PASSWORD': os.getenv('PAWS_DB_SSH_PASSWORD', ''),
-    'SSH_KEY_PATH': os.getenv('PAWS_DB_SSH_KEY_PATH', ''),
-    'USE_SSH': os.getenv('PAWS_DB_USE_SSH', 'False').lower() == 'true',
 }
-
-if not PAWS_DATABASE['USE_SSH'] and PAWS_DATABASE.get('SSH_HOST') and PAWS_DATABASE.get('SSH_USER'):
-    logger.warning(f"SSH credentials provided but PAWS_DB_USE_SSH is False.")
 
 if KNOWLEDGETREE['AUTH_METHOD'] in ('database', 'both'):
     KNOWLEDGETREE['DATABASE'] = PAWS_DATABASE
@@ -295,18 +285,8 @@ EMAIL_HOST_PASSWORD = 'your-email-password'
 LTI_PUBLIC_KEY_FILE = os.getenv('LTI_PUBLIC_KEY_FILE', './modulearn/public.key')
 LTI_PRIVATE_KEY_FILE = os.getenv('LTI_PRIVATE_KEY_FILE', './modulearn/private.key')
 
-LTI_CONFIG = {
-    'https://saltire.lti.app/platform': {
-        'client_id': 'saltire.lti.app',
-        'auth_login_url': 'https://saltire.lti.app/platform/auth',
-        'auth_token_url': 'https://saltire.lti.app/platform/token/3b4f2aae79ac1d451a4911ac3bc00145',
-        'key_set_url': 'https://saltire.lti.app/platform/jwks/3b4f2aae79ac1d451a4911ac3bc00145',
-        'auth_audience': 'https://saltire.lti.app/platform',
-        'deployment_ids': ['6eb84c059ff928e88f0b734420330efa09905105'],
-        'public_key_file': LTI_PUBLIC_KEY_FILE,
-        'private_key_file': LTI_PRIVATE_KEY_FILE,
-    }
-}
+# LMS registrations are managed through LTIPlatformRegistration in Admin.
+LTI_CONFIG = {}
 
 CACHES = {
     'default': {

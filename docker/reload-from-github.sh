@@ -13,23 +13,32 @@ sudo mv ModuLearn.new ModuLearn
 # 2. Sync your repository's production compose file to the root directory
 cp ModuLearn/docker/docker-compose.yml ./docker-compose.yml
 
-# 3. Clean, rebuild, and launch your container infrastructure
-sudo docker-compose down
+# 3. Validate and build while the existing container remains available.
+sudo docker-compose config --quiet
 sudo docker-compose build
-sudo docker-compose up -d
+sudo docker-compose up -d --no-deps --force-recreate webapp
 
-# --- START OF CHANGE ---
-# Wait dynamically for single-threaded collectstatic to finish and Gunicorn to boot
-echo "Waiting for production asset compilation to complete inside the container..."
-until sudo docker logs modulearn__webapp 2>&1 | grep -q "Starting gunicorn"; do
-    echo -n "."
+# Check the current container, rather than matching an old startup log line.
+# Migrations and collectstatic finish before Gunicorn starts accepting requests.
+echo "Waiting up to five minutes for application startup..."
+ready=false
+for attempt in $(seq 1 60); do
+    if sudo docker exec modulearn__webapp python -c 'import urllib.request; r = urllib.request.urlopen("http://127.0.0.1:8000/", timeout=3); raise SystemExit(0 if r.status == 200 else 1)' >/dev/null 2>&1; then
+        ready=true
+        break
+    fi
     sleep 2
 done
-echo -e "\nAsset compilation finished! Proceeding to file extraction..."
-# --- END OF CHANGE ---
+if [ "$ready" != true ]; then
+    echo "Startup check failed. Existing published static files were left intact."
+    sudo docker logs --tail 100 modulearn__webapp
+    exit 1
+fi
 
-# 4. Extract the dynamically compiled production assets out to Nginx
-sudo rm -rf /var/www/html/modulearn-static/*
+# 4. Publish compiled assets without removing hashes still referenced by open pages.
+# If startup was recovered manually after this script failed, run this copy step
+# once Gunicorn is running; starting the container alone does not publish assets.
+sudo mkdir -p /var/www/html/modulearn-static
 sudo docker cp modulearn__webapp:/modulearn/staticfiles/. /var/www/html/modulearn-static/
 
 echo "Deployment completed successfully!"

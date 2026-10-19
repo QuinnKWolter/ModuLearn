@@ -1,3 +1,5 @@
+{% load static %}
+<script src="{% static 'js/analytics-cell-details.js' %}" defer></script>
 <script>
 // Shared analytics grid renderer.
 // Expects `window.responseData` (legacy-shaped analytics response) to be populated.
@@ -196,6 +198,15 @@ function updateMasteryGrid() {
       cell.className = 'text-center border-0 py-2 progress-cell cursor-pointer';
       cell.style.cursor = 'pointer';
       cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resource.name);
+      cell.tabIndex = 0;
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('aria-label', `${topic.name} · ${resource.name}`);
+      cell.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          cell.click();
+        }
+      });
       cell.innerHTML = `
         <div class="legacy-cell-card">
           <div class="cell-pct font-bold text-base" style="color: ${textColor};">${Math.round(value * 100)}%</div>
@@ -718,11 +729,12 @@ function renderStudentProgressSummary(learner) {
                         ${activities.length ? activities.map(activity => {
                           const values = learner?.state?.activities?.[topic.id]?.[resource.id]?.[activity.id]?.values || {};
                           const activityPct = clampPercent(values.p || 0);
+                          const activityMetrics = cellActivityMetrics(values);
                           return `
                             <div class="student-activity-row">
                               <div class="min-w-0">
                                 <div class="font-semibold truncate">${escapeHtml(activity.name || activity.id)}</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">${activityPct >= 100 ? 'Completed' : activityPct > 0 ? 'In progress' : 'Not started'}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">${analyticsText(activityMetrics.status)} · ${analyticsText('Score')}: ${activityMetrics.score === null ? '—' : `${Math.round(activityMetrics.score)}%`} · ${analyticsText('Attempts')}: ${activityMetrics.attempts ?? '—'}</div>
                               </div>
                               <div class="student-activity-actions">
                                 <button
@@ -947,170 +959,6 @@ function showStudentDetails(learnerId) {
   }
 
   const modal = new bootstrap.Modal(modalEl);
-  modal.show();
-}
-
-function handleCellClick(topicId, resourceId, topicName, resourceName) {
-  const classAvg = responseData.groups?.find(g => g.name === 'Class Average');
-  if (!classAvg) return;
-
-  // Build per-student progress for this cell
-  const classP = classAvg?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
-  const students = (responseData.learners || []).map(l => {
-    const p = l?.state?.topics?.[topicId]?.values?.[resourceId]?.p || 0;
-    return { id: l.id, name: l.name, p, pct: Math.round(p * 100) };
-  }).sort((a, b) => b.p - a.p);
-
-  // Activity definitions for this topic/resource
-  const topicDef = (responseData.topics || []).find(t => t.id === topicId);
-  const activitiesDef = topicDef?.activities?.[resourceId] || [];
-
-  // Precompute class average per activity (progress p)
-  const classAvgByActivity = {};
-  activitiesDef.forEach(a => {
-    const vals = (responseData.learners || []).map(l => (
-      l?.state?.activities?.[topicId]?.[resourceId]?.[a.id]?.values?.p || 0
-    ));
-    classAvgByActivity[a.id] = vals.length ? (vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
-  });
-
-  const safeId = (s) => String(s).replace(/[^a-zA-Z0-9_-]/g, '_');
-  const modalId = `cellModal_${safeId(topicId)}_${safeId(resourceId)}`;
-
-  const modalHtml = `
-    <div class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" id="${modalId}" aria-hidden="true">
-      <div class="modal-backdrop-close absolute inset-0"></div>
-      <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-blue-600 text-white">
-          <h5 class="text-lg font-bold">
-            <i class="fas fa-chart-bar mr-2"></i>
-            ${topicName} → ${resourceName}
-          </h5>
-          <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
-        </div>
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="card h-full"><div class="p-4 text-center">
-              <h6 class="font-bold mb-1">Class Average</h6>
-              <div class="text-3xl font-bold text-blue-600">${Math.round(classP * 100)}%</div>
-            </div></div>
-            <div class="card h-full"><div class="p-4 text-center">
-              <h6 class="font-bold mb-1">Students</h6>
-              <div class="text-3xl font-bold text-blue-600">${students.length}</div>
-            </div></div>
-            <div class="card h-full"><div class="p-4 text-center">
-              <h6 class="font-bold mb-1">Activities</h6>
-              <div class="text-3xl font-bold text-blue-600">${activitiesDef.length}</div>
-            </div></div>
-          </div>
-
-          <div class="card">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                  <h6 class="font-bold mb-0">Compare a student vs peers</h6>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-0">Select a student to see per-activity progress vs class average.</p>
-                </div>
-                <div class="md:w-80">
-                  <select class="form-select" id="${modalId}_studentSelect">
-                    <option value="">-- Select student --</option>
-                    ${students.map(s => `<option value="${String(s.id).replace(/"/g, '&quot;')}">${s.id} (${s.pct}%)</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="p-4">
-              ${activitiesDef.length ? `
-                <div class="overflow-x-auto">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr>
-                        <th>Activity</th>
-                        <th class="text-center">Selected Student</th>
-                        <th class="text-center">Class Avg</th>
-                        <th class="text-center">Delta</th>
-                      </tr>
-                    </thead>
-                    <tbody id="${modalId}_activityBody">
-                      <tr><td colspan="4" class="text-center text-gray-500 py-4"><em>Select a student to view activity comparisons.</em></td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              ` : `<div class="text-gray-500 dark:text-gray-400"><em>No activities defined for this cell.</em></div>`}
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h6 class="font-bold mb-0">Peer progress (this cell)</h6>
-            </div>
-            <div class="p-4">
-              <div class="overflow-x-auto">
-                <table class="table table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th>Student</th>
-                      <th class="text-center">Progress</th>
-                      <th class="text-center">%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${students.map(s => `
-                      <tr>
-                        <td class="font-semibold">${s.id}</td>
-                        <td class="text-center">
-                          <div class="progress" style="width: 140px; height: 14px; margin: 0 auto;">
-                            <div class="progress-bar" style="width: ${s.pct}%; background-color: ${getTextColor(s.p)};"></div>
-                          </div>
-                        </td>
-                        <td class="text-center font-semibold">${s.pct}%</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  const existing = document.getElementById(modalId);
-  if (existing) existing.remove();
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-  const select = document.getElementById(`${modalId}_studentSelect`);
-  const body = document.getElementById(`${modalId}_activityBody`);
-  if (select && body) {
-    select.addEventListener('change', () => {
-      const learnerId = select.value;
-      const learner = (responseData.learners || []).find(l => String(l.id) === String(learnerId));
-      if (!learner) {
-        body.innerHTML = `<tr><td colspan="4" class="text-center text-gray-500 py-4"><em>Select a student to view activity comparisons.</em></td></tr>`;
-        return;
-      }
-
-      body.innerHTML = activitiesDef.map(a => {
-        const p = learner?.state?.activities?.[topicId]?.[resourceId]?.[a.id]?.values?.p || 0;
-        const avg = classAvgByActivity[a.id] || 0;
-        const delta = p - avg;
-        const deltaPct = Math.round(delta * 100);
-        const deltaStr = deltaPct > 0 ? `+${deltaPct}%` : `${deltaPct}%`;
-        const deltaColor = deltaPct > 0 ? 'text-green-600' : (deltaPct < 0 ? 'text-red-500' : 'text-gray-500');
-        return `
-          <tr>
-            <td class="break-words">${a.name || a.id}</td>
-            <td class="text-center font-semibold">${Math.round(p * 100)}%</td>
-            <td class="text-center text-gray-500">${Math.round(avg * 100)}%</td>
-            <td class="text-center font-bold ${deltaColor}">${deltaStr}</td>
-          </tr>
-        `;
-      }).join('');
-    });
-  }
-
-  const modal = new bootstrap.Modal(document.getElementById(modalId));
   modal.show();
 }
 

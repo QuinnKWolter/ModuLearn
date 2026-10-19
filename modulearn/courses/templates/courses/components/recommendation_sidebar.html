@@ -1,16 +1,17 @@
 {% load static ui_i18n %}
 <aside id="practice-sidebar" hidden data-no-ui-translate
+       data-viewer="{{ request.user.pk }}"
        data-queue="{% url 'courses:recommendation_queue' course_instance.id %}?source={{ module.id }}">
-  <details open>
-    <summary>{% ui 'Recommended practice' %}</summary>
+    <header class="practice-heading"><h2 id="practice-heading">{% ui 'Ungraded Optional Practice' %}</h2><button type="button" id="practice-minimize" aria-label="{% ui 'Minimize practice' %}" title="{% ui 'Minimize practice' %}">−</button></header>
     <div class="practice-sidebar-body">
-      <button type="button" id="practice-original" class="btn btn-outline-primary">← {% ui 'Return to the original problem' %}</button>
       <p class="practice-note">{% if is_instructor %}{% ui 'Instructor testing: your scores are saved separately and excluded from student analytics.' %}{% else %}{% ui 'Optional practice. Your scores here do not count toward your course grade or completion.' %}{% endif %}</p>
       <div id="practice-items"></div>
-      <p id="practice-error" role="status"></p>
+      <p id="practice-panel-error" role="status"></p>
     </div>
-  </details>
 </aside>
+<button id="practice-launcher" type="button" hidden aria-controls="practice-sidebar" aria-expanded="false" aria-label="{% ui 'Open optional practice' %}" title="{% ui 'Open optional practice' %}" data-no-ui-translate><span aria-hidden="true">⭐</span><span class="practice-launcher-label">{% ui 'Practice' %}</span></button>
+<dialog id="practice-dialog" aria-labelledby="practice-heading"></dialog>
+<div id="practice-toolbar" hidden data-no-ui-translate><button type="button" id="practice-original" disabled>{% ui 'Original problem' %}</button><span id="practice-context">{% ui 'Try optional practice when you are ready.' %}</span><p id="practice-error" role="status"></p></div>
 <div id="practice-feedback" hidden role="region" aria-live="polite" aria-label="{% ui 'Recommendation feedback' %}" data-no-ui-translate>
   <strong>{% ui 'Was this helpful?' %}</strong>
   <p id="practice-feedback-title"></p>
