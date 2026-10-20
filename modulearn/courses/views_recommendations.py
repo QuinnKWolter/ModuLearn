@@ -204,13 +204,12 @@ def queue(request, instance_id):
     options = StaticRecommendationSet.objects.filter(course_instance=instance).values_list('options', flat=True).first() or {}
     presentation = {'mode': 'modal_then_sidebar', 'animate': options.get('animate', True) is not False}
     if instance.instructors.filter(pk=request.user.pk).exists():
-        from modulearn.learning.services.instructor_testing import testing_enrollment, prepare_recommendations
+        from modulearn.learning.services.instructor_testing import testing_enrollment
         enabled = recommendations_enabled(instance)
         enrollment = testing_enrollment(request.user, instance)
         if enabled and source:
             module = get_object_or_404(Module, pk=source, unit__course=instance.course)
-            dataset = StaticRecommendationSet.objects.get(course_instance=instance)
-            prepare_recommendations(enrollment, module, dataset)
+
         response = JsonResponse({'enabled': enabled, 'instructor_testing': True, 'presentation': presentation,
             'items': practice_items(enrollment, source)})
         response['Cache-Control'] = 'no-store'

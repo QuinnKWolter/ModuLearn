@@ -12,6 +12,7 @@ from courses.models import (ModuleProgress, RecommendationActivation, Recommenda
                             RecommendationEvent, StaticRecommendationSet)
 from .static_recommendations import resolve_nodes, source_keys_by_module
 from .recommendation_sessions import recommendations_enabled
+from .recommendation_types import activity_kind, recommendation_tier
 
 
 def attempt_snapshot(source, payload, score, success, event_type):
@@ -210,13 +211,14 @@ def practice_items(enrollment, source_id=None):
     if not recommendations_enabled(enrollment.course_instance):
         return []
     query = RecommendationProgress.objects.filter(activation__enrollment=enrollment, activation__activated_at__isnull=False, retired_at__isnull=True).select_related('module', 'activation__source_module')
-    if not enrollment.is_instructor_preview:
-        query = query.filter(activation__failures__gte=1)
+    query = query.filter(activation__failures__gte=1)
     if source_id:
         query = query.filter(activation__source_module_id=source_id)
     return [{'id': str(item.pk), 'module_id': item.module_id, 'title': item.module.title,
              'source_id': item.activation.source_module_id, 'source_title': item.activation.source_module.title,
              'provider': item.provider, 'rank': item.rank, 'similarity': item.similarity,
+             'activity_kind': activity_kind(item.module, fallback_provider=item.provider),
+             'tier': recommendation_tier(item.activation.source_module, item.module, item.provider),
              'progress': item.progress, 'score': item.score, 'is_complete': item.is_complete,
              'feedback': item.feedback, 'attempts': item.attempts,
              'source_url': reverse('courses:launch_iframe_module', args=[enrollment.course_instance_id, item.activation.source_module_id]),

@@ -2,11 +2,14 @@
 <aside id="practice-sidebar" hidden data-no-ui-translate
        data-viewer="{{ request.user.pk }}"
        data-queue="{% url 'courses:recommendation_queue' course_instance.id %}?source={{ module.id }}">
-    <header class="practice-heading"><h2 id="practice-heading">{% ui 'Ungraded Optional Practice' %}</h2><button type="button" id="practice-minimize" aria-label="{% ui 'Minimize practice' %}" title="{% ui 'Minimize practice' %}">−</button></header>
+    <header class="practice-heading"><h2 id="practice-heading"><span aria-hidden="true">⭐</span> {% ui 'Optional Practice' %}</h2><button type="button" id="practice-minimize" aria-label="{% ui 'Minimize practice' %}" title="{% ui 'Minimize practice' %}">−</button></header>
     <div class="practice-sidebar-body">
-      <p class="practice-note">{% if is_instructor %}{% ui 'Instructor testing: your scores are saved separately and excluded from student analytics.' %}{% else %}{% ui 'Optional practice. Your scores here do not count toward your course grade or completion.' %}{% endif %}</p>
+      <p class="practice-note">{% ui 'This optional learning content could assist you in solving the problem you were previously attempting.' %}</p>
       <button type="button" id="practice-original" hidden>← {% ui 'Return' %}</button>
-      <div id="practice-items"></div>
+      <div id="practice-items">
+        <section id="practice-recommended" hidden><h3 class="practice-tier-heading">{% ui 'Recommended Practice' %}</h3><div id="practice-recommended-items" class="practice-groups"></div></section>
+        <details id="practice-similar" hidden><summary class="practice-tier-heading">{% ui 'Similar Activities' %}</summary><div id="practice-similar-items" class="practice-groups"></div></details>
+      </div>
       <p id="practice-panel-error" role="status"></p>
     </div>
 </aside>

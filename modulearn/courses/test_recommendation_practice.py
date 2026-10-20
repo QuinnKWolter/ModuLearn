@@ -95,13 +95,19 @@ class PracticeTests(TestCase):
         response = self.client.get(url, {'source': self.source.pk})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['instructor_testing'])
-        item = response.json()['items'][0]
+        self.assertEqual(response.json()['items'], [])
+        from modulearn.learning.services.instructor_testing import testing_enrollment
+        enrollment = testing_enrollment(self.teacher, self.instance)
+        progress, _ = ModuleProgress.get_or_create_progress(user=self.teacher, module=self.source, course_instance=self.instance)
+        for _ in range(2):
+            apply_progress_snapshot(progress, source='splice', score=0, success=False, progress=0)
+        item = self.client.get(url, {'source':self.source.pk}).json()['items'][0]
         self.assertEqual(item['module_id'], self.target.pk)
         practice = RecommendationProgress.objects.get(pk=item['id'])
         self.assertTrue(practice.enrollment.is_instructor_preview)
         self.assertIn('event_url', item)
-        self.assertEqual(practice.activation.failures, 0)
-        self.assertFalse(RecommendationEvent.objects.exists())
+        self.assertEqual(practice.activation.failures, 2)
+        self.assertTrue(RecommendationEvent.objects.filter(event_type="source_attempt").exists())
         apply_progress_snapshot(practice, source='splice', score=100, progress=1, is_complete=True)
         self.assertEqual(self.client.get(url, {'source': self.source.pk}).json()['items'][0]['score'], 100)
         self.assertEqual(before, list(ModuleProgress.objects.filter(user=self.student).order_by('pk').values()))

@@ -30,15 +30,17 @@
   function impressions() {
     if (!panelOpen) return;
     items.forEach(item => {
+      if (item.tier !== 'recommended' && !document.getElementById('practice-similar').open) return;
       if (!seen.has(item.id)) { seen.add(item.id); record(item,'impression').catch(e=>error(e.message)); }
     });
   }
+  document.getElementById('practice-similar').addEventListener('toggle', impressions);
   function openPanel(reason = 'launcher', mode = 'sidebar') {
     if (!items.length || closing || panelOpen) return;
     presented = true; presentation = mode; panelOpen = true; sidebar.hidden = false;
     if (presentation === 'modal') { dialog.append(sidebar); dialog.showModal(); }
     else { home.after(sidebar); layout.classList.add('has-practice'); }
-    launcher.setAttribute('aria-expanded','true');
+    launcher.setAttribute('aria-expanded','true'); launcher.hidden = true;
     if (canAnimate()) sidebar.animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'none'}],{duration:180,easing:'ease-out'});
     logPanel(presentation === 'modal' ? 'modal_open' : 'sidebar_open', reason);
     if (reason === 'launcher') logPanel('launcher_open',reason);
@@ -48,15 +50,16 @@
   function hidePanel() {
     if (dialog.open) dialog.close();
     sidebar.hidden = true; home.after(sidebar); layout.classList.remove('has-practice');
-    panelOpen = false; launcher.setAttribute('aria-expanded','false');
+    panelOpen = false; launcher.setAttribute('aria-expanded','false'); launcher.hidden = !items.length;
   }
   async function closePanel(reason = 'minimize') {
     if (!panelOpen || closing) return;
-    closing = true;
+    closing = true; launcher.disabled = true;
     const wasModal = dialog.open;
     logPanel(presentation === 'modal' ? 'modal_close' : 'sidebar_close',reason);
     const surface = dialog.open ? dialog : sidebar;
     if (canAnimate()) {
+      launcher.hidden = false;
       const from = surface.getBoundingClientRect(), to = launcher.getBoundingClientRect();
       const animation = surface.animate([
         {transform:'translate(0,0) scale(1)',opacity:1},
@@ -66,7 +69,7 @@
       try { await animation.finished; } catch (_) {}
       surface.style.transformOrigin='';
     }
-    hidePanel(); closing = false;
+    hidePanel(); closing = false; launcher.disabled = false;
     if (wasModal && items.length && !launcher.hidden) openPanel('modal_to_sidebar');
     else if (selected) showOriginal();
     if (!launcher.hidden && canAnimate()) launcher.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:240});
@@ -153,22 +156,26 @@
   document.getElementById('practice-original').addEventListener('click',showOriginal);
   function render() {
     if (!items.length) { deactivate(); return; }
-    launcher.hidden = false;
+    launcher.hidden = panelOpen;
     document.getElementById('module-frame-container').classList.add('practice-available');
     const ids = new Set(items.map(item=>item.id));
     buttons.forEach((button,id)=>{if(!ids.has(id)){button.remove();buttons.delete(id);frames.get(id)?.remove();frames.delete(id);}});
-    list.querySelectorAll('section').forEach(group=>{if(!group.querySelector('button'))group.remove();});
+    list.querySelectorAll('[data-kind]').forEach(group=>{if(!group.querySelector('button'))group.remove();});
     if(selected && !ids.has(selected.id)) showOriginal();
-    const labels = {animatedexamples:t('Animations'), pcex:t('Worked Examples'), quizjet:t('Completion Problems')};
+    const labels = {animation:t('Animations'), worked_example:t('Worked Examples'), completion:t('Completion Problems'), tracing:t('Tracing Problems'), coding:t('Coding Problems'), other:t('Other Activities')};
     for (const item of items) {
       let button = buttons.get(item.id);
+      const tier = item.tier === 'recommended' ? 'recommended' : 'similar';
+      const container = document.getElementById('practice-' + tier + '-items');
+      const kind = Object.hasOwn(labels, item.activity_kind) ? item.activity_kind : 'other';
+      let group = container.querySelector('[data-kind="'+kind+'"]');
+      if (!group) {
+        group = document.createElement('section'); group.dataset.kind=kind;
+        const heading=document.createElement('h4'); heading.textContent=labels[kind];
+        group.append(heading); container.append(group);
+      }
+      if (button && button.parentElement !== group) group.append(button);
       if (!button) {
-        let group = list.querySelector('[data-provider="'+item.provider+'"]');
-        if (!group) {
-          group = document.createElement('section');group.dataset.provider=item.provider;
-          const heading=document.createElement('h3');heading.textContent=labels[item.provider] || item.provider;
-          group.append(heading);list.append(group);
-        }
         button=document.createElement('button');button.type='button';button.className='practice-item';
         const title=document.createElement('span'),status=document.createElement('span'),icon=document.createElement('span');
         title.className='practice-title';status.className='practice-score';icon.className='practice-status-icon';icon.setAttribute('aria-hidden','true');
@@ -186,6 +193,8 @@
       button.setAttribute('aria-label',button.title);
       if (selected?.id===item.id) {selected=item;maybeFeedback(item);}
     }
+    list.querySelectorAll('[data-kind]').forEach(group=>{if(!group.querySelector('button'))group.remove();});
+    for (const tier of ['recommended','similar']) document.getElementById('practice-'+tier).hidden = !document.getElementById('practice-'+tier+'-items').querySelector('button');
     updateContext();
     if (!presented) openPanel('automatic', 'modal');
     impressions();
@@ -194,7 +203,11 @@
     if(selected) showOriginal();
     hidePanel(); launcher.hidden=true;feedback.hidden=true;feedbackItem=null;
     document.getElementById('module-frame-container').classList.remove('practice-available');
-    buttons.forEach(button=>button.remove());buttons.clear();list.replaceChildren();
+    buttons.forEach(button=>button.remove());buttons.clear();
+    list.querySelectorAll('[data-kind]').forEach(group=>group.remove());
+    document.getElementById('practice-recommended').hidden=true;
+    document.getElementById('practice-similar').hidden=true;
+    document.getElementById('practice-similar').open=false;
     frames.forEach(frame=>frame.remove());frames.clear();
   }
   async function refresh() {

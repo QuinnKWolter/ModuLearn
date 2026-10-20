@@ -11,7 +11,7 @@
 #practice-minimize { min-width:2.5rem; min-height:2.5rem; border:1px solid var(--color-border); border-radius:.65rem; font-size:1.5rem; }
 .practice-sidebar-body { padding:0 1rem 1rem; }
 .practice-note { font-size:.88rem; line-height:1.5; color:var(--color-ink-soft); margin:0 0 .9rem; }
-#practice-items h3 { font-size:.95rem; font-weight:700; margin:1rem 0 .4rem; }
+#practice-items h4 { font-size:1.08rem; font-weight:700; margin:1rem 0 .4rem; }
 .practice-item { display:flex; align-items:center; gap:.65rem; width:100%; min-width:0; text-align:left; padding:.75rem; margin:.4rem 0; border:1px solid #b78c27; border-radius:.75rem; color:var(--color-ink); background:color-mix(in srgb,#facc15 15%,var(--color-surface)); transition:background .18s,border-color .18s,box-shadow .18s; }
 .practice-item:hover { box-shadow:0 0 0 2px color-mix(in srgb,#d4a017 30%,transparent); }
 .practice-item .practice-title { display:block; font-size:.96rem; line-height:1.45; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
@@ -32,7 +32,7 @@
 #practice-dialog .practice-heading { padding:1.3rem 1.3rem .7rem; }
 #practice-dialog .practice-heading h2 { font-size:1.3rem; }
 #practice-dialog .practice-sidebar-body { padding:0 1.3rem 1.3rem; }
-#practice-dialog #practice-items { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:0 1rem; }
+#practice-dialog .practice-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:0 1rem; }
 .practice-frame { width:100%; height:100%; min-height:0; border:0; border-radius:.75rem; }
 #practice-feedback { position:fixed; bottom:2rem; right:1.5rem; z-index:100; width:min(340px,calc(100vw - 2rem)); padding:1.2rem; border:1px solid #16877b; border-radius:1rem; background:var(--color-surface-strong); color:var(--color-ink); box-shadow:0 10px 35px #0003; }
 #practice-feedback p { font-size:.8rem; margin:.5rem 0; }
@@ -59,3 +59,7 @@ html.module-player, .module-player body { height:100%; overflow:hidden; }
 #practice-sidebar { background:#f8fafc; }
 .dark #practice-sidebar { background:#111827; }
 .practice-heading { position:sticky; top:0; z-index:1; background:inherit; }
+
+.practice-tier-heading { font-size:1.15rem; font-weight:800; margin:.8rem 0; }
+#practice-similar { border-top:1px solid var(--color-border); margin-top:1rem; padding-top:.5rem; }
+#practice-similar > summary { cursor:pointer; }
