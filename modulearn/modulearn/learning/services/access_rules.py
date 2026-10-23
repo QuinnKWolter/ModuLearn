@@ -247,7 +247,9 @@ def _unit_accessed(enrollment, unit_id) -> bool:
 
 
 def _unit_completed(enrollment, unit_id) -> bool:
-    modules = list(_unit_modules(unit_id).filter(is_graded=True))
+    from modulearn.learning.services.grading import eligible_modules, graded_module_ids
+    ids = graded_module_ids(eligible_modules(enrollment.course_instance.course))
+    modules = list(_unit_modules(unit_id).filter(pk__in=ids))
     if not modules:
         from courses.models import Unit
         return bool(unit_id and Unit.objects.filter(pk=unit_id, course=enrollment.course_instance.course).exists())

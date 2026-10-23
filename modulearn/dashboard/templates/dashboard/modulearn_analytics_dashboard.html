@@ -33,6 +33,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/analytics-timeline.js' %}" defer></script>
 {{ course_instances|json_script:"modulearn-course-instances-data" }}
 <script>
   const instancesEl = document.getElementById('modulearn-course-instances-data');

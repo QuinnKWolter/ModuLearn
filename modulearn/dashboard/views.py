@@ -243,9 +243,13 @@ def fetch_modulearn_instance_analytics(request):
         units = list(Unit.objects.filter(course=course).order_by('id'))
         modules = list(Module.objects.filter(unit__in=units, is_recommendation_only=False).select_related('unit').order_by('id'))
 
+        from modulearn.learning.services.grading import calculate_grade, graded_module_ids
+        grade_modules = [m for m in modules if m.is_visible and m.unit.is_visible]
+        graded_ids = graded_module_ids(grade_modules)
+
         def _module_type_key(m):
             key = m.display_type_label or m.platform_name or m.provider_id or 'Modules'
-            return key if m.is_graded else f"{key} · Practice"
+            return key if m.id in graded_ids else f"{key} · Practice"
 
         # Determine module types (these become "resource columns")
         type_keys = []
@@ -295,17 +299,25 @@ def fetch_modulearn_instance_analytics(request):
         progress_qs = ModuleProgress.objects.filter(
             enrollment_id__in=enrollment_ids,
             module_id__in=module_ids,
-        ).values('enrollment_id', 'module_id', 'progress', 'score', 'attempts', 'is_complete')
+        ).values('enrollment_id', 'module_id', 'progress', 'score', 'attempts', 'is_complete', 'last_accessed', 'completed_at')
 
         progress_by_enrollment = {}
         for row in progress_qs:
             progress_by_enrollment.setdefault(row['enrollment_id'], {})[row['module_id']] = row
 
+        from django.db.models import Max
+        from courses.models import ModuleProgressEvent, ModuleAccessLog
+        last_accesses = dict(ModuleAccessLog.objects.filter(enrollment_id__in=enrollment_ids).values('enrollment_id').annotate(last=Max('created_at')).values_list('enrollment_id', 'last'))
+        last_events = dict(ModuleProgressEvent.objects.filter(
+            module_progress__enrollment_id__in=enrollment_ids
+        ).values('module_progress__enrollment_id').annotate(last=Max('created_at')).values_list('module_progress__enrollment_id', 'last'))
         learners = []
         for e in enrollments:
             per_topic = {}
             per_activities = {}
             module_progress_map = progress_by_enrollment.get(e.id, {})
+
+            grade = calculate_grade(grade_modules, {mid for mid, mp in module_progress_map.items() if mp['is_complete']}, course_instance.grading_policy)
 
             for u in units:
                 topic_values = {}
@@ -317,9 +329,9 @@ def fetch_modulearn_instance_analytics(request):
                         ps = []
                         for m in type_modules:
                             mp = module_progress_map.get(m.id)
-                            ps.append(float(mp.get('progress') or 0.0) if mp else 0.0)
+                            ps.append(float(bool(mp and mp.get('is_complete'))))
                         avg_p = sum(ps) / len(ps)
-                        all_ps.extend(p for m, p in zip(type_modules, ps) if m.is_graded)
+                        all_ps.extend(p for m, p in zip(type_modules, ps) if m.id in graded_ids)
                     else:
                         avg_p = 0.0
 
@@ -358,6 +370,8 @@ def fetch_modulearn_instance_analytics(request):
                 'condition': getattr(participant_session, 'condition', '') or '',
                 'participant_session_uuid': str(participant_session.uuid) if participant_session else '',
                 'recruitment_platform': participant_session.recruitment_source.platform if participant_session else '',
+                'lastActive': max([v for mp in module_progress_map.values() for v in (mp.get('last_accessed'), mp.get('completed_at')) if v and (mp.get('attempts') or mp.get('progress') or mp.get('is_complete'))] + ([last_events[e.id]] if last_events.get(e.id) else []) + ([last_accesses[e.id]] if last_accesses.get(e.id) else []), default=None),
+                'grading': {'progress': grade['progress'], 'units_met': grade['units_met'], 'units_total': grade['units_total']},
                 'isHidden': False,
                 'state': {
                     'topics': per_topic,
@@ -766,6 +780,17 @@ def fetch_modulearn_student_engagement(request):
         if not enrollment:
             return JsonResponse({'error': 'Learner not found for this course session'}, status=404)
 
+        requested_module = request.GET.get('module_id')
+        if requested_module:
+            if not str(requested_module).isdigit() or not Module.objects.filter(
+                pk=requested_module, unit__course=course_instance.course, is_recommendation_only=False
+            ).exists():
+                return JsonResponse({'error': 'Activity not found'}, status=404)
+            events = ModuleProgressEvent.objects.filter(
+                module_progress__enrollment=enrollment, module_progress__module_id=requested_module
+            ).order_by('created_at', 'id')
+            return JsonResponse({'events': [_serialize_module_progress_event(event) for event in events]})
+        summary_only = request.GET.get('summary') == '1'
         units = list(Unit.objects.filter(course=course_instance.course).order_by('order', 'id'))
         modules = list(
             Module.objects.filter(unit__in=units, is_recommendation_only=False)
@@ -789,9 +814,12 @@ def fetch_modulearn_student_engagement(request):
             for event in (
                 ModuleProgressEvent.objects
                 .filter(module_progress_id__in=[row.id for row in progress_rows])
+                .defer(*(['payload'] if summary_only else []))
                 .order_by('created_at', 'id')
             ):
-                events_by_progress.setdefault(event.module_progress_id, []).append(_serialize_module_progress_event(event))
+                events_by_progress.setdefault(event.module_progress_id, []).append(
+                    {'event_type': event.event_type, 'created_at': event.created_at, 'progress': float(event.progress or 0)}
+                    if summary_only else _serialize_module_progress_event(event))
 
         units_payload = []
         event_count = 0
@@ -832,7 +860,11 @@ def fetch_modulearn_student_engagement(request):
                     "is_complete": bool(progress and progress.is_complete),
                     "first_accessed": progress.first_accessed if progress else None,
                     "last_accessed": progress.last_accessed if progress else None,
-                    "events": events,
+                    "events": [] if summary_only else events,
+                    "completed_at": progress.completed_at if progress else None,
+                    "activity_type": module.display_type_label,
+                    "timeline": [{'at': event['created_at'], 'progress': event['progress']}
+                                 for event in events if event['event_type'] in {'attempt', 'progress', 'outcome', 'completion'}],
                     "event_count": len(events),
                 })
 

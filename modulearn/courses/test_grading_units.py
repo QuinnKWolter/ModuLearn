@@ -175,8 +175,8 @@ class GradingAndUnitTests(TestCase):
         self.assertEqual(self.units[0].opens_at.year,2030)
         self.assertEqual(Module.objects.filter(unit__course=self.course,is_graded=True).count(),0)
         self.enrollment.course_progress.refresh_from_db()
-        self.assertEqual(self.enrollment.course_progress.total_modules,0)
-        self.assertEqual(self.enrollment.course_progress.practice_total,8)
+        self.assertEqual(self.enrollment.course_progress.total_modules,8)
+        self.assertEqual(self.enrollment.course_progress.practice_total,0)
         fields[-1][1]='2029-01-01T00:00'
         self.client.post(url,{'action':'update_structure','structure_controls':json.dumps(fields)})
         self.units[0].refresh_from_db()

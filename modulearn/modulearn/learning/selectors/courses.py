@@ -61,7 +61,7 @@ def _build_provider_grid(unit_cards):
                 if module["can_access"] and not module["is_complete"] and module["progress_percent"] <= 0
             )
             progress_percent = (
-                round(sum(module["progress_percent"] for module in modules) / module_count)
+                round(100 * completed_count / module_count)
                 if module_count
                 else 0
             )
@@ -149,6 +149,8 @@ def build_course_detail_context(user, course_instance):
                 ).select_related("recruitment_source").first()
 
     units = list(course.units.prefetch_related("modules", "modules__form").all())
+    from modulearn.learning.services.grading import graded_module_ids
+    graded_ids = graded_module_ids([m for u in units if u.is_visible for m in u.modules.all()])
     unit_cards = []
     for unit in units:
         unit_state = evaluate_unit_access(unit, enrollment, include_hidden=is_instructor)
@@ -174,12 +176,12 @@ def build_course_detail_context(user, course_instance):
             if not is_instructor and not module_state.is_visible:
                 continue
 
-            counts_for_grade = module.is_graded and module.is_visible and unit.is_visible
+            counts_for_grade = module.id in graded_ids
             module_count += int(counts_for_grade)
-            practice_count += int(not module.is_graded)
+            practice_count += int(module.id not in graded_ids)
             progress_data = module_progress_data.get(module.id, {})
             progress_value = float(progress_data.get("progress") or 0.0)
-            is_complete = bool(progress_data.get("is_complete")) or progress_value >= 1.0
+            is_complete = bool(progress_data.get("is_complete"))
             if is_complete:
                 progress_value = 1.0
             progress_value = max(0.0, min(progress_value, 1.0))
@@ -206,10 +208,10 @@ def build_course_detail_context(user, course_instance):
             if counts_for_grade:
                 progress_sum += int(is_complete)
                 completed_count += int(is_complete)
-            elif not module.is_graded:
+            elif module.id not in graded_ids:
                 practice_completed += int(is_complete)
             module_items.append({
-                "is_graded": module.is_graded,
+                "is_graded": module.id in graded_ids,
                 "id": module.id,
                 "title": module.title,
                 "progress_percent": progress_percent,

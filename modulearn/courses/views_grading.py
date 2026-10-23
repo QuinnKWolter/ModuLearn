@@ -27,6 +27,13 @@ def grading(request, instance_id):
         raise PermissionDenied
     units = list(instance.course.units.annotate(graded_count=Count('modules', filter=Q(
         is_visible=True, modules__is_visible=True, modules__is_graded=True, modules__is_recommendation_only=False))))
+    from modulearn.learning.services.grading import eligible_modules, graded_module_ids
+    from collections import Counter
+    modules = list(eligible_modules(instance.course))
+    selected = graded_module_ids(modules)
+    counts = Counter(m.unit_id for m in modules if m.id in selected)
+    for unit in units:
+        unit.graded_count = counts[unit.id]
     if request.method == 'GET':
         # Removed units must not strand the configuration page with stale IDs.
         valid_ids = {str(unit.id) for unit in units}

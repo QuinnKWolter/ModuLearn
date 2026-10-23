@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const inputs = [...document.querySelectorAll('[data-grade-module]')];
+  inputs.forEach(input => input.addEventListener('change', () => {
+    const id = input.name.match(/module_(\d+)_/)[1];
+    const star = document.querySelector(`[data-grade-star="${id}"]`);
+    if (star) star.hidden = !input.checked;
+  }));
   const select = document.getElementById('gradeTypeSelect');
   if (!select) return;
   const t = text => window.ModuLearnI18n?.t(text) || text;

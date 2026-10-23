@@ -59,16 +59,16 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
           <button type="button" data-bs-dismiss="modal" class="text-2xl p-2" aria-label="${analyticsText('Close')}">&times;</button>
         </header>
         <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          <div class="flex flex-wrap gap-4 text-sm">
-            <span><strong>${classPct}%</strong> ${analyticsText('Class average progress')}</span>
-            <span><strong>${students.filter(s => s.attempted > 0).length}/${students.length}</strong> ${analyticsText('Students with recorded work')}</span>
-            <span><strong>${activities.length}</strong> ${analyticsText('Activities')}</span>
+          <div class="analytics-cell-kpis">
+            <div><strong>${activities.length}</strong><span>${analyticsText('Activities')}</span></div>
+            <div><strong>${students.filter(s => s.attempted > 0).length}/${students.length}</strong><span>${analyticsText('Students with progress')}</span></div>
+            <div><strong>${classPct}%</strong><span>${analyticsText('Class average progress')}</span></div>
           </div>
           <p class="text-sm text-gray-500 dark:text-gray-400">${analyticsText('Expand a student to see exercises, scores, attempts, and comparison with the class. A dash means no grade was recorded.')}</p>
           <label class="block"><span class="text-sm font-semibold">${analyticsText('Find a student')}</span>
             <input type="search" class="form-control mt-1" data-cell-student-filter placeholder="${analyticsText('Name or username')}" autocomplete="off"></label>
           <div class="space-y-2" data-cell-students>
-            ${students.map((student, index) => `<details class="student-resource-detail" data-cell-student="${index}">
+            ${students.map((student, index) => `<details class="student-resource-detail" data-cell-student="${index}" style="--completion:${student.pct}%">
               <summary class="flex flex-wrap gap-2 items-center justify-between cursor-pointer">
                 <span class="min-w-0"><span class="font-semibold break-words">${escapeHtml(student.learner.name || student.learner.id)}</span>
                 ${student.learner.name && student.learner.name !== student.learner.id ? `<span class="block text-xs text-gray-500 dark:text-gray-400">${escapeHtml(student.learner.id)}</span>` : ''}</span>

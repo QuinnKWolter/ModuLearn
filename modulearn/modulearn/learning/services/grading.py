@@ -56,15 +56,25 @@ def normalize_policy(raw, unit_ids):
 def eligible_modules(course):
     from courses.models import Module
     return Module.objects.filter(unit__course=course, unit__is_visible=True,
-                                 is_visible=True, is_recommendation_only=False).only('id', 'unit_id', 'is_graded')
+                                 is_visible=True, is_recommendation_only=False).only('id', 'unit_id', 'is_graded', 'is_visible', 'is_recommendation_only')
+
+
+def graded_module_ids(modules):
+    """Visible course activities that count; no explicit selection means all."""
+    eligible = [m for m in modules if getattr(m, 'is_visible', True)
+                and not getattr(m, 'is_recommendation_only', False)]
+    selected = {m.id for m in eligible if m.is_graded}
+    return selected or {m.id for m in eligible}
 
 
 def calculate_grade(modules, completed_ids, policy):
     """No DB access. Missing progress counts as incomplete; empty units never penalize."""
+    modules = list(modules)
+    graded_ids = graded_module_ids(modules)
     units = defaultdict(lambda: {'total': 0, 'completed': 0})
     practice_total = practice_completed = 0
     for module in modules:
-        if not module.is_graded:
+        if module.id not in graded_ids:
             practice_total += 1
             practice_completed += module.id in completed_ids
             continue
@@ -80,6 +90,8 @@ def calculate_grade(modules, completed_ids, policy):
         settings = policy.get('units', {}).get(id, {})
         weight = settings.get('weight', 1)
         target = settings.get('target') or policy.get('target', 100)
+        row['target'] = target if policy.get('mode') == 'units' else 100
+        row['target_met'] = 100 * row['completed'] / row['total'] >= row['target']
         weighted += min(1, 100 * row['completed'] / row['total'] / target) * weight
         weight_sum += weight
         if not row['completed']:
@@ -100,7 +112,8 @@ def calculate_grade(modules, completed_ids, policy):
                 grade=100 * earned / maximum, earned=earned, maximum=maximum,
                 base=base, deduction=deduction, units=dict(units),
                 missing=missing, penalized=penalized,
-                practice_total=practice_total, practice_completed=practice_completed)
+                practice_total=practice_total, practice_completed=practice_completed,
+                units_met=sum(row['target_met'] for row in units.values()), units_total=len(units))
 
 
 def session_results(instance, policy=None, *, enrollments=None):

@@ -1135,4 +1135,32 @@
         margin-left: 0;
     }
 }
+
+/* Compact analytical details: type color and completion shading have separate roles. */
+#analyticsCellModal .student-resource-detail, #studentModal .student-resource-detail,
+#studentModal .engagement-unit, #studentModal .engagement-module {border-radius:4px;}
+#analyticsCellModal summary, #studentModal details > summary {padding: .45rem .65rem;}
+#analyticsCellModal .student-resource-detail > summary, #studentModal .student-resource-detail > summary {
+ background:linear-gradient(90deg,rgba(34,197,94,.19) var(--completion,0%),rgba(148,163,184,.06) var(--completion,0%));
+ border-left:3px solid var(--type-color,#16a34a);
+}
+#studentModal .analytics-card, #studentModal .analytics-kpi {border-radius:5px;padding:.7rem;}
+#studentModal .student-activity-row {padding:.35rem .55rem;}
+#studentModal .engagement-unit-body, #studentModal .engagement-module-body {padding:.5rem;gap:.4rem;}
+#studentModal .engagement-event {padding:.5rem;border-radius:4px;}
+#studentModalBody {padding:1rem;}
+.analytics-cell-kpis {display:flex;flex-wrap:wrap;gap:1.5rem;padding:.5rem 0;}
+.analytics-cell-kpis > div {display:flex;flex-direction:column;gap:.15rem;}
+.analytics-cell-kpis strong {font-size:1.4rem;line-height:1.2;}
+.analytics-cell-kpis span {font-size:.8rem;opacity:.8;}
+.activity-timeline {border:1px solid #94a3b844;border-radius:5px;padding:.65rem;margin-bottom:1rem;}
+.activity-timeline svg {display:block;width:100%;height:230px;touch-action:none;cursor:grab;}
+.activity-timeline svg text {fill:currentColor;font-size:11px;}
+.activity-timeline-controls {display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;}
+.activity-timeline-controls button {border:1px solid #94a3b866;padding:.2rem .65rem;border-radius:4px;}
+.activity-timeline-legend {display:flex;flex-wrap:wrap;gap:.35rem 1rem;font-size:.8rem;}
+.activity-timeline-activities {max-height:5rem;overflow:auto;display:flex;flex-wrap:wrap;gap:.25rem;}
+.activity-timeline-activities button {font-size:.75rem;text-align:left;padding:.2rem .4rem;border-left:3px solid var(--type-color);}
+#analyticsCellModal table th, #analyticsCellModal table td {padding:.4rem .6rem;}
+#analyticsCellModal [data-cell-exercises] {margin-top:.35rem;}
 </style>

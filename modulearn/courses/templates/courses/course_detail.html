@@ -574,10 +574,10 @@
                         <span class="min-w-0">
                           {% if module.can_access %}
                             <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="truncate font-semibold text-blue-700 dark:text-blue-300 hover:underline">
-                              {{ module.title }}
+                              {% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}
                             </a>
                           {% else %}
-                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{{ module.title }}</span>
+                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}</span>
                           {% endif %}
                           <span class="block text-xs text-slate-500 dark:text-slate-400">
                             {{ module.type_label }} · {% if module.is_graded %}Graded{% else %}Practice{% endif %}{% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
@@ -723,10 +723,10 @@
                               <span class="min-w-0">
                                 {% if module.can_access %}
                                   <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="truncate font-semibold text-blue-700 dark:text-blue-300 hover:underline">
-                                    {{ module.title }}
+                                    {% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}
                                   </a>
                                 {% else %}
-                                  <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{{ module.title }}</span>
+                                  <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}</span>
                                 {% endif %}
                                 <span class="block text-xs text-slate-500 dark:text-slate-400">
                                   {{ module.type_label }} · {% if module.is_graded %}Graded{% else %}Practice{% endif %}{% if module.provider_id %} · {{ module.provider_id }}{% endif %}

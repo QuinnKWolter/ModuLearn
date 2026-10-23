@@ -2567,7 +2567,7 @@ def get_course_enrollments(request, course_instance_id):
             return JsonResponse({'error': 'Not authorized'}, status=403)
         
         # Get total modules count for the course
-        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
+        total_modules = course_instance.course.total_modules()
         
         enrollments_data = [
             _enrollment_response_payload(enrollment, total_modules)
@@ -2696,14 +2696,14 @@ def bulk_enroll_students(request, course_instance_id):
                 
                 if enrollment_created:
                     remaining_slots -= 1
-                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
+                    total_modules = course_instance.course.total_modules()
                     new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 elif not enrollment.active:
                     enrollment.active = True
                     enrollment.save(update_fields=['active'])
                     remaining_slots -= 1
-                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
+                    total_modules = course_instance.course.total_modules()
                     new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 else:
@@ -2787,7 +2787,7 @@ def generate_anonymous_students(request, course_instance_id):
         prefix = (data.get('prefix') or 'anon').strip() or 'anon'
         password_mode = (data.get('password_mode') or 'username').strip().lower()
         use_username_password = password_mode != 'random'
-        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
+        total_modules = course_instance.course.total_modules()
         generated_accounts = []
         enrollments_data = []
 

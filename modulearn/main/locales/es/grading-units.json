@@ -57,5 +57,21 @@
   "Units (select one or more)": "Unidades (selecciona una o varias)",
   "Deduct once": "Deducir una vez",
   "Remove requirement": "Eliminar requisito",
-  "points": "puntos"
+  "points": "puntos",
+  "Graded activity": "Actividad evaluable",
+  "Units meeting target": "Unidades que cumplen el objetivo",
+  "Students with progress": "Estudiantes con progreso",
+  "Activity progress over time": "Progreso de las actividades a lo largo del tiempo",
+  "Loading interactions…": "Cargando interacciones…",
+  "Could not load interactions. Close and expand to retry.": "No se pudieron cargar las interacciones. Cierre y vuelva a expandir para reintentar.",
+  "No recorded progress signals yet.": "Todavía no hay registros de progreso.",
+  "Zoom in": "Acercar",
+  "Zoom out": "Alejar",
+  "Earlier": "Anterior",
+  "Later": "Posterior",
+  "Reset": "Restablecer",
+  "First completion": "Primera finalización",
+  "Last completion": "Última finalización",
+  "Drag to pan; use +/− to zoom. Select an activity to open its interactions.": "Arrastre para desplazarse; use +/− para ampliar. Seleccione una actividad para abrir sus interacciones.",
+  "Changes apply when you save configuration. If no visible activities are marked graded, all visible course activities count equally.": "Los cambios se aplican al guardar. Si ninguna actividad visible está marcada como evaluable, todas las actividades visibles del curso cuentan por igual."
 }

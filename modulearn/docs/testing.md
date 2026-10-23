@@ -118,3 +118,9 @@ Automated tests cover authenticated resource-bound launches, signed outcomes, ta
 Real browser tests verify provider interactions and persisted local progress as recorded in the matrix. A real provider-originated server-to-server LTI grade callback remains **pending public HTTPS**, by design; localhost cannot establish it. No claim of complete catalog support is made for broken catalog records, unavailable upstream services, provider registrations awaiting setup, or untested internal provider events.
 
 OpenDSA compatibility reference: its [current controller](https://github.com/OpenDSA/OpenDSA-LTI/blob/master/app/controllers/lti_controller.rb) identifies the LMS from `request.referrer`; the launch response now permits origin-only disclosure for that provider. Other launches retain the existing referrer policy.
+
+## Graded completion and analytics checks
+
+`courses.test_grading_units` and `dashboard.test_analytics_drilldown` cover mixed graded/practice courses, the no-graded fallback, unit targets, completion versus scores, bounded grade recalculation queries, Last Active evidence, lazy interaction detail and access restrictions.
+
+Before production acceptance, check a mixed course and an all-ungraded course: stars and course/unit totals should agree; practice details should remain inspectable. Open a class-average cell and expand a student. In the individual Interaction Timeline, confirm units/activities begin collapsed, chart zoom/pan/reset work, and selecting an activity reveals its history. The chart requires historical progress signals or saved completion timestamps; it does not fabricate missing history. Apply migration `0029` and publish the new `analytics-timeline.js` with collected static assets.

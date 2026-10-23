@@ -48,7 +48,7 @@ function populateKPIs() {
       totalActual += (v?.p || 0);
     });
   });
-  const overallPct = totalPossible > 0 ? Math.round((totalActual / totalPossible) * 100) : 0;
+  const overallPct = responseData.context?.domain === 'modulearn' ? Math.round(learners.reduce((sum, learner) => sum + (learner.grading?.progress || 0), 0) / (learners.length || 1)) : (totalPossible > 0 ? Math.round((totalActual / totalPossible) * 100) : 0);
   const overallEl = document.getElementById('overallProgress');
   if (overallEl) overallEl.textContent = `${overallPct}%`;
 
@@ -280,7 +280,7 @@ function updatePerStudentView() {
       <td class="border-0 py-2 text-center">
         <div class="flex flex-col items-center">
           <div class="font-bold text-base mb-1">${summary.topicsCompleted}/${summary.totalTopics}</div>
-          <div class="text-gray-500" style="font-size: 0.7rem;">Topics</div>
+          <div class="text-gray-500" style="font-size: 0.7rem;">Units</div>
         </div>
       </td>
       <td class="border-0 py-2 text-center">
@@ -362,9 +362,12 @@ function getLastActiveTime(value) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-function resourceColor(index) {
-  const colors = ['#2563eb', '#16a34a', '#f59e0b', '#0f766e', '#7c3aed', '#dc2626'];
-  return colors[index % colors.length];
+function resourceColor(name) {
+  // Stable by activity type, independent of student, ordering, or practice status.
+  const key = String(name).replace(/ · (Practice|Graded)$/, '').toLocaleLowerCase();
+  let hash = 0;
+  for (const letter of key) hash = ((hash * 31) + letter.codePointAt(0)) >>> 0;
+  return `hsl(${hash % 360} 65% 43%)`;
 }
 
 function computeLearnerSummary(learner) {
@@ -379,10 +382,10 @@ function computeLearnerSummary(learner) {
   });
 
   return {
-    overall,
-    progressPercent: clampPercent(overall),
-    topicsCompleted: topicProgresses.filter(p => p >= 0.9).length,
-    totalTopics: topics.length,
+    overall: learner.grading?.progress == null ? overall : learner.grading.progress / 100,
+    progressPercent: learner.grading?.progress == null ? clampPercent(overall) : Math.round(learner.grading.progress),
+    topicsCompleted: learner.grading?.units_met ?? topicProgresses.filter(p => p >= 1).length,
+    totalTopics: learner.grading?.units_total ?? topics.length,
     resourceTotals,
     lastActive: learner?.lastActive || learner?.last_update || learner?.lastUpdate || null
   };
@@ -396,7 +399,7 @@ function renderResourceProfile(summary) {
     <div class="resource-profile" title="Relative activity by resource type">
       ${resources.map((resource, index) => {
         const width = Math.max(4, (resource.average / total) * 100);
-        return `<span class="resource-profile-segment" title="${escapeHtml(resource.name)} ${clampPercent(resource.average)}%" style="width:${width}%; background:${resourceColor(index)};"></span>`;
+        return `<span class="resource-profile-segment" title="${escapeHtml(resource.name)} ${clampPercent(resource.average)}%" style="width:${width}%; background:${resourceColor(resource.name)};"></span>`;
       }).join('')}
     </div>
   `;
@@ -543,7 +546,7 @@ async function fetchStudentEngagement(learnerId) {
     throw new Error('No course session is selected.');
   }
 
-  const params = new URLSearchParams({ instance_id: instanceId, learner_id: learnerId });
+  const params = new URLSearchParams({ instance_id: instanceId, learner_id: learnerId, summary: '1' });
   const response = await fetch(`{% url 'dashboard:fetch_modulearn_student_engagement' %}?${params}`, {
     headers: { 'Accept': 'application/json' }
   });
@@ -688,7 +691,7 @@ function renderStudentProgressSummary(learner) {
           <div class="analytics-kpi-value mt-2">${summary.progressPercent}%</div>
         </div>
         <div class="analytics-kpi p-4">
-          <div class="analytics-kpi-label">Units Complete</div>
+          <div class="analytics-kpi-label">Units meeting target</div>
           <div class="analytics-kpi-value mt-2">${summary.topicsCompleted}/${summary.totalTopics}</div>
         </div>
         <div class="analytics-kpi p-4">
@@ -720,7 +723,7 @@ function renderStudentProgressSummary(learner) {
                   const resourcePct = clampPercent(resourceProgress);
                   const activities = topic.activities?.[resource.id] || [];
                   return `
-                    <details class="student-resource-detail">
+                    <details class="student-resource-detail" style="--completion:${resourcePct}%;--type-color:${resourceColor(resource.name)}">
                       <summary>
                         <span>${escapeHtml(resource.name)}</span>
                         <span>${resourcePct}% · ${activities.length} modules</span>
@@ -843,19 +846,20 @@ function renderStudentEngagementView(data) {
         <div class="analytics-kpi p-4"><div class="analytics-kpi-label">Last Event</div><div class="text-lg font-bold mt-3">${formatDateTime(summary.last_event_at)}</div></div>
       </div>
 
+      <div data-activity-timeline></div>
       <div class="space-y-4">
         ${(data.units || []).map(unit => `
-          <details class="engagement-unit" ${unit.event_count ? 'open' : ''}>
+          <details class="engagement-unit" data-timeline-unit="${unit.id}">
             <summary>
-              <span>${escapeHtml(unit.title)}</span>
+              <span>▸ ${escapeHtml(unit.title)}</span>
               <span>${unit.event_count || 0} events</span>
             </summary>
             <div class="engagement-unit-body">
               ${(unit.modules || []).map(module => `
-                <details class="engagement-module" ${module.event_count ? 'open' : ''}>
+                <details class="engagement-module" data-timeline-module="${module.id}">
                   <summary>
                     <div class="min-w-0">
-                      <div class="font-bold truncate">${escapeHtml(module.title)}</div>
+                      <div class="font-bold truncate">▸ ${escapeHtml(module.title)}</div>
                       <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(module.module_type || 'Module')}</div>
                     </div>
                     <div class="engagement-module-actions">
@@ -949,6 +953,7 @@ function showStudentDetails(learnerId) {
       try {
         const engagement = await fetchStudentEngagement(learner.id);
         body.innerHTML = renderStudentEngagementView(engagement);
+        initializeActivityTimeline(body, engagement, `{% url 'dashboard:fetch_modulearn_student_engagement' %}`);
       } catch (error) {
         body.innerHTML = renderStudentProgressSummary(learner);
         summaryBtn.className = 'btn btn-primary btn-sm';

@@ -145,8 +145,19 @@ The **Grade weighting** page previews active students only, excluding instructor
 - Unit-target mode: each nonempty unit contributes `min(completed / total / target_fraction, 1) × weight`, divided by the sum of those weights. A blank unit target inherits the current default. A zero-weight unit contributes no base credit, but its configured deductions still apply.
 - Optional course points scale the base percentage; otherwise deductions are percentage points.
 - A configurable missed-unit deduction applies to each unit with graded material but zero completions. Each unit can also have an incomplete-unit deduction unless **all** its graded exercises are completed. Deductions add and the result is clamped between zero and the maximum.
-- Practice-only/empty units incur no deductions. Visibility and grading changes recalculate all affected sessions.
+- When at least one visible ordinary activity is graded, practice-only/empty units incur no deductions. Visibility and grading changes recalculate all affected sessions.
 
 For a five-point course with a 50% target in every unit: choose unit-target mode, set course points to `5`, default target to `50`, and set the missed-unit deduction as desired. For a single point deducted if either X or Y is incomplete, add one combined completion requirement selecting X and Y with a deduction of `1`. For independent penalties instead, use each unit's incomplete-unit deduction. Combined and individual deductions add together when both are configured.
 
 Migration `0028` adds these fields and recalculates historical **course summaries** using completion-based grades. It does not overwrite exercise scores or logs. Include the migration, templates, JavaScript, CSS and translations in deployment; publish collected static assets as usual.
+
+
+### Graded progress and analytics
+
+A star marks activities that count toward completion. If **none of the visible ordinary activities** are marked graded, all visible ordinary activities count equally. Hidden and recommendation-only activities remain excluded. This fallback does not change module flags or exercise records. Migration `0029` refreshes cached summaries for courses affected by the fallback; it preserves session grading policies and does not send LMS grades.
+
+Course/unit bars and analytics overall progress count completed eligible activities. Practice remains separately inspectable, including partial exercise progress, attempt scores and raw history. **Exercise progress and score are distinct**: providers can report partial completion separately from correctness; the course grade additionally applies the session's completion targets and deductions.
+
+Analytics **Units** counts nonempty graded units meeting their configured completion target (100% in default module-completion mode). Last Active combines recorded access logs, interaction timestamps and progress records with evidence of work; enrolling alone is not activity. Resource colors are stable by activity type, including across graded/practice groups.
+
+The interaction timeline starts collapsed. Its overview loads only after opening the Interaction Timeline tab; detailed events load on first expansion of an activity, scoped to that student and course session. The chart shows recorded progress/attempt signals and saved completion dates, with zoom, pan, reset, a type legend and clickable activity lines/list. It cannot reconstruct interactions that were never logged. Raw capture details remain available separately.

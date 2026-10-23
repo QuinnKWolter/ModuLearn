@@ -2752,7 +2752,7 @@
       </details>
       <div class="shell-surface p-3 mb-3 flex flex-wrap items-center gap-2" id="gradingBulkControls">
         <strong>Grading</strong><button type="button" class="btn btn-sm btn-outline-primary" data-grade-all="1">All graded</button><button type="button" class="btn btn-sm btn-outline-secondary" data-grade-all="0">All practice</button>
-        <label>Problem type <select id="gradeTypeSelect" class="form-control"></select></label><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark type graded</button><span class="text-sm">Changes apply when you save configuration.</span>
+        <label>Problem type <select id="gradeTypeSelect" class="form-control"></select></label><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark type graded</button><span class="text-sm">Changes apply when you save configuration. If no visible activities are marked graded, all visible course activities count equally.</span>
       </div>
       <form method="post" enctype="multipart/form-data" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
@@ -2882,7 +2882,7 @@
                         <summary class="cfg-module-summary">
                           <span class="cfg-module-order" data-module-order-label>#{{ module.order }}</span>
                           <span class="cfg-module-title">
-                            <strong>{{ module.title }}</strong>
+                            <strong><span data-grade-star="{{ module.id }}" title="Graded activity" {% if not module.is_graded %}hidden{% endif %}>★ </span>{{ module.title }}</strong>
                             <small class="text-slate-500 dark:text-slate-300">{{ module.display_type_label }}</small>
                           </span>
                           <span class="cfg-chip-row">

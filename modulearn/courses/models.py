@@ -126,7 +126,8 @@ class Course(models.Model):
 
     def total_modules(self):
         """Return the total number of modules in the course."""
-        return Module.objects.filter(unit__course=self, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
+        from modulearn.learning.services.grading import eligible_modules, graded_module_ids
+        return len(graded_module_ids(eligible_modules(self)))
 
     def is_plugin_enabled(self, plugin_key):
         from modulearn.learning.services.course_plugins import is_course_plugin_enabled
@@ -1047,15 +1048,16 @@ def create_module_progress_records(sender, instance, created, **kwargs):
     """
     if created:
         # Get total modules for the course
-        total_modules = Module.objects.filter(unit__course=instance.course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
+        from modulearn.learning.services.grading import eligible_modules, calculate_grade
+        totals = calculate_grade(eligible_modules(instance.course_instance.course), set(), {})
+        total_modules = totals['total']
         
         # Create or update CourseProgress with correct total_modules
         CourseProgress.objects.get_or_create(
             enrollment=instance,
             defaults={
                 'total_modules': total_modules,
-                'practice_total': Module.objects.filter(unit__course=instance.course_instance.course,
-                    is_recommendation_only=False, is_graded=False, is_visible=True, unit__is_visible=True).count(),
+                'practice_total': totals['practice_total'],
                 'modules_completed': 0
             }
         )
