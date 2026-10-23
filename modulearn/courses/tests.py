@@ -627,6 +627,29 @@ class CourseProgressTests(TestCase):
                 Enrollment.objects.filter(student=user, course_instance=self.instance).exists()
             )
 
+    def test_anonymous_roster_batches_initialize_full_course_progress(self):
+        Module.objects.bulk_create([
+            Module(unit=self.unit, title=f'Roster exercise {index}')
+            for index in range(298)
+        ])
+        self.client.force_login(self.instructor)
+        usernames = set()
+        for _ in range(2):
+            response = self.client.post(
+                reverse('courses:generate_anonymous_students', args=[self.instance.id]),
+                data=json.dumps({'count': 5, 'password_mode': 'random'}),
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200)
+            for account in response.json()['accounts']:
+                self.assertNotIn(account['username'], usernames)
+                usernames.add(account['username'])
+                enrollment = Enrollment.objects.get(student__username=account['username'])
+                self.assertEqual(enrollment.course_progress.total_modules, 300)
+                self.assertEqual(ModuleProgress.objects.filter(enrollment=enrollment).count(), 300)
+                self.assertTrue(enrollment.student.check_password(account['password']))
+        self.assertEqual(len(usernames), 10)
+
     def test_generate_anonymous_students_defaults_to_anon_and_username_password(self):
         self.client.force_login(self.instructor)
 

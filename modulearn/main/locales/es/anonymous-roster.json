@@ -1,0 +1,6 @@
+{
+  "Generating...": "Generando...",
+  "Accounts confirmed:": "Cuentas confirmadas:",
+  "Failed to generate anonymous accounts": "No se pudieron generar las cuentas anónimas",
+  "Saved credentials remain below. Refresh the roster before generating any remaining accounts; do not repeat the full request.": "Las credenciales guardadas permanecen abajo. Actualiza la lista antes de generar las cuentas restantes; no repitas la solicitud completa."
+}

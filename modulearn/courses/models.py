@@ -126,13 +126,14 @@ class Course(models.Model):
 
     def total_modules(self):
         """Return the total number of modules in the course."""
-        return Module.objects.filter(unit__course=self, is_recommendation_only=False).count()
+        return Module.objects.filter(unit__course=self, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
 
     def is_plugin_enabled(self, plugin_key):
         from modulearn.learning.services.course_plugins import is_course_plugin_enabled
         return is_course_plugin_enabled(self, plugin_key)
 
 class CourseInstance(models.Model):
+    grading_policy = models.JSONField(default=dict, blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='instances', null=True, blank=True)
     group_name = models.CharField(max_length=255, blank=True, help_text="Custom identifier for the student group")
     instructors = models.ManyToManyField(User, related_name='course_instances_taught', limit_choices_to={'is_instructor': True}, blank=True)
@@ -159,7 +160,8 @@ class CourseInstance(models.Model):
         
         new_instance = CourseInstance.objects.create(
             course=self.course,
-            group_name=new_group_name
+            group_name=new_group_name,
+            grading_policy=json.loads(json.dumps(self.grading_policy)),
         )
         
         # Copy session instructors and include any course-level co-instructors.
@@ -171,6 +173,8 @@ class CourseInstance(models.Model):
         return new_instance
 
 class Unit(models.Model):
+    opens_at = models.DateTimeField(null=True, blank=True)
+    closes_at = models.DateTimeField(null=True, blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='units')
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -196,6 +200,7 @@ class Unit(models.Model):
         ordering = ['order', 'id']
 
 class Module(models.Model):
+    is_graded = models.BooleanField(default=True)
     is_recommendation_only = models.BooleanField(default=False, help_text="Available only as isolated recommendation practice; excluded from course requirements.")
     MODULE_TYPE_IMPORTED = 'imported'
     MODULE_TYPE_EXTERNAL_LINK = 'external_link'
@@ -722,6 +727,8 @@ class EnrollmentCode(models.Model):
         return f"Code for {self.email} - {self.course_instance}"
 
 class CourseProgress(models.Model):
+    practice_total = models.IntegerField(default=0)
+    practice_completed = models.IntegerField(default=0)
     enrollment = models.OneToOneField(Enrollment, on_delete=models.CASCADE, related_name='course_progress')
     overall_progress = models.FloatField(default=0.0)
     overall_score = models.FloatField(default=0.0)
@@ -730,6 +737,14 @@ class CourseProgress(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     last_accessed = models.DateTimeField(auto_now=True)
     lis_result_sourcedid = models.CharField(max_length=255, null=True, blank=True)
+
+    @property
+    def points_possible(self):
+        return self.enrollment.course_instance.grading_policy.get('points')
+
+    @property
+    def points_earned(self):
+        return self.overall_score * self.points_possible / 100 if self.points_possible else None
 
     def update_progress(self):
         """Calculate overall course progress based on module progress"""
@@ -740,6 +755,8 @@ class CourseProgress(models.Model):
         self.overall_score = refreshed.overall_score
         self.modules_completed = refreshed.modules_completed
         self.total_modules = refreshed.total_modules
+        self.practice_total = refreshed.practice_total
+        self.practice_completed = refreshed.practice_completed
         self.completed_at = refreshed.completed_at
         if self.lis_result_sourcedid and self.enrollment.course_instance.lis_outcome_service_url:
             self.submit_grade_to_canvas()
@@ -1030,13 +1047,15 @@ def create_module_progress_records(sender, instance, created, **kwargs):
     """
     if created:
         # Get total modules for the course
-        total_modules = Module.objects.filter(unit__course=instance.course_instance.course, is_recommendation_only=False).count()
+        total_modules = Module.objects.filter(unit__course=instance.course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
         
         # Create or update CourseProgress with correct total_modules
         CourseProgress.objects.get_or_create(
             enrollment=instance,
             defaults={
                 'total_modules': total_modules,
+                'practice_total': Module.objects.filter(unit__course=instance.course_instance.course,
+                    is_recommendation_only=False, is_graded=False, is_visible=True, unit__is_visible=True).count(),
                 'modules_completed': 0
             }
         )

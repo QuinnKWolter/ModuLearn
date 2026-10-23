@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_grading, views_units
 from . import views_catalog
 from . import views_recommendations
 from .views_integration_testing import integration_testing
@@ -8,6 +9,9 @@ from .views import LTIOutcomesView, CaliperAnalyticsView
 app_name = 'courses'
 
 urlpatterns = [
+    path('instance/<int:instance_id>/configure/grading/', views_grading.grading, name='grading'),
+    path('instance/<int:instance_id>/units/import/', views_units.upload, name='import_unit'),
+    path('instance/<int:instance_id>/units/<int:unit_id>/export/', views_units.export, name='export_unit'),
     path('instance/<int:instance_id>/integration-testing/', integration_testing, name='integration_testing'),
     path('', views.course_list, name='course_list'),
     path('check-group-name/', views.check_group_name, name='check_group_name'),

@@ -22,11 +22,11 @@ def _build_provider_grid(unit_cards):
     columns_by_key = {}
     for card in unit_cards:
         for module in card["modules"]:
-            key = module.get("provider_key") or "other"
+            key = (module.get("provider_key") or "other") + ("-practice" if not module.get("is_graded", True) else "")
             if key not in columns_by_key:
                 columns_by_key[key] = {
                     "key": key,
-                    "label": module.get("provider_label") or "Other",
+                    "label": (module.get("provider_label") or "Other") + (" · Practice" if not module.get("is_graded", True) else " · Graded"),
                     "sublabels": [],
                     "module_count": 0,
                 }
@@ -41,7 +41,8 @@ def _build_provider_grid(unit_cards):
     for row_index, card in enumerate(unit_cards):
         modules_by_provider = {}
         for module in card["modules"]:
-            modules_by_provider.setdefault(module.get("provider_key") or "other", []).append(module)
+            key = (module.get("provider_key") or "other") + ("-practice" if not module.get("is_graded", True) else "")
+            modules_by_provider.setdefault(key, []).append(module)
 
         cells = []
         for column_index, column in enumerate(columns):
@@ -158,6 +159,7 @@ def build_course_detail_context(user, course_instance):
         module_count = 0
         completed_count = 0
         progress_sum = 0.0
+        practice_count = practice_completed = 0
 
         for module in unit.modules.all():
             if module.is_recommendation_only:
@@ -172,7 +174,9 @@ def build_course_detail_context(user, course_instance):
             if not is_instructor and not module_state.is_visible:
                 continue
 
-            module_count += 1
+            counts_for_grade = module.is_graded and module.is_visible and unit.is_visible
+            module_count += int(counts_for_grade)
+            practice_count += int(not module.is_graded)
             progress_data = module_progress_data.get(module.id, {})
             progress_value = float(progress_data.get("progress") or 0.0)
             is_complete = bool(progress_data.get("is_complete")) or progress_value >= 1.0
@@ -186,7 +190,7 @@ def build_course_detail_context(user, course_instance):
                 status_class = "is-locked"
                 icon_class = "fa-solid fa-lock"
             elif is_complete:
-                completed_count += 1
+                pass  # Completion counts are independent of current access dates.
                 status = "Done"
                 status_class = "is-complete"
                 icon_class = "fa-solid fa-check"
@@ -199,8 +203,13 @@ def build_course_detail_context(user, course_instance):
                 status_class = "is-todo"
                 icon_class = "fa-regular fa-circle"
 
-            progress_sum += progress_value
+            if counts_for_grade:
+                progress_sum += int(is_complete)
+                completed_count += int(is_complete)
+            elif not module.is_graded:
+                practice_completed += int(is_complete)
             module_items.append({
+                "is_graded": module.is_graded,
                 "id": module.id,
                 "title": module.title,
                 "progress_percent": progress_percent,
@@ -227,6 +236,8 @@ def build_course_detail_context(user, course_instance):
             "unit": unit,
             "modules": module_items,
             "module_count": module_count,
+            "practice_count": practice_count,
+            "practice_completed": practice_completed,
             "completed_count": completed_count,
             "progress_percent": unit_percent,
             "is_complete": is_unit_complete,

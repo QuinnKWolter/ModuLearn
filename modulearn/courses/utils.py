@@ -585,6 +585,9 @@ def create_course_from_json(
                     updated = True
             if updated:
                 unit.save()
+        from modulearn.learning.services.unit_packages import parse_schedule
+        unit.opens_at, unit.closes_at = parse_schedule(unit_data.get("opens_at", unit.opens_at), unit_data.get("closes_at", unit.closes_at))
+        unit.save(update_fields=["opens_at", "closes_at"])
         pending_unlock_rules.append((unit, unit_data.get("unlock_rule") or {}, unit_data.get("unlock_rule_portable") or {}))
         logger.debug("Unit %s: %s", "created" if unit_created else "retrieved", unit)
 
@@ -653,6 +656,7 @@ def create_course_from_json(
                 "author": author_id,
                 "supported_protocols": supported_protocols,
                 "is_visible": activity.get("is_visible", module.is_visible),
+                "is_graded": activity.get("is_graded", module.is_graded) is True,
                 "is_recommendation_only": activity.get("is_recommendation_only", module.is_recommendation_only) is True,
                 "is_locked": activity.get("is_locked", module.is_locked),
                 "allow_resubmission": activity.get("allow_resubmission", module.allow_resubmission),
@@ -717,7 +721,7 @@ def create_course_from_json(
     return course
 
 
-def export_course_to_json(course, *, course_instance=None, include_file_data=True):
+def export_course_to_json(course, *, course_instance=None, include_file_data=True, unit_ids=None):
     provider_protocols = {}
     units = []
     course_modules_by_id = {}
@@ -727,6 +731,8 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
             course_modules_by_id[str(module.id)] = module
 
     for unit in prefetched_units:
+        if unit_ids is not None and unit.id not in unit_ids:
+            continue
         activities = {}
         modules = []
         for module in unit.modules.all():
@@ -755,6 +761,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
                 "order": module.order,
                 "is_visible": module.is_visible,
                 "is_recommendation_only": module.is_recommendation_only,
+                "is_graded": module.is_graded,
                 "is_locked": module.is_locked,
                 "allow_resubmission": module.allow_resubmission,
                 "unlock_rule": module.unlock_rule or {},
@@ -771,6 +778,8 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
 
         units.append({
             "id": unit.id,
+            "opens_at": unit.opens_at.isoformat() if unit.opens_at else None,
+            "closes_at": unit.closes_at.isoformat() if unit.closes_at else None,
             "name": unit.title,
             "title": unit.title,
             "description": unit.description,

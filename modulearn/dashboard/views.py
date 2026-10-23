@@ -244,24 +244,8 @@ def fetch_modulearn_instance_analytics(request):
         modules = list(Module.objects.filter(unit__in=units, is_recommendation_only=False).select_related('unit').order_by('id'))
 
         def _module_type_key(m):
-            # Best-effort bucketing for "module type" columns.
-            # Prefer platform_name (human-facing), then provider_id, otherwise a fallback.
-            key = (getattr(m, 'platform_name', '') or '').strip()
-            if key:
-                return key
-            key = (getattr(m, 'provider_id', '') or '').strip()
-            if key:
-                return key
-            # Try JSON content_data if present
-            try:
-                cd = getattr(m, 'content_data', None) or {}
-                if isinstance(cd, dict):
-                    t = (cd.get('type') or cd.get('module_type') or cd.get('kind') or '').strip()
-                    if t:
-                        return t
-            except Exception:
-                pass
-            return 'Modules'
+            key = m.display_type_label or m.platform_name or m.provider_id or 'Modules'
+            return key if m.is_graded else f"{key} · Practice"
 
         # Determine module types (these become "resource columns")
         type_keys = []
@@ -335,7 +319,7 @@ def fetch_modulearn_instance_analytics(request):
                             mp = module_progress_map.get(m.id)
                             ps.append(float(mp.get('progress') or 0.0) if mp else 0.0)
                         avg_p = sum(ps) / len(ps)
-                        all_ps.extend(ps)
+                        all_ps.extend(p for m, p in zip(type_modules, ps) if m.is_graded)
                     else:
                         avg_p = 0.0
 
@@ -395,7 +379,7 @@ def fetch_modulearn_instance_analytics(request):
                         avg_p = 0.0
                     values[rid] = {'k': 0.0, 'p': avg_p}
                     overall_vals.append(avg_p)
-                overall_p = (sum(overall_vals) / len(overall_vals)) if overall_vals else 0.0
+                overall_p = (sum(learner['state']['topics'][str(unit.id)]['overall']['p'] for learner in selected_learners) / len(selected_learners)) if selected_learners else 0.0
                 avg_topics[str(unit.id)] = {
                     'values': values,
                     'overall': {'k': 0.0, 'p': overall_p},
@@ -720,7 +704,8 @@ def fetch_module_capture_history(request):
                 "id": module.id,
                 "title": module.title,
                 "unit_title": module.unit.title if module.unit else "",
-                "module_type": module.display_type_label,
+                "module_type": module.display_type_label + (" · Graded" if module.is_graded else " · Practice"),
+                "is_graded": module.is_graded,
                 "provider_id": module.provider_id,
                 "platform_name": module.platform_name,
                 "content_url": module.content_url,
@@ -837,7 +822,8 @@ def fetch_modulearn_student_engagement(request):
                 module_payloads.append({
                     "id": module.id,
                     "title": module.title,
-                    "module_type": module.display_type_label,
+                    "module_type": module.display_type_label + (" · Graded" if module.is_graded else " · Practice"),
+                    "is_graded": module.is_graded,
                     "order": module.order,
                     "progress": float(progress.progress or 0.0) if progress else 0.0,
                     "progress_percent": round(float(progress.progress or 0.0) * 100.0) if progress else 0,

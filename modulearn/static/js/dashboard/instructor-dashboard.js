@@ -771,7 +771,7 @@
                 <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(enrollment.student.username || '')}</div>
               </td>
               <td><span class="${emailClass}">${escapeHtml(emailLabel)}</span></td>
-              <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules}</td>
+              <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules} ${t('Graded')}<small class="block">${enrollment.progress.practice_completed || 0}/${enrollment.progress.practice_total || 0} ${t('Practice')}</small></td>
               <td class="text-right">${enrollment.progress.overall_score.toFixed(2)}%</td>
               <td class="text-right">
                 <button class="btn btn-sm btn-outline-danger remove-enrollment" data-enrollment-id="${enrollment.id}">
@@ -971,9 +971,11 @@
     }
 
     const anonymousEnrollmentForm = document.getElementById('anonymousEnrollmentForm');
+    let generatingAnonymousAccounts = false;
     if (anonymousEnrollmentForm) {
       anonymousEnrollmentForm.addEventListener('submit', async function (event) {
         event.preventDefault();
+        if (generatingAnonymousAccounts) return;
         const courseInstanceId = document.getElementById('currentCourseInstanceId').value;
         const countInput = document.getElementById('anonymousStudentCount');
         const prefixInput = document.getElementById('anonymousUsernamePrefix');
@@ -989,39 +991,59 @@
         }
 
         const submitButton = this.querySelector('button[type="submit"]');
+        generatingAnonymousAccounts = true;
         submitButton.disabled = true;
         submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${t('Generating...')}`;
 
+        let generatedCount = 0;
+        const prefix = prefixInput.value.trim() || 'anon';
+        const passwordMode = passwordMatchesUsernameInput && passwordMatchesUsernameInput.checked ? 'username' : 'random';
         try {
-          const response = await fetch(
-            replacePattern(config.generateAnonymousStudentsPattern, '__COURSE_INSTANCE_ID__', courseInstanceId),
-            {
-              method: 'POST',
-              headers: csrfHeaders({ 'Content-Type': 'application/json' }),
-              body: JSON.stringify({
-                count,
-                prefix: prefixInput.value.trim() || 'anon',
-                password_mode: passwordMatchesUsernameInput && passwordMatchesUsernameInput.checked ? 'username' : 'random',
-              }),
+          // Password hashing and progress initialization make whole-class requests
+          // exceed the production worker timeout. Commit small sequential batches.
+          while (generatedCount < count) {
+            const response = await fetch(
+              replacePattern(config.generateAnonymousStudentsPattern, '__COURSE_INSTANCE_ID__', courseInstanceId),
+              {
+                method: 'POST',
+                headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({
+                  count: Math.min(5, count - generatedCount),
+                  prefix,
+                  password_mode: passwordMode,
+                }),
+              }
+            );
+            const data = await parseJsonResponse(response);
+
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || t('Failed to generate anonymous accounts'));
             }
-          );
-          const data = await parseJsonResponse(response);
+            if (!Array.isArray(data.accounts) || !data.accounts.length) {
+              throw new Error(t('Failed to generate anonymous accounts'));
+            }
 
-          if (!response.ok || !data.success) {
-            throw new Error(data.error || t('Failed to generate anonymous accounts'));
-          }
-
-          if (rosterText) {
-            rosterText.value = formatGeneratedRoster(data.accounts || []);
-          }
-          if (rosterOutput) {
-            rosterOutput.classList.remove('hidden');
+            if (rosterText) {
+              const batchText = formatGeneratedRoster(data.accounts);
+              // Keep credentials from earlier batches, including an interrupted run.
+              rosterText.value = rosterText.value.trim()
+                ? `${rosterText.value.trimEnd()}\n${batchText.split('\n').slice(1).join('\n')}`
+                : batchText;
+            }
+            if (rosterOutput) {
+              rosterOutput.classList.remove('hidden');
+            }
+            generatedCount += data.accounts.length;
+            submitButton.textContent = `${t('Generating...')} ${generatedCount}/${count}`;
           }
           await loadEnrollments(courseInstanceId);
         } catch (error) {
           console.error('Error generating anonymous accounts:', error);
-          alert(t(error.message || 'An error occurred while generating anonymous accounts.'));
+          alert(`${t(error.message || 'An error occurred while generating anonymous accounts.')}\n${t('Accounts confirmed:')} ${generatedCount}/${count}. ${t('Saved credentials remain below. Refresh the roster before generating any remaining accounts; do not repeat the full request.')}`);
+          // A failed response can follow a committed request. Never retry silently.
+          await loadEnrollments(courseInstanceId);
         } finally {
+          generatingAnonymousAccounts = false;
           submitButton.disabled = Boolean(countInput && countInput.disabled);
           submitButton.innerHTML = `<i class="bi bi-person-badge mr-1"></i>${t('Generate Accounts')}`;
         }
@@ -1072,6 +1094,10 @@
 
     const manageEnrollmentModal = document.getElementById('manageEnrollmentModal');
     if (manageEnrollmentModal) {
+      manageEnrollmentModal.addEventListener('hide.bs.modal', function (event) {
+        // Prevent switching sessions while batches and their credentials are arriving.
+        if (generatingAnonymousAccounts) event.preventDefault();
+      });
       manageEnrollmentModal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
         document.getElementById('manageEnrollmentModalLabel').textContent =

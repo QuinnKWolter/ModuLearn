@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.db.models import Max, Q
+from django.utils import timezone
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,7 @@ class AccessState:
     is_visible: bool
     is_unlocked: bool
     reason: str = ""
+    scheduled_lock: bool = False
 
     @property
     def can_access(self) -> bool:
@@ -94,6 +96,11 @@ def log_module_access(user, module, course_instance, *, event_type: str = "view"
 def evaluate_unit_access(unit, enrollment, *, include_hidden: bool = False) -> AccessState:
     if not unit.is_visible and not include_hidden:
         return AccessState(False, False, "Hidden by instructor")
+    now = timezone.now()
+    if unit.opens_at and now < unit.opens_at:
+        return AccessState(True, False, f"Opens {timezone.localtime(unit.opens_at):%Y-%m-%d %H:%M %Z}", True)
+    if unit.closes_at and now >= unit.closes_at:
+        return AccessState(True, False, f"Closed {timezone.localtime(unit.closes_at):%Y-%m-%d %H:%M %Z}", True)
     if not unit.is_locked:
         return AccessState(True, True)
     if _rule_passes(unit.unlock_rule, enrollment, subject_unit=unit):
@@ -109,7 +116,7 @@ def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None
     has_dynamic_unlock = _has_dynamic_module_unlock(enrollment, module)
     has_branch_lock = _has_active_branch_target(module)
     if unit_state is not None and not unit_state.can_access:
-        if unit_state.is_visible and has_dynamic_unlock:
+        if unit_state.is_visible and has_dynamic_unlock and not unit_state.scheduled_lock:
             return AccessState(True, True)
         return AccessState(unit_state.is_visible, False, unit_state.reason or "Unit is locked")
     if not module.is_locked and not has_branch_lock:
@@ -240,9 +247,10 @@ def _unit_accessed(enrollment, unit_id) -> bool:
 
 
 def _unit_completed(enrollment, unit_id) -> bool:
-    modules = list(_unit_modules(unit_id))
+    modules = list(_unit_modules(unit_id).filter(is_graded=True))
     if not modules:
-        return False
+        from courses.models import Unit
+        return bool(unit_id and Unit.objects.filter(pk=unit_id, course=enrollment.course_instance.course).exists())
     return all(_module_completed(enrollment, module.id) for module in modules)
 
 

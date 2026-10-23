@@ -1,0 +1,376 @@
+[
+  {
+    "event_id": "adb905bf-e413-497d-bae6-fa07fad4f811",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "answerChecked",
+      "eventData": {
+        "isCorrect": false,
+        "isPassed": false,
+        "answer": "wrong",
+        "parameters": [
+          {
+            "parameter": {
+              "context": "Guest[] seats = new Guest[5];",
+              "snippet": "5"
+            },
+            "value": 4
+          },
+          {
+            "parameter": {
+              "context": "int booked = 3;",
+              "snippet": "3"
+            },
+            "value": 2
+          }
+        ]
+      },
+      "clientTimestamp": 1791775940757,
+      "activityType": "parameterized-code-tracing",
+      "activityId": "pct_aoo_seat_map_nulls",
+      "difficulty": "novice",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "2c2bbe58-5830-4258-a327-555325dadef8",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "answerChecked",
+      "eventData": {
+        "isCorrect": false,
+        "isPassed": false,
+        "answer": "First seat: G0\nLast seat: null\nEmpty seats: 2",
+        "parameters": [
+          {
+            "parameter": {
+              "context": "Guest[] seats = new Guest[5];",
+              "snippet": "5"
+            },
+            "value": 4
+          },
+          {
+            "parameter": {
+              "context": "int booked = 3;",
+              "snippet": "3"
+            },
+            "value": 2
+          }
+        ]
+      },
+      "clientTimestamp": 1791775942555,
+      "activityType": "parameterized-code-tracing",
+      "activityId": "pct_aoo_seat_map_nulls",
+      "difficulty": "novice",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "08905799-0480-407f-a55e-b7198a2dbef5",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "explanationOpened",
+      "eventData": {
+        "snippet": {
+          "index": 0,
+          "location": {
+            "snippet": "players[i] = shared;"
+          }
+        },
+        "explanation": {
+          "index": 0,
+          "body": "### 1. Share one token\nCall the first token T. Its score is 5. The array is `[T, T, T]`.\n`shared` also refers to T. Assignment copies the reference, not T.\n",
+          "totalCount": 1,
+          "viewedPercentage": 25
+        },
+        "progress": {
+          "snippets": 25,
+          "explanations": 25
+        }
+      },
+      "clientTimestamp": 1791775948679,
+      "activityType": "worked-example",
+      "activityId": "we_array_objects_game",
+      "difficulty": "novice",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "e8779e47-d297-4c43-a0df-c93aba1725a0",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "explanationOpened",
+      "eventData": {
+        "snippet": {
+          "index": 1,
+          "location": {
+            "snippet": "players[0].score += 2;"
+          }
+        },
+        "explanation": {
+          "index": 0,
+          "body": "### 2. Change the shared score\nT's score becomes 7. All three players see 7.\nThe next line prints `Player 1: 7`.\n",
+          "totalCount": 1,
+          "viewedPercentage": 50
+        },
+        "progress": {
+          "snippets": 50,
+          "explanations": 50
+        }
+      },
+      "clientTimestamp": 1791775948987,
+      "activityType": "worked-example",
+      "activityId": "we_array_objects_game",
+      "difficulty": "novice",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "6973b71e-fc07-490b-a685-0945417d5f97",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "explanationOpened",
+      "eventData": {
+        "snippet": {
+          "index": 2,
+          "location": {
+            "snippet": "players[2] = new Token(20);"
+          }
+        },
+        "explanation": {
+          "index": 0,
+          "body": "### 3. Give player 2 a new token\nCall the new token U. Its score starts at 20.\nThe array becomes `[T, T, U]`.\nIncreasing U's score gives 21. T's score stays 7.\n",
+          "totalCount": 1,
+          "viewedPercentage": 75
+        },
+        "progress": {
+          "snippets": 75,
+          "explanations": 75
+        }
+      },
+      "clientTimestamp": 1791775949053,
+      "activityType": "worked-example",
+      "activityId": "we_array_objects_game",
+      "difficulty": "novice",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "19ad38cb-b442-468c-912c-d965cd41f70b",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "explanationOpened",
+      "eventData": {
+        "snippet": {
+          "index": 3,
+          "location": {
+            "snippet": "System.out.println(\"Players 0 and 1 share: \" + (players[0] == players[1]));"
+          }
+        },
+        "explanation": {
+          "index": 0,
+          "body": "### 4. Compare the players\n| Stage | players references | T.score | U.score |\n|-------|--------------------|---------|---------|\n| After filling | [T, T, T] | 5 | not created |\n| After player 0 update | [T, T, T] | 7 | not created |\n| After replacing index 2 | [T, T, U] | 7 | 20 |\n| After player 2 update | [T, T, U] | 7 | 21 |\n\nPlayers 0 and 1 share T, so `==` is true.\nPlayers 0 and 2 have different tokens, so `==` is false.\nTo create separate tokens from the start, use `new Token(5)`\ninside the loop.\n",
+          "totalCount": 1,
+          "viewedPercentage": 100
+        },
+        "progress": {
+          "snippets": 100,
+          "explanations": 100
+        }
+      },
+      "clientTimestamp": 1791775949120,
+      "activityType": "worked-example",
+      "activityId": "we_array_objects_game",
+      "difficulty": "novice",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "9ae81dc3-3866-42db-864a-c19f6a2c7388",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "answerChecked",
+      "eventData": {
+        "isCorrect": false,
+        "blanksSucceededPercent": 66.67,
+        "blanksStates": [
+          {
+            "blank": {
+              "index": 0,
+              "location": {
+                "context": "if (hold[i] != null && hold[i].weight > 20) {",
+                "snippet": "!=",
+                "nth": 1
+              }
+            },
+            "choice": {
+              "index": 1,
+              "shuffledIndex": 0,
+              "snippet": "==",
+              "role": "distractor"
+            }
+          },
+          {
+            "blank": {
+              "index": 1,
+              "location": {
+                "context": "if (hold[i] != null && hold[i].weight > 20) {",
+                "snippet": "null",
+                "nth": 1
+              }
+            },
+            "choice": {
+              "index": 0,
+              "shuffledIndex": 1,
+              "snippet": "null",
+              "role": "solution"
+            }
+          },
+          {
+            "blank": {
+              "index": 2,
+              "location": {
+                "context": "if (hold[i] != null && hold[i].weight > 20) {",
+                "snippet": "&&",
+                "nth": 1
+              }
+            },
+            "choice": {
+              "index": 0,
+              "shuffledIndex": 2,
+              "snippet": "&&",
+              "role": "solution"
+            }
+          }
+        ]
+      },
+      "clientTimestamp": 1791775953482,
+      "activityType": "code-completion",
+      "activityId": "cc_aoo_cargo_hold_null_guard",
+      "difficulty": "intermediate",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "794d7cc7-0587-4879-a616-3c5b6603c5c2",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "runResultReceived",
+      "eventData": {
+        "durationMs": 28,
+        "testCasesResults": [
+          {
+            "title": "Heavy crate report",
+            "passed": false,
+            "stdout": "",
+            "stderr": "mkdir: cannot create directory \u2018./classes\u2019: Read-only file system"
+          }
+        ]
+      },
+      "clientTimestamp": 1791775953482,
+      "activityType": "code-completion",
+      "activityId": "cc_aoo_cargo_hold_null_guard",
+      "difficulty": "intermediate",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "c95d7ab8-d8bc-4e4d-92e1-153789308d64",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "answerChecked",
+      "eventData": {
+        "isCorrect": true,
+        "blanksSucceededPercent": 100,
+        "blanksStates": [
+          {
+            "blank": {
+              "index": 0,
+              "location": {
+                "context": "if (hold[i] != null && hold[i].weight > 20) {",
+                "snippet": "!=",
+                "nth": 1
+              }
+            },
+            "choice": {
+              "index": 0,
+              "shuffledIndex": 0,
+              "snippet": "!=",
+              "role": "solution"
+            }
+          },
+          {
+            "blank": {
+              "index": 1,
+              "location": {
+                "context": "if (hold[i] != null && hold[i].weight > 20) {",
+                "snippet": "null",
+                "nth": 1
+              }
+            },
+            "choice": {
+              "index": 0,
+              "shuffledIndex": 0,
+              "snippet": "null",
+              "role": "solution"
+            }
+          },
+          {
+            "blank": {
+              "index": 2,
+              "location": {
+                "context": "if (hold[i] != null && hold[i].weight > 20) {",
+                "snippet": "&&",
+                "nth": 1
+              }
+            },
+            "choice": {
+              "index": 0,
+              "shuffledIndex": 0,
+              "snippet": "&&",
+              "role": "solution"
+            }
+          }
+        ]
+      },
+      "clientTimestamp": 1791775959850,
+      "activityType": "code-completion",
+      "activityId": "cc_aoo_cargo_hold_null_guard",
+      "difficulty": "intermediate",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  },
+  {
+    "event_id": "f11117a9-8d84-4dd2-8a75-ddf26b481845",
+    "message": {
+      "type": "cupcake:log",
+      "eventName": "runResultReceived",
+      "eventData": {
+        "durationMs": 131,
+        "testCasesResults": [
+          {
+            "title": "Heavy crate report",
+            "passed": false,
+            "stdout": "",
+            "stderr": "mkdir: cannot create directory \u2018./classes\u2019: Read-only file system"
+          }
+        ]
+      },
+      "clientTimestamp": 1791775959850,
+      "activityType": "code-completion",
+      "activityId": "cc_aoo_cargo_hold_null_guard",
+      "difficulty": "intermediate",
+      "locale": "en-US",
+      "journeyId": "drakram-day13"
+    }
+  }
+]

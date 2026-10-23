@@ -214,16 +214,18 @@
 
                       <div class="grid gap-3 sm:grid-cols-3">
                         <div class="shell-surface p-4 rounded-xl">
-                          <div class="stat-kicker">Progress</div>
+                          <div class="stat-kicker">Graded completion</div>
                           <div class="mt-1 text-2xl font-bold">{{ progress.overall_progress|default:0|floatformat:0 }}%</div>
                         </div>
                         <div class="shell-surface p-4 rounded-xl">
-                          <div class="stat-kicker">Score</div>
+                          <div class="stat-kicker">Course grade</div>
                           <div class="mt-1 text-2xl font-bold">{{ progress.overall_score|default:0|floatformat:1 }}%</div>
+                          {% if progress.points_possible %}<div class="text-sm">{{ progress.points_earned|floatformat:2 }} / {{ progress.points_possible|floatformat:2 }} points</div>{% endif %}
                         </div>
                         <div class="shell-surface p-4 rounded-xl">
-                          <div class="stat-kicker">Completed</div>
+                          <div class="stat-kicker">Graded exercises</div>
                           <div class="mt-1 text-2xl font-bold">{{ progress.modules_completed }}/{{ progress.total_modules }}</div>
+                          <div class="text-sm mt-1">{{ progress.practice_completed }}/{{ progress.practice_total }} practice</div>
                         </div>
                       </div>
 

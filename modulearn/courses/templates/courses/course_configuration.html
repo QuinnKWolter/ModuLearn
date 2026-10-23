@@ -2713,6 +2713,7 @@
           </div>
         </div>
         <div class="cfg-toolbar-actions">
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'courses:grading' course_instance.id %}">Grade weighting</a>
           <button type="submit" form="structureControlsForm" class="btn btn-primary btn-sm cfg-save-button">
             <i class="bi bi-check2-circle mr-1" aria-hidden="true"></i>Save Configuration
           </button>
@@ -2743,6 +2744,16 @@
         </div>
       {% endif %}
 
+      <details class="shell-surface p-3 mb-3"><summary>Import a unit</summary>
+        <form method="post" enctype="multipart/form-data" action="{% url 'courses:import_unit' course_instance.id %}" class="flex flex-wrap items-center gap-3 mt-2">
+          {% csrf_token %}<label>Unit JSON <input type="file" name="unit_file" accept=".json,application/json" required></label><button class="btn btn-sm btn-primary">Import as new unit</button>
+          <p class="text-sm">Existing units and student work are preserved. Unit structure is shared by this course's sessions.</p>
+        </form>
+      </details>
+      <div class="shell-surface p-3 mb-3 flex flex-wrap items-center gap-2" id="gradingBulkControls">
+        <strong>Grading</strong><button type="button" class="btn btn-sm btn-outline-primary" data-grade-all="1">All graded</button><button type="button" class="btn btn-sm btn-outline-secondary" data-grade-all="0">All practice</button>
+        <label>Problem type <select id="gradeTypeSelect" class="form-control"></select></label><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark type graded</button><span class="text-sm">Changes apply when you save configuration.</span>
+      </div>
       <form method="post" enctype="multipart/form-data" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_structure">
@@ -2808,6 +2819,12 @@
                       <input id="unit_{{ group.unit.id }}_title" name="unit_{{ group.unit.id }}_title" value="{{ group.unit.title }}" class="form-control font-semibold">
                       <textarea name="unit_{{ group.unit.id }}_description" rows="2" class="form-control" placeholder="Unit description">{{ group.unit.description }}</textarea>
                     </div>
+                  </div>
+                  <div class="grid gap-2 mt-3 mb-3">
+                    <a href="{% url 'courses:export_unit' course_instance.id group.unit.id %}" class="btn btn-sm btn-outline-primary">Export this unit</a>
+                    <label>Opens at <input type="datetime-local" class="form-control" name="unit_{{ group.unit.id }}_opens_at" value="{{ group.unit.opens_at|date:'Y-m-d\TH:i' }}"></label>
+                    <label>Closes at <input type="datetime-local" class="form-control" name="unit_{{ group.unit.id }}_closes_at" value="{{ group.unit.closes_at|date:'Y-m-d\TH:i' }}"></label>
+                    <small>{% ui "Times use the site timezone:" %} {% now "e" %}. {% ui "Blank means no date restriction. Other unlock conditions still apply. Dates affect every session of this course." %}</small>
                   </div>
                   <div data-unlock-control>
                     <div class="stat-kicker mb-2">Unit Unlock Rule</div>
@@ -2880,6 +2897,10 @@
                               <i class="fa-solid {% if module.is_locked or module.unlock_rule_type != 'none' %}fa-lock{% else %}fa-unlock{% endif %}" data-chip-icon></i>
                               <span data-chip-label>{% if module.is_locked or module.unlock_rule_type != 'none' %}Locked{% else %}Open{% endif %}</span>
                             </button>
+                            <label class="cfg-chip" title="Practice is logged but does not count toward course grades">
+                              <input type="hidden" name="module_{{ module.id }}_is_graded" value="0">
+                              <input type="checkbox" name="module_{{ module.id }}_is_graded" value="1" data-grade-module data-grade-type="{{ module.display_type_label }}" {% if module.is_graded %}checked{% endif %}> Graded
+                            </label>
                             <input type="hidden" name="module_{{ module.id }}_allow_resubmission" value="{% if module.allow_resubmission %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="resubmission">
                             <button type="button" class="cfg-chip cfg-chip-toggle {% if module.allow_resubmission %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="resubmission" aria-pressed="{% if module.allow_resubmission %}true{% else %}false{% endif %}" title="Toggle resubmissions">
                               <i class="fa-solid {% if module.allow_resubmission %}fa-rotate-right{% else %}fa-ban{% endif %}" data-chip-icon></i>
@@ -3651,6 +3672,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/courses/grading-controls.js' %}" defer></script>
 {% include 'courses/components/slc_catalog.html' %}
 <script src="{% static 'js/slc-catalog.js' %}" defer></script>
 <script>

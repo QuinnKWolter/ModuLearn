@@ -656,7 +656,11 @@ def _update_course_structure_controls(request, course):
             valid_conditions=valid_conditions,
             has_previous_unit=group["has_previous_unit"],
         )
-        unit.save(update_fields=["title", "description", "order", "is_visible", "is_locked", "unlock_rule"])
+        from modulearn.learning.services.unit_packages import parse_schedule
+        unit.opens_at, unit.closes_at = parse_schedule(
+            request.POST.get(f"{prefix}_opens_at", unit.opens_at),
+            request.POST.get(f"{prefix}_closes_at", unit.closes_at))
+        unit.save(update_fields=["title", "description", "order", "is_visible", "is_locked", "unlock_rule", "opens_at", "closes_at"])
 
         for module in group["modules"]:
             module_prefix = f"module_{module.id}"
@@ -667,6 +671,7 @@ def _update_course_structure_controls(request, course):
             module.description = request.POST.get(f"{module_prefix}_description", module.description)
             module.order = int(request.POST.get(f"{module_prefix}_order") or module.order or 0)
             module.is_visible = _parse_bool(request.POST.get(f"{module_prefix}_visible"))
+            module.is_graded = _parse_bool(request.POST.get(f"{module_prefix}_is_graded", "1" if module.is_graded else "0"))
             module.allow_resubmission = _parse_bool(request.POST.get(f"{module_prefix}_allow_resubmission", "1"))
             target_unit_id = request.POST.get(f"{module_prefix}_unit_id")
             if target_unit_id:
@@ -693,6 +698,7 @@ def _update_course_structure_controls(request, course):
                 "is_visible",
                 "is_locked",
                 "allow_resubmission",
+                "is_graded",
                 "unlock_rule",
                 "content_url",
                 "content_file",
@@ -707,6 +713,8 @@ def _update_course_structure_controls(request, course):
 
     if deleted_module_ids:
         _remove_deleted_module_unlock_references(course, deleted_module_ids)
+    from modulearn.learning.services.grading import refresh_course_grades
+    refresh_course_grades(course)
     return len(deleted_module_ids)
 
 
@@ -2559,7 +2567,7 @@ def get_course_enrollments(request, course_instance_id):
             return JsonResponse({'error': 'Not authorized'}, status=403)
         
         # Get total modules count for the course
-        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
+        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
         
         enrollments_data = [
             _enrollment_response_payload(enrollment, total_modules)
@@ -2599,6 +2607,8 @@ def _enrollment_response_payload(enrollment, total_modules):
             'modules_completed': progress.modules_completed if progress else 0,
             'total_modules': total_modules,
             'overall_score': progress.overall_score if progress else 0.0,
+            'practice_total': progress.practice_total if progress else 0,
+            'practice_completed': progress.practice_completed if progress else 0,
         },
     }
 
@@ -2686,14 +2696,14 @@ def bulk_enroll_students(request, course_instance_id):
                 
                 if enrollment_created:
                     remaining_slots -= 1
-                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
+                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
                     new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 elif not enrollment.active:
                     enrollment.active = True
                     enrollment.save(update_fields=['active'])
                     remaining_slots -= 1
-                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
+                    total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
                     new_enrollments.append(_enrollment_response_payload(enrollment, total_modules))
                     success_count += 1
                 else:
@@ -2777,7 +2787,7 @@ def generate_anonymous_students(request, course_instance_id):
         prefix = (data.get('prefix') or 'anon').strip() or 'anon'
         password_mode = (data.get('password_mode') or 'username').strip().lower()
         use_username_password = password_mode != 'random'
-        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False).count()
+        total_modules = Module.objects.filter(unit__course=course_instance.course, is_recommendation_only=False, is_graded=True, is_visible=True, unit__is_visible=True).count()
         generated_accounts = []
         enrollments_data = []
 

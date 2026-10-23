@@ -1,5 +1,4 @@
 {
-  "Ungraded Optional Practice": "Práctica opcional sin calificación",
   "Minimize practice": "Minimizar práctica",
   "Open optional practice": "Abrir práctica opcional",
   "Practice": "Práctica",
@@ -11,5 +10,10 @@
   "Reduced-motion device preferences always take priority. These settings apply only to this course session.": "La preferencia del dispositivo de reducir el movimiento siempre tiene prioridad. Estos ajustes se aplican solo a esta sesión del curso.",
   "Practice becomes available after the configured unsuccessful attempts. It never counts toward course grades or completion.": "La práctica está disponible tras los intentos fallidos configurados. Nunca cuenta para la calificación ni la finalización del curso.",
   "Choose valid practice presentation settings.": "Elige ajustes válidos para la presentación de la práctica.",
-  "Practice opens in a modal when available on each problem visit, then settles into a sidebar. Minimizing the sidebar returns to the original problem.": "La práctica se abre en una ventana al visitar un problema con recomendaciones disponibles y después pasa al panel lateral. Al minimizar el panel, vuelves al problema original."
+  "Practice opens in a modal when available on each problem visit, then settles into a sidebar. Minimizing the sidebar returns to the original problem.": "La práctica se abre en una ventana al visitar un problema con recomendaciones disponibles y después pasa al panel lateral. Al minimizar el panel, vuelves al problema original.",
+  "Optional Practice": "Práctica opcional",
+  "Recommended Practice": "Práctica recomendada",
+  "Similar Activities": "Actividades similares",
+  "Other Activities": "Otras actividades",
+  "This optional learning content could assist you in solving the problem you were previously attempting.": "Este contenido de aprendizaje opcional podría ayudarte a resolver el problema que estabas intentando anteriormente."
 }

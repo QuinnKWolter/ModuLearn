@@ -92,36 +92,21 @@ def recompute_course_progress(enrollment, *, save: bool = True):
         defaults={"total_modules": 0, "modules_completed": 0},
     )
 
-    all_modules = Module.objects.filter(
-        unit__course=enrollment.course_instance.course,
-        unit__is_visible=True,
-        is_visible=True,
-        is_recommendation_only=False,
-    )
-    total_modules = all_modules.count()
-    progress_rows = ModuleProgress.objects.filter(enrollment=enrollment).select_related("module")
-    progress_lookup = {row.module_id: row for row in progress_rows}
-
-    total_progress = 0.0
-    total_score = 0.0
-    completed = 0
-
-    for module in all_modules:
-        progress = progress_lookup.get(module.id)
-        if not progress:
-            continue
-        total_progress += progress.progress or 0.0
-        total_score += progress.score or 0.0
-        if progress.is_complete:
-            completed += 1
-
-    course_progress.total_modules = total_modules
-    course_progress.modules_completed = completed
-    course_progress.overall_progress = ((total_progress / total_modules) * 100.0) if total_modules else 0.0
-    course_progress.overall_score = (total_score / total_modules) if total_modules else 0.0
-
-    if total_modules and completed >= total_modules and course_progress.completed_at is None:
-        course_progress.completed_at = timezone.now()
+    from .grading import eligible_modules, calculate_grade
+    modules = list(eligible_modules(enrollment.course_instance.course))
+    completed_ids = set(ModuleProgress.objects.filter(
+        enrollment=enrollment, is_complete=True).values_list("module_id", flat=True))
+    result = calculate_grade(modules, completed_ids, enrollment.course_instance.grading_policy)
+    course_progress.total_modules = result['total']
+    course_progress.modules_completed = result['completed']
+    course_progress.overall_progress = result['progress']
+    course_progress.overall_score = result['grade']
+    course_progress.practice_total = result['practice_total']
+    course_progress.practice_completed = result['practice_completed']
+    if result['total'] and result['completed'] == result['total']:
+        course_progress.completed_at = course_progress.completed_at or timezone.now()
+    else:
+        course_progress.completed_at = None
 
     if save:
         update_fields = [
@@ -129,10 +114,11 @@ def recompute_course_progress(enrollment, *, save: bool = True):
             "modules_completed",
             "overall_progress",
             "overall_score",
+            "practice_total",
+            "practice_completed",
             "last_accessed",
         ]
-        if course_progress.completed_at:
-            update_fields.append("completed_at")
+        update_fields.append("completed_at")
         course_progress.save(update_fields=update_fields)
     return course_progress
 

@@ -444,9 +444,9 @@
             <div class="text-xl font-bold mt-2">{{ current_instance.group_name|default:"Default Session" }}</div>
           </div>
           <div class="shell-surface p-5 rounded-2xl">
-            <div class="stat-kicker">Modules Completed</div>
+            <div class="stat-kicker">Graded exercises completed</div>
             <div class="text-xl font-bold mt-2">
-              {% if course_progress %}{{ course_progress.modules_completed }}/{{ course_progress.total_modules }}{% else %}{{ course.total_modules }} total{% endif %}
+              {% if course_progress %}{{ course_progress.modules_completed }}/{{ course_progress.total_modules }}<small class="block text-sm">{{ course_progress.practice_completed }}/{{ course_progress.practice_total }} practice</small>{% else %}{{ course.total_modules }} total{% endif %}
             </div>
           </div>
           <div class="shell-surface p-5 rounded-2xl">
@@ -461,7 +461,7 @@
           <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
             <div>
               <div class="flex items-center justify-between text-sm mb-2">
-                <span class="font-semibold">Course progress</span>
+                <span class="font-semibold">Graded completion</span>
                 <span>{{ course_progress.overall_progress|default:0|floatformat:1 }}%</span>
               </div>
               <div class="progress h-4">
@@ -472,8 +472,9 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="shell-surface p-4 rounded-2xl">
-                <div class="stat-kicker">Score</div>
+                <div class="stat-kicker">Course grade</div>
                 <div class="text-2xl font-bold mt-1">{{ course_progress.overall_score|floatformat:1 }}%</div>
+                {% if course_progress.points_possible %}<div class="text-sm">{{ course_progress.points_earned|floatformat:2 }} / {{ course_progress.points_possible|floatformat:2 }} points</div>{% endif %}
               </div>
               <div class="shell-surface p-4 rounded-2xl">
                 <div class="stat-kicker">Completed At</div>
@@ -557,7 +558,7 @@
                     <span class="course-unit-meter-fill" style="width: {{ card.progress_percent }}%;"></span>
                   </span>
                   <span class="text-sm font-semibold whitespace-nowrap">
-                    {{ card.completed_count }}/{{ card.module_count }} &middot; {{ card.progress_percent }}%
+                    {{ card.completed_count }}/{{ card.module_count }} graded &middot; {{ card.progress_percent }}%{% if card.practice_count %} · {{ card.practice_completed }}/{{ card.practice_count }} practice{% endif %}
                   </span>
                 </span>
               </summary>
@@ -579,7 +580,7 @@
                             <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{{ module.title }}</span>
                           {% endif %}
                           <span class="block text-xs text-slate-500 dark:text-slate-400">
-                            {{ module.type_label }}{% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
+                            {{ module.type_label }} · {% if module.is_graded %}Graded{% else %}Practice{% endif %}{% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
                             {% if is_instructor and not module.is_visible %} · Hidden from students{% endif %}
                           </span>
                         </span>
@@ -728,7 +729,7 @@
                                   <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{{ module.title }}</span>
                                 {% endif %}
                                 <span class="block text-xs text-slate-500 dark:text-slate-400">
-                                  {{ module.type_label }}{% if module.provider_id %} · {{ module.provider_id }}{% endif %}
+                                  {{ module.type_label }} · {% if module.is_graded %}Graded{% else %}Practice{% endif %}{% if module.provider_id %} · {{ module.provider_id }}{% endif %}
                                   {% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
                                   {% if is_instructor and not module.is_visible %} · Hidden from students{% endif %}
                                 </span>

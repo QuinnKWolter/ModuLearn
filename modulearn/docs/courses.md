@@ -130,3 +130,23 @@ For preview/simulation runs where Prolific gives you only one participant link, 
 ```
 
 Reusing the same `SESSION_ID` resumes the same `ParticipantSession`. To simulate a new participant, change both `PROLIFIC_PID` and `SESSION_ID`; keep `STUDY_ID` the same for the same Prolific study. Synthetic participant IDs skip remote Prolific submission verification even if `PROLIFIC_API_TOKEN` is configured.
+
+## Unit packages, access dates, and completion grades
+
+Course Configuration now exports a selected unit and imports a unit JSON as a **new unit**, preserving existing units and learner work. The standard format is `schema: "modulearn.unit.v2"` with a `unit` object and package-local module `ref` values. It includes module metadata, forms, embedded files, graded flags, schedules and local prerequisites/adaptive branches. Duplicate exercise titles remain distinct. An unresolved external prerequisite stays locked and produces a warning; cross-unit adaptive branches require reconfiguration. Learner data and recommendation assignments are never copied. Verified legacy `format: "modulearn.unit.v1", ready: true` URL packages are accepted by the UI too; the existing checksum-based CLI remains available for those older packages.
+
+Unit **Opens at** and **Closes at** use the displayed site timezone. Opening is inclusive; closing is exclusive. Dates apply in addition to prerequisite rules, and dynamic module unlocks cannot bypass them. Instructor previews remain accessible. Dates restrict access, not historical evidence: already received scores and delayed provider callbacks are retained. Unit structure, dates, and graded flags belong to the course and therefore affect its sessions. Grade-weighting policies belong to an individual session.
+
+Ordinary modules start **graded**. Configuration offers individual toggles, all graded/all practice, and a dynamically populated problem-type selector. Save configuration to apply bulk changes. Hidden modules/units and recommendation-only content do not count toward grades. Practice retains attempts, scores, completion and logs, with separate completion counts. Existing recommendation progress remains isolated.
+
+The **Grade weighting** page previews active students only, excluding instructor testing. Preview edits never persist; **Save grading rules** recalculates saved course summaries in that session without changing exercise records or proactively sending grades to an external LMS. Subsequent supported grade callbacks use the saved policy.
+
+- Default: completed visible graded exercises / all visible graded exercises.
+- Unit-target mode: each nonempty unit contributes `min(completed / total / target_fraction, 1) × weight`, divided by the sum of those weights. A blank unit target inherits the current default. A zero-weight unit contributes no base credit, but its configured deductions still apply.
+- Optional course points scale the base percentage; otherwise deductions are percentage points.
+- A configurable missed-unit deduction applies to each unit with graded material but zero completions. Each unit can also have an incomplete-unit deduction unless **all** its graded exercises are completed. Deductions add and the result is clamped between zero and the maximum.
+- Practice-only/empty units incur no deductions. Visibility and grading changes recalculate all affected sessions.
+
+For a five-point course with a 50% target in every unit: choose unit-target mode, set course points to `5`, default target to `50`, and set the missed-unit deduction as desired. For a single point deducted if either X or Y is incomplete, add one combined completion requirement selecting X and Y with a deduction of `1`. For independent penalties instead, use each unit's incomplete-unit deduction. Combined and individual deductions add together when both are configured.
+
+Migration `0028` adds these fields and recalculates historical **course summaries** using completion-based grades. It does not overwrite exercise scores or logs. Include the migration, templates, JavaScript, CSS and translations in deployment; publish collected static assets as usual.
