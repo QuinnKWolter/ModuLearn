@@ -25,5 +25,15 @@
   "Multiple choice": "Selección múltiple",
   "Short answer": "Respuesta breve",
   "Long answer": "Respuesta larga",
-  "Rating scale (1–5)": "Escala de valoración (1–5)"
+  "Rating scale (1–5)": "Escala de valoración (1–5)",
+  "Scheduled": "Programada",
+  "Unscheduled": "Sin programar",
+  "Set All Graded": "Marcar todas como calificadas",
+  "Set All Practice": "Marcar todas como práctica",
+  "Mark Type Graded": "Calificar este tipo",
+  "Grade Weighting": "Ponderación de calificaciones",
+  "Course Timezone": "Zona horaria del curso",
+  "Import Unit": "Importar unidad",
+  "Import as New Unit": "Importar como unidad nueva",
+  "Save your configuration changes before opening Grade Weighting.": "Guarde los cambios de configuración antes de abrir la ponderación de calificaciones."
 }

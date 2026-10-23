@@ -2629,6 +2629,13 @@
 .cfg-graded-star, [data-grade-toggle][aria-pressed="true"] i {color:#eab308;}
 .cfg-builder-toolbar,.cfg-question-actions {display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}.cfg-builder-toolbar {margin:.6rem 0;}.cfg-builder-toolbar>span {margin-right:auto;font-size:.85rem;}.cfg-question-actions {border-top:1px solid #94a3b844;padding-top:.6rem;}.cfg-question-actions [data-remove-question]{margin-left:auto;}.cfg-question-summary strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}.cfg-question-body label {font-size:.85rem;font-weight:600;}.cfg-question-preview {padding:1rem;border:1px solid #94a3b866;border-radius:.5rem;}.cfg-question-preview[hidden]{display:none;}.cfg-question-preview fieldset {padding:.8rem 0;border-bottom:1px solid #94a3b844;}.cfg-question-preview legend {font-weight:600;}.cfg-question-preview label {display:block;margin:.4rem 0;}.cfg-question-preview input[type=radio],.cfg-question-preview input[type=checkbox]{margin-right:.4rem;}
 #questionBuilder[hidden]{display:none;}.cfg-quiz-settings {border-bottom:1px solid #94a3b844;padding-bottom:.6rem;font-size:.85rem;}.cfg-quiz-settings summary {cursor:pointer;font-weight:600;}.cfg-quiz-settings label{display:block;margin-top:.6rem;}.cfg-question-body .form-control,.cfg-quiz-settings .form-control{padding:.5rem .65rem;font-size:.9rem;border-radius:.4rem;}.cfg-question-body{gap:.5rem;padding:.7rem;}.cfg-question-body textarea[data-question-prompt]{min-height:4rem;}.cfg-question-add-button{width:auto!important;height:auto!important;border-radius:.4rem!important;padding:.4rem .65rem!important;gap:.25rem;}.cfg-question-summary{padding:.55rem .7rem;}.cfg-question-preview{background:var(--surface,rgba(148,163,184,.05));}
+  .cfg-source-body label {align-content:start;}
+  [data-grade-toggle].is-on {color:#854d0e;background:#fef3c7;border-color:#facc15;}
+  [data-grade-toggle].is-off,[data-schedule-toggle].is-off {color:#475569;background:#f1f5f9;border-color:#cbd5e1;}
+  [data-schedule-toggle].is-on {color:#1e40af;background:#dbeafe;border-color:#93c5fd;}
+  .cfg-grade-footer {display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-top:1rem;padding-top:1rem;border-top:1px solid #94a3b833;}
+  [data-grade-save]:disabled,[data-grade-weighting][aria-disabled="true"] {opacity:.45;cursor:not-allowed;}
+  [data-unit-unlock-control][hidden] {display:none;}
 </style>
 {% endblock %}
 
@@ -2726,12 +2733,13 @@
           </div>
         </div>
         <div class="cfg-toolbar-actions">
-          <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#courseGradesModal"><i class="bi bi-mortarboard" aria-hidden="true"></i> Grades</button>
-          <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseTimezoneModal" title="Course timezone" aria-label="Course timezone"><i class="bi bi-clock" aria-hidden="true"></i></button>
           <button type="submit" form="structureControlsForm" class="btn btn-primary btn-sm cfg-save-button">
             <i class="bi bi-check2-circle mr-1" aria-hidden="true"></i>Save Configuration
           </button>
           <div class="cfg-utility-actions" aria-label="Configuration utilities">
+            <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseGradesModal" title="Grades" aria-label="Grades"><i class="bi bi-mortarboard" aria-hidden="true"></i></button>
+            <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseTimezoneModal" title="Course Timezone" aria-label="Course Timezone"><i class="bi bi-clock" aria-hidden="true"></i></button>
+            <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseImportUnitModal" title="Import Unit" aria-label="Import Unit"><i class="bi bi-upload" aria-hidden="true"></i></button>
             <button type="button" class="cfg-icon-button" title="Instructors" aria-label="Instructors" data-bs-toggle="modal" data-bs-target="#courseInstructorsModal">
               <i class="bi bi-person-gear" aria-hidden="true"></i>
             </button>
@@ -2758,12 +2766,6 @@
         </div>
       {% endif %}
 
-      <details class="shell-surface p-3 mb-3"><summary>Import a unit</summary>
-        <form method="post" enctype="multipart/form-data" action="{% url 'courses:import_unit' course_instance.id %}" class="flex flex-wrap items-center gap-3 mt-2">
-          {% csrf_token %}<label>Unit JSON <input type="file" name="unit_file" accept=".json,application/json" required></label><button class="btn btn-sm btn-primary">Import as new unit</button>
-          <p class="text-sm">Existing units and student work are preserved. Unit structure is shared by this course's sessions.</p>
-        </form>
-      </details>
       <form method="post" enctype="multipart/form-data" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_structure">
@@ -2797,7 +2799,7 @@
               </span>
               <span class="cfg-chip-row">
                 <span class="cfg-chip">{{ group.modules|length }} activit{{ group.modules|length|pluralize:"y,ies" }}</span>
-                <button type="button" class="cfg-chip cfg-chip-toggle {% if group.unit.opens_at or group.unit.closes_at %}is-on{% else %}is-off{% endif %}" data-schedule-toggle aria-controls="unitSchedule{{ group.unit.id }}" aria-expanded="{% if group.unit.opens_at or group.unit.closes_at %}true{% else %}false{% endif %}" title="Unit schedule"><i class="bi bi-clock" aria-hidden="true"></i><span data-chip-label>Schedule</span></button>
+                <button type="button" class="cfg-chip cfg-chip-toggle {% if group.unit.opens_at or group.unit.closes_at %}is-on{% else %}is-off{% endif %}" data-schedule-toggle aria-controls="unitSchedule{{ group.unit.id }}" aria-expanded="{% if group.unit.opens_at or group.unit.closes_at %}true{% else %}false{% endif %}" title="Unit schedule"><i class="bi bi-clock" aria-hidden="true"></i><span data-chip-label>{% if group.unit.opens_at or group.unit.closes_at %}Scheduled{% else %}Unscheduled{% endif %}</span></button>
                 <input type="hidden" name="unit_{{ group.unit.id }}_visible" value="{% if group.unit.is_visible %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="visible">
                 <button type="button" class="cfg-chip cfg-chip-toggle {% if group.unit.is_visible %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="visible" aria-pressed="{% if group.unit.is_visible %}true{% else %}false{% endif %}" title="Toggle student visibility">
                   <i class="fa-solid {% if group.unit.is_visible %}fa-eye{% else %}fa-eye-slash{% endif %}" data-chip-icon></i>
@@ -2839,7 +2841,7 @@
                     {% endtimezone %}
                     <small>{{ course_timezone }} · Blank means no date restriction.</small>
                   </div>
-                  <div data-unlock-control>
+                  <div data-unlock-control data-unit-unlock-control{% if not group.unit.is_locked and group.unit.unlock_rule_type == 'none' %} hidden{% endif %}>
                     <div class="stat-kicker mb-2">Unit Unlock Rule</div>
                     <div class="cfg-rule-grid">
                       <select name="unit_{{ group.unit.id }}_rule_type" class="form-control" data-unlock-rule>
@@ -3187,18 +3189,28 @@
   </div>
 
 
+  <div id="courseImportUnitModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true" role="dialog" aria-labelledby="courseImportUnitTitle">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <section class="relative card p-5 w-full max-w-lg cfg-settings-modal">
+      <header><h2 id="courseImportUnitTitle">Import Unit</h2><button type="button" data-bs-dismiss="modal" aria-label="Close">×</button></header>
+        <form method="post" enctype="multipart/form-data" action="{% url 'courses:import_unit' course_instance.id %}" class="flex flex-wrap items-center gap-3 mt-2">
+          {% csrf_token %}<label>Unit JSON <input type="file" name="unit_file" accept=".json,application/json" required></label><button class="btn btn-sm btn-primary">Import as New Unit</button>
+          <p class="text-sm">Existing units and student work are preserved. Unit structure is shared by this course's sessions.</p>
+        </form>
+    </section>
+  </div>
   <div id="courseGradesModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true" role="dialog" aria-labelledby="courseGradesTitle">
     <div class="modal-backdrop-close absolute inset-0"></div>
     <section class="relative card p-5 w-full max-w-lg cfg-settings-modal">
       <header><h2 id="courseGradesTitle">Grades</h2><button type="button" data-bs-dismiss="modal" aria-label="Close">×</button></header>
       <div id="gradingBulkControls">
         <p>Choose which activities count toward course completion.</p>
-        <div class="cfg-grade-actions"><button type="button" class="btn btn-sm btn-outline-primary" data-grade-all="1">All graded</button><button type="button" class="btn btn-sm btn-outline-secondary" data-grade-all="0">All practice</button></div>
-        <label for="gradeTypeSelect">Problem type</label><div class="cfg-grade-actions"><select id="gradeTypeSelect" class="form-control"></select><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark type graded</button></div>
+        <div class="cfg-grade-actions"><button type="button" class="btn btn-sm btn-outline-primary" data-grade-all="1">Set All Graded</button><button type="button" class="btn btn-sm btn-outline-secondary" data-grade-all="0">Set All Practice</button></div>
+        <label for="gradeTypeSelect">Problem type</label><div class="cfg-grade-actions"><select id="gradeTypeSelect" class="form-control"></select><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark Type Graded</button></div>
         <p class="text-sm">If no visible activities are marked graded, all visible course activities count equally. Practice activity is still recorded.</p>
-        <button type="submit" form="structureControlsForm" class="btn btn-primary btn-sm">Save configuration</button>
+
       </div>
-      <hr><a class="btn btn-outline-primary btn-sm" href="{% url 'courses:grading' course_instance.id %}"><i class="bi bi-sliders" aria-hidden="true"></i> Grade weighting</a><p class="text-sm">Save activity selections before opening grade weighting.</p>
+      <footer class="cfg-grade-footer"><a data-grade-weighting class="btn btn-outline-primary btn-sm" href="{% url 'courses:grading' course_instance.id %}"><i class="bi bi-sliders" aria-hidden="true"></i> Grade Weighting</a><button data-grade-save type="submit" form="structureControlsForm" class="btn btn-primary btn-sm" disabled>Save</button></footer>
     </section>
   </div>
   <div id="courseTimezoneModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true" role="dialog" aria-labelledby="courseTimezoneTitle">
@@ -4646,10 +4658,10 @@
     }
 
     function syncModuleUnlockVisibility(owner) {
-      if (!owner || !owner.matches('.cfg-module')) return;
+      if (!owner || !owner.matches('.cfg-module, .cfg-unit')) return;
       const lock = owner.querySelector('[data-lock-input]');
-      const control = owner.querySelector('[data-module-unlock-control]');
-      const help = owner.querySelector('[data-module-unlock-help]');
+      const control = owner.querySelector(owner.matches('.cfg-unit') ? '[data-unit-unlock-control]' : '[data-module-unlock-control]');
+      const help = owner.matches('.cfg-module') ? owner.querySelector('[data-module-unlock-help]') : null;
       const isLocked = isToggleOn(lock);
       if (control) control.hidden = !isLocked;
       if (help) help.hidden = !isLocked;
@@ -4761,7 +4773,7 @@
     }
 
     function setModuleDeletionState(owner, marked) {
-      if (!owner || !owner.matches('.cfg-module')) return;
+      if (!owner || !owner.matches('.cfg-module, .cfg-unit')) return;
       const input = owner.querySelector('[data-delete-module-input]');
       const button = owner.querySelector('[data-delete-module-button]');
       const icon = owner.querySelector('[data-delete-module-icon]');
