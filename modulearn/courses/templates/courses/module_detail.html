@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-  {% include 'includes/page_header.html' with eyebrow='Module' title=module.title description=module.description %}
+  {% include 'includes/page_header.html' with eyebrow='Activity' title=module.title description=module.description %}
 
   <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
     <section class="space-y-6">
@@ -34,7 +34,7 @@
         </div>
 
         <div class="mt-6 flex flex-wrap gap-3">
-          <a href="{% url 'courses:launch_iframe_module' course_instance.id module.id %}" class="btn btn-primary btn-lg">Launch Module</a>
+          <a href="{% url 'courses:launch_iframe_module' course_instance.id module.id %}" class="btn btn-primary btn-lg">Launch Activity</a>
           <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-lg">Back To Course</a>
         </div>
       </div>
@@ -45,7 +45,7 @@
         <div class="stat-kicker">Progress snapshot</div>
         {% if progress %}
           <div class="mt-3 text-3xl font-bold">{{ progress.progress|default:0|floatformat:0 }}%</div>
-          <div class="text-sm text-slate-500 dark:text-slate-300 mt-2">Current module progress</div>
+          <div class="text-sm text-slate-500 dark:text-slate-300 mt-2">Current activity progress</div>
           {% if progress.score is not None %}
             <div class="mt-4 badge badge-info">{{ progress.score|floatformat:0 }}% score</div>
           {% endif %}

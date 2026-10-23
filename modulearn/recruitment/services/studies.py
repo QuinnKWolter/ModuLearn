@@ -95,14 +95,14 @@ DEFAULT_STUDY_UNITS = [
         "modules": [
             {
                 "title": "Main Study Task",
-                "description": "Replace this placeholder with the first interactive problem or study module.",
+                "description": "Replace this placeholder with the first interactive problem or study activity.",
                 "module_type": Module.MODULE_TYPE_FORM,
                 "study_step": "main_task",
                 "instructions": "This placeholder marks where the main experimental task sequence begins.",
                 "submit_button_label": "Mark Placeholder Complete",
                 "questions": [
                     {
-                        "prompt": "Instructor setup note: replace this module with the first study activity.",
+                        "prompt": "Instructor setup note: replace this activity with the first study activity.",
                         "question_type": ModuleFormQuestion.TYPE_SINGLE_CHOICE,
                         "options": ["I understand this placeholder should be replaced."],
                         "required": True,

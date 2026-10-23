@@ -532,7 +532,7 @@
 {% endblock %}
 
 {% block content %}
-  {% include 'includes/page_header.html' with eyebrow='Study Analytics' title=study.title description='Condition assignment, participant progress, and module-level study activity.' %}
+  {% include 'includes/page_header.html' with eyebrow='Study Analytics' title=study.title description='Condition assignment, participant progress, and activity-level study activity.' %}
 
   <section class="study-analytics-shell">
     <div class="study-analytics-toolbar">
@@ -579,7 +579,7 @@
           <div class="stat-kicker">Condition Overview</div>
           <h2 class="text-lg font-bold mt-1 mb-0">Assignment and progress by condition</h2>
         </div>
-        <span class="text-xs font-semibold text-slate-500 dark:text-slate-300">{{ summary.module_count }} module{{ summary.module_count|pluralize }} tracked</span>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-300">{{ summary.module_count }} activit{{ summary.module_count|pluralize:"y,ies" }} tracked</span>
       </div>
       <div class="study-condition-grid">
         {% for condition in conditions %}
@@ -609,7 +609,7 @@
           <div class="stat-kicker">Participants</div>
           <h2 class="text-lg font-bold mt-1 mb-0">Condition roster and drilldown</h2>
         </div>
-        <span class="text-xs text-slate-500 dark:text-slate-300">Expand a participant to inspect every module.</span>
+        <span class="text-xs text-slate-500 dark:text-slate-300">Expand a participant to inspect every activity.</span>
       </div>
 
       {% if participants %}
@@ -638,7 +638,7 @@
                       <span class="min-w-[10rem]">
                         <span class="block text-right text-sm font-bold">{{ participant.overall_progress_percent }}%</span>
                         <span class="study-progress mt-1"><span style="width: {{ participant.overall_progress_percent }}%"></span></span>
-                        <span class="block text-right text-xs text-slate-500 dark:text-slate-300 mt-1">{{ participant.modules_completed }}/{{ participant.total_modules }} modules</span>
+                        <span class="block text-right text-xs text-slate-500 dark:text-slate-300 mt-1">{{ participant.modules_completed }}/{{ participant.total_modules }} activities</span>
                       </span>
                     </summary>
                     <div class="study-participant-body">
@@ -813,7 +813,7 @@
           <div class="raw-history-modal-header">
             <div class="raw-history-modal-heading">
               <div class="raw-history-modal-eyebrow">Raw Captured Data</div>
-              <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Module')}</h5>
+              <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Activity')}</h5>
               <div class="raw-history-modal-meta">${escapeHtml(data.learner?.name || data.learner?.id || '')} · ${escapeHtml(data.module?.unit_title || '')}</div>
             </div>
             <button type="button" data-bs-dismiss="modal" class="raw-history-modal-close">&times;</button>
@@ -828,7 +828,7 @@
             </div>
             ${items.length
               ? `<div class="raw-history-list">${items.map(renderRawHistoryItem).join('')}</div>`
-              : '<div class="raw-history-empty">No captured events or submissions are available for this module yet.</div>'}
+              : '<div class="raw-history-empty">No captured events or submissions are available for this activity yet.</div>'}
           </div>
         </div>
       </div>

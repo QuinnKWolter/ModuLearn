@@ -11,7 +11,7 @@ function initializeActivityTimeline(root, data, endpoint) {
         const response = await fetch(`${endpoint}?${params}`, {headers: {'Accept':'application/json'}});
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || response.status);
-        body.innerHTML = result.events.length ? result.events.map(renderEngagementEvent).join('') : escapeHtml(t('No tracked interactions for this module yet.'));
+        body.innerHTML = result.events.length ? result.events.map(renderEngagementEvent).join('') : escapeHtml(t('No tracked interactions for this activity yet.'));
         panel.dataset.loaded = '1';
       } catch (error) {
         body.textContent = `${t('Could not load interactions. Close and expand to retry.')} ${error.message}`;

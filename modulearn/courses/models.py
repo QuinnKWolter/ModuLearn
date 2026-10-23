@@ -114,6 +114,7 @@ class RecommendationEvent(models.Model):
 
 
 class Course(models.Model):
+    schedule_timezone = models.CharField(max_length=64, blank=True, default="")
     id = models.CharField(max_length=255, primary_key=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -537,7 +538,7 @@ class ModuleProgress(models.Model):
     def update_from_activity_attempt(self, data):
         """Update progress based on activity attempt data"""
         if not isinstance(data, dict) or 'data' not in data or not data['data']:
-            logger.warning("Invalid activity attempt payload for module progress update")
+            logger.warning("Invalid activity attempt payload for activity progress update")
             return
         
         activity_data = data['data'][0]  # Get the first activity
@@ -548,7 +549,7 @@ class ModuleProgress(models.Model):
 
             if not module_accepts_scored_attempt(self):
                 logger.info(
-                    "Ignoring resubmission for single-attempt module progress user=%s module=%s",
+                    "Ignoring resubmission for single-attempt activity progress user=%s activity=%s",
                     self.user_id,
                     self.module_id,
                 )

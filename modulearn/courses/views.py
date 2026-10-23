@@ -409,11 +409,21 @@ def course_configuration(request, instance_id):
                 message_text = "Course visibility and locking controls were updated."
                 if deleted_count:
                     message_text = (
-                        f"Course structure updated and {deleted_count} module"
+                        f"Course structure updated and {deleted_count} activity"
                         f"{'' if deleted_count == 1 else 's'} removed."
                     )
                 if not wants_json:
                     messages.success(request, message_text)
+            elif action == "update_timezone":
+                from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+                zone = request.POST.get('course_timezone', '').strip()
+                try:
+                    ZoneInfo(zone)
+                except (ZoneInfoNotFoundError, ValueError):
+                    raise ValueError('Choose a valid timezone.') from None
+                course.schedule_timezone = zone
+                course.save(update_fields=['schedule_timezone'])
+                messages.success(request, 'Course timezone updated. Existing opening and closing instants are unchanged.')
             elif action == "add_unit":
                 _create_manual_unit(request, course)
                 message_text = "Unit added to the course structure."
@@ -422,7 +432,7 @@ def course_configuration(request, instance_id):
             elif action == "add_module":
                 with transaction.atomic():
                     _create_custom_module(request, course)
-                message_text = "Module added to the course structure."
+                message_text = "Activity added to the course structure."
                 if not wants_json:
                     messages.success(request, message_text)
             elif action == "update_plugins":
@@ -464,6 +474,10 @@ def course_configuration(request, instance_id):
         return redirect("courses:course_configuration", instance_id=course_instance.id)
 
     context = _course_configuration_context(course_instance, research_has_participants)
+    from zoneinfo import available_timezones
+    from django.conf import settings
+    context['course_timezone'] = course.schedule_timezone or settings.TIME_ZONE
+    context['course_timezones'] = sorted(available_timezones())
     return render(request, "courses/course_configuration.html", context)
 
 
@@ -482,7 +496,11 @@ def _course_configuration_context(course_instance, research_has_participants):
         "branch_rules": _branch_rule_context(course),
         "module_types": Module.MANUAL_MODULE_TYPE_CHOICES,
         "branch_condition_types": ModuleBranchRule.CONDITION_CHOICES,
-        "question_types": ModuleFormQuestion.TYPE_CHOICES,
+        "question_types": [(value, {
+            'single_choice': 'Single choice', 'multiple_choice': 'Multiple choice',
+            'short_answer': 'Short answer', 'long_answer': 'Long answer',
+            'likert': 'Rating scale (1–5)',
+        }.get(value, label)) for value, label in ModuleFormQuestion.TYPE_CHOICES],
         "research_conditions": _course_research_conditions(course),
         "is_locked_for_research": course.is_locked_for_research,
         "research_has_participants": research_has_participants,
@@ -659,7 +677,7 @@ def _update_course_structure_controls(request, course):
         from modulearn.learning.services.unit_packages import parse_schedule
         unit.opens_at, unit.closes_at = parse_schedule(
             request.POST.get(f"{prefix}_opens_at", unit.opens_at),
-            request.POST.get(f"{prefix}_closes_at", unit.closes_at))
+            request.POST.get(f"{prefix}_closes_at", unit.closes_at), zone=course.schedule_timezone or None)
         unit.save(update_fields=["title", "description", "order", "is_visible", "is_locked", "unlock_rule", "opens_at", "closes_at"])
 
         for module in group["modules"]:
@@ -789,7 +807,7 @@ def _update_module_content_configuration(request, module, prefix):
         )
         if replacement:
             logger.info(
-                "Replacing legacy SLC URL during module configuration: %s -> %s",
+                "Replacing legacy SLC URL during activity configuration: %s -> %s",
                 replacement.original_url,
                 replacement.replacement_url,
             )
@@ -998,10 +1016,10 @@ def _update_branching_rules(request, course):
         source_module = modules[int(source_id)]
         target_module = modules[int(target_id)]
     except (KeyError, TypeError, ValueError):
-        raise ValueError("Choose a valid source and target module for the branch rule.")
+        raise ValueError("Choose a valid source and target activity for the branch rule.")
 
     if source_module.id == target_module.id:
-        raise ValueError("A branch rule cannot unlock the same module that triggered it.")
+        raise ValueError("A branch rule cannot unlock the same activity that triggered it.")
 
     valid_condition_types = {value for value, _label in ModuleBranchRule.CONDITION_CHOICES}
     if condition_type not in valid_condition_types:
@@ -1110,11 +1128,11 @@ def _create_custom_module(request, course):
     module_type = request.POST.get("module_type")
     valid_types = {choice[0] for choice in Module.MANUAL_MODULE_TYPE_CHOICES}
     if module_type not in valid_types:
-        raise ValueError("Choose a valid manually-authored module type.")
+        raise ValueError("Choose a valid manually-authored activity type.")
 
     title = (request.POST.get("title") or "").strip()
     if not title:
-        raise ValueError("Module title is required.")
+        raise ValueError("Activity title is required.")
 
     content_url = request.POST.get("content_url") or None
     supported_protocols = ['splice'] if module_type == Module.MODULE_TYPE_SPLICE_SMART_CONTENT else []
@@ -1126,7 +1144,7 @@ def _create_custom_module(request, course):
     )
     if replacement:
         logger.info(
-            "Replacing legacy SLC URL during manual module creation: %s -> %s",
+            "Replacing legacy SLC URL during manual activity creation: %s -> %s",
             replacement.original_url,
             replacement.replacement_url,
         )
@@ -1223,7 +1241,7 @@ def module_detail(request, instance_id, unit_id, module_id):
     if not allowed:
         if not _is_course_instructor(request.user, course_instance):
             log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_UNLOCK_DENIED)
-        messages.error(request, reason or "That module is locked.")
+        messages.error(request, reason or "That activity is locked.")
         return redirect("courses:course_detail", instance_id=course_instance.id)
 
     return redirect(
@@ -1290,14 +1308,14 @@ def launch_iframe_module(request, instance_id, module_id):
     is_enrolled = Enrollment.objects.filter(student=request.user, course_instance=course_instance).exists()
     
     if not (is_instructor or is_enrolled):
-        return HttpResponseForbidden("You don't have access to this module")
+        return HttpResponseForbidden("You don't have access to this activity")
 
     from modulearn.learning.services.recommendation_tracking import practice_for_request
     practice = practice_for_request(request, module=module, course_instance=course_instance)
     allowed, reason = (True, '') if practice else _user_can_access_module(request.user, course_instance, module)
     if not allowed:
         log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_UNLOCK_DENIED)
-        messages.error(request, reason or "That module is locked.")
+        messages.error(request, reason or "That activity is locked.")
         return redirect("courses:course_detail", instance_id=course_instance.id)
     
     # Use the get_or_create_progress class method instead of direct get_or_create
@@ -1341,8 +1359,8 @@ def launch_iframe_module(request, instance_id, module_id):
     original_content_url = module.content_url  # Keep original for logging
     selected_protocol = module.select_launch_protocol()
     
-    logger.info(f"Module {module.id}: Original content_url: {original_content_url}")
-    logger.info(f"Module {module.id}: Provider ID: {module.provider_id}")
+    logger.info(f"Activity {module.id}: Original content_url: {original_content_url}")
+    logger.info(f"Activity {module.id}: Provider ID: {module.provider_id}")
     
     # Parse URL for LTI parameters
     parsed_url = urlparse(content_url) if content_url else None
@@ -1352,7 +1370,7 @@ def launch_iframe_module(request, instance_id, module_id):
     url_tool = query_params.get('tool', [''])[0]
     url_sub = query_params.get('sub', [''])[0]
     
-    logger.info(f"Module {module.id}: Parsed URL - tool={url_tool}, sub={url_sub}, path={parsed_url.path if parsed_url else 'None'}")
+    logger.info(f"Activity {module.id}: Parsed URL - tool={url_tool}, sub={url_sub}, path={parsed_url.path if parsed_url else 'None'}")
     
     # SPECIAL HANDLING: CodeCheck exercises should load directly from their activity URL
     # instead of going through LTI launch. Detect CodeCheck by provider_id or tool parameter.
@@ -1391,7 +1409,7 @@ def launch_iframe_module(request, instance_id, module_id):
                 '',  # Remove query string
                 parsed.fragment
             ))
-            logger.info(f"Module {module.id}: Transformed JSVEE URL from {parsed.path}?{parsed.query} to: {content_url}")
+            logger.info(f"Activity {module.id}: Transformed JSVEE URL from {parsed.path}?{parsed.query} to: {content_url}")
     
     # SPECIAL HANDLING: Parson's Problems URL transformation
     # Transform from: http://adapt2.sis.pitt.edu/acos/pitt/jsparsons/jsparsons-python/ps?example-id=ps_python_for_odd_or_even
@@ -1411,7 +1429,7 @@ def launch_iframe_module(request, instance_id, module_id):
                 '',  # Remove query string
                 ''   # No fragment
             ))
-            logger.info(f"Module {module.id}: Transformed Parson's Problems URL from {parsed.geturl()} to: {content_url}")
+            logger.info(f"Activity {module.id}: Transformed Parson's Problems URL from {parsed.geturl()} to: {content_url}")
     
     # SPECIAL HANDLING: WebEx exercises URL transformation
     # Preserve the exact activity identifier; never substitute another exercise.
@@ -1438,7 +1456,7 @@ def launch_iframe_module(request, instance_id, module_id):
                 new_query,
                 parsed.fragment
             ))
-            logger.info(f"Module {module.id}: Transformed WebEx URL from {parsed.geturl()} to: {content_url}")
+            logger.info(f"Activity {module.id}: Transformed WebEx URL from {parsed.geturl()} to: {content_url}")
     
     if is_codecheck:
         # CodeCheck demos and manually created modules may already carry a real
@@ -1446,14 +1464,14 @@ def launch_iframe_module(request, instance_id, module_id):
         # Wiley path when the module came from an LTI-style URL with a sub value.
         if is_direct_codecheck_file:
             content_url = force_https_url(content_url)
-            logger.info(f"Module {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
+            logger.info(f"Activity {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
             parsed_url = urlparse(content_url)
             query_params = parse_qs(parsed_url.query) if parsed_url else {}
             selected_protocol = 'splice'
             is_lti_launch_url = False
         elif url_sub:
             content_url = f"https://codecheck.io/files/wiley/{url_sub}"
-            logger.info(f"Module {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
+            logger.info(f"Activity {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
             # Re-parse the new URL
             parsed_url = urlparse(content_url)
             query_params = parse_qs(parsed_url.query) if parsed_url else {}
@@ -1461,7 +1479,7 @@ def launch_iframe_module(request, instance_id, module_id):
             selected_protocol = 'splice'  # Use splice for direct loading with session params
             is_lti_launch_url = False
         else:
-            logger.warning(f"Module {module.id}: CodeCheck detected but no direct file URL or sub parameter is available")
+            logger.warning(f"Activity {module.id}: CodeCheck detected but no direct file URL or sub parameter is available")
             selected_protocol = 'splice'
             is_lti_launch_url = False
     else:
@@ -1489,7 +1507,7 @@ def launch_iframe_module(request, instance_id, module_id):
     # Skip for CodeCheck since we're loading directly
     if not is_codecheck and selected_protocol is None and is_lti_launch_url:
         selected_protocol = 'lti'
-        logger.info(f"Module {module.id}: Auto-detected LTI protocol from URL pattern")
+        logger.info(f"Activity {module.id}: Auto-detected LTI protocol from URL pattern")
     
     # For LTI protocol, extract the sub parameter for our LTI consumer
     lti_sub = url_sub if url_sub else None
@@ -1499,12 +1517,12 @@ def launch_iframe_module(request, instance_id, module_id):
     if not is_codecheck:
         if is_paws_url and url_tool:
             lti_tool = f"paws_{url_tool}"
-            logger.info(f"Module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+            logger.info(f"Activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
         else:
             lti_tool = url_tool if url_tool else module.provider_id
     elif is_paws_url and url_tool:
         lti_tool = f"paws_{url_tool}"
-        logger.info(f"Module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+        logger.info(f"Activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
     else:
         lti_tool = url_tool if url_tool else module.provider_id
     
@@ -1561,7 +1579,7 @@ def launch_iframe_module(request, instance_id, module_id):
         ))
         
         logger.info(
-            f"Module {module.id}: Built activity URL with session params: "
+            f"Activity {module.id}: Built activity URL with session params: "
             f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
         )
         
@@ -1572,11 +1590,11 @@ def launch_iframe_module(request, instance_id, module_id):
             # proxying same-origin PCEX activity APIs.
             activity_url_with_params = force_https_url(activity_url_with_params)
     
-    logger.info(f"Module {module.id} '{module.title}' selected protocol: {selected_protocol}")
-    logger.info(f"Module {module.id} - Original content_url: {original_content_url}")
-    logger.info(f"Module {module.id} - Final content_url: {content_url}")
-    logger.info(f"Module {module.id} - Activity URL with params: {activity_url_with_params}")
-    logger.info(f"Module {module.id} - Use proxy: {use_proxy}, Is LTI URL: {is_lti_launch_url}, Is CodeCheck: {is_codecheck}")
+    logger.info(f"Activity {module.id} '{module.title}' selected protocol: {selected_protocol}")
+    logger.info(f"Activity {module.id} - Original content_url: {original_content_url}")
+    logger.info(f"Activity {module.id} - Final content_url: {content_url}")
+    logger.info(f"Activity {module.id} - Activity URL with params: {activity_url_with_params}")
+    logger.info(f"Activity {module.id} - Use proxy: {use_proxy}, Is LTI URL: {is_lti_launch_url}, Is CodeCheck: {is_codecheck}")
     
     # Check if tool is known to refuse iframe embedding
     refuses_iframe = False
@@ -1589,7 +1607,7 @@ def launch_iframe_module(request, instance_id, module_id):
             refuses_iframe = tool_config.get('refuses_iframe', False)
             refuses_iframe_reason = tool_config.get('refuses_iframe_reason', '')
             if refuses_iframe:
-                logger.warning(f"Module {module.id}: Tool '{lti_tool}' refuses iframe embedding: {refuses_iframe_reason}")
+                logger.warning(f"Activity {module.id}: Tool '{lti_tool}' refuses iframe embedding: {refuses_iframe_reason}")
     
     if practice and selected_protocol == 'lti':
         raise PermissionDenied('Recommendation practice requires a directly tracked delivery URL.')
@@ -1604,17 +1622,17 @@ def launch_iframe_module(request, instance_id, module_id):
             'usr': request.user.id, 'grp': grp_id, 'module_id': module.id,
         })
         logger.info(
-            f"LTI Launch URL generated: module={module.id}, tool={lti_tool}, "
+            f"LTI Launch URL generated: activity={module.id}, tool={lti_tool}, "
             f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
         )
     else:
         if use_proxy:
             iframe_src = to_path_style_proxy(activity_url_with_params)
-            logger.info(f"Module {module.id}: Final iframe_src (proxied): {iframe_src}")
+            logger.info(f"Activity {module.id}: Final iframe_src (proxied): {iframe_src}")
         else:
             # Use the URL with session parameters directly, forcing HTTPS if needed
             iframe_src = force_https_url(activity_url_with_params)
-            logger.info(f"Module {module.id}: Final iframe_src (direct, https): {iframe_src}")
+            logger.info(f"Activity {module.id}: Final iframe_src (direct, https): {iframe_src}")
 
     context = {
         'recommendation_practice': practice,
@@ -1759,7 +1777,7 @@ def next_accessible_module(request, instance_id, module_id):
     if not next_module:
         return JsonResponse({
             "available": False,
-            "message": "No visible unlocked module is available yet.",
+            "message": "No visible unlocked activity is available yet.",
         })
 
     return JsonResponse({
@@ -1785,7 +1803,7 @@ def record_module_session_event_view(request, instance_id, module_id):
 
     allowed, reason = _user_can_access_module(request.user, course_instance, module)
     if not allowed:
-        return JsonResponse({"success": False, "error": reason or "Module is locked."}, status=403)
+        return JsonResponse({"success": False, "error": reason or "Activity is locked."}, status=403)
 
     try:
         data = json.loads(request.body or "{}")
@@ -1869,14 +1887,14 @@ def preview_iframe_module(request, module_id):
         # for LTI-style imports that provide a sub parameter.
         if is_direct_codecheck_file:
             content_url = force_https_url(content_url)
-            logger.info(f"Preview module {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
+            logger.info(f"Preview activity {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
             parsed_url = urlparse(content_url)
             query_params = parse_qs(parsed_url.query) if parsed_url else {}
             selected_protocol = 'splice'
             is_lti_launch_url_check = False
         elif url_sub:
             content_url = f"https://codecheck.io/files/wiley/{url_sub}"
-            logger.info(f"Preview module {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
+            logger.info(f"Preview activity {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
             # Re-parse the new URL
             parsed_url = urlparse(content_url)
             query_params = parse_qs(parsed_url.query) if parsed_url else {}
@@ -1884,7 +1902,7 @@ def preview_iframe_module(request, module_id):
             selected_protocol = 'splice'  # Use splice for direct loading with session params
             is_lti_launch_url_check = False
         else:
-            logger.warning(f"Preview module {module.id}: CodeCheck detected but no direct file URL or sub parameter is available")
+            logger.warning(f"Preview activity {module.id}: CodeCheck detected but no direct file URL or sub parameter is available")
             selected_protocol = 'splice'
             is_lti_launch_url_check = False
     
@@ -1913,7 +1931,7 @@ def preview_iframe_module(request, module_id):
     # (Skip for CodeCheck since we've already set it)
     if not is_codecheck and selected_protocol is None and is_lti_launch_url_check:
         selected_protocol = 'lti'
-        logger.info(f"Preview module {module.id}: Auto-detected LTI protocol from URL pattern")
+        logger.info(f"Preview activity {module.id}: Auto-detected LTI protocol from URL pattern")
     
     # For LTI protocol, extract the sub parameter for our LTI consumer
     lti_sub = url_sub if url_sub else None
@@ -1923,7 +1941,7 @@ def preview_iframe_module(request, module_id):
     if not is_codecheck:
         if is_paws_url and url_tool:
             lti_tool = f"paws_{url_tool}"
-            logger.info(f"Preview module {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+            logger.info(f"Preview activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
         else:
             lti_tool = url_tool if url_tool else module.provider_id
     
@@ -1971,7 +1989,7 @@ def preview_iframe_module(request, module_id):
         ))
         
         logger.info(
-            f"Preview module {module.id}: Built activity URL with session params: "
+            f"Preview activity {module.id}: Built activity URL with session params: "
             f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
         )
         
@@ -1981,7 +1999,7 @@ def preview_iframe_module(request, module_id):
             # Force HTTPS for iframe embedding when not using the PAWS proxy.
             activity_url_with_params = force_https_url(activity_url_with_params)
     
-    logger.info(f"Preview module {module.id} '{module.title}' selected protocol: {selected_protocol}")
+    logger.info(f"Preview activity {module.id} '{module.title}' selected protocol: {selected_protocol}")
     logger.debug(f"Preview - Protocol: {selected_protocol}, Content URL: {content_url}")
     logger.debug(f"Preview activity URL with params: {activity_url_with_params}")
     logger.debug(f"Preview use proxy for HTTP content: {use_proxy}, Is LTI URL: {is_lti_launch_url_check}")
@@ -1997,7 +2015,7 @@ def preview_iframe_module(request, module_id):
             refuses_iframe = tool_config.get('refuses_iframe', False)
             refuses_iframe_reason = tool_config.get('refuses_iframe_reason', '')
             if refuses_iframe:
-                logger.warning(f"Preview module {module.id}: Tool '{lti_tool}' refuses iframe embedding")
+                logger.warning(f"Preview activity {module.id}: Tool '{lti_tool}' refuses iframe embedding")
     
     # Generate iframe src based on protocol
     if selected_protocol == 'lti':
@@ -2008,7 +2026,7 @@ def preview_iframe_module(request, module_id):
             'tool': lti_tool, 'sub': lti_sub or content_url,
             'usr': request.user.id, 'grp': 'preview', 'module_id': module.id,
         })
-        logger.info(f"LTI Preview URL generated: module={module.id}, tool={lti_tool}, sub={lti_sub}")
+        logger.info(f"LTI Preview URL generated: activity={module.id}, tool={lti_tool}, sub={lti_sub}")
     else:
         iframe_src = to_path_style_proxy(activity_url_with_params) if use_proxy else force_https_url(activity_url_with_params)
 
@@ -2288,7 +2306,7 @@ def update_module_progress(request, module_id):
 
         allowed, reason = _user_can_access_module(request.user, course_instance, module)
         if not allowed:
-            return JsonResponse({'error': reason or 'Module is locked'}, status=403)
+            return JsonResponse({'error': reason or 'Activity is locked'}, status=403)
         
         # Now include course_instance in the get_or_create_progress call
         module_progress, created = ModuleProgress.get_or_create_progress(
@@ -2614,15 +2632,18 @@ def _enrollment_response_payload(enrollment, total_modules):
 
 
 def _unique_generated_student_username(course_instance, prefix=''):
-    label = f"{course_instance.course_id}:{course_instance.id}:{course_instance.group_name}:{course_instance.created_at:%Y%m%d}"
-    digest = hashlib.blake2s(label.encode("utf-8"), digest_size=3).hexdigest()
+    # A short, stable session code, permuted through all two-character values
+    # before wrapping. Session renames do not change it; suffix collisions retry.
+    alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
+    size = len(alphabet)
+    value = (int(course_instance.id) * 37 + 137) % (size * size)
+    code = alphabet[value // size] + alphabet[value % size]
     prefix_slug = slugify(prefix or "anon").strip("-") or "anon"
     prefix_slug = prefix_slug[:24].strip("-") or "anon"
-    base = f"{prefix_slug}-{digest}"[:40].strip("-") or f"anon-{digest}"
     User = get_user_model()
     while True:
-        token = get_random_string(6, allowed_chars="23456789abcdefghjkmnpqrstuvwxyz")
-        candidate = f"{base}-{token}"[:150]
+        token = get_random_string(4, allowed_chars=alphabet)
+        candidate = f"{prefix_slug}-{code}{token}"
         if not User.objects.filter(username__iexact=candidate).exists():
             return candidate
 

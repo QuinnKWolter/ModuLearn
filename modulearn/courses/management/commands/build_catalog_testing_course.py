@@ -23,7 +23,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options['create'] and Course.objects.filter(pk=options['course_id']).exists():
-            raise CommandError('Course already exists; refusing to replace any modules, grades or configuration. Use another --course-id.')
+            raise CommandError('Course already exists; refusing to replace any activities, grades or configuration. Use another --course-id.')
         output = Path(options['output'])
         output.mkdir(parents=True, exist_ok=True)
         records = json.loads(_fetch(PITT_API))

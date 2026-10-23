@@ -16,7 +16,7 @@
     <div id="manualState" class="card p-6{% if course_export_url %} hidden{% endif %}">
       <div class="stat-kicker">Session Setup</div>
       <h1 class="text-2xl font-bold mt-2">Create a custom course session</h1>
-      <p class="text-slate-600 dark:text-slate-300 mt-2">Start empty, then populate units and modules manually.</p>
+      <p class="text-slate-600 dark:text-slate-300 mt-2">Start empty, then populate units and activities manually.</p>
 
       <form id="createRawSessionForm" class="grid gap-4 mt-5">
         {% csrf_token %}
@@ -47,7 +47,7 @@
         <span class="spinner-border" aria-hidden="true"></span>
       </div>
       <h1 class="text-3xl font-bold mt-6">Importing your course structure</h1>
-      <p class="text-slate-600 dark:text-slate-300 mt-3">ModuLearn is pulling the authored structure, normalizing modules, and preparing instructor workflows.</p>
+      <p class="text-slate-600 dark:text-slate-300 mt-3">ModuLearn is pulling the authored structure, normalizing activities, and preparing instructor workflows.</p>
       <div class="progress h-3 mt-6">
         <div class="progress-bar bg-blue-600 animate-pulse" style="width: 100%"></div>
       </div>

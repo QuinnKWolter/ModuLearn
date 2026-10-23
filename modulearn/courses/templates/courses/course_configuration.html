@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static ui_i18n %}
+{% load static ui_i18n tz %}
 
 {% block title %}Configure {% if study %}{{ study.title }}{% else %}{{ course_instance.group_name|default:course.title }}{% endif %} - ModuLearn{% endblock %}
 
@@ -2616,14 +2616,27 @@
       padding-block: 0.48rem;
     }
   }
+
+  .cfg-module-summary .cfg-chip-toggle, .cfg-unit-summary .cfg-chip-toggle {gap:0;min-height:32px;}
+  .cfg-chip-toggle [data-chip-label] {max-width:0;opacity:0;overflow:hidden;white-space:nowrap;transition:max-width .25s ease,opacity .25s ease,margin .25s ease;margin-left:0;}
+  .cfg-chip-toggle:hover [data-chip-label],.cfg-chip-toggle:focus-visible [data-chip-label],.cfg-chip-toggle.is-recent [data-chip-label],.cfg-module[open] > summary [data-chip-label] {max-width:10rem;opacity:1;margin-left:.4rem;}
+  .cfg-schedule {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;font-size:.8rem;}
+  .cfg-schedule[hidden] {display:none;}.cfg-schedule small {grid-column:1/-1;}
+  .cfg-schedule input {font-size:.85rem;padding:.4rem;min-width:0;}
+  .cfg-settings-modal {max-height:85vh;overflow:auto;}.cfg-settings-modal header {display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}.cfg-settings-modal h2 {font-size:1.2rem;font-weight:700;}.cfg-settings-modal header button {font-size:1.5rem;}
+  .cfg-settings-modal p,.cfg-settings-modal hr {margin:.8rem 0;}.cfg-grade-actions {display:flex;gap:.5rem;align-items:center;margin:.6rem 0;}.cfg-grade-actions select {min-width:0;flex:1;}.cfg-grade-actions button {flex-shrink:0;}
+  @media(prefers-reduced-motion:reduce){.cfg-chip-toggle [data-chip-label]{transition:none;}}
+.cfg-graded-star, [data-grade-toggle][aria-pressed="true"] i {color:#eab308;}
+.cfg-builder-toolbar,.cfg-question-actions {display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}.cfg-builder-toolbar {margin:.6rem 0;}.cfg-builder-toolbar>span {margin-right:auto;font-size:.85rem;}.cfg-question-actions {border-top:1px solid #94a3b844;padding-top:.6rem;}.cfg-question-actions [data-remove-question]{margin-left:auto;}.cfg-question-summary strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}.cfg-question-body label {font-size:.85rem;font-weight:600;}.cfg-question-preview {padding:1rem;border:1px solid #94a3b866;border-radius:.5rem;}.cfg-question-preview[hidden]{display:none;}.cfg-question-preview fieldset {padding:.8rem 0;border-bottom:1px solid #94a3b844;}.cfg-question-preview legend {font-weight:600;}.cfg-question-preview label {display:block;margin:.4rem 0;}.cfg-question-preview input[type=radio],.cfg-question-preview input[type=checkbox]{margin-right:.4rem;}
+#questionBuilder[hidden]{display:none;}.cfg-quiz-settings {border-bottom:1px solid #94a3b844;padding-bottom:.6rem;font-size:.85rem;}.cfg-quiz-settings summary {cursor:pointer;font-weight:600;}.cfg-quiz-settings label{display:block;margin-top:.6rem;}.cfg-question-body .form-control,.cfg-quiz-settings .form-control{padding:.5rem .65rem;font-size:.9rem;border-radius:.4rem;}.cfg-question-body{gap:.5rem;padding:.7rem;}.cfg-question-body textarea[data-question-prompt]{min-height:4rem;}.cfg-question-add-button{width:auto!important;height:auto!important;border-radius:.4rem!important;padding:.4rem .65rem!important;gap:.25rem;}.cfg-question-summary{padding:.55rem .7rem;}.cfg-question-preview{background:var(--surface,rgba(148,163,184,.05));}
 </style>
 {% endblock %}
 
 {% block content %}
   {% if study %}
-    {% include 'includes/page_header.html' with eyebrow='Study Controls' title=course.title subtitle=course_instance.group_name|default:course.title description='Configure study modules, sequence, visibility, lock rules, and participant flow.' %}
+    {% include 'includes/page_header.html' with eyebrow='Study Controls' title=course.title subtitle=course_instance.group_name|default:course.title description='Configure study activities, sequence, visibility, lock rules, and participant flow.' %}
   {% else %}
-    {% include 'includes/page_header.html' with eyebrow='Session Controls' title=course.title subtitle=course_instance.group_name|default:course.title description='Configure modules, sequence, visibility, lock rules, and manual additions.' %}
+    {% include 'includes/page_header.html' with eyebrow='Session Controls' title=course.title subtitle=course_instance.group_name|default:course.title description='Configure activities, sequence, visibility, lock rules, and manual additions.' %}
   {% endif %}
 
   <div class="cfg-layout" data-structure-workbench>
@@ -2652,7 +2665,7 @@
                 <span class="cfg-tree-label">{{ group.unit.title }}</span>
                 <span class="cfg-tree-count" data-tree-unit-count>{{ group.modules|length }}</span>
               </button>
-              <button type="button" class="cfg-tree-add-module" title="Add module to this unit" aria-label="Add module to {{ group.unit.title }}" data-sidebar-add-module data-unit-id="{{ group.unit.id }}" data-bs-toggle="modal" data-bs-target="#addModuleModal">
+              <button type="button" class="cfg-tree-add-module" title="Add activity to this unit" aria-label="Add activity to {{ group.unit.title }}" data-sidebar-add-module data-unit-id="{{ group.unit.id }}" data-bs-toggle="modal" data-bs-target="#addModuleModal">
                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
               </button>
             </div>
@@ -2676,7 +2689,7 @@
                   <span class="cfg-tree-icon" aria-hidden="true">
                     <i class="bi bi-file-earmark-code"></i>
                   </span>
-                  <span class="cfg-tree-label">{{ module.title }}</span>
+                  <span class="cfg-tree-label"><span data-grade-star="{{ module.id }}" class="cfg-graded-star" title="Graded activity" {% if not module.is_graded %}hidden{% endif %}>★ </span>{{ module.title }}</span>
                   <span class="cfg-tree-flags">
                   {% if module.is_locked or module.unlock_rule_type != 'none' %}
                     <i class="fa-solid fa-lock" title="Locked" aria-label="Locked"></i>
@@ -2687,7 +2700,7 @@
                 </span>
               </button>
               {% empty %}
-                <div class="cfg-tree-empty" data-tree-empty>No modules yet.</div>
+                <div class="cfg-tree-empty" data-tree-empty>No activities yet.</div>
               {% endfor %}
             </div>
           </article>
@@ -2713,7 +2726,8 @@
           </div>
         </div>
         <div class="cfg-toolbar-actions">
-          <a class="btn btn-outline-primary btn-sm" href="{% url 'courses:grading' course_instance.id %}">Grade weighting</a>
+          <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#courseGradesModal"><i class="bi bi-mortarboard" aria-hidden="true"></i> Grades</button>
+          <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseTimezoneModal" title="Course timezone" aria-label="Course timezone"><i class="bi bi-clock" aria-hidden="true"></i></button>
           <button type="submit" form="structureControlsForm" class="btn btn-primary btn-sm cfg-save-button">
             <i class="bi bi-check2-circle mr-1" aria-hidden="true"></i>Save Configuration
           </button>
@@ -2750,10 +2764,6 @@
           <p class="text-sm">Existing units and student work are preserved. Unit structure is shared by this course's sessions.</p>
         </form>
       </details>
-      <div class="shell-surface p-3 mb-3 flex flex-wrap items-center gap-2" id="gradingBulkControls">
-        <strong>Grading</strong><button type="button" class="btn btn-sm btn-outline-primary" data-grade-all="1">All graded</button><button type="button" class="btn btn-sm btn-outline-secondary" data-grade-all="0">All practice</button>
-        <label>Problem type <select id="gradeTypeSelect" class="form-control"></select></label><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark type graded</button><span class="text-sm">Changes apply when you save configuration. If no visible activities are marked graded, all visible course activities count equally.</span>
-      </div>
       <form method="post" enctype="multipart/form-data" id="structureControlsForm" class="cfg-stack">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_structure">
@@ -2767,7 +2777,7 @@
               <div class="stat-kicker mt-4">Select a unit</div>
               <h3 class="text-2xl font-black mt-2 text-slate-900 dark:text-white">Choose a unit from the structure sidebar</h3>
               <p class="mt-2 max-w-xl text-sm text-slate-600 dark:text-slate-300">
-                Unit settings, module editing, lock rules, and sequence controls will appear here.
+                Unit settings, activity editing, lock rules, and sequence controls will appear here.
               </p>
             </div>
           </section>
@@ -2786,7 +2796,8 @@
                 {% endif %}
               </span>
               <span class="cfg-chip-row">
-                <span class="cfg-chip">{{ group.modules|length }} module{{ group.modules|length|pluralize }}</span>
+                <span class="cfg-chip">{{ group.modules|length }} activit{{ group.modules|length|pluralize:"y,ies" }}</span>
+                <button type="button" class="cfg-chip cfg-chip-toggle {% if group.unit.opens_at or group.unit.closes_at %}is-on{% else %}is-off{% endif %}" data-schedule-toggle aria-controls="unitSchedule{{ group.unit.id }}" aria-expanded="{% if group.unit.opens_at or group.unit.closes_at %}true{% else %}false{% endif %}" title="Unit schedule"><i class="bi bi-clock" aria-hidden="true"></i><span data-chip-label>Schedule</span></button>
                 <input type="hidden" name="unit_{{ group.unit.id }}_visible" value="{% if group.unit.is_visible %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="visible">
                 <button type="button" class="cfg-chip cfg-chip-toggle {% if group.unit.is_visible %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="visible" aria-pressed="{% if group.unit.is_visible %}true{% else %}false{% endif %}" title="Toggle student visibility">
                   <i class="fa-solid {% if group.unit.is_visible %}fa-eye{% else %}fa-eye-slash{% endif %}" data-chip-icon></i>
@@ -2820,11 +2831,13 @@
                       <textarea name="unit_{{ group.unit.id }}_description" rows="2" class="form-control" placeholder="Unit description">{{ group.unit.description }}</textarea>
                     </div>
                   </div>
-                  <div class="grid gap-2 mt-3 mb-3">
-                    <a href="{% url 'courses:export_unit' course_instance.id group.unit.id %}" class="btn btn-sm btn-outline-primary">Export this unit</a>
+                  <a href="{% url 'courses:export_unit' course_instance.id group.unit.id %}" class="btn btn-sm btn-outline-primary">Export this unit</a>
+                  <div class="cfg-schedule" id="unitSchedule{{ group.unit.id }}" {% if not group.unit.opens_at and not group.unit.closes_at %}hidden{% endif %}>
+                    {% timezone course_timezone %}
                     <label>Opens at <input type="datetime-local" class="form-control" name="unit_{{ group.unit.id }}_opens_at" value="{{ group.unit.opens_at|date:'Y-m-d\TH:i' }}"></label>
                     <label>Closes at <input type="datetime-local" class="form-control" name="unit_{{ group.unit.id }}_closes_at" value="{{ group.unit.closes_at|date:'Y-m-d\TH:i' }}"></label>
-                    <small>{% ui "Times use the site timezone:" %} {% now "e" %}. {% ui "Blank means no date restriction. Other unlock conditions still apply. Dates affect every session of this course." %}</small>
+                    {% endtimezone %}
+                    <small>{{ course_timezone }} · Blank means no date restriction.</small>
                   </div>
                   <div data-unlock-control>
                     <div class="stat-kicker mb-2">Unit Unlock Rule</div>
@@ -2836,8 +2849,8 @@
                           <option value="previous_unit_completed" {% if group.unit.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>After previous unit completed</option>
                         {% endif %}
                         {% if group.unlock_target_modules %}
-                          <option value="module_accessed" {% if group.unit.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected module accessed</option>
-                          <option value="module_completed" {% if group.unit.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected module completed</option>
+                          <option value="module_accessed" {% if group.unit.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected activity accessed</option>
+                          <option value="module_completed" {% if group.unit.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected activity completed</option>
                         {% endif %}
                         {% if research_conditions %}
                           <option value="condition_equals" {% if group.unit.unlock_rule_type == 'condition_equals' %}selected{% endif %}>For selected research condition</option>
@@ -2860,17 +2873,17 @@
                 <section class="cfg-panel">
                   <div class="cfg-modules-header">
                     <div>
-                      <div class="stat-kicker">Modules In Unit</div>
-                      <h3 class="text-base font-bold mt-1 mb-0">Module sequence and access rules</h3>
+                      <div class="stat-kicker">Activities In Unit</div>
+                      <h3 class="text-base font-bold mt-1 mb-0">Activity sequence and access rules</h3>
                     </div>
-                    <div class="cfg-module-window-actions" aria-label="Module display controls">
-                      <button type="button" class="btn btn-outline-primary btn-sm" data-unit-add-module data-unit-id="{{ group.unit.id }}" data-bs-toggle="modal" data-bs-target="#addModuleModal" aria-label="Add module to {{ group.unit.title }}">
-                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Module
+                    <div class="cfg-module-window-actions" aria-label="Activity display controls">
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-unit-add-module data-unit-id="{{ group.unit.id }}" data-bs-toggle="modal" data-bs-target="#addModuleModal" aria-label="Add activity to {{ group.unit.title }}">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Activity
                       </button>
-                      <button type="button" class="cfg-icon-button" title="Expand all modules in this unit" aria-label="Expand all modules in this unit" data-expand-unit-modules>
+                      <button type="button" class="cfg-icon-button" title="Expand all activities in this unit" aria-label="Expand all activities in this unit" data-expand-unit-modules>
                         <i class="bi bi-arrows-expand" aria-hidden="true"></i>
                       </button>
-                      <button type="button" class="cfg-icon-button" title="Collapse all modules in this unit" aria-label="Collapse all modules in this unit" data-collapse-unit-modules>
+                      <button type="button" class="cfg-icon-button" title="Collapse all activities in this unit" aria-label="Collapse all activities in this unit" data-collapse-unit-modules>
                         <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
                       </button>
                     </div>
@@ -2882,7 +2895,7 @@
                         <summary class="cfg-module-summary">
                           <span class="cfg-module-order" data-module-order-label>#{{ module.order }}</span>
                           <span class="cfg-module-title">
-                            <strong><span data-grade-star="{{ module.id }}" title="Graded activity" {% if not module.is_graded %}hidden{% endif %}>★ </span>{{ module.title }}</strong>
+                            <strong><span data-grade-star="{{ module.id }}" title="Graded activity" class="cfg-graded-star" {% if not module.is_graded %}hidden{% endif %}>★ </span>{{ module.title }}</strong>
                             <small class="text-slate-500 dark:text-slate-300">{{ module.display_type_label }}</small>
                           </span>
                           <span class="cfg-chip-row">
@@ -2897,10 +2910,9 @@
                               <i class="fa-solid {% if module.is_locked or module.unlock_rule_type != 'none' %}fa-lock{% else %}fa-unlock{% endif %}" data-chip-icon></i>
                               <span data-chip-label>{% if module.is_locked or module.unlock_rule_type != 'none' %}Locked{% else %}Open{% endif %}</span>
                             </button>
-                            <label class="cfg-chip" title="Practice is logged but does not count toward course grades">
-                              <input type="hidden" name="module_{{ module.id }}_is_graded" value="0">
-                              <input type="checkbox" name="module_{{ module.id }}_is_graded" value="1" data-grade-module data-grade-type="{{ module.display_type_label }}" {% if module.is_graded %}checked{% endif %}> Graded
-                            </label>
+                            <input type="hidden" name="module_{{ module.id }}_is_graded" value="0">
+                            <input type="checkbox" name="module_{{ module.id }}_is_graded" value="1" data-grade-module data-grade-type="{{ module.display_type_label }}" {% if module.is_graded %}checked{% endif %} hidden>
+                            <button type="button" class="cfg-chip cfg-chip-toggle {% if module.is_graded %}is-on{% else %}is-off{% endif %}" data-grade-toggle aria-pressed="{% if module.is_graded %}true{% else %}false{% endif %}" aria-label="Graded activity" title="Toggle graded activity"><i class="bi {% if module.is_graded %}bi-star-fill{% else %}bi-star{% endif %}" aria-hidden="true"></i><span data-chip-label>{% if module.is_graded %}Graded{% else %}Practice{% endif %}</span></button>
                             <input type="hidden" name="module_{{ module.id }}_allow_resubmission" value="{% if module.allow_resubmission %}1{% else %}0{% endif %}" data-toggle-value data-toggle-kind="resubmission">
                             <button type="button" class="cfg-chip cfg-chip-toggle {% if module.allow_resubmission %}is-on{% else %}is-off{% endif %}" data-chip-toggle data-chip-kind="resubmission" aria-pressed="{% if module.allow_resubmission %}true{% else %}false{% endif %}" title="Toggle resubmissions">
                               <i class="fa-solid {% if module.allow_resubmission %}fa-rotate-right{% else %}fa-ban{% endif %}" data-chip-icon></i>
@@ -2926,7 +2938,7 @@
                             </div>
                             <div class="cfg-field-grid">
                               <input id="module_{{ module.id }}_title" name="module_{{ module.id }}_title" value="{{ module.title }}" class="form-control font-semibold">
-                              <textarea name="module_{{ module.id }}_description" rows="2" class="form-control" placeholder="Module description">{{ module.description }}</textarea>
+                              <textarea name="module_{{ module.id }}_description" rows="2" class="form-control" placeholder="Activity description">{{ module.description }}</textarea>
                               {% if module.is_smart_content_configurable %}
                                 <details class="cfg-source-panel">
                                   <summary>
@@ -2945,7 +2957,7 @@
                                       <label class="grid gap-1">
                                         <span class="stat-kicker">{% ui "Content type label" %}</span>
                                         <input name="module_{{ module.id }}_platform_name" value="{{ module.platform_name }}" maxlength="255" class="form-control" placeholder="{{ module.get_module_type_display }}" aria-describedby="module-{{ module.id }}-type-help">
-                                        <span id="module-{{ module.id }}-type-help" class="text-xs text-slate-500 dark:text-slate-300">{% ui "Shown beneath the module name in the course. Leave blank to use the default type." %}</span>
+                                        <span id="module-{{ module.id }}-type-help" class="text-xs text-slate-500 dark:text-slate-300">{% ui "Shown beneath the activity name in the course. Leave blank to use the default type." %}</span>
                                       </label>
                                       <label class="grid gap-1">
                                         <span class="stat-kicker">Provider ID</span>
@@ -2996,28 +3008,28 @@
                                       {% if module.content_file %}
                                         <span class="text-xs text-slate-500 dark:text-slate-300"><span>Current file:</span> {{ module.content_file.name }}</span>
                                       {% else %}
-                                        <span class="text-xs text-slate-500 dark:text-slate-300">No file has been uploaded for this module yet.</span>
+                                        <span class="text-xs text-slate-500 dark:text-slate-300">No file has been uploaded for this activity yet.</span>
                                       {% endif %}
                                     </label>
                                   </div>
                                 </details>
                               {% endif %}
                               <div class="cfg-rule-grid" data-unlock-control data-module-unlock-control{% if not module.is_locked and module.unlock_rule_type == 'none' %} hidden{% endif %}>
-                                <select name="module_{{ module.id }}_rule_type" class="form-control" aria-label="Module unlock rule" data-unlock-rule>
+                                <select name="module_{{ module.id }}_rule_type" class="form-control" aria-label="Activity unlock rule" data-unlock-rule>
                                   <option value="none" {% if module.unlock_rule_type == 'none' %}selected{% endif %}>No unlock condition</option>
                                   {% if module.has_previous_unit %}
                                     <option value="previous_unit_accessed" {% if module.unlock_rule_type == 'previous_unit_accessed' %}selected{% endif %}>After previous unit accessed</option>
                                     <option value="previous_unit_completed" {% if module.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>After previous unit completed</option>
                                   {% endif %}
                                   {% if module.unlock_target_modules %}
-                                    <option value="module_accessed" {% if module.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected module accessed</option>
-                                    <option value="module_completed" {% if module.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected module completed</option>
+                                    <option value="module_accessed" {% if module.unlock_rule_type == 'module_accessed' %}selected{% endif %}>After selected activity accessed</option>
+                                    <option value="module_completed" {% if module.unlock_rule_type == 'module_completed' %}selected{% endif %}>After selected activity completed</option>
                                   {% endif %}
                                   {% if research_conditions %}
                                     <option value="condition_equals" {% if module.unlock_rule_type == 'condition_equals' %}selected{% endif %}>For selected research condition</option>
                                   {% endif %}
                                 </select>
-                                <select name="module_{{ module.id }}_rule_target" class="form-control" aria-label="Module unlock target" data-unlock-target>
+                                <select name="module_{{ module.id }}_rule_target" class="form-control" aria-label="Activity unlock target" data-unlock-target>
                                   <option value="">Choose target</option>
                                   {% for condition in research_conditions %}
                                     <option value="{{ condition }}" data-target-kind="condition" {% if module.unlock_rule_target == condition %}selected{% endif %}>Condition: {{ condition }}</option>
@@ -3153,7 +3165,7 @@
                         </div>
                       </details>
                     {% empty %}
-                      <div class="empty-state">No modules have been added to this unit yet.</div>
+                      <div class="empty-state">No activities have been added to this unit yet.</div>
                     {% endfor %}
                   </div>
                 </section>
@@ -3174,6 +3186,32 @@
 
   </div>
 
+
+  <div id="courseGradesModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true" role="dialog" aria-labelledby="courseGradesTitle">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <section class="relative card p-5 w-full max-w-lg cfg-settings-modal">
+      <header><h2 id="courseGradesTitle">Grades</h2><button type="button" data-bs-dismiss="modal" aria-label="Close">×</button></header>
+      <div id="gradingBulkControls">
+        <p>Choose which activities count toward course completion.</p>
+        <div class="cfg-grade-actions"><button type="button" class="btn btn-sm btn-outline-primary" data-grade-all="1">All graded</button><button type="button" class="btn btn-sm btn-outline-secondary" data-grade-all="0">All practice</button></div>
+        <label for="gradeTypeSelect">Problem type</label><div class="cfg-grade-actions"><select id="gradeTypeSelect" class="form-control"></select><button type="button" class="btn btn-sm btn-outline-primary" id="gradeSelectedType">Mark type graded</button></div>
+        <p class="text-sm">If no visible activities are marked graded, all visible course activities count equally. Practice activity is still recorded.</p>
+        <button type="submit" form="structureControlsForm" class="btn btn-primary btn-sm">Save configuration</button>
+      </div>
+      <hr><a class="btn btn-outline-primary btn-sm" href="{% url 'courses:grading' course_instance.id %}"><i class="bi bi-sliders" aria-hidden="true"></i> Grade weighting</a><p class="text-sm">Save activity selections before opening grade weighting.</p>
+    </section>
+  </div>
+  <div id="courseTimezoneModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true" role="dialog" aria-labelledby="courseTimezoneTitle">
+    <div class="modal-backdrop-close absolute inset-0"></div>
+    <section class="relative card p-5 w-full max-w-lg cfg-settings-modal">
+      <header><h2 id="courseTimezoneTitle">Course timezone</h2><button type="button" data-bs-dismiss="modal" aria-label="Close">×</button></header>
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_timezone">
+        <label for="courseTimezone">Timezone</label><select id="courseTimezone" name="course_timezone" class="form-control">{% for zone in course_timezones %}<option value="{{ zone }}" {% if zone == course_timezone %}selected{% endif %}>{{ zone }}</option>{% endfor %}</select>
+        <p class="text-sm">Applies to every session of this course. Existing opening and closing instants stay unchanged. Save other configuration edits before changing timezone.</p>
+        <button class="btn btn-primary btn-sm">Save timezone</button>
+      </form>
+    </section>
+  </div>
   <div id="courseInstructorsModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true">
     <div class="modal-backdrop-close absolute inset-0"></div>
     <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -3238,7 +3276,7 @@
           <section class="rounded-lg border border-blue-200/70 bg-blue-50/70 p-4 dark:border-blue-400/20 dark:bg-blue-400/10">
             <h3 class="font-bold text-slate-900 dark:text-white">Enable optional course behaviors</h3>
             <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
-              Plugins expose course-level hooks for recommendation queues, overlays, and experiments without changing the base module sequence.
+              Plugins expose course-level hooks for recommendation queues, overlays, and experiments without changing the base activity sequence.
             </p>
           </section>
 
@@ -3275,7 +3313,7 @@
               <div class="stat-kicker">Adaptive Branching</div>
               <h3 class="font-bold text-slate-900 dark:text-white mt-1">Flow map and conditional unlocks</h3>
               <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                Open the mapper to see modules as connected nodes, add correct/incorrect paths, and scope branches by study condition.
+                Open the mapper to see activities as connected nodes, add correct/incorrect paths, and scope branches by study condition.
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -3355,8 +3393,8 @@
         <div class="flex items-center gap-3">
           <span class="cfg-create-icon"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i></span>
           <div>
-            <div class="stat-kicker">Module Builder</div>
-            <h2 class="text-xl font-bold mt-1 mb-0">Add Module</h2>
+            <div class="stat-kicker">Activity Builder</div>
+            <h2 class="text-xl font-bold mt-1 mb-0">Add Activity</h2>
           </div>
         </div>
         <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
@@ -3371,7 +3409,7 @@
           <input type="hidden" name="catalog_item_id" value="">
 
           <div class="cfg-wizard-body">
-            <div class="cfg-wizard-steps" aria-label="Module creation steps">
+            <div class="cfg-wizard-steps" aria-label="Activity creation steps">
               <span class="cfg-wizard-step-pill is-active" data-step-pill="1"><span class="cfg-wizard-step-number">1</span> Type</span>
               <span class="cfg-wizard-step-pill" data-step-pill="2"><span class="cfg-wizard-step-number">2</span> Details</span>
               <span class="cfg-wizard-step-pill cfg-module-form-only" data-step-pill="3" hidden><span class="cfg-wizard-step-number">3</span> Questions</span>
@@ -3388,11 +3426,11 @@
                       {% endfor %}
                     </select>
                   {% else %}
-                    <div class="text-xs text-slate-500 dark:text-slate-300 mt-1">Add at least one unit before adding modules.</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-300 mt-1">Add at least one unit before adding activities.</div>
                   {% endif %}
                 </div>
                 <div>
-                  <label class="stat-kicker">Module Type</label>
+                  <label class="stat-kicker">Activity Type</label>
                   <select name="module_type" id="moduleTypeSelect" required class="form-control mt-1">
                     {% for value,label in module_types %}
                       <option value="{{ value }}">{{ label }}</option>
@@ -3401,7 +3439,7 @@
                 </div>
               </div>
               <div class="cfg-shape-note text-sm">
-                <strong>Choose the module shape first.</strong>
+                <strong>Choose the activity shape first.</strong>
                 <span class="block mt-1">Questions only appear when the selected type is Quiz / Form.</span>
               </div>
             </section>
@@ -3410,7 +3448,7 @@
               <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_7rem]">
                 <div>
                   <label class="stat-kicker">Title</label>
-                  <input name="title" required class="form-control mt-1" placeholder="Module title">
+                  <input name="title" required class="form-control mt-1" placeholder="Activity title">
                 </div>
                 <div>
                   <label class="stat-kicker">Order</label>
@@ -3446,31 +3484,32 @@
             </section>
 
             <section class="cfg-wizard-step cfg-module-form-only" data-module-step="3" data-module-form-step hidden>
-              <div>
-                <label class="stat-kicker">Instructions</label>
-                <textarea name="form_instructions" rows="3" class="form-control mt-1" placeholder="Optional instructions shown above questions"></textarea>
-              </div>
-              <input name="submit_button_label" class="form-control" placeholder="Submit button label">
+              <details class="cfg-quiz-settings"><summary>Instructions &amp; submission settings <span class="text-xs">(optional)</span></summary>
+                <label for="quizInstructions">Instructions</label><textarea id="quizInstructions" name="form_instructions" rows="2" class="form-control" placeholder="Optional instructions shown above questions"></textarea>
+                <label for="quizSubmitLabel">Submit button label</label><input id="quizSubmitLabel" name="submit_button_label" class="form-control" placeholder="Submit">
+              </details>
               <div class="cfg-form-builder-head">
                 <div>
                   <div class="stat-kicker">Questions</div>
                   <p class="text-xs text-slate-500 dark:text-slate-300 mt-1">Likert, single/multi choice, and free response supported.</p>
                 </div>
                 <button type="button" class="btn btn-outline-primary btn-sm cfg-question-add-button" id="addQuestionButton" title="Add question" aria-label="Add question">
-                  <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                  <span aria-hidden="true">＋</span> Add question
                 </button>
               </div>
+              <div class="cfg-builder-toolbar"><span id="questionCount" role="status">0 questions</span><button type="button" class="btn btn-sm btn-outline-secondary" id="collapseQuestions">Collapse all</button><button type="button" class="btn btn-sm btn-outline-primary" id="previewQuestions" aria-expanded="false">Preview</button></div>
               <div id="questionBuilder" class="grid gap-2"></div>
+              <section id="questionPreview" class="cfg-question-preview" aria-label="Student preview" hidden></section>
             </section>
           </div>
 
           <div class="cfg-wizard-footer">
-            <span class="text-xs text-slate-500 dark:text-slate-300" data-module-wizard-note>Pick a unit and module type.</span>
+            <span class="text-xs text-slate-500 dark:text-slate-300" data-module-wizard-note>Pick a unit and activity type.</span>
             <div class="cfg-wizard-footer-actions">
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-module-step-back hidden>Back</button>
               <button type="button" class="btn btn-outline-primary btn-sm" data-module-step-next>Next</button>
-              <button type="submit" class="btn btn-primary btn-sm" data-module-submit hidden {% if not unit_groups %}disabled{% endif %}>Add Module</button>
+              <button type="submit" class="btn btn-primary btn-sm" data-module-submit hidden {% if not unit_groups %}disabled{% endif %}>Add Activity</button>
             </div>
           </div>
         </form>
@@ -3497,7 +3536,7 @@
             <div>
               <h3 class="font-bold text-slate-900 dark:text-white">End-of-study credit link</h3>
               <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                Add this URL as the final module or final-page link. It resolves the logged-in participant session and sends Prolific participants to their configured completion URL.
+                Add this URL as the final activity or final-page link. It resolves the logged-in participant session and sends Prolific participants to their configured completion URL.
               </p>
             </div>
             <span class="badge badge-primary">Current participant aware</span>
@@ -3946,19 +3985,22 @@
       }
       if (wizardNote) {
         if (currentModuleStep === 1) {
-          wizardNote.textContent = t('Pick a unit and module type.');
+          wizardNote.textContent = t('Pick a unit and activity type.');
         } else if (currentModuleStep === 2 && maxStep === 2) {
-          wizardNote.textContent = t('Add the module details, then save.');
+          wizardNote.textContent = t('Add the activity details, then save.');
         } else if (currentModuleStep === 2) {
-          wizardNote.textContent = t('Add the module details before building questions.');
+          wizardNote.textContent = t('Add the activity details before building questions.');
         } else {
-          wizardNote.textContent = t('Only Quiz / Form modules collect questions.');
+          wizardNote.textContent = t('Only Quiz / Form activities collect questions.');
         }
       }
     }
 
     function renumberQuestions() {
       if (!builder) return;
+      const countLabel = `${builder.children.length} ${t(builder.children.length === 1 ? 'question' : 'questions')}`;
+      const count = document.getElementById('questionCount');
+      if (count.textContent !== countLabel) count.textContent = countLabel;
       Array.from(builder.children).forEach((wrapper, index) => {
         const label = wrapper.querySelector('[data-question-label]');
         if (label) {
@@ -3966,40 +4008,53 @@
           const typeLabel = select && select.selectedOptions.length
             ? select.selectedOptions[0].textContent
             : t('Question');
-          label.textContent = `Q${index + 1}: ${typeLabel}`;
+          const prompt = wrapper.querySelector('[data-question-prompt]').value.trim();
+          label.textContent = `${index + 1}. ${prompt || typeLabel}`;
+          label.title = prompt || typeLabel;
+          wrapper.querySelector('[data-move-question="up"]').disabled = index === 0;
+          wrapper.querySelector('[data-move-question="down"]').disabled = index === builder.children.length - 1;
         }
       });
     }
 
+    let questionSequence = 0;
     function addQuestion() {
       if (!builder) return;
+      builder.hidden = false;
+      document.getElementById('questionPreview').hidden = true;
+      document.getElementById('previewQuestions').textContent = t('Preview');
+      document.getElementById('previewQuestions').setAttribute('aria-expanded', 'false');
       const wrapper = document.createElement('details');
       wrapper.className = 'cfg-question-item';
       wrapper.open = true;
       wrapper.dataset.builderQuestion = 'true';
+      const questionId = `builder-question-${++questionSequence}`;
       wrapper.innerHTML = `
         <summary class="cfg-question-summary">
           <span class="cfg-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-right text-[10px]"></i></span>
           <strong data-question-label>Q: Short Answer</strong>
-          <span class="cfg-question-type-badge">Draft</span>
+          <span class="cfg-question-type-badge" data-question-badge>Question</span>
         </summary>
         <div class="cfg-question-body">
-          <textarea class="form-control" data-question-prompt rows="2" placeholder="Question prompt"></textarea>
-          <input class="form-control" data-question-help placeholder="Optional helper text">
+          <label for="${questionId}-prompt">Question</label><textarea id="${questionId}-prompt" class="form-control" data-question-prompt rows="2" placeholder="What would you like to ask?"></textarea>
+          <label for="${questionId}-help">Hint or instructions <span class="text-xs">(optional)</span></label><input id="${questionId}-help" class="form-control" data-question-help placeholder="Help students understand what to enter">
           <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-1">
-            <select class="form-control" data-question-type>
+            <label>Response type<select class="form-control" data-question-type>
               {% for value,label in question_types %}
                 <option value="{{ value }}">{{ label }}</option>
               {% endfor %}
-            </select>
+            </select></label>
             <label class="cfg-toggle justify-center"><input type="checkbox" data-question-required checked> Required</label>
           </div>
-          <textarea class="form-control" data-question-options rows="3" placeholder="Choices, one per line" data-choice-options></textarea>
+          <textarea class="form-control" data-question-options rows="3" aria-label="Answer choices, one per line" placeholder="Answer choices — one per line (at least two)" data-choice-options></textarea>
           <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-1" data-likert-labels data-likert-options hidden>
-            <input class="form-control" data-likert-min placeholder="Low label" value="Strongly disagree">
-            <input class="form-control" data-likert-max placeholder="High label" value="Strongly agree">
+            <input class="form-control" data-likert-min aria-label="Low scale label" placeholder="Low label" value="Strongly disagree">
+            <input class="form-control" data-likert-max aria-label="High scale label" placeholder="High label" value="Strongly agree">
           </div>
-          <div class="flex justify-end">
+          <div class="cfg-question-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-move-question="up" aria-label="Move question up">↑</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-move-question="down" aria-label="Move question down">↓</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-duplicate-question>Duplicate</button>
             <button type="button" class="btn btn-outline-secondary btn-sm" data-remove-question>Remove</button>
           </div>
         </div>
@@ -4007,6 +4062,8 @@
       builder.appendChild(wrapper);
       updateQuestionControls(wrapper);
       renumberQuestions();
+      wrapper.querySelector('[data-question-prompt]').focus();
+      return wrapper;
     }
 
     function updateQuestionControls(wrapper) {
@@ -4015,12 +4072,12 @@
       const options = wrapper.querySelector('[data-question-options]');
       const likert = wrapper.querySelector('[data-likert-labels]');
       const label = wrapper.querySelector('[data-question-label]');
+      options.setCustomValidity('');
+      options.setCustomValidity('');
       options.hidden = !['single_choice', 'multiple_choice'].includes(type);
       likert.hidden = type !== 'likert';
-      if (label && typeSelect.selectedOptions.length) {
-        const currentNumber = (label.textContent || 'Q').split(':')[0] || 'Q';
-        label.textContent = `${currentNumber}: ${typeSelect.selectedOptions[0].textContent}`;
-      }
+      wrapper.querySelector('[data-question-badge]').textContent = typeSelect.selectedOptions[0]?.textContent || '';
+      renumberQuestions();
     }
 
     function serializeQuestions() {
@@ -4051,13 +4108,67 @@
         }
       });
       builder.addEventListener('click', event => {
+        const wrapper = event.target.closest('[data-builder-question]');
+        const move = event.target.closest('[data-move-question]');
+        if (move) {
+          const sibling = move.dataset.moveQuestion === 'up' ? wrapper.previousElementSibling : wrapper.nextElementSibling;
+          if (sibling) builder.insertBefore(move.dataset.moveQuestion === 'up' ? wrapper : sibling, move.dataset.moveQuestion === 'up' ? sibling : wrapper);
+          renumberQuestions(); move.focus();
+        }
+        if (event.target.closest('[data-duplicate-question]')) {
+          const copy = addQuestion();
+          const originals = wrapper.querySelectorAll('input,textarea,select');
+          copy.querySelectorAll('input,textarea,select').forEach((field,index)=>{field.value=originals[index].value;field.checked=originals[index].checked;});
+          wrapper.after(copy);updateQuestionControls(copy);renumberQuestions();
+        }
         const removeButton = event.target.closest('[data-remove-question]');
         if (removeButton) {
           removeButton.closest('[data-builder-question]').remove();
           renumberQuestions();
         }
       });
-      form.addEventListener('submit', serializeQuestions);
+      form.addEventListener('submit', event => {
+        if (typeSelect.value === 'form') {
+          for (const wrapper of builder.children) {
+            const prompt = wrapper.querySelector('[data-question-prompt]');
+            const options = wrapper.querySelector('[data-question-options]');
+            const kind = wrapper.querySelector('[data-question-type]').value;
+            const choices = options.value.split('\n').map(value => value.trim()).filter(Boolean);
+            const invalid = !prompt.value.trim() ? prompt : (['single_choice','multiple_choice'].includes(kind) && (choices.length < 2 || new Set(choices).size !== choices.length) ? options : null);
+            if (invalid) {
+              event.preventDefault(); wrapper.open = true;
+              invalid.setCustomValidity(t(invalid === prompt ? 'Enter a question.' : 'Enter at least two distinct answer choices.'));
+              invalid.reportValidity(); invalid.focus(); return;
+            }
+          }
+        }
+        serializeQuestions();
+      });
+      builder.addEventListener('input', event => { event.target.setCustomValidity?.(''); renumberQuestions(); });
+      document.getElementById('collapseQuestions').addEventListener('click', () => { [...builder.children].forEach(question => question.open = false); });
+      document.getElementById('previewQuestions').addEventListener('click', event => {
+        const preview = document.getElementById('questionPreview');
+        preview.hidden = !preview.hidden;
+        event.currentTarget.setAttribute('aria-expanded', String(!preview.hidden));
+        event.currentTarget.textContent = t(preview.hidden ? 'Preview' : 'Edit questions');
+        builder.hidden = !preview.hidden;
+        if (preview.hidden) return;
+        preview.replaceChildren();
+        const title = document.createElement('h4'); title.textContent = t('Student preview'); preview.append(title);
+        const instructions = document.createElement('p'); instructions.textContent = form.elements.form_instructions.value; preview.append(instructions);
+        [...builder.children].forEach((question, index) => {
+          const field = document.createElement('fieldset');
+          const legend = document.createElement('legend');legend.textContent = `${index+1}. ${question.querySelector('[data-question-prompt]').value || t('Untitled question')}`;if (question.querySelector('[data-question-required]').checked) legend.append(document.createTextNode(' *'));field.append(legend);
+          const help = document.createElement('p');help.textContent = question.querySelector('[data-question-help]').value;field.append(help);
+          const kind = question.querySelector('[data-question-type]').value;
+          if (['single_choice','multiple_choice','likert'].includes(kind)) {
+            const choices = kind === 'likert' ? ['1','2','3','4','5'] : question.querySelector('[data-question-options]').value.split('\n').filter(value=>value.trim());
+            choices.forEach(choice=>{const label=document.createElement('label');const input=document.createElement('input');input.type=kind==='multiple_choice'?'checkbox':'radio';input.name=`preview-${index}`;label.append(input,document.createTextNode(' '+choice));field.append(label);});
+            if(kind==='likert'){const labels=document.createElement('p');labels.textContent=`${question.querySelector('[data-likert-min]').value} → ${question.querySelector('[data-likert-max]').value}`;field.append(labels);}
+          } else { const input=document.createElement(kind==='long_answer'?'textarea':'input');input.className='form-control';input.setAttribute('aria-label',legend.textContent);field.append(input); }
+          preview.append(field);
+        });
+      });
       if (stepNextButton) {
         stepNextButton.addEventListener('click', () => showModuleStep(currentModuleStep + 1));
       }
@@ -4211,7 +4322,7 @@
         const placeholder = document.createElement('div');
         placeholder.className = 'cfg-tree-empty';
         placeholder.dataset.treeEmpty = 'true';
-        placeholder.textContent = t('No modules yet.');
+        placeholder.textContent = t('No activities yet.');
         list.appendChild(placeholder);
       }
     }
@@ -4253,7 +4364,7 @@
       } else if (!hasModules && !empty) {
         const placeholder = document.createElement('div');
         placeholder.className = 'empty-state';
-        placeholder.textContent = t('No modules have been added to this unit yet.');
+        placeholder.textContent = t('No activities have been added to this unit yet.');
         list.appendChild(placeholder);
       }
     }
@@ -4444,7 +4555,7 @@
       }
       if (moduleTitleMatch) {
         const label = getTreeModule(moduleTitleMatch[1])?.querySelector('.cfg-tree-label');
-        if (label) label.textContent = target.value || t('Untitled module');
+        if (label) label.textContent = target.value || t('Untitled activity');
       }
     });
 
@@ -4522,8 +4633,8 @@
             : t('No automatic unlock rule is applied.');
         } else if (needsModule) {
           help.textContent = target && target.disabled
-            ? t('No earlier modules are available as valid targets.')
-            : t('Only earlier modules are listed so unlocks cannot depend on future work.');
+            ? t('No earlier activities are available as valid targets.')
+            : t('Only earlier activities are listed so unlocks cannot depend on future work.');
         } else if (needsCondition) {
           help.textContent = target && target.disabled
             ? t('No research conditions are configured for this course session.')
@@ -4664,14 +4775,14 @@
         button.classList.toggle('is-marked', marked);
         button.setAttribute('aria-pressed', marked ? 'true' : 'false');
         button.title = marked
-          ? t('Undo module deletion')
-          : t('Mark this module for deletion');
+          ? t('Undo activity deletion')
+          : t('Mark this activity for deletion');
       }
       if (icon) {
         icon.classList.toggle('bi-trash3', !marked);
         icon.classList.toggle('bi-arrow-counterclockwise', marked);
       }
-      if (label) label.textContent = marked ? t('Undo Delete') : t('Delete Module');
+      if (label) label.textContent = marked ? t('Undo Delete') : t('Delete Activity');
       if (note) note.hidden = !marked;
       syncTreeStateForOwner(owner);
       if (treeModule && marked) {
@@ -4733,7 +4844,7 @@
         if (!owner) return;
         const input = owner.querySelector('[data-delete-module-input]');
         const nextValue = !(input && input.value === '1');
-        if (nextValue && !window.confirm(t('Mark this module for deletion? It will be removed when you save changes.'))) {
+        if (nextValue && !window.confirm(t('Mark this activity for deletion? It will be removed when you save changes.'))) {
           return;
         }
         setModuleDeletionState(owner, nextValue);

@@ -605,3 +605,9 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+#copyAnonymousRosterButton.is-copied {
+  background-color: #047857;
+  border-color: #047857;
+  color: #fff;
+}

@@ -248,7 +248,7 @@ def fetch_modulearn_instance_analytics(request):
         graded_ids = graded_module_ids(grade_modules)
 
         def _module_type_key(m):
-            key = m.display_type_label or m.platform_name or m.provider_id or 'Modules'
+            key = m.display_type_label or m.platform_name or m.provider_id or 'Activities'
             return key if m.id in graded_ids else f"{key} · Practice"
 
         # Determine module types (these become "resource columns")
@@ -653,7 +653,7 @@ def fetch_module_capture_history(request):
             unit__course=course_instance.course,
         ).first()
         if not module:
-            return JsonResponse({"error": "Module not found for this course session"}, status=404)
+            return JsonResponse({"error": "Activity not found for this course session"}, status=404)
 
         enrollment, participant_session, error = _resolve_history_participant(
             course_instance,
@@ -746,7 +746,7 @@ def fetch_module_capture_history(request):
     except CourseInstance.DoesNotExist:
         return JsonResponse({"error": "Course session not found"}, status=404)
     except Exception as e:
-        logger.error("Error building module capture history: %s", str(e), exc_info=True)
+        logger.error("Error building activity capture history: %s", str(e), exc_info=True)
         return JsonResponse({"error": str(e)}, status=500)
 
 

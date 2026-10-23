@@ -123,7 +123,7 @@
     form.elements.content_url.value = item.selected_delivery.url;
     form.elements.catalog_source.value = item.source;
     form.elements.catalog_item_id.value = item.id;
-    selection.textContent = t('{catalog} · {provider} · {protocol} delivery selected. Review the details, then choose Add Module.', {catalog:item.source_label, provider:item.provider, protocol:item.selected_delivery.protocol});
+    selection.textContent = t('{catalog} · {provider} · {protocol} delivery selected. Review the details, then choose Add Activity.', {catalog:item.source_label, provider:item.provider, protocol:item.selected_delivery.protocol});
     selection.dataset.noUiTranslate = '';
     selection.hidden = false;
     close();

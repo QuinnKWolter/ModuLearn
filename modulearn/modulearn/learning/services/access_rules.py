@@ -278,10 +278,10 @@ def _rule_reason(rule: dict[str, Any] | None, *, subject_unit=None, subject_modu
 
     if condition_type in {"module_accessed", "resource_accessed"}:
         target = _module_title(target_id)
-        return f"Unlocks after {target} is accessed" if target else "Unlocks after the selected module is accessed"
+        return f"Unlocks after {target} is accessed" if target else "Unlocks after the selected activity is accessed"
     if condition_type in {"module_completed", "form_completed", "survey_completed", "quiz_completed"}:
         target = _module_title(target_id)
-        return f"Unlocks after {target} is completed" if target else "Unlocks after the selected module is completed"
+        return f"Unlocks after {target} is completed" if target else "Unlocks after the selected activity is completed"
     if condition_type == "unit_accessed":
         target = _unit_title(target_id)
         return f"Unlocks after {target} has been fully accessed" if target else "Unlocks after the selected unit has been fully accessed"
@@ -346,7 +346,7 @@ def _branch_reason(module) -> str:
         return ""
 
     def describe(rule):
-        source_title = getattr(rule.source_module, "title", "the source module")
+        source_title = getattr(rule.source_module, "title", "the source activity")
         condition_labels = {
             ModuleBranchRule.CONDITION_SUCCESS: f"{source_title} is answered correctly",
             ModuleBranchRule.CONDITION_FAILURE: f"{source_title} is answered incorrectly",

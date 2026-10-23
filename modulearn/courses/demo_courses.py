@@ -15,7 +15,7 @@ from .models import Course, CourseInstance, Module, ModuleBranchRule, Unit
 INTRO_PYTHON_DEMO_KEY = "intro_python"
 DEMO_COURSE_TITLE = "Intro to Python - SPLICE Demo Course"
 DEMO_COURSE_DESCRIPTION = (
-    "A lightweight, fully structured demo course: 10 units, 28 modules, "
+    "A lightweight, fully structured demo course: 10 units, 28 activities, "
     "linked to live SPLICE-delivered JSVEE and CodeCheck resources."
 )
 ADAPTIVE_BRANCHING_DEMO_KEY = "adaptive_branching"
@@ -356,7 +356,7 @@ def create_adaptive_branching_demo_course(instructor):
         unit = Unit.objects.create(
             course=course,
             title="Adaptive Branching Walkthrough",
-            description="A minimal sequence demonstrating personalized next-module unlocks.",
+            description="A minimal sequence demonstrating personalized next-activity unlocks.",
             order=10,
         )
 
@@ -432,7 +432,7 @@ DEMO_COURSE_OPTIONS = [
     {
         "key": ADAPTIVE_BRANCHING_DEMO_KEY,
         "title": ADAPTIVE_BRANCHING_DEMO_TITLE,
-        "summary": "Slim 4-module course with correct and incorrect outcome branches already configured.",
+        "summary": "Slim 4-activity course with correct and incorrect outcome branches already configured.",
         "create": create_adaptive_branching_demo_course,
         "exists": instructor_has_adaptive_branching_demo_course,
     },

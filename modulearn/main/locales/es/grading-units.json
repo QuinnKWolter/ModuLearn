@@ -73,5 +73,17 @@
   "First completion": "Primera finalización",
   "Last completion": "Última finalización",
   "Drag to pan; use +/− to zoom. Select an activity to open its interactions.": "Arrastre para desplazarse; use +/− para ampliar. Seleccione una actividad para abrir sus interacciones.",
-  "Changes apply when you save configuration. If no visible activities are marked graded, all visible course activities count equally.": "Los cambios se aplican al guardar. Si ninguna actividad visible está marcada como evaluable, todas las actividades visibles del curso cuentan por igual."
+  "Changes apply when you save configuration. If no visible activities are marked graded, all visible course activities count equally.": "Los cambios se aplican al guardar. Si ninguna actividad visible está marcada como evaluable, todas las actividades visibles del curso cuentan por igual.",
+  "Grades": "Calificaciones",
+  "Course timezone": "Zona horaria del curso",
+  "Timezone": "Zona horaria",
+  "Save timezone": "Guardar zona horaria",
+  "Schedule": "Horario",
+  "Unit schedule": "Horario de la unidad",
+  "Toggle graded activity": "Alternar actividad evaluable",
+  "Choose which activities count toward course completion.": "Elija qué actividades cuentan para completar el curso.",
+  "Save activity selections before opening grade weighting.": "Guarde la selección de actividades antes de abrir la ponderación de calificaciones.",
+  "If no visible activities are marked graded, all visible course activities count equally. Practice activity is still recorded.": "Si ninguna actividad visible está marcada como evaluable, todas cuentan por igual. La actividad de práctica se sigue registrando.",
+  "Blank means no date restriction.": "En blanco significa sin restricción de fecha.",
+  "Applies to every session of this course. Existing opening and closing instants stay unchanged. Save other configuration edits before changing timezone.": "Se aplica a todas las sesiones de este curso. Los momentos de apertura y cierre existentes no cambian. Guarde otros cambios de configuración antes de cambiar la zona horaria."
 }

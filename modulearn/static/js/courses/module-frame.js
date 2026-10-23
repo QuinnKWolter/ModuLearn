@@ -129,7 +129,7 @@
           payload: sessionPayload(reason, extra),
         }),
       }).catch(function (error) {
-        console.warn('Error recording module session event:', error);
+        console.warn('Error recording activity session event:', error);
       });
     }
 
@@ -314,7 +314,7 @@
             notifyProgressMaybeUpdated(data);
           })
           .catch(function (error) {
-            console.error('Error updating module progress:', error);
+            console.error('Error updating activity progress:', error);
           });
       }
     });

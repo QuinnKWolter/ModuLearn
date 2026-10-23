@@ -143,7 +143,7 @@
 {% endblock %}
 
 {% block content %}
-  {% include 'includes/page_header.html' with eyebrow='Student View' title='Your learning dashboard' description='Pick up where you left off, see your next best move, and review your recent module activity in one place.' %}
+  {% include 'includes/page_header.html' with eyebrow='Student View' title='Your learning dashboard' description='Pick up where you left off, see your next best move, and review your recent activity activity in one place.' %}
 
   <div class="student-dashboard-tight grid gap-6 lg:grid-cols-[minmax(0,1.72fr)_minmax(320px,1fr)]">
     <section class="space-y-5">
@@ -251,7 +251,7 @@
                             {% endfor %}
                           </div>
                         {% else %}
-                          <p class="text-sm text-slate-500 dark:text-slate-300 mb-0">No recent module activity yet.</p>
+                          <p class="text-sm text-slate-500 dark:text-slate-300 mb-0">No recent activity activity yet.</p>
                         {% endif %}
                       </div>
                     </div>

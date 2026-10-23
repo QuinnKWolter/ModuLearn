@@ -375,7 +375,7 @@ def resume_session(request, session_uuid):
 
     resume_module = get_participant_resume_module(participant_session)
     if not resume_module:
-        messages.info(request, "No available module was found for this study session.")
+        messages.info(request, "No available activity was found for this study session.")
         if getattr(request.user, "is_anonymous_participant", False):
             course_instance = participant_session.recruitment_source.resolved_course_instance
             if course_instance:

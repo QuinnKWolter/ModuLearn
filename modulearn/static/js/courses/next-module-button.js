@@ -12,7 +12,7 @@
   function setButtonState(button, state) {
     var label = button.querySelector('[data-next-label]');
     var icon = button.querySelector('[data-next-icon]');
-    var text = button.dataset.readyLabel || t('Next Module');
+    var text = button.dataset.readyLabel || t('Next Activity');
 
     button.classList.remove('btn-primary', 'btn-outline-secondary', 'opacity-75');
     button.dataset.nextState = state;
@@ -22,7 +22,7 @@
       button.setAttribute('aria-disabled', 'true');
       if (icon) icon.className = 'bi bi-arrow-repeat';
     } else if (state === 'empty') {
-      text = button.dataset.emptyLabel || t('No Unlocked Module');
+      text = button.dataset.emptyLabel || t('No Unlocked Activity');
       button.classList.add('btn-outline-secondary', 'opacity-75');
       button.setAttribute('aria-disabled', 'true');
       if (icon) icon.className = 'bi bi-lock';
@@ -52,7 +52,7 @@
       credentials: 'same-origin',
     })
       .then(function (response) {
-        if (!response.ok) throw new Error('Next module lookup failed');
+        if (!response.ok) throw new Error('Next activity lookup failed');
         return response.json();
       })
       .then(function (data) {
@@ -60,20 +60,20 @@
         if (data && data.available && data.url) {
           button.href = data.url;
           button.dataset.resolvedUrl = data.url;
-          button.title = data.title ? t('Open') + ' ' + data.title : t('Open the next module');
+          button.title = data.title ? t('Open') + ' ' + data.title : t('Open the next activity');
           setButtonState(button, 'ready');
           return data;
         }
         button.removeAttribute('data-resolved-url');
         button.href = '#';
-        button.title = (data && data.message) || t('No visible unlocked module is available yet');
+        button.title = (data && data.message) || t('No visible unlocked activity is available yet');
         setButtonState(button, 'empty');
         return data || null;
       })
       .catch(function () {
         button.href = '#';
         button.removeAttribute('data-resolved');
-        button.title = t('Could not check the next module. Try again.');
+        button.title = t('Could not check the next activity. Try again.');
         setButtonState(button, 'error');
         return null;
       });

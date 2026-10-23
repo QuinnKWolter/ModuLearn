@@ -12,7 +12,7 @@
       </div>
       <div class="cfg-flow-header-tools">
         <div class="cfg-flow-stats cfg-flow-stats--header" aria-label="Flow map totals">
-          <span><strong>{{ branch_modules|length }}</strong> modules</span>
+          <span><strong>{{ branch_modules|length }}</strong> activities</span>
           {% if research_conditions %}
             <span><strong>{{ research_conditions|length }}</strong> conditions</span>
           {% else %}
@@ -28,7 +28,7 @@
       <input type="hidden" name="action" value="update_branching">
 
       <div class="cfg-flow-body">
-        <section class="cfg-flow-map-shell" data-flow-map-shell aria-label="Adaptive branching module map">
+        <section class="cfg-flow-map-shell" data-flow-map-shell aria-label="Adaptive branching activity map">
           <div class="cfg-flow-map" data-flow-map>
             <svg class="cfg-flow-lines" data-flow-lines aria-hidden="true"></svg>
             <div class="cfg-flow-units">
@@ -63,12 +63,12 @@
                         </span>
                       </button>
                     {% empty %}
-                      <div class="cfg-tree-empty">No modules yet.</div>
+                      <div class="cfg-tree-empty">No activities yet.</div>
                     {% endfor %}
                   </div>
                 </section>
               {% empty %}
-                <div class="empty-state">Add units and modules before mapping adaptive branches.</div>
+                <div class="empty-state">Add units and activities before mapping adaptive branches.</div>
               {% endfor %}
             </div>
           </div>

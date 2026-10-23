@@ -367,7 +367,8 @@ function resourceColor(name) {
   const key = String(name).replace(/ · (Practice|Graded)$/, '').toLocaleLowerCase();
   let hash = 0;
   for (const letter of key) hash = ((hash * 31) + letter.codePointAt(0)) >>> 0;
-  return `hsl(${hash % 360} 65% 43%)`;
+  const palette = ['#2563eb', '#0d9488', '#7c3aed', '#0891b2', '#65a30d', '#a16207', '#4f46e5', '#059669', '#9333ea', '#0369a1'];
+  return palette[hash % palette.length];
 }
 
 function computeLearnerSummary(learner) {
@@ -564,7 +565,7 @@ async function fetchModuleCaptureHistory({ learnerId, moduleId, participantSessi
     throw new Error('No course session is selected.');
   }
   if (!moduleId) {
-    throw new Error('No module was selected.');
+    throw new Error('No activity was selected.');
   }
 
   const params = new URLSearchParams({ instance_id: instanceId, module_id: moduleId });
@@ -642,7 +643,7 @@ function showModuleCaptureHistoryModal(data) {
         <div class="raw-history-modal-header">
           <div class="raw-history-modal-heading">
             <div class="raw-history-modal-eyebrow">Raw Captured Data</div>
-            <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Module')}</h5>
+            <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Activity')}</h5>
             <div class="raw-history-modal-meta">${escapeHtml(data.learner?.name || data.learner?.id || '')} · ${escapeHtml(data.module?.unit_title || '')}</div>
           </div>
           <button type="button" data-bs-dismiss="modal" class="raw-history-modal-close">&times;</button>
@@ -657,7 +658,7 @@ function showModuleCaptureHistoryModal(data) {
           </div>
           ${items.length
             ? `<div class="raw-history-list">${items.map(renderRawHistoryItem).join('')}</div>`
-            : '<div class="raw-history-empty">No captured events or submissions are available for this module yet.</div>'}
+            : '<div class="raw-history-empty">No captured events or submissions are available for this activity yet.</div>'}
         </div>
       </div>
     </div>
@@ -726,7 +727,7 @@ function renderStudentProgressSummary(learner) {
                     <details class="student-resource-detail" style="--completion:${resourcePct}%;--type-color:${resourceColor(resource.name)}">
                       <summary>
                         <span>${escapeHtml(resource.name)}</span>
-                        <span>${resourcePct}% · ${activities.length} modules</span>
+                        <span>${resourcePct}% · ${activities.length} activities</span>
                       </summary>
                       <div class="mt-3 space-y-2">
                         ${activities.length ? activities.map(activity => {
@@ -834,7 +835,7 @@ function renderStudentEngagementView(data) {
         <div>
           <div class="font-bold">Engagement timeline for ${escapeHtml(data.learner?.id || '')}</div>
           <div class="text-sm text-gray-600 dark:text-gray-300">
-            Interaction-by-interaction events from module launch, iframe load, tab focus changes, and progress/result updates.
+            Interaction-by-interaction events from activity launch, iframe load, tab focus changes, and progress/result updates.
           </div>
         </div>
       </div>
@@ -860,7 +861,7 @@ function renderStudentEngagementView(data) {
                   <summary>
                     <div class="min-w-0">
                       <div class="font-bold truncate">▸ ${escapeHtml(module.title)}</div>
-                      <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(module.module_type || 'Module')}</div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(module.module_type || 'Activity')}</div>
                     </div>
                     <div class="engagement-module-actions">
                       <button
@@ -884,7 +885,7 @@ function renderStudentEngagementView(data) {
                   <div class="engagement-module-body">
                     ${module.events?.length
                       ? module.events.map(renderEngagementEvent).join('')
-                      : '<div class="empty-state py-4">No tracked interactions for this module yet.</div>'}
+                      : '<div class="empty-state py-4">No tracked interactions for this activity yet.</div>'}
                   </div>
                 </details>
               `).join('')}

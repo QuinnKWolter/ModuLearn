@@ -428,6 +428,10 @@
       justify-content: center;
     }
   }
+.course-activity-star {color:#94a3b8;}.course-activity-star.is-earned {color:#eab308;}
+.completed-activity-title {text-decoration:line-through;text-decoration-thickness:1px;opacity:.7;}
+.course-module-row.is-completed {background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.2);}
+.dark .course-module-row.is-completed {background:rgba(134,239,172,.1);}
 </style>
 {% endblock %}
 
@@ -510,12 +514,12 @@
           <div class="course-view-switch">
             <div>
               <div class="stat-kicker">Course View</div>
-              <div class="text-sm font-semibold text-slate-600 dark:text-slate-300">Switch between the module sequence and a provider-grouped grid.</div>
+              <div class="text-sm font-semibold text-slate-600 dark:text-slate-300">Switch between the activity sequence and a provider-grouped grid.</div>
             </div>
             <div class="course-view-tabs" role="group" aria-label="Course view mode">
               <button type="button" class="course-view-tab is-active" data-course-view-toggle="sequence" aria-pressed="true">
                 <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-                Module Sequence
+                Activity Sequence
               </button>
               <button type="button" class="course-view-tab" data-course-view-toggle="provider-grid" aria-pressed="false">
                 <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
@@ -567,17 +571,17 @@
                 {% if card.modules %}
                   <div class="course-module-list">
                     {% for module in card.modules %}
-                      <article class="course-module-row {% if not module.can_access %}is-locked{% endif %}">
+                      <article class="course-module-row {% if module.is_complete %}is-completed{% endif %} {% if not module.can_access %}is-locked{% endif %}">
                         <span class="{% if module.is_complete %}text-green-600{% else %}text-slate-400{% endif %}" aria-hidden="true">
                           <i class="{{ module.icon_class }}"></i>
                         </span>
                         <span class="min-w-0">
                           {% if module.can_access %}
                             <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="truncate font-semibold text-blue-700 dark:text-blue-300 hover:underline">
-                              {% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}
+                              {% if module.is_graded or module.is_complete %}<span title="{% if module.is_complete %}Completed activity{% else %}Graded activity{% endif %}" class="course-activity-star {% if module.is_complete %}is-earned{% endif %}">{% if module.is_complete %}★{% else %}☆{% endif %}</span> {% endif %}<span class="{% if module.is_complete %}completed-activity-title{% endif %}">{{ module.title }}</span>
                             </a>
                           {% else %}
-                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}</span>
+                            <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{% if module.is_graded or module.is_complete %}<span title="{% if module.is_complete %}Completed activity{% else %}Graded activity{% endif %}" class="course-activity-star {% if module.is_complete %}is-earned{% endif %}">{% if module.is_complete %}★{% else %}☆{% endif %}</span> {% endif %}<span class="{% if module.is_complete %}completed-activity-title{% endif %}">{{ module.title }}</span></span>
                           {% endif %}
                           <span class="block text-xs text-slate-500 dark:text-slate-400">
                             {{ module.type_label }} · {% if module.is_graded %}Graded{% else %}Practice{% endif %}{% if module.lock_reason and not module.can_access %} · {{ module.lock_reason }}{% endif %}
@@ -596,7 +600,7 @@
                     {% endfor %}
                   </div>
                 {% else %}
-                  <div class="empty-state">No modules have been added to this unit yet.</div>
+                  <div class="empty-state">No activities have been added to this unit yet.</div>
                 {% endif %}
               </div>
             </details>
@@ -616,7 +620,7 @@
                   </span>
                   <div>
                     <h2 class="text-xl font-bold mb-0">Provider Grid</h2>
-                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">Units are rows; provider IDs are columns. Open a cell to see the matching modules.</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">Units are rows; provider IDs are columns. Open a cell to see the matching activities.</p>
                   </div>
                 </div>
                 <div class="text-sm font-semibold text-slate-500 dark:text-slate-300">
@@ -655,15 +659,15 @@
                               {% if cell.module_count %}
                                 data-bs-toggle="modal"
                                 data-bs-target="#{{ cell.modal_id }}"
-                                aria-label="Open {{ row.unit.title }} {{ cell.column.label }} modules"
+                                aria-label="Open {{ row.unit.title }} {{ cell.column.label }} activities"
                               {% else %}
                                 disabled
-                                aria-label="No modules for {{ row.unit.title }} and {{ cell.column.label }}"
+                                aria-label="No activities for {{ row.unit.title }} and {{ cell.column.label }}"
                               {% endif %}
                             >
                               {% if cell.module_count %}
                                 <span class="provider-grid-pct">{{ cell.progress_percent }}%</span>
-                                <span class="provider-grid-counts" aria-label="{{ cell.module_count }} modules">
+                                <span class="provider-grid-counts" aria-label="{{ cell.module_count }} activities">
                                   <span><i class="fa-solid fa-check text-green-600" aria-hidden="true"></i>{{ cell.completed_count }}</span>
                                   <span><i class="fa-solid fa-play text-sky-600" aria-hidden="true"></i>{{ cell.in_progress_count }}</span>
                                   <span><i class="fa-regular fa-circle text-slate-500" aria-hidden="true"></i>{{ cell.todo_count }}</span>
@@ -671,9 +675,9 @@
                                     <span><i class="fa-solid fa-lock text-amber-600" aria-hidden="true"></i>{{ cell.locked_count }}</span>
                                   {% endif %}
                                 </span>
-                                <span class="text-[0.68rem] font-black uppercase tracking-wide">{{ cell.module_count }} module{{ cell.module_count|pluralize }}</span>
+                                <span class="text-[0.68rem] font-black uppercase tracking-wide">{{ cell.module_count }} activit{{ cell.module_count|pluralize:"y,ies" }}</span>
                               {% else %}
-                                <span class="font-bold">No modules</span>
+                                <span class="font-bold">No activities</span>
                               {% endif %}
                             </button>
                           </td>
@@ -716,17 +720,17 @@
                         </div>
                         <div class="provider-modal-list">
                           {% for module in cell.modules %}
-                            <article class="course-module-row {% if not module.can_access %}is-locked{% endif %}">
+                            <article class="course-module-row {% if module.is_complete %}is-completed{% endif %} {% if not module.can_access %}is-locked{% endif %}">
                               <span class="{% if module.is_complete %}text-green-600{% else %}text-slate-400{% endif %}" aria-hidden="true">
                                 <i class="{{ module.icon_class }}"></i>
                               </span>
                               <span class="min-w-0">
                                 {% if module.can_access %}
                                   <a href="{% url 'courses:launch_iframe_module' current_instance.id module.id %}" class="truncate font-semibold text-blue-700 dark:text-blue-300 hover:underline">
-                                    {% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}
+                                    {% if module.is_graded or module.is_complete %}<span title="{% if module.is_complete %}Completed activity{% else %}Graded activity{% endif %}" class="course-activity-star {% if module.is_complete %}is-earned{% endif %}">{% if module.is_complete %}★{% else %}☆{% endif %}</span> {% endif %}<span class="{% if module.is_complete %}completed-activity-title{% endif %}">{{ module.title }}</span>
                                   </a>
                                 {% else %}
-                                  <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{% if module.is_graded %}<span title="Graded activity" aria-label="Graded activity" class="text-amber-600 dark:text-amber-300">★</span> {% endif %}{{ module.title }}</span>
+                                  <span class="truncate font-semibold text-slate-600 dark:text-slate-300">{% if module.is_graded or module.is_complete %}<span title="{% if module.is_complete %}Completed activity{% else %}Graded activity{% endif %}" class="course-activity-star {% if module.is_complete %}is-earned{% endif %}">{% if module.is_complete %}★{% else %}☆{% endif %}</span> {% endif %}<span class="{% if module.is_complete %}completed-activity-title{% endif %}">{{ module.title }}</span></span>
                                 {% endif %}
                                 <span class="block text-xs text-slate-500 dark:text-slate-400">
                                   {{ module.type_label }} · {% if module.is_graded %}Graded{% else %}Practice{% endif %}{% if module.provider_id %} · {{ module.provider_id }}{% endif %}
@@ -756,7 +760,7 @@
       {% elif not user.is_authenticated %}
         <div class="empty-state">
           <div class="text-xl font-semibold text-slate-700 dark:text-slate-200">Sign in to access this course</div>
-          <p class="mt-2">Student enrollment and module progress are available after authentication.</p>
+          <p class="mt-2">Student enrollment and activity progress are available after authentication.</p>
         </div>
       {% endif %}
     </section>

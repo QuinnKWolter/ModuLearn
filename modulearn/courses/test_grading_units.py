@@ -197,3 +197,23 @@ class GradingAndUnitTests(TestCase):
             with copies[0].content_file.open('rb') as uploaded:self.assertEqual(uploaded.read(),b'unit notes')
             self.assertEqual(copies[1].form.instructions,'Read carefully')
             self.assertEqual(copies[1].form.questions.get().prompt,'What did you learn?')
+
+    def test_course_timezone_preserves_instants_and_parses_schedule(self):
+        from modulearn.learning.services.unit_packages import parse_schedule
+        from datetime import timezone as utc
+        self.client.force_login(self.teacher)
+        url=reverse('courses:course_configuration',args=[self.instance.id])
+        instant=timezone.now()
+        Unit.objects.filter(pk=self.units[0].pk).update(opens_at=instant)
+        self.client.post(url,{'action':'update_timezone','course_timezone':'America/New_York'})
+        self.course.refresh_from_db();self.units[0].refresh_from_db()
+        self.assertEqual(self.course.schedule_timezone,'America/New_York')
+        self.assertEqual(self.units[0].opens_at,instant)
+        start,_=parse_schedule('2030-01-01T10:00',None,zone=self.course.schedule_timezone)
+        self.assertEqual(start.astimezone(utc.utc).hour,15)
+        for bad in ['2030-03-10T02:30','2030-11-03T01:30']:
+            with self.assertRaises(ValueError):parse_schedule(bad,None,zone='America/New_York')
+        self.client.post(url,{'action':'update_timezone','course_timezone':'Not/AZone'})
+        self.course.refresh_from_db();self.assertEqual(self.course.schedule_timezone,'America/New_York')
+        self.client.force_login(self.student)
+        self.assertEqual(self.client.post(url,{'action':'update_timezone','course_timezone':'UTC'}).status_code,403)

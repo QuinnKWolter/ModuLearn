@@ -66,7 +66,7 @@ def _build_provider_grid(unit_cards):
                 else 0
             )
             if not module_count:
-                status = "No modules"
+                status = "No activities"
                 status_class = "is-empty"
             elif completed_count == module_count:
                 status = "Complete"

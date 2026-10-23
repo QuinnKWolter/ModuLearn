@@ -163,7 +163,7 @@ def resolve_nodes(dataset, course):
         if len(candidates) == 1 and not needs_variant_match:
             resolved[key] = candidates[0]
         else:
-            issues.append({'key': key, **node, 'reason': 'Code variant requires explicit match' if candidates and needs_variant_match else 'Ambiguous match' if candidates else 'No matching module',
+            issues.append({'key': key, **node, 'reason': 'Code variant requires explicit match' if candidates and needs_variant_match else 'Ambiguous match' if candidates else 'No matching activity',
                            'candidates': [m.pk for m in candidates]})
     return resolved, issues, modules
 

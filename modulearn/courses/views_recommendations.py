@@ -55,7 +55,7 @@ def manage(request, instance_id):
                         'course': course, 'enabled': dataset.enabled if dataset else False,
                         **parsed, 'bindings': {}, 'options': dataset.options if dataset else {},
                     })
-                messages.success(request, 'Recommendation files imported. Review module matches below before enabling the plugin.')
+                messages.success(request, 'Recommendation files imported. Review activity matches below before enabling the plugin.')
             elif action in {'settings', 'binding', 'practice'} and dataset:
                 with transaction.atomic():
                     dataset = StaticRecommendationSet.objects.select_for_update().get(pk=dataset.pk)
@@ -105,7 +105,7 @@ def manage(request, instance_id):
                                 supported_protocols=['splice'], is_recommendation_only=True)
                             module_id = module.pk
                         if module_id and not course.units.filter(modules__id=module_id).exists():
-                            raise ValueError('Choose a module in this course.')
+                            raise ValueError('Choose a activity in this course.')
                         dataset.bindings[key] = module_id
                         # An explicit instructor override replaces imported placement aliases.
                         dataset.nodes[key].pop('source_module_ids', None)
@@ -199,7 +199,7 @@ def queue(request, instance_id):
     from modulearn.learning.services.recommendation_tracking import practice_items
     source = request.GET.get('source')
     if source and not source.isdecimal():
-        return JsonResponse({'error': 'Invalid source module.'}, status=400)
+        return JsonResponse({'error': 'Invalid source activity.'}, status=400)
     instance = get_object_or_404(CourseInstance, pk=instance_id)
     options = StaticRecommendationSet.objects.filter(course_instance=instance).values_list('options', flat=True).first() or {}
     presentation = {'mode': 'modal_then_sidebar', 'animate': options.get('animate', True) is not False}

@@ -36,7 +36,7 @@
             {% elif card.session.is_finished %}
               <span class="btn btn-outline-secondary justify-center opacity-75">Finished</span>
             {% else %}
-              <span class="btn btn-outline-secondary justify-center opacity-75">No module available</span>
+              <span class="btn btn-outline-secondary justify-center opacity-75">No activity available</span>
             {% endif %}
             <a class="btn btn-outline-secondary justify-center" href="{% url 'recruitment:complete' card.session.uuid %}">
               Finish Study

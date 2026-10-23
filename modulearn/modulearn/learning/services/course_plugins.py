@@ -5,12 +5,12 @@ AVAILABLE_COURSE_PLUGINS = [
     {
         "key": "guided_sequence",
         "name": "Guided Sequence",
-        "summary": "Defaults the course to module-by-module progression where each module unlocks after the previous one is completed.",
+        "summary": "Defaults the course to activity-by-activity progression where each activity unlocks after the previous one is completed.",
     },
     {
         "key": "adaptive_branching",
         "name": "Adaptive Branching",
-        "summary": "Unlocks different next modules for each learner based on success, failure, completion, or score rules.",
+        "summary": "Unlocks different next activities for each learner based on success, failure, completion, or score rules.",
     },
     {
         "key": "static_recommendations",
@@ -20,7 +20,7 @@ AVAILABLE_COURSE_PLUGINS = [
     {
         "key": "dynamic_recommendations",
         "name": "Dynamic Recommendations",
-        "summary": "Runtime recommendation hooks can suggest modules after failed or low-success work.",
+        "summary": "Runtime recommendation hooks can suggest activities after failed or low-success work.",
     },
 ]
 

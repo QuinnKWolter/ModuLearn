@@ -234,7 +234,7 @@ def _module_entries_for_unit(unit_data):
                 or activity.get("platform_name")
                 or activity.get("provider_id")
                 or activity.get("module_type")
-                or "Modules"
+                or "Activities"
             )
             entries.append((resource_id, activity))
         return entries
@@ -345,7 +345,7 @@ def _content_file_export_payload(module, *, include_file_data=True):
                 payload["encoding"] = "base64"
                 payload["data_base64"] = base64.b64encode(file_handle.read()).decode("ascii")
         except Exception as exc:
-            logger.warning("Could not embed uploaded file for module %s: %s", module.id, exc)
+            logger.warning("Could not embed uploaded file for activity %s: %s", module.id, exc)
             payload["export_warning"] = "file data could not be read"
     return payload
 
@@ -362,7 +362,7 @@ def _restore_content_file(module, activity):
     try:
         file_bytes = base64.b64decode(file_payload["data_base64"])
     except Exception as exc:
-        logger.warning("Could not decode uploaded file for module %s: %s", module.id, exc)
+        logger.warning("Could not decode uploaded file for activity %s: %s", module.id, exc)
         return False
     module.content_file.save(filename, ContentFile(file_bytes), save=False)
     return True
@@ -508,12 +508,17 @@ def create_course_from_json(
         else bool(course_data.get("is_locked_for_research", False))
     )
 
+    schedule_timezone = course_data.get('schedule_timezone') or ''
+    if schedule_timezone:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(schedule_timezone)
     course, created = Course.objects.get_or_create(
         id=course_id,
         defaults={
             "title": course_title,
             "description": course_description or "",
             "plugin_config": plugin_config,
+            "schedule_timezone": schedule_timezone,
             "is_locked_for_research": is_locked_for_research,
         },
     )
@@ -689,7 +694,7 @@ def create_course_from_json(
 
             module_lookup[(unit.title, module.title)] = module
             pending_unlock_rules.append((module, activity.get("unlock_rule") or {}, activity.get("unlock_rule_portable") or {}))
-            logger.debug("Module %s: %s", "created" if module_created else "retrieved", module)
+            logger.debug("Activity %s: %s", "created" if module_created else "retrieved", module)
 
     for model_object, raw_rule, portable_rule in pending_unlock_rules:
         resolved_rule = _resolve_unlock_rule(portable_rule, raw_rule, module_lookup)
@@ -800,6 +805,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
         "description": course.description,
         "is_locked_for_research": course.is_locked_for_research,
         "plugin_config": normalize_course_plugin_config(course.plugin_config),
+        "schedule_timezone": course.schedule_timezone,
         "provider_protocols": provider_protocols,
         "instructors": [
             {

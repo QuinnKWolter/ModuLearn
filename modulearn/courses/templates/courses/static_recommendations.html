@@ -53,7 +53,7 @@
     <form method="post" class="rec-binding mt-4">
       {% csrf_token %}<input type="hidden" name="action" value="binding"><input type="hidden" name="revision" value="{{ revision }}">
       <label>Activity in uploaded files<select id="recBindingNode" name="node" class="form-control" required></select></label>
-      <label>Course module<select name="module" class="form-control"><option value="0">Leave unmatched / exclude</option>{% for module in modules %}<option value="{{ module.id }}">{{ module.unit.title }} / {{ module.title }} ({{ module.provider_id }})</option>{% endfor %}</select></label>
+      <label>Course activity<select name="module" class="form-control"><option value="0">Leave unmatched / exclude</option>{% for module in modules %}<option value="{{ module.id }}">{{ module.unit.title }} / {{ module.title }} ({{ module.provider_id }})</option>{% endfor %}</select></label>
       <button type="submit" class="btn btn-outline-primary">Save match</button>
       <label>{% ui 'Or add a new practice activity by URL' %}<input type="url" name="new_content_url" class="form-control" placeholder="https://…"><small>{% ui 'Choose Leave unmatched above to create a practice-only activity and match it automatically.' %}</small></label>
     </form>

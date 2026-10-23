@@ -17,7 +17,7 @@ def normalize_policy(raw, unit_ids):
         return value
     mode = raw.get('mode', 'modules')
     if mode not in {'modules', 'units'}:
-        raise ValueError('Choose module completion or unit targets.')
+        raise ValueError('Choose activity completion or unit targets.')
     points = raw.get('points')
     result = {
         'mode': mode,

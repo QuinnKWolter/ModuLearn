@@ -43,7 +43,7 @@ def annotation_metadata(module):
             metadata = {'example': unquote(parsed.path.rstrip('/').split('/')[-1]), 'lines': sorted(parser.lines)}
             cache.set(key, metadata, 86400)
         except Exception:
-            logger.warning('Unable to retrieve AnnEx annotation metadata for module %s', module.pk, exc_info=True)
+            logger.warning('Unable to retrieve AnnEx annotation metadata for activity %s', module.pk, exc_info=True)
             return None
     return metadata
 

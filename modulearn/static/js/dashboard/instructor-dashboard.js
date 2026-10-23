@@ -196,7 +196,7 @@
               <div class="text-xs text-slate-500 dark:text-slate-300">${escapeHtml(learnerSub)}</div>
             </td>
             <td class="max-w-xs">
-              <div class="truncate font-semibold" title="${escapeHtml(event.module_title || '')}">${escapeHtml(event.module_title || t('Module activity'))}</div>
+              <div class="truncate font-semibold" title="${escapeHtml(event.module_title || '')}">${escapeHtml(event.module_title || t('Activity activity'))}</div>
             </td>
             <td><span class="activity-event-pill ${activityEventClass(event.event_type)}">${escapeHtml(activityEventLabel(event.event_type))}</span></td>
             <td class="text-right font-semibold">${escapeHtml(progress)}</td>
@@ -995,6 +995,13 @@
         submitButton.disabled = true;
         submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${t('Generating...')}`;
 
+        const progressPanel = document.getElementById('anonymousGenerationProgress');
+        const progressBar = document.getElementById('anonymousGenerationBar');
+        const progressStatus = document.getElementById('anonymousGenerationStatus');
+        rosterOutput?.classList.add('hidden');
+        progressPanel?.classList.remove('hidden');
+        if (progressBar) { progressBar.max = count; progressBar.value = 0; }
+        if (progressStatus) progressStatus.textContent = `${t('Generating...')} 0/${count}`;
         let generatedCount = 0;
         const prefix = prefixInput.value.trim() || 'anon';
         const passwordMode = passwordMatchesUsernameInput && passwordMatchesUsernameInput.checked ? 'username' : 'random';
@@ -1030,11 +1037,10 @@
                 ? `${rosterText.value.trimEnd()}\n${batchText.split('\n').slice(1).join('\n')}`
                 : batchText;
             }
-            if (rosterOutput) {
-              rosterOutput.classList.remove('hidden');
-            }
             generatedCount += data.accounts.length;
             submitButton.textContent = `${t('Generating...')} ${generatedCount}/${count}`;
+            if (progressBar) progressBar.value = generatedCount;
+            if (progressStatus) progressStatus.textContent = submitButton.textContent;
           }
           await loadEnrollments(courseInstanceId);
         } catch (error) {
@@ -1043,6 +1049,9 @@
           // A failed response can follow a committed request. Never retry silently.
           await loadEnrollments(courseInstanceId);
         } finally {
+          progressPanel?.classList.add('hidden');
+          // Reveal once, including safely retained credentials after an interruption.
+          if (rosterText?.value.trim()) rosterOutput?.classList.remove('hidden');
           generatingAnonymousAccounts = false;
           submitButton.disabled = Boolean(countInput && countInput.disabled);
           submitButton.innerHTML = `<i class="bi bi-person-badge mr-1"></i>${t('Generate Accounts')}`;
@@ -1055,17 +1064,27 @@
       copyAnonymousRosterButton.addEventListener('click', async function () {
         const rosterText = document.getElementById('anonymousRosterText');
         if (!rosterText || !rosterText.value.trim()) return;
-        const originalText = this.innerHTML;
+        const indicateCopied = () => {
+          const status = document.getElementById('anonymousCopyStatus');
+          if (status) { status.textContent = ''; window.setTimeout(() => { status.textContent = t('Copied'); }, 20); }
+          if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            this.animate([
+              {transform:'scale(1)',boxShadow:'0 0 0 0 rgba(16,185,129,.6)'},
+              {transform:'scale(1.12)',boxShadow:'0 0 0 8px rgba(16,185,129,0)'},
+              {transform:'scale(1)',boxShadow:'0 0 0 0 rgba(16,185,129,0)'}
+            ], {duration:500,easing:'ease-out'});
+          }
+          this.classList.add('is-copied');
+          window.clearTimeout(this._copiedTimer);
+          this._copiedTimer = window.setTimeout(() => this.classList.remove('is-copied'), 1200);
+        };
         try {
           await navigator.clipboard.writeText(rosterText.value);
-          this.innerHTML = `<i class="bi bi-check2 mr-1"></i>${t('Copied')}`;
-          window.setTimeout(() => {
-            this.innerHTML = originalText;
-          }, 1400);
+          indicateCopied();
         } catch (_error) {
           rosterText.focus();
           rosterText.select();
-          document.execCommand('copy');
+          if (document.execCommand('copy')) indicateCopied();
         }
       });
     }

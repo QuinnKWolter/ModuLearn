@@ -38,10 +38,10 @@ class Command(BaseCommand):
                 label = {'username': row.user.username, 'session': row.enrollment.course_instance_id,
                          'module': row.module_id, 'progress_id': row.pk}
                 if row.module.is_recommendation_only or not row.module.allow_resubmission:
-                    report['skipped'].append({**label, 'reason': 'Practice-only or single-attempt module requires separate review.'})
+                    report['skipped'].append({**label, 'reason': 'Practice-only or single-attempt activity requires separate review.'})
                     continue
                 if row.user_id != row.enrollment.student_id or row.module.unit.course_id != row.enrollment.course_instance.course_id:
-                    report['skipped'].append({**label, 'reason': 'Enrollment/module ownership mismatch.'})
+                    report['skipped'].append({**label, 'reason': 'Enrollment/activity ownership mismatch.'})
                     continue
                 attempts = list(row.events.filter(event_type='attempt').order_by('id'))
                 handled = {e.payload.get('transport_id') for e in attempts if isinstance(e.payload, dict)} - {None, ''}

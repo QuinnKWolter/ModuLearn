@@ -16,14 +16,24 @@ from .access_rules import next_order_for_unit, sync_module_progress_for_course
 SCHEMA = 'modulearn.unit.v2'
 
 
-def parse_schedule(opens, closes):
+def parse_schedule(opens, closes, zone=None):
     def parse(value):
         if not value:
             return None
         result = value if isinstance(value, datetime) else parse_datetime(str(value))
         if result is None:
             raise ValueError('Enter a valid date and time.')
-        return timezone.make_aware(result) if timezone.is_naive(result) else result
+        if timezone.is_naive(result):
+            from zoneinfo import ZoneInfo
+            from datetime import timezone as dt_timezone
+            tz = ZoneInfo(zone) if zone else timezone.get_current_timezone()
+            aware = timezone.make_aware(result, tz)
+            if aware.astimezone(dt_timezone.utc).astimezone(tz).replace(tzinfo=None) != result:
+                raise ValueError('This local time does not exist because of a daylight-saving change. Choose another time.')
+            if aware.utcoffset() != aware.replace(fold=1).utcoffset():
+                raise ValueError('This local time occurs twice because of a daylight-saving change. Choose an unambiguous time.')
+            return aware
+        return result
     opens, closes = parse(opens), parse(closes)
     if opens and closes and closes <= opens:
         raise ValueError('The closing date must be after the opening date.')
@@ -92,9 +102,9 @@ def _import_unit(course, payload, files):
         raise ValueError('Upload a ModuLearn unit export (modulearn.unit.v2).')
     data = payload.get('unit')
     if not isinstance(data, dict) or not isinstance(data.get('modules'), list):
-        raise ValueError('The unit must contain a list of modules.')
+        raise ValueError('The unit must contain a list of activities.')
     if len(data['modules']) > 1000:
-        raise ValueError('A unit package may contain at most 1,000 modules.')
+        raise ValueError('A unit package may contain at most 1,000 activities.')
     title = str(data.get('title') or data.get('name') or '').strip()
     if not title or len(title) > 255:
         raise ValueError('A unit title of 1–255 characters is required.')
@@ -106,11 +116,11 @@ def _import_unit(course, payload, files):
     warnings = [str(warning) for warning in payload.get('warnings', []) if isinstance(warning, str)]
     for index, activity in enumerate(data['modules']):
         if not isinstance(activity, dict) or not isinstance(activity.get('ref'), str) or not activity['ref'] or activity['ref'] in lookup:
-            raise ValueError('Every module needs a unique package reference.')
+            raise ValueError('Every activity needs a unique package reference.')
         module_title = str(activity.get('title') or activity.get('name') or '').strip()
         module_type = activity.get('module_type', Module.MODULE_TYPE_IMPORTED)
         if not module_title or len(module_title) > 255 or module_type not in dict(Module.MODULE_TYPE_CHOICES):
-            raise ValueError('A module has an invalid title or type.')
+            raise ValueError('A activity has an invalid title or type.')
         values = {key: deepcopy(activity[key]) for key in (
             'description', 'content_url', 'provider_id', 'platform_name', 'author',
             'supported_protocols', 'content_data', 'keywords', 'resource_link_id'
@@ -119,7 +129,7 @@ def _import_unit(course, payload, files):
             try:
                 URLValidator(schemes=['http', 'https'])(values['content_url'])
             except ValidationError:
-                raise ValueError('Module URLs must use HTTP or HTTPS.') from None
+                raise ValueError('Activity URLs must use HTTP or HTTPS.') from None
         for key, default in [('is_visible', True), ('is_locked', False), ('allow_resubmission', True),
                              ('is_graded', True), ('is_recommendation_only', False)]:
             values[key] = activity.get(key, default) is True
@@ -129,7 +139,7 @@ def _import_unit(course, payload, files):
                                        order=(index + 1) * 10, **values)
         file_data = activity.get('content_file')
         if file_data and (not isinstance(file_data, dict) or not file_data.get('data_base64')):
-            raise ValueError('A file module is missing its embedded file. Export it again from the source.')
+            raise ValueError('A file activity is missing its embedded file. Export it again from the source.')
         if file_data:
             try:
                 base64.b64decode(file_data['data_base64'], validate=True)
@@ -165,7 +175,7 @@ def _import_unit(course, payload, files):
         obj.save(update_fields=['unlock_rule', 'is_locked'])
     for rule in payload.get('branch_rules', []):
         if not isinstance(rule, dict) or rule.get('source_ref') not in lookup or rule.get('target_ref') not in lookup:
-            raise ValueError('An adaptive branch has an invalid module reference.')
+            raise ValueError('An adaptive branch has an invalid activity reference.')
         if rule.get('condition_type') not in dict(ModuleBranchRule.CONDITION_CHOICES):
             raise ValueError('Invalid adaptive branch condition.')
         ModuleBranchRule.objects.create(course=course, source_module=lookup[rule['source_ref']],

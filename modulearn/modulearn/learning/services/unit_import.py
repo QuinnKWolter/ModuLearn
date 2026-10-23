@@ -25,7 +25,7 @@ def validate_unit_package(raw):
         raise ValueError('A unit title of at most 255 characters is required.')
     entries = unit.get('modules')
     if not isinstance(entries, list) or not 1 <= len(entries) <= 500:
-        raise ValueError('Include between 1 and 500 modules.')
+        raise ValueError('Include between 1 and 500 activities.')
     result = []
     titles = set()
     for index, entry in enumerate(entries, 1):
