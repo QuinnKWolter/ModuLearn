@@ -14,6 +14,25 @@ def percentage(value):
     return float(value)
 
 
+def free_coding_test_score(data):
+    """Equal-weight test percentage, only when every reported result is explicit.
+
+    A hidden test still contributes its boolean result; never infer a pass from
+    output text or from an absent result. Contradictory summaries are not repaired.
+    """
+    if not isinstance(data, dict) or type(data.get('isCorrect')) is not bool:
+        return None
+    tests = data.get('testCasesResults')
+    if not isinstance(tests, list) or not tests or any(
+        not isinstance(test, dict) or type(test.get('passed')) is not bool for test in tests
+    ):
+        return None
+    passed = sum(test['passed'] for test in tests)
+    if data['isCorrect'] != (passed == len(tests)):
+        return None
+    return 100.0 * passed / len(tests)
+
+
 @transaction.atomic
 def record_cupcake_event(progress, envelope):
     if not isinstance(envelope, dict) or len(json.dumps(envelope, allow_nan=False)) > 250000:
@@ -42,6 +61,10 @@ def record_cupcake_event(progress, envelope):
         if not isinstance(data.get('isCorrect'), bool):
             raise ValueError('Answer checks must include boolean isCorrect.')
         score = percentage(data['blanksSucceededPercent']) if kind == 'code-completion' and 'blanksSucceededPercent' in data else (100.0 if data['isCorrect'] else 0.0)
+        if kind == 'free-coding':
+            partial_score = free_coding_test_score(data)
+            if partial_score is not None:
+                score = partial_score
         value = score / 100
     elif kind == 'worked-example' and name in {'explanationOpened', 'explanationNavigated'}:
         reported = data.get('progress', {})

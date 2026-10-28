@@ -36,22 +36,53 @@
       });
     }
 
+    var latestAnswerCheck = null;
+    function showAnswerStatus(message, state, saved) {
+      if (message !== latestAnswerCheck) return;
+      var status = document.getElementById('activity-save-status');
+      if (!status) {
+        status = document.createElement('div');
+        status.id = 'activity-save-status';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        status.style.cssText = 'padding:.5rem .75rem;margin-bottom:.5rem;border-radius:.5rem;font-size:.95rem;border:1px solid currentColor';
+        iframe.parentNode.insertBefore(status, iframe);
+      }
+      var t = function (text) { return window.ModuLearnI18n?.t(text) || text; };
+      var data = message.eventData || {};
+      var tests = Array.isArray(data.testCasesResults) ? data.testCasesResults : [];
+      var passed = tests.filter(function (test) { return test.passed === true; }).length;
+      var text;
+      if (state === 'saving') text = t('Saving your result\u2026');
+      else if (state === 'error') text = t('Your result could not be saved. Stay on this page and check your answer again.');
+      else if (data.isCorrect === true && saved?.module_progress?.is_complete) text = t('Activity completed \u2014 saved to your course.');
+      else if (data.isCorrect === true) text = t('Answer correct \u2014 result saved.');
+      else if (saved?.module_progress?.is_complete) text = t('Attempt saved. Your earlier completion is retained.');
+      else text = t('Result saved. Some tests are still failing, including possibly hidden tests. All tests must pass to complete this activity.');
+      if (state === 'saved' && tests.length) text += ' ' + passed + '/' + tests.length + ' ' + t('tests passed.');
+      status.textContent = text;
+      status.style.color = state === 'error' ? '#b91c1c' : state === 'saved' && data.isCorrect ? '#15803d' : '#92400e';
+      status.style.background = state === 'error' ? '#fef2f2' : state === 'saved' && data.isCorrect ? '#f0fdf4' : '#fffbeb';
+    }
+
     function recordProviderEvent(message) {
       if (config.previewMode || !config.progressUrl) return;
+      var answerCheck = message.type === 'cupcake:log' && message.activityType === 'free-coding' && message.eventName === 'answerChecked';
+      if (answerCheck) { latestAnswerCheck = message; showAnswerStatus(message, 'saving'); }
       var eventField = message.subject === 'SPLICE.sendEvent' ? 'splice_event' : 'provider_event';
       var body = JSON.stringify({course_instance_id: config.courseInstanceId || null,
         [eventField]: {event_id: uuid(), message: message}});
-      if (body.length > 250000) return;
+      if (body.length > 250000) { if (answerCheck) showAnswerStatus(message, 'error'); return; }
       providerQueue = providerQueue.then(async function () {
         for (var attempt = 0; attempt < 3; attempt++) {
           try {
             var response = await fetch(config.progressUrl, {method: 'POST', keepalive: body.length < 60000,
               headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfNode ? csrfNode.value : ''}, body: body});
-            if (response.ok) { notifyProgressMaybeUpdated(await response.json()); return; }
-            if (response.status < 500) { console.error('Activity event rejected: ' + response.status); return; }
+            if (response.ok) { var saved = await response.json(); notifyProgressMaybeUpdated(saved); if (answerCheck) showAnswerStatus(message, 'saved', saved); return; }
+            if (response.status < 500) { if (answerCheck) showAnswerStatus(message, 'error'); console.error('Activity event rejected: ' + response.status); return; }
             throw new Error('Activity event failed: ' + response.status);
           } catch (error) {
-            if (attempt === 2) { console.error('Activity event could not be saved', error); return; }
+            if (attempt === 2) { if (answerCheck) showAnswerStatus(message, 'error'); console.error('Activity event could not be saved', error); return; }
           }
           await new Promise(function (resolve) { setTimeout(resolve, 300 * (attempt + 1)); });
         }

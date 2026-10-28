@@ -35,5 +35,12 @@
   "Course Timezone": "Zona horaria del curso",
   "Import Unit": "Importar unidad",
   "Import as New Unit": "Importar como unidad nueva",
-  "Save your configuration changes before opening Grade Weighting.": "Guarde los cambios de configuración antes de abrir la ponderación de calificaciones."
+  "Save your configuration changes before opening Grade Weighting.": "Guarde los cambios de configuración antes de abrir la ponderación de calificaciones.",
+  "Saving your result…": "Guardando el resultado…",
+  "Your result could not be saved. Stay on this page and check your answer again.": "No se pudo guardar el resultado. Permanezca en esta página y compruebe su respuesta de nuevo.",
+  "Activity completed — saved to your course.": "Actividad completada y guardada en su curso.",
+  "Answer correct — result saved.": "Respuesta correcta; resultado guardado.",
+  "Result saved. Some tests are still failing, including possibly hidden tests. All tests must pass to complete this activity.": "Resultado guardado. Algunas pruebas aún fallan, posiblemente pruebas ocultas. Debe superar todas las pruebas para completar esta actividad.",
+  "tests passed.": "pruebas superadas.",
+  "Attempt saved. Your earlier completion is retained.": "Intento guardado. Se conserva la finalización anterior."
 }
