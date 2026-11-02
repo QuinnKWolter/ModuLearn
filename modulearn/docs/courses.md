@@ -10,6 +10,8 @@ Add Module is available in the structure sidebar and beside each unit's expand/c
 
 Configuration packs text controls into `structure_controls`, leaving CSRF/action/files as normal form fields. This prevents large courses exceeding Django's field-count limit without raising that limit globally. Save validation and writes remain atomic; preserve multipart handling and research locks.
 
+The trash button beneath Order in Unit Details marks a unit for deletion, like the activity trash button. Undo is available until Save Configuration. Saving removes the unit, its remaining activities and their learner records across all sessions of the course. Activities moved out before saving survive. Dependent unlock rules and unit grading references are cleared, and course totals are recalculated. Courses locked for active research remain protected.
+
 ## Plugins
 
 The registry and normalization helpers live in `modulearn.learning.services.course_plugins`. General course plugin settings use `Course.plugin_config`; **static recommendations are the session-scoped exception**, stored in `StaticRecommendationSet`. See [the recommendation guide](recommendation-package-format.md). Dynamic recommendation registry entries are not evidence of an implemented personalized ranking service.

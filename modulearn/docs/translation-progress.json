@@ -3,22 +3,22 @@
   "coverage_note": "Catalog parity and source references are automated. Runtime dialogs and new unmarked text still require browser review.",
   "languages": {
     "en": {
-      "messages": 2057,
+      "messages": 2061,
       "missing": 0,
       "invalid": 0
     },
     "es": {
-      "messages": 2057,
+      "messages": 2061,
       "missing": 0,
       "invalid": 0
     },
     "fr": {
-      "messages": 2057,
+      "messages": 2061,
       "missing": 0,
       "invalid": 0
     },
     "sr-latn": {
-      "messages": 2057,
+      "messages": 2061,
       "missing": 0,
       "invalid": 0
     }
@@ -797,6 +797,7 @@
       "Default",
       "Delete",
       "Delete Activity",
+      "Delete Unit",
       "Delete question",
       "Description",
       "Destination URL students open",
@@ -871,9 +872,11 @@
       "Mark Type Graded",
       "Mark this activity for deletion",
       "Mark this activity for deletion? It will be removed when you save changes.",
+      "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.",
       "Markdown: **bold**, *italic*, `code`, # headings, - lists, and fenced code blocks.",
       "Markdown: **bold**, *italic*, `code`, # headings, - lists, and fenced code blocks. HTML is displayed as text.",
       "Marked for deletion. Save changes to remove it, or click Undo.",
+      "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.",
       "ModuLearn",
       "Move question down",
       "Move question up",
@@ -1035,6 +1038,7 @@
       "Unable to save flow map.",
       "Undo Delete",
       "Undo activity deletion",
+      "Undo unit deletion",
       "Unit",
       "Unit Builder",
       "Unit Details",
@@ -1087,6 +1091,7 @@
       "participants",
       "placeholders in the format Prolific expects.",
       "practice",
+      "progress",
       "provider",
       "question",
       "questions",
@@ -1767,6 +1772,7 @@
       "unlock"
     ],
     "courses/views.py": [
+      ", and",
       "A course must keep at least one instructor.",
       "Access",
       "Activity",
@@ -1788,6 +1794,7 @@
       "Course",
       "Course ID",
       "Course plugin settings were updated.",
+      "Course structure updated. Units removed: {units}; activities removed: {activities}.",
       "Course timezone",
       "Course visibility and locking controls were updated.",
       "Create",
@@ -1854,6 +1861,7 @@
       "Unit",
       "Unit added to the course structure.",
       "Unit title",
+      "Units",
       "Unknown course configuration action.",
       "Untitled Course",
       "You",

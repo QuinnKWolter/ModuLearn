@@ -2055,5 +2055,9 @@
   "Result: {value}": "Résultat : {value}",
   "Attempts: {value}": "Tentatives : {value}",
   "Goal: {value}": "Objectif : {value}",
-  "Payload: {value}": "Données reçues : {value}"
+  "Payload: {value}": "Données reçues : {value}",
+  "Course structure updated. Units removed: {units}; activities removed: {activities}.": "Structure du cours mise à jour. Unités supprimées : {units} ; activités supprimées : {activities}.",
+  "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.": "Suppression prévue. Enregistrez les modifications pour supprimer cette unité et les activités qui y restent, ou cliquez sur Annuler.",
+  "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.": "Marquer cette unité pour suppression ? L’enregistrement supprimera l’unité, les activités qui y restent et leur progression enregistrée dans toutes les sessions de ce cours. Les règles de déverrouillage qui en dépendent seront supprimées.",
+  "Undo unit deletion": "Annuler la suppression de l’unité"
 }

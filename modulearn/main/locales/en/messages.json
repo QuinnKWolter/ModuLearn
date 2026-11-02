@@ -2055,5 +2055,9 @@
   "Result: {value}": "Result: {value}",
   "Attempts: {value}": "Attempts: {value}",
   "Goal: {value}": "Goal: {value}",
-  "Payload: {value}": "Payload: {value}"
+  "Payload: {value}": "Payload: {value}",
+  "Course structure updated. Units removed: {units}; activities removed: {activities}.": "Course structure updated. Units removed: {units}; activities removed: {activities}.",
+  "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.": "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.",
+  "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.": "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.",
+  "Undo unit deletion": "Undo unit deletion"
 }

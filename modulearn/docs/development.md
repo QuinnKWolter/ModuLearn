@@ -67,7 +67,7 @@ a separate Spanish dictionary or replaces arbitrary prefixes. Mutation batches
 deduplicate changed subtrees, skip authored/code regions, and cache text lookups.
 English does not start an observer or download a duplicate catalog. Only the
 selected language is embedded, so adding languages does not multiply page weight.
-At the November 2026 review, the 2,057-message translated catalogs are roughly
+At the November 2026 review, the 2,061-message translated catalogs are roughly
 150–175 KB uncompressed (about 50 KB compressed). Template rendering and catalog
 lookup make no external translation requests. The normal deployment must publish
 changed JS/CSS and restart workers to refresh their cached catalogs.

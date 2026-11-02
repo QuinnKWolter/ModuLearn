@@ -420,12 +420,12 @@ def course_configuration(request, instance_id):
             if action == "update_structure":
                 _unpack_structure_controls(request)
                 with transaction.atomic():
-                    deleted_count = _update_course_structure_controls(request, course)
+                    deleted_units, deleted_modules = _update_course_structure_controls(request, course)
                 message_text = "Course visibility and locking controls were updated."
-                if deleted_count:
-                    message_text = (
-                        f"Course structure updated and {deleted_count} activity"
-                        f"{'' if deleted_count == 1 else 's'} removed."
+                if deleted_units or deleted_modules:
+                    message_text = ui(
+                        'Course structure updated. Units removed: {units}; activities removed: {activities}.',
+                        units=deleted_units, activities=deleted_modules,
                     )
                 if not wants_json:
                     messages.success(request, message_text)
@@ -667,38 +667,54 @@ def _update_course_structure_controls(request, course):
     rule_context = _module_rule_context(course)
     valid_conditions = set(_course_research_conditions(course))
     valid_unit_ids = {group["unit"].id for group in rule_context}
+    deleted_unit_ids = {
+        unit_id for unit_id in valid_unit_ids
+        if _parse_bool(request.POST.get(f"unit_{unit_id}_delete"))
+    }
     deleted_module_ids = {
         module.id
         for group in rule_context
         for module in group["modules"]
         if _parse_bool(request.POST.get(f"module_{module.id}_delete"))
     }
+    # Resolve final placement before deleting units. An activity dragged out of a
+    # deleted unit in this same save must survive; one left inside must not.
+    for group in rule_context:
+        for module in group['modules']:
+            try:
+                target = int(request.POST.get(f'module_{module.id}_unit_id', module.unit_id))
+            except (ValueError, TypeError):
+                target = module.unit_id
+            if target in valid_unit_ids:
+                module.unit_id = target
+            if module.unit_id in deleted_unit_ids:
+                deleted_module_ids.add(module.id)
 
     for group in rule_context:
         unit = group["unit"]
-        prefix = f"unit_{unit.id}"
-        unit.title = request.POST.get(f"{prefix}_title", unit.title).strip() or unit.title
-        unit.description = request.POST.get(f"{prefix}_description", unit.description)
-        unit.order = int(request.POST.get(f"{prefix}_order") or unit.order or 0)
-        unit.is_visible = _parse_bool(request.POST.get(f"{prefix}_visible"))
-        unit.is_locked, unit.unlock_rule = _normalize_unlock_settings(
-            _parse_bool(request.POST.get(f"{prefix}_locked")),
-            request.POST.get(f"{prefix}_rule_type"),
-            request.POST.get(f"{prefix}_rule_target"),
-            valid_module_ids={module.id for module in group["unlock_target_modules"]},
-            valid_conditions=valid_conditions,
-            has_previous_unit=group["has_previous_unit"],
-        )
-        from modulearn.learning.services.unit_packages import parse_schedule
-        unit.opens_at, unit.closes_at = parse_schedule(
-            request.POST.get(f"{prefix}_opens_at", unit.opens_at),
-            request.POST.get(f"{prefix}_closes_at", unit.closes_at), zone=course.schedule_timezone or None)
-        unit.save(update_fields=["title", "description", "order", "is_visible", "is_locked", "unlock_rule", "opens_at", "closes_at"])
+        if unit.id not in deleted_unit_ids:
+            prefix = f"unit_{unit.id}"
+            unit.title = request.POST.get(f"{prefix}_title", unit.title).strip() or unit.title
+            unit.description = request.POST.get(f"{prefix}_description", unit.description)
+            unit.order = int(request.POST.get(f"{prefix}_order") or unit.order or 0)
+            unit.is_visible = _parse_bool(request.POST.get(f"{prefix}_visible"))
+            unit.is_locked, unit.unlock_rule = _normalize_unlock_settings(
+                _parse_bool(request.POST.get(f"{prefix}_locked")),
+                request.POST.get(f"{prefix}_rule_type"),
+                request.POST.get(f"{prefix}_rule_target"),
+                valid_module_ids={module.id for module in group["unlock_target_modules"]},
+                valid_conditions=valid_conditions,
+                has_previous_unit=group["has_previous_unit"],
+            )
+            from modulearn.learning.services.unit_packages import parse_schedule
+            unit.opens_at, unit.closes_at = parse_schedule(
+                request.POST.get(f"{prefix}_opens_at", unit.opens_at),
+                request.POST.get(f"{prefix}_closes_at", unit.closes_at), zone=course.schedule_timezone or None)
+            unit.save(update_fields=["title", "description", "order", "is_visible", "is_locked", "unlock_rule", "opens_at", "closes_at"])
 
         for module in group["modules"]:
             module_prefix = f"module_{module.id}"
             if module.id in deleted_module_ids:
-                module.delete()
                 continue
             module.title = request.POST.get(f"{module_prefix}_title", module.title).strip() or module.title
             module.description = request.POST.get(f"{module_prefix}_description", module.description)
@@ -710,14 +726,6 @@ def _update_course_structure_controls(request, course):
             if completion_rule not in dict(Module.COMPLETION_RULE_CHOICES):
                 raise ValueError('Invalid activity completion rule.')
             module.completion_rule = completion_rule
-            target_unit_id = request.POST.get(f"{module_prefix}_unit_id")
-            if target_unit_id:
-                try:
-                    target_unit_id = int(target_unit_id)
-                except (TypeError, ValueError):
-                    target_unit_id = None
-                if target_unit_id in valid_unit_ids:
-                    module.unit_id = target_unit_id
             _update_module_content_configuration(request, module, module_prefix)
             module.is_locked, module.unlock_rule = _normalize_unlock_settings(
                 _parse_bool(request.POST.get(f"{module_prefix}_locked")),
@@ -749,20 +757,32 @@ def _update_course_structure_controls(request, course):
             ])
             _update_module_form_configuration(request, module)
 
+    # Include recommendation-only activities, which are intentionally absent
+    # from the configuration list, and let normal FK cascades remove their data.
+    deleted_module_ids.update(Module.objects.filter(unit_id__in=deleted_unit_ids).values_list('id', flat=True))
     if deleted_module_ids:
-        _remove_deleted_module_unlock_references(course, deleted_module_ids)
+        Module.objects.filter(unit__course=course, id__in=deleted_module_ids).delete()
+    if deleted_unit_ids:
+        course.units.filter(id__in=deleted_unit_ids).delete()
+        _remove_deleted_unit_grading_references(course, deleted_unit_ids)
+    if deleted_module_ids or deleted_unit_ids:
+        _remove_deleted_module_unlock_references(course, deleted_module_ids, deleted_unit_ids)
     from modulearn.learning.services.grading import refresh_course_grades
     refresh_course_grades(course)
-    return len(deleted_module_ids)
+    return len(deleted_unit_ids), len(deleted_module_ids)
 
 
-def _remove_deleted_module_unlock_references(course, deleted_module_ids):
+def _remove_deleted_module_unlock_references(course, deleted_module_ids, deleted_unit_ids=()):
     deleted_targets = {str(module_id) for module_id in deleted_module_ids}
+    deleted_units = {str(unit_id) for unit_id in deleted_unit_ids}
 
     def rule_references_deleted_module(rule):
         for condition in (rule or {}).get("conditions") or []:
-            if condition.get("type") in {"module_accessed", "module_completed"}:
+            if condition.get("type") in {"module_accessed", "resource_accessed", "module_completed", "form_completed", "survey_completed", "quiz_completed"}:
                 if str(condition.get("target_id", "")) in deleted_targets:
+                    return True
+            if condition.get('type') in {'unit_accessed', 'unit_completed'}:
+                if str(condition.get('target_id', '')) in deleted_units:
                     return True
         return False
 
@@ -777,6 +797,21 @@ def _remove_deleted_module_unlock_references(course, deleted_module_ids):
             module.is_locked = False
             module.unlock_rule = {}
             module.save(update_fields=["is_locked", "unlock_rule"])
+
+
+def _remove_deleted_unit_grading_references(course, deleted_unit_ids):
+    deleted = {str(unit_id) for unit_id in deleted_unit_ids}
+    for instance in course.instances.all():
+        policy = dict(instance.grading_policy or {})
+        if 'units' in policy:
+            policy['units'] = {key: value for key, value in policy['units'].items() if str(key) not in deleted}
+        if 'groups' in policy:
+            policy['groups'] = [dict(group, unit_ids=[key for key in group['unit_ids'] if str(key) not in deleted])
+                                for group in policy['groups']
+                                if any(str(key) not in deleted for key in group['unit_ids'])]
+        if policy != instance.grading_policy:
+            instance.grading_policy = policy
+            instance.save(update_fields=['grading_policy'])
 
 
 def _parse_protocol_list(raw_value):

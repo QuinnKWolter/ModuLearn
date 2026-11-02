@@ -2055,5 +2055,9 @@
   "Result: {value}": "Ishod: {value}",
   "Attempts: {value}": "Pokušaji: {value}",
   "Goal: {value}": "Cilj: {value}",
-  "Payload: {value}": "Primljeni podaci: {value}"
+  "Payload: {value}": "Primljeni podaci: {value}",
+  "Course structure updated. Units removed: {units}; activities removed: {activities}.": "Struktura kursa je ažurirana. Obrisane celine: {units}; obrisane aktivnosti: {activities}.",
+  "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.": "Označeno za brisanje. Sačuvajte izmene da biste obrisali ovu celinu i preostale aktivnosti u njoj ili kliknite na Opozovi.",
+  "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.": "Označiti ovu celinu za brisanje? Čuvanjem izmena brišu se celina, preostale aktivnosti u njoj i njihov sačuvani napredak iz svih sesija ovog kursa. Pravila otključavanja koja zavise od njih biće uklonjena.",
+  "Undo unit deletion": "Opozovi brisanje celine"
 }

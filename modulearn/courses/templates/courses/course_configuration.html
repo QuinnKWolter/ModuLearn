@@ -428,16 +428,19 @@
     text-decoration: line-through;
   }
 
-  .cfg-tree-module.is-pending-delete {
+  .cfg-tree-module.is-pending-delete,
+  .cfg-tree-unit.is-pending-delete > .cfg-tree-unit-row {
     color: #b91c1c;
     background: rgba(254, 226, 226, 0.68);
   }
 
-  .cfg-tree-module.is-pending-delete .cfg-tree-label {
+  .cfg-tree-module.is-pending-delete .cfg-tree-label,
+  .cfg-tree-unit.is-pending-delete .cfg-tree-label {
     text-decoration: line-through;
   }
 
-  .dark .cfg-tree-module.is-pending-delete {
+  .dark .cfg-tree-module.is-pending-delete,
+  .dark .cfg-tree-unit.is-pending-delete > .cfg-tree-unit-row {
     color: #fecaca;
     background: rgba(127, 29, 29, 0.28);
   }
@@ -709,18 +712,22 @@
     background: #ede9fe;
   }
 
-  .cfg-module.is-pending-delete {
+  .cfg-module.is-pending-delete,
+  .cfg-unit.is-pending-delete {
     border-color: rgba(220, 38, 38, 0.42);
     background: rgba(254, 226, 226, 0.56);
   }
 
-  .dark .cfg-module.is-pending-delete {
+  .dark .cfg-module.is-pending-delete,
+  .dark .cfg-unit.is-pending-delete {
     border-color: rgba(248, 113, 113, 0.48);
     background: rgba(127, 29, 29, 0.2);
   }
 
   .cfg-module.is-pending-delete .cfg-module-summary,
-  .cfg-module.is-pending-delete .cfg-module-body {
+  .cfg-module.is-pending-delete .cfg-module-body,
+  .cfg-unit.is-pending-delete > .cfg-unit-summary,
+  .cfg-unit.is-pending-delete .cfg-module-list {
     opacity: 0.72;
   }
 
@@ -2830,6 +2837,12 @@
                     <div>
                       <label class="stat-kicker" for="unit_{{ group.unit.id }}_order">{% ui "Order" %}</label>
                       <input id="unit_{{ group.unit.id }}_order" name="unit_{{ group.unit.id }}_order" type="number" value="{{ group.unit.order }}" class="form-control mt-1" data-unit-order-input>
+                      <input type="hidden" name="unit_{{ group.unit.id }}_delete" value="0" data-delete-unit-input>
+                      <div class="cfg-module-delete-control">
+                        <button type="button" class="cfg-delete-module-btn" data-delete-unit-button aria-pressed="false" title="{% ui 'Delete Unit' %}" aria-label="{% ui 'Delete Unit' %}" {% if is_locked_for_research and research_has_participants %}disabled{% endif %}>
+                          <i class="bi bi-trash3" aria-hidden="true" data-delete-unit-icon></i>
+                        </button>
+                      </div>
                     </div>
                     <div class="grid gap-2">
                       <label class="stat-kicker" for="unit_{{ group.unit.id }}_title">{% ui "Unit Title" %}</label>
@@ -2837,6 +2850,7 @@
                       <textarea name="unit_{{ group.unit.id }}_description" rows="2" class="form-control" placeholder="Unit description">{{ group.unit.description }}</textarea>
                     </div>
                   </div>
+                  <p class="cfg-delete-module-note" data-delete-unit-note role="status" hidden>{% ui "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo." %}</p>
                   <a href="{% url 'courses:export_unit' course_instance.id group.unit.id %}" class="btn btn-sm btn-outline-primary">{% ui "Export this unit" %}</a>
                   <div class="cfg-schedule" id="unitSchedule{{ group.unit.id }}" {% if not group.unit.opens_at and not group.unit.closes_at %}hidden{% endif %}>
                     {% timezone course_timezone %}
@@ -2934,7 +2948,7 @@
                               <label class="stat-kicker" for="module_{{ module.id }}_order">{% ui "Order" %}</label>
                               <input id="module_{{ module.id }}_order" name="module_{{ module.id }}_order" type="number" value="{{ module.order }}" class="form-control mt-1" data-module-order-input>
                               <div class="cfg-module-delete-control">
-                                <button type="button" class="cfg-delete-module-btn" data-delete-module-button aria-pressed="false">
+                                <button type="button" class="cfg-delete-module-btn" data-delete-module-button aria-pressed="false" title="{% ui 'Delete Activity' %}" aria-label="{% ui 'Delete Activity' %}">
                                   <i class="bi bi-trash3" aria-hidden="true" data-delete-module-icon></i>
                                 </button>
                                 <p class="cfg-delete-module-note" data-delete-module-note hidden>
@@ -4804,6 +4818,7 @@
         button.title = marked
           ? t('Undo activity deletion')
           : t('Mark this activity for deletion');
+        button.setAttribute('aria-label', button.title);
       }
       if (icon) {
         icon.classList.toggle('bi-trash3', !marked);
@@ -4875,6 +4890,28 @@
           return;
         }
         setModuleDeletionState(owner, nextValue);
+      });
+    });
+
+    document.querySelectorAll('[data-delete-unit-button]').forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        const owner = button.closest('[data-unit-block]');
+        const input = owner.querySelector('[data-delete-unit-input]');
+        const marked = input.value !== '1';
+        if (marked && !window.confirm(t('Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.'))) return;
+        input.value = marked ? '1' : '0';
+        owner.classList.toggle('is-pending-delete', marked);
+        getTreeUnit(owner.dataset.unitId)?.classList.toggle('is-pending-delete', marked);
+        button.classList.toggle('is-marked', marked);
+        button.setAttribute('aria-pressed', String(marked));
+        button.title = marked ? t('Undo unit deletion') : t('Delete Unit');
+        button.setAttribute('aria-label', button.title);
+        const icon = button.querySelector('[data-delete-unit-icon]');
+        icon.classList.toggle('bi-trash3', !marked);
+        icon.classList.toggle('bi-arrow-counterclockwise', marked);
+        owner.querySelector('[data-delete-unit-note]').hidden = !marked;
+        input.dispatchEvent(new Event('change', {bubbles: true}));
       });
     });
 
