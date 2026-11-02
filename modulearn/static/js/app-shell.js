@@ -28,10 +28,10 @@
       icon.classList.toggle('bi-moon-stars-fill', theme !== 'dark');
     });
     document.querySelectorAll('[data-theme-toggle]').forEach(function (trigger) {
-      const nextTheme = theme === 'dark' ? 'light' : 'dark';
+      const label = theme === 'dark' ? t('Switch to light mode') : t('Switch to dark mode');
       trigger.setAttribute('aria-pressed', String(theme === 'dark'));
-      trigger.setAttribute('aria-label', t('Switch to ' + nextTheme + ' mode'));
-      trigger.setAttribute('title', t('Switch to ' + nextTheme + ' mode'));
+      trigger.setAttribute('aria-label', label);
+      trigger.setAttribute('title', label);
     });
   }
 

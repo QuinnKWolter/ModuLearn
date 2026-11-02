@@ -1,3 +1,4 @@
+from main.i18n import translate as ui
 import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -38,7 +39,7 @@ def upload(request, instance_id):
         if not upload or upload.size > 20 * 1024 * 1024:
             raise ValueError('Choose a unit JSON file smaller than 20 MB.')
         unit, warnings = import_unit(instance.course, json.loads(upload.read()))
-        messages.success(request, f'Imported {unit.title} as a new unit.')
+        messages.success(request, ui('Imported {unit} as a new unit.', unit=unit.title))
         for warning in warnings:
             messages.warning(request, warning)
     except (ValueError, TypeError, KeyError) as exc:

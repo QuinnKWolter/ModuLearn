@@ -109,9 +109,13 @@ def _import_unit(course, payload, files):
     if not title or len(title) > 255:
         raise ValueError('A unit title of 1–255 characters is required.')
     opens, closes = parse_schedule(data.get('opens_at'), data.get('closes_at'))
+    seconds = int(data.get('time_limit_seconds', 0) or 0)
+    if not 0 <= seconds <= 86400:
+        raise ValueError('Section timers must be between 0 and 86400 seconds.')
     unit = Unit.objects.create(course=course, title=title, description=data.get('description') or '',
         order=next_order_for_unit(course), is_visible=data.get('is_visible', True) is True,
-        is_locked=data.get('is_locked', False) is True, opens_at=opens, closes_at=closes)
+        is_locked=data.get('is_locked', False) is True, opens_at=opens, closes_at=closes,
+        time_limit_seconds=seconds)
     lookup, pending = {}, [(unit, data.get('unlock_rule'))]
     warnings = [str(warning) for warning in payload.get('warnings', []) if isinstance(warning, str)]
     for index, activity in enumerate(data['modules']):
@@ -135,6 +139,9 @@ def _import_unit(course, payload, files):
             values[key] = activity.get(key, default) is True
         if values['is_recommendation_only']:
             values['is_graded'] = False
+        values['completion_rule'] = activity.get('completion_rule', Module.COMPLETION_PROVIDER)
+        if values['completion_rule'] not in dict(Module.COMPLETION_RULE_CHOICES):
+            raise ValueError('Invalid activity completion rule.')
         module = Module.objects.create(unit=unit, title=module_title, module_type=module_type,
                                        order=(index + 1) * 10, **values)
         file_data = activity.get('content_file')

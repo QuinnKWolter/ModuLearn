@@ -1,12 +1,13 @@
-<section class="card p-5">
+
+{% load ui_i18n %}<section class="card p-5">
   <div class="flex items-start justify-between gap-3">
     <div>
-      <div class="stat-kicker">Research Recruitment</div>
-      <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-1">Recruitment Lives In Studies</h2>
+      <div class="stat-kicker">{% ui "Research Recruitment" %}</div>
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-1">{% ui "Recruitment Lives In Studies" %}</h2>
       <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
-        Prolific links, participant conditions, and research exports are configured from the Instructor Dashboard Studies modal.
+        {% ui "Prolific links, participant conditions, and research exports are configured from the Instructor Dashboard Studies modal." %}
       </p>
     </div>
-    <span class="badge badge-primary">Study-owned</span>
+    <span class="badge badge-primary">{% ui "Study-owned" %}</span>
   </div>
 </section>

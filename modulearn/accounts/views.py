@@ -1,3 +1,4 @@
+from main.i18n import translate as ui
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -275,7 +276,7 @@ def profile_view(request):
                     return redirect('accounts:profile')
                 except Exception as e:
                     logger.error(f"Error provisioning KnowledgeTree account: {str(e)}", exc_info=True)
-                    messages.error(request, f"Could not provision KnowledgeTree account: {str(e)}")
+                    messages.error(request, ui('Could not provision KnowledgeTree account: {error}', error=str(e)))
         elif 'reset_kt_password' in request.POST and is_kt_user:
             kt_password_form = KnowledgeTreePasswordResetForm(user=request.user, data=request.POST)
             if kt_password_form.is_valid():
@@ -295,13 +296,13 @@ def profile_view(request):
                         logger.info(f"Password reset successful for KT user {kt_login}")
                     else:
                         # ModuLearn password was updated, but KT update failed
-                        messages.warning(request, f'Password updated in ModuLearn, but KnowledgeTree update failed: {kt_message}. Please contact support.')
+                        messages.warning(request, ui('Password updated in ModuLearn, but KnowledgeTree update failed: {error}. Please contact support.', error=kt_message))
                         logger.error(f"KT password update failed for {kt_login}: {kt_message}")
                     
                     return redirect('accounts:profile')
                 except Exception as e:
                     logger.error(f"Error during KT password reset: {str(e)}", exc_info=True)
-                    messages.error(request, f'Error resetting password: {str(e)}')
+                    messages.error(request, ui('Error resetting password: {error}', error=str(e)))
     
     return render(request, 'accounts/profile.html', {
         'profile_form': profile_form,

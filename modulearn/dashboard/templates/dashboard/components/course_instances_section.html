@@ -1,8 +1,9 @@
-<section class="mb-8">
+
+{% load ui_i18n %}<section class="mb-8">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="text-lg font-semibold">Active Course Sessions</h2>
+    <h2 class="text-lg font-semibold">{% ui "Active Course Sessions" %}</h2>
     {% if course_instances %}
-    <span class="badge badge-primary">{{ course_instances.count }} active session{{ course_instances.count|pluralize }}</span>
+    <span class="badge badge-primary">{% ui_count "active session" "active sessions" course_instances.count %}</span>
     {% endif %}
   </div>
 
@@ -17,7 +18,7 @@
   {% else %}
   <div class="bg-gray-50 dark:bg-gray-800 rounded-xl text-center py-8">
     <i class="bi bi-calendar3 text-gray-300 dark:text-gray-600 text-4xl"></i>
-    <p class="text-gray-400 mt-3">No active course sessions</p>
+    <p class="text-gray-400 mt-3">{% ui "No active course sessions" %}</p>
   </div>
   {% endif %}
 </section>

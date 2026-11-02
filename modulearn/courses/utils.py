@@ -592,7 +592,11 @@ def create_course_from_json(
                 unit.save()
         from modulearn.learning.services.unit_packages import parse_schedule
         unit.opens_at, unit.closes_at = parse_schedule(unit_data.get("opens_at", unit.opens_at), unit_data.get("closes_at", unit.closes_at))
-        unit.save(update_fields=["opens_at", "closes_at"])
+        seconds = int(unit_data.get('time_limit_seconds', 0) or 0)
+        if not 0 <= seconds <= 86400:
+            raise ValueError('Section timers must be between 0 and 86400 seconds.')
+        unit.time_limit_seconds = seconds
+        unit.save(update_fields=["opens_at", "closes_at", "time_limit_seconds"])
         pending_unlock_rules.append((unit, unit_data.get("unlock_rule") or {}, unit_data.get("unlock_rule_portable") or {}))
         logger.debug("Unit %s: %s", "created" if unit_created else "retrieved", unit)
 
@@ -654,6 +658,7 @@ def create_course_from_json(
 
             updated = False
             desired_values = {
+                "completion_rule": activity.get("completion_rule", module.completion_rule),
                 "order": activity.get("order") or module.order,
                 "provider_id": provider_id,
                 "module_type": desired_module_type,
@@ -680,6 +685,8 @@ def create_course_from_json(
                 desired_values["content_data"] = content_data
 
             for field_name, value in desired_values.items():
+                if field_name == 'completion_rule' and value not in dict(Module.COMPLETION_RULE_CHOICES):
+                    raise ValueError('Invalid activity completion rule.')
                 if getattr(module, field_name) != value:
                     setattr(module, field_name, value)
                     updated = True
@@ -767,6 +774,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
                 "is_visible": module.is_visible,
                 "is_recommendation_only": module.is_recommendation_only,
                 "is_graded": module.is_graded,
+                "completion_rule": module.completion_rule,
                 "is_locked": module.is_locked,
                 "allow_resubmission": module.allow_resubmission,
                 "unlock_rule": module.unlock_rule or {},
@@ -784,6 +792,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
         units.append({
             "id": unit.id,
             "opens_at": unit.opens_at.isoformat() if unit.opens_at else None,
+            "time_limit_seconds": unit.time_limit_seconds,
             "closes_at": unit.closes_at.isoformat() if unit.closes_at else None,
             "name": unit.title,
             "title": unit.title,

@@ -1,0 +1,28 @@
+{
+  "source_url": "https://pitt.co1.qualtrics.com/jfe/form/SV_0SONxocJu2utGtM",
+  "capture_date": "2026-11-01",
+  "capture_scope": "opening_page_only",
+  "complete_survey": false,
+  "question_ids": [
+    "QID35"
+  ],
+  "questions": {
+    "QID35": {
+      "Configuration": {
+        "QuestionDescriptionOption": "UseText"
+      },
+      "DataExportTag": "W1",
+      "Language": {
+        "EN": {
+          "QuestionText": "<div style=\"text-align: center;\"><strong>Programming Questionnaire&nbsp;</strong>&nbsp;&nbsp;&nbsp;</div>\n\n<div>&nbsp;</div>\n\n<div>We are interested in your background, thoughts, feelings, and experience with computer programming and how you study/learn computer programming and in general.&nbsp;</div>\n\n<div>&nbsp;</div>\n\n<div>Please answer these questions&nbsp;<strong>as honestly as you can.&nbsp;</strong>There are <strong>no right or wrong answers</strong>—we only want to know what you think and feel about programming and other aspects of life that could be related to studying at a college-level with the support of technology.&nbsp; &nbsp;</div>\n\n<div><br>\nAnswers will <strong>have&nbsp;no impact on grading</strong>&nbsp;and will&nbsp;<strong>only be used for research purposes</strong>&nbsp;and&nbsp;the responses will&nbsp;be&nbsp;<strong>ANONYMIZED</strong>.&nbsp;</div>"
+        }
+      },
+      "QuestionID": "QID35",
+      "QuestionType": "DB",
+      "Selector": "TB",
+      "SurveyLanguage": "EN"
+    }
+  },
+  "next_button": true,
+  "previous_button": false
+}

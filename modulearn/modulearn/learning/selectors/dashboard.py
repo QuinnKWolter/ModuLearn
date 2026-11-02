@@ -55,7 +55,7 @@ def build_instructor_dashboard_context(user):
         .order_by("course__title", "-created_at")
     )
     studies = (
-        Study.objects.filter(instructors=user)
+        Study.objects.filter(instructors=user, preview_of__isnull=True)
         .select_related("course_instance", "course_instance__course")
         .prefetch_related(
             "conditions",

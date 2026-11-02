@@ -1,10 +1,20 @@
 from django.urls import path
 
-from . import views
+from . import views, studio
 
 app_name = "recruitment"
 
 urlpatterns = [
+    path('study/<int:study_id>/setup/', studio.studio, name='studio'),
+    path('study/<int:study_id>/duplicate/', studio.duplicate, name='duplicate'),
+    path('study/<int:study_id>/previews/clear/', studio.clear_previews, name='clear_previews'),
+    path('study/<int:study_id>/preview/', studio.preview, name='preview'),
+    path('study/<int:study_id>/events.csv', studio.events_csv, name='events_csv'),
+    path('preview/exit/', studio.exit_preview, name='exit_preview'),
+    path('flow/<uuid:session_uuid>/', studio.flow_status, name='flow_status'),
+    path('flow/<uuid:session_uuid>/input/', studio.input_summary, name='input_summary'),
+    path('flow/<uuid:session_uuid>/simulate/', studio.simulate, name='simulate'),
+    path('flow/<uuid:session_uuid>/continue/', studio.continue_resource, name='continue_resource'),
     path("sessions/", views.sessions, name="sessions"),
     path("enter/<int:source_id>/", views.enter, name="enter"),
     path("prolific/<int:source_id>/", views.enter, name="prolific_enter"),

@@ -1,0 +1,1568 @@
+{
+  "version": 1,
+  "source_url": "https://pitt.co1.qualtrics.com/jfe/form/SV_bBiUs28oqC5pAnI",
+  "phase": "pre",
+  "pages": [
+    {
+      "id": "QID35",
+      "title": "**Programming Questionnaire **   \n\nWe are interested in your background, thoughts, feelings, and experience with computer programming and how you study/learn computer programming and in general. \n\nPlease answer these questions **as honestly as you can. **There are **no right or wrong answers**—we only want to know what you think and feel about programming and other aspects of life that could be related to studying at a college-level with the support of technology.   \n\nAnswers will **have no impact on grading** and will **only be used for research purposes** and the responses will be **ANONYMIZED**. \n\nPlease, read the attached** consent form** and** please provide your consent** by selecting one of the options below. Your participation in the study is completely voluntary.",
+      "type": "MC",
+      "back": false,
+      "block_id": "BL_201GelSZLmJOSIl",
+      "tag": "W1",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID35",
+          "prompt": "**Programming Questionnaire **   \n\nWe are interested in your background, thoughts, feelings, and experience with computer programming and how you study/learn computer programming and in general. \n\nPlease answer these questions **as honestly as you can. **There are **no right or wrong answers**—we only want to know what you think and feel about programming and other aspects of life that could be related to studying at a college-level with the support of technology.   \n\nAnswers will **have no impact on grading** and will **only be used for research purposes** and the responses will be **ANONYMIZED**. \n\nPlease, read the attached** consent form** and** please provide your consent** by selecting one of the options below. Your participation in the study is completely voluntary.",
+          "options": [
+            {
+              "id": "3",
+              "label": "I agree to participate in this research study.",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "I decline my participation in this study and will not answer the questionnaire.",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID40",
+      "title": "How interesting do you find programming?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_5nzyaUjQTxxtON8",
+      "tag": "Interest1",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID40",
+          "prompt": "How interesting do you find programming?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not interesting at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Slightly interesting",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Somewhat interesting",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Very interesting",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Extremely interesting",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID41",
+      "title": "How much do you enjoy learning about programming?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_5nzyaUjQTxxtON8",
+      "tag": "Interest2",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID41",
+          "prompt": "How much do you enjoy learning about programming?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Slightly",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Somewhat",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Very much",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Extremely",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID42",
+      "title": "How excited are you to learn about programming?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_5nzyaUjQTxxtON8",
+      "tag": "Interest3",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID42",
+          "prompt": "How excited are you to learn about programming?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not excited at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Slightly excited",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Somewhat excited",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Very excited",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Extremely excited",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID46",
+      "title": "How good are you at coding?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_2hKY8Ep59FF0xw2",
+      "tag": "Confidence1",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID46",
+          "prompt": "How good are you at coding?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not good at all",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Slightly good",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat good",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Very good",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Extremely good",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID47",
+      "title": "How comfortable do you feel doing coding problems?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_2hKY8Ep59FF0xw2",
+      "tag": "Confidence2",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID47",
+          "prompt": "How comfortable do you feel doing coding problems?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not comfortable at all",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Slightly comfortable",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat comfortable",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Very comfortable",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Extremely comfortable",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID48",
+      "title": "How strong is your background in coding?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_2hKY8Ep59FF0xw2",
+      "tag": "Confidence3",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID48",
+          "prompt": "How strong is your background in coding?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not strong at all",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Slightly strong",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat strong",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Very strong",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Extremely strong",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID29",
+      "title": "Please indicate the extent to which the following statements describe your behavior in programming classes. Indicate how you typically behave rather than how you think you should behave. There are no correct or incorrect responses to these questions.",
+      "type": "Matrix",
+      "back": false,
+      "block_id": "BL_8uMsKkdAkobOVuK",
+      "tag": "SR1",
+      "required": true,
+      "shuffle_rows": true,
+      "rows": [
+        {
+          "key": "QID29_4",
+          "prompt": "I set personal standards for performance in my learning.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_5",
+          "prompt": "I set short-term (daily or weekly) goals as well as long-term goals (for the whole course)",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_6",
+          "prompt": "I set goals to help me manage study time for my learning.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_16",
+          "prompt": "I set realistic deadlines for learning.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_18",
+          "prompt": "I ask myself questions about what I am to study before I begin to learn.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_19",
+          "prompt": "I think of alternative ways to solve a problem and choose the best one.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_20",
+          "prompt": "When planning my learning, I use and adapt strategies that have worked in the past.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID29_22",
+          "prompt": "I organize my study time to accomplish my goals to the best of my ability.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true for me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Sometimes true for me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Quite true for me",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "True for me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Very true for me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ],
+      "options": [
+        {
+          "id": "1",
+          "label": "Not at all true for me",
+          "text_entry": false
+        },
+        {
+          "id": "2",
+          "label": "Sometimes true for me",
+          "text_entry": false
+        },
+        {
+          "id": "3",
+          "label": "Quite true for me",
+          "text_entry": false
+        },
+        {
+          "id": "4",
+          "label": "True for me",
+          "text_entry": false
+        },
+        {
+          "id": "5",
+          "label": "Very true for me",
+          "text_entry": false
+        }
+      ]
+    },
+    {
+      "id": "QID33",
+      "title": "Please respond to each of the following items in terms of how true it is for you with respect to your learning how to program in Java.",
+      "type": "Matrix",
+      "back": true,
+      "block_id": "BL_6LSL4tzlCMnBqWV",
+      "tag": "PCS",
+      "required": true,
+      "shuffle_rows": true,
+      "rows": [
+        {
+          "key": "QID33_1",
+          "prompt": "I feel confident in my ability to learn how to program.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat true",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "8",
+              "label": "Very true",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID33_2",
+          "prompt": "I am capable of learning how to program.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat true",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "8",
+              "label": "Very true",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID33_3",
+          "prompt": "I am able to achieve my goals of learning how to program.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat true",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "8",
+              "label": "Very true",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID33_4",
+          "prompt": "I feel able to meet the challenge of performing well when programming in Java.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all true",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat true",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "",
+              "text_entry": false
+            },
+            {
+              "id": "8",
+              "label": "Very true",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ],
+      "options": [
+        {
+          "id": "1",
+          "label": "Not at all true",
+          "text_entry": false
+        },
+        {
+          "id": "2",
+          "label": "",
+          "text_entry": false
+        },
+        {
+          "id": "3",
+          "label": "Somewhat true",
+          "text_entry": false
+        },
+        {
+          "id": "5",
+          "label": "",
+          "text_entry": false
+        },
+        {
+          "id": "8",
+          "label": "Very true",
+          "text_entry": false
+        }
+      ]
+    },
+    {
+      "id": "QID12",
+      "title": "Your gender",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_bdyxLXSiWErabfT",
+      "tag": "Gender",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID12",
+          "prompt": "Your gender",
+          "options": [
+            {
+              "id": "1",
+              "label": "Female",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Male",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Self describe",
+              "text_entry": true
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID13",
+      "title": "How familiar are you with computer programming (not necessarily Java or Python)?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_bdyxLXSiWErabfT",
+      "tag": "Previous exp",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID13",
+          "prompt": "How familiar are you with computer programming (not necessarily Java or Python)?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Unfamiliar (I have no experience with programming)",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Beginner (I know some programming, but I still need quite a lot of help)",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Experienced (I have demonstrated a general competency in programming)",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Advanced (I can program competently)",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID52",
+      "title": "Please indicate your race and ethnicity (select all that apply)",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_bdyxLXSiWErabfT",
+      "tag": "Race Ethnicity",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID52",
+          "prompt": "Please indicate your race and ethnicity (select all that apply)",
+          "options": [
+            {
+              "id": "1",
+              "label": "Hispanic or Latino",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "White",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Black or African American",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Asian",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Native Hawaiian or Other Pacific Islander",
+              "text_entry": false
+            },
+            {
+              "id": "8",
+              "label": "American Indian or Alaska Native",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Other (please specify)",
+              "text_entry": true
+            },
+            {
+              "id": "2",
+              "label": "Prefer not to say",
+              "text_entry": false
+            }
+          ],
+          "multiple": true
+        }
+      ]
+    },
+    {
+      "id": "QID53",
+      "title": "Are you a first-generation college student?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_bdyxLXSiWErabfT",
+      "tag": "1st gen",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID53",
+          "prompt": "Are you a first-generation college student?",
+          "options": [
+            {
+              "id": "1",
+              "label": "No",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Yes",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID50",
+      "title": "The following statements may apply more or less to you. To what extent do you  think each statement applies to you personally?”",
+      "type": "Matrix",
+      "back": true,
+      "block_id": "BL_3h1kYX7uDJw4h94",
+      "tag": "NC",
+      "required": true,
+      "shuffle_rows": true,
+      "rows": [
+        {
+          "key": "QID50_1",
+          "prompt": "I would prefer complex to simple problems.",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Extremely uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "2: Somewhat uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "3: Neither uncharacteristic nor characteristic",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "4: Somewhat characteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "5: Extremely characteristic of me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID50_4",
+          "prompt": "I like to have the responsibility of handling a situation that requires a lot of thinking.",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Extremely uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "2: Somewhat uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "3: Neither uncharacteristic nor characteristic",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "4: Somewhat characteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "5: Extremely characteristic of me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID50_3",
+          "prompt": "Thinking is not my idea of fun.",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Extremely uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "2: Somewhat uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "3: Neither uncharacteristic nor characteristic",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "4: Somewhat characteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "5: Extremely characteristic of me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID50_5",
+          "prompt": "I would rather do something that requires little thought than something that is sure to challenge my thinking abilities.",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Extremely uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "2: Somewhat uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "3: Neither uncharacteristic nor characteristic",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "4: Somewhat characteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "5: Extremely characteristic of me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID50_6",
+          "prompt": "I really enjoy a task that involves coming up with new solutions to problems.",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Extremely uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "2: Somewhat uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "3: Neither uncharacteristic nor characteristic",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "4: Somewhat characteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "5: Extremely characteristic of me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID50_7",
+          "prompt": "I would prefer a task that is intellectual, difficult, and important to one that is somewhat important but does not require much thought.",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Extremely uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "2: Somewhat uncharacteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "3: Neither uncharacteristic nor characteristic",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "4: Somewhat characteristic of me",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "5: Extremely characteristic of me",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ],
+      "options": [
+        {
+          "id": "1",
+          "label": "1: Extremely uncharacteristic of me",
+          "text_entry": false
+        },
+        {
+          "id": "2",
+          "label": "2: Somewhat uncharacteristic of me",
+          "text_entry": false
+        },
+        {
+          "id": "3",
+          "label": "3: Neither uncharacteristic nor characteristic",
+          "text_entry": false
+        },
+        {
+          "id": "4",
+          "label": "4: Somewhat characteristic of me",
+          "text_entry": false
+        },
+        {
+          "id": "5",
+          "label": "5: Extremely characteristic of me",
+          "text_entry": false
+        }
+      ]
+    },
+    {
+      "id": "QID51",
+      "title": "The following statements may apply more or less to you. To what extent do you think each statement applies to you personally?”",
+      "type": "Matrix",
+      "back": true,
+      "block_id": "BL_8of14OQxEpnj3xQ",
+      "tag": "LC",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID51_1",
+          "prompt": "I am my own boss",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Does not apply at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "2: Applies very little",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "3: Applies somewhat",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "4: Applies mostly",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "5: Applies completely",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID51_2",
+          "prompt": "If I work hard, I will succeed",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Does not apply at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "2: Applies very little",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "3: Applies somewhat",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "4: Applies mostly",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "5: Applies completely",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID51_3",
+          "prompt": "Whether at work or in my private life: What I do is mainly determined by others",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Does not apply at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "2: Applies very little",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "3: Applies somewhat",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "4: Applies mostly",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "5: Applies completely",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID51_4",
+          "prompt": "Fate often gets in the way of my plans",
+          "options": [
+            {
+              "id": "1",
+              "label": "1: Does not apply at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "2: Applies very little",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "3: Applies somewhat",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "4: Applies mostly",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "5: Applies completely",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ],
+      "options": [
+        {
+          "id": "1",
+          "label": "1: Does not apply at all",
+          "text_entry": false
+        },
+        {
+          "id": "4",
+          "label": "2: Applies very little",
+          "text_entry": false
+        },
+        {
+          "id": "5",
+          "label": "3: Applies somewhat",
+          "text_entry": false
+        },
+        {
+          "id": "6",
+          "label": "4: Applies mostly",
+          "text_entry": false
+        },
+        {
+          "id": "7",
+          "label": "5: Applies completely",
+          "text_entry": false
+        }
+      ]
+    },
+    {
+      "id": "QID54",
+      "title": "Now we are interested in your opinions about automated technology –i.e.,technology that can perform certain functions automatically without any input from you. Automated technology is taking on more and more tasks in various areas of life. For example, robots are becoming more widely used in industry and in private households and many programs and systems we use daily are currently based on artificial intelligence (e.g. language assistants, image recognition).\n\nHere there's a number of statements about automated technology in general that may apply to you more or less. Please respond to each of these statements by indicating the extent to which you agree or disagree with the statement, i.e. how much it applies to you.",
+      "type": "Matrix",
+      "back": true,
+      "block_id": "BL_doh7I8n2AcZFIEe",
+      "tag": "Trust",
+      "required": true,
+      "shuffle_rows": true,
+      "rows": [
+        {
+          "key": "QID54_1",
+          "prompt": "Even though I may sometimes suffer the consequences of trusting automated technological systems, I still prefer to trust than not to trust them",
+          "options": [
+            {
+              "id": "1",
+              "label": "Strongly Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Neither Disagree Nor Agree",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Agree",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Strongly Agree",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID54_2",
+          "prompt": "I rarely trust automated technological systems because I can’t handle the uncertainty.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Strongly Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Neither Disagree Nor Agree",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Agree",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Strongly Agree",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID54_3",
+          "prompt": "Automated technological systems are competent.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Strongly Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Neither Disagree Nor Agree",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Agree",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Strongly Agree",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID54_4",
+          "prompt": "I am wary about the capabilities of automated technological systems.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Strongly Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Neither Disagree Nor Agree",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Agree",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Strongly Agree",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID54_5",
+          "prompt": "I don’t expect that automated technological systems are willing to assist and support people.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Strongly Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Neither Disagree Nor Agree",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Agree",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Strongly Agree",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "key": "QID54_6",
+          "prompt": "I feel that automated technological systems can be relied upon to do what they say they will do.",
+          "options": [
+            {
+              "id": "1",
+              "label": "Strongly Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Disagree",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Neither Disagree Nor Agree",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Agree",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Strongly Agree",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ],
+      "options": [
+        {
+          "id": "1",
+          "label": "Strongly Disagree",
+          "text_entry": false
+        },
+        {
+          "id": "4",
+          "label": "Disagree",
+          "text_entry": false
+        },
+        {
+          "id": "5",
+          "label": "Neither Disagree Nor Agree",
+          "text_entry": false
+        },
+        {
+          "id": "6",
+          "label": "Agree",
+          "text_entry": false
+        },
+        {
+          "id": "7",
+          "label": "Strongly Agree",
+          "text_entry": false
+        }
+      ]
+    }
+  ],
+  "page_shuffle_groups": [
+    [
+      "QID29",
+      "QID33"
+    ],
+    [
+      "QID50",
+      "QID51",
+      "QID54"
+    ]
+  ],
+  "decline": {
+    "key": "QID35",
+    "value": "4"
+  },
+  "end_text": "We thank you for your time spent taking this survey.\nYour response has been recorded."
+}

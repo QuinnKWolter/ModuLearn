@@ -8,7 +8,7 @@ from courses.models import Module, ModuleProgress, ModuleProgressEvent
 from recruitment.models import ParticipantSession, Study
 
 
-SESSION_ANALYTICS_EVENT_TYPES = ("launch", "iframe_load", "tab_blur", "tab_focus", "progress", "outcome", "completion")
+SESSION_ANALYTICS_EVENT_TYPES = ("launch", "iframe_load", "tab_blur", "tab_focus", "attempt", "progress", "outcome", "completion", "study_transition", "study_input", "study_late_event")
 
 
 def build_study_analytics_context(study: Study) -> dict:
@@ -20,6 +20,9 @@ def build_study_analytics_context(study: Study) -> dict:
         .order_by("unit__order", "unit__id", "order", "id")
     )
     visible_module_count = sum(1 for module in modules if module.unit.is_visible and module.is_visible)
+    remediation_ids = set(course.branch_rules.filter(condition_type__in=['failure', 'score_lt'])
+        .values_list('target_module_id', flat=True)) if study.guided_flow else set()
+    main_ids = {m.pk for m in modules if m.is_visible and m.unit.is_visible and m.pk not in remediation_ids}
 
     sessions = list(
         ParticipantSession.objects.filter(recruitment_source__study=study)
@@ -27,6 +30,9 @@ def build_study_analytics_context(study: Study) -> dict:
         .order_by("condition", "entered_at", "id")
     )
     enrollment_ids = [session.enrollment_id for session in sessions if session.enrollment_id]
+    from recruitment.services.flow import condition_visible
+    main_ids_by_condition = {label: {m.pk for m in modules if m.pk in main_ids and
+        condition_visible(m, label) and condition_visible(m.unit, label)} for label in {s.condition for s in sessions}}
     progress_rows = (
         ModuleProgress.objects.filter(enrollment_id__in=enrollment_ids, module_id__in=[module.id for module in modules])
         .select_related("module", "module__unit")
@@ -37,6 +43,9 @@ def build_study_analytics_context(study: Study) -> dict:
         for row in progress_rows
     }
     progress_event_summary = _progress_event_summary(progress_rows)
+    incorrect_counts = dict(ModuleProgressEvent.objects.filter(
+        module_progress__enrollment_id__in=enrollment_ids, event_type='attempt', success=False,
+        score__isnull=False).values('module_progress_id').annotate(total=Count('pk')).values_list('module_progress_id', 'total'))
 
     condition_labels = [condition.label for condition in study.conditions.filter(is_active=True).order_by("order", "id")]
     condition_map = OrderedDict(
@@ -74,6 +83,7 @@ def build_study_analytics_context(study: Study) -> dict:
                 "is_complete": bool(progress and progress.is_complete),
                 "score": progress.score if progress and progress.score is not None else None,
                 "attempts": progress.attempts if progress else 0,
+                "incorrect_attempts": incorrect_counts.get(progress.id, 0) if progress else 0,
                 "success": bool(progress and progress.success),
                 "first_accessed": progress.first_accessed if progress else None,
                 "last_accessed": progress.last_accessed if progress else None,
@@ -88,6 +98,15 @@ def build_study_analytics_context(study: Study) -> dict:
         else:
             total_modules = visible_module_count
             overall_progress = (progress_total / total_modules * 100.0) if total_modules else 0.0
+        if study.guided_flow:
+            # Study flow is not the ordinary course grade denominator: other arms'
+            # remediation is never required, and timeout advances without awarding a grade.
+            main_rows = [row for row in module_rows if row['module_id'] in main_ids_by_condition.get(session.condition, main_ids)]
+            total_modules = len(main_rows)
+            modules_completed = sum(row['is_complete'] for row in main_rows)
+            expired = set((session.flow_state or {}).get('expired_units', []))
+            advanced = sum(row['is_complete'] or row['unit_id'] in expired for row in main_rows)
+            overall_progress = 100.0 if (session.flow_state or {}).get('finished') else (100.0 * advanced / total_modules if total_modules else 0)
 
         participant = {
             "index": index,
@@ -106,6 +125,8 @@ def build_study_analytics_context(study: Study) -> dict:
             "modules_completed": modules_completed,
             "total_modules": total_modules,
             "module_rows": module_rows,
+            "incorrect_attempts": sum(row['incorrect_attempts'] for row in module_rows),
+            "incorrect_activities": sum(row['incorrect_attempts'] > 0 for row in module_rows),
         }
         participants.append(participant)
 
@@ -164,6 +185,7 @@ def study_analytics_csv_rows(context: dict):
                 "is_complete": "yes" if module_row["is_complete"] else "no",
                 "score": "" if module_row["score"] is None else module_row["score"],
                 "attempts": module_row["attempts"],
+                "incorrect_attempts": module_row['incorrect_attempts'],
                 "success": "yes" if module_row["success"] else "no",
                 "first_accessed": module_row["first_accessed"].isoformat() if module_row["first_accessed"] else "",
                 "last_accessed": module_row["last_accessed"].isoformat() if module_row["last_accessed"] else "",

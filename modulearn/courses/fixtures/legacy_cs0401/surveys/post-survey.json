@@ -1,0 +1,285 @@
+{
+  "version": 1,
+  "source_url": "https://pitt.co1.qualtrics.com/jfe/form/SV_0SONxocJu2utGtM",
+  "phase": "post",
+  "pages": [
+    {
+      "id": "QID35",
+      "title": "**Programming Questionnaire **   \n\nWe are interested in your background, thoughts, feelings, and experience with computer programming and how you study/learn computer programming and in general. \n\nPlease answer these questions **as honestly as you can. **There are **no right or wrong answers**—we only want to know what you think and feel about programming and other aspects of life that could be related to studying at a college-level with the support of technology.   \n\nAnswers will **have no impact on grading** and will **only be used for research purposes** and the responses will be **ANONYMIZED**.",
+      "type": "DB",
+      "back": false,
+      "block_id": "BL_201GelSZLmJOSIl",
+      "tag": "W1",
+      "required": false,
+      "shuffle_rows": false,
+      "rows": []
+    },
+    {
+      "id": "QID40",
+      "title": "How interesting do you find programming?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_5nzyaUjQTxxtON8",
+      "tag": "Interest1",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID40",
+          "prompt": "How interesting do you find programming?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not interesting at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Slightly interesting",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Somewhat interesting",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Very interesting",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Extremely interesting",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID41",
+      "title": "How much do you enjoy learning about programming?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_5nzyaUjQTxxtON8",
+      "tag": "Interest2",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID41",
+          "prompt": "How much do you enjoy learning about programming?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Slightly",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Somewhat",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Very much",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Extremely",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID42",
+      "title": "How excited are you to learn about programming?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_5nzyaUjQTxxtON8",
+      "tag": "Interest3",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID42",
+          "prompt": "How excited are you to learn about programming?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not excited at all",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Slightly excited",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Somewhat excited",
+              "text_entry": false
+            },
+            {
+              "id": "6",
+              "label": "Very excited",
+              "text_entry": false
+            },
+            {
+              "id": "7",
+              "label": "Extremely excited",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID46",
+      "title": "How good are you at coding?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_2hKY8Ep59FF0xw2",
+      "tag": "Confidence1",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID46",
+          "prompt": "How good are you at coding?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not good at all",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Slightly good",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat good",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Very good",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Extremely good",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID47",
+      "title": "How comfortable do you feel doing coding problems?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_2hKY8Ep59FF0xw2",
+      "tag": "Confidence2",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID47",
+          "prompt": "How comfortable do you feel doing coding problems?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not comfortable at all",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Slightly comfortable",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat comfortable",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Very comfortable",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Extremely comfortable",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    },
+    {
+      "id": "QID48",
+      "title": "How strong is your background in coding?",
+      "type": "MC",
+      "back": true,
+      "block_id": "BL_2hKY8Ep59FF0xw2",
+      "tag": "Confidence3",
+      "required": true,
+      "shuffle_rows": false,
+      "rows": [
+        {
+          "key": "QID48",
+          "prompt": "How strong is your background in coding?",
+          "options": [
+            {
+              "id": "1",
+              "label": "Not strong at all",
+              "text_entry": false
+            },
+            {
+              "id": "2",
+              "label": "Slightly strong",
+              "text_entry": false
+            },
+            {
+              "id": "3",
+              "label": "Somewhat strong",
+              "text_entry": false
+            },
+            {
+              "id": "4",
+              "label": "Very strong",
+              "text_entry": false
+            },
+            {
+              "id": "5",
+              "label": "Extremely strong",
+              "text_entry": false
+            }
+          ],
+          "multiple": false
+        }
+      ]
+    }
+  ],
+  "page_shuffle_groups": [],
+  "decline": null,
+  "end_text": "We thank you for your time spent taking this survey.\nYour response has been recorded."
+}

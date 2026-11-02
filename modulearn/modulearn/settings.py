@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'modulearn.core.context_processors.app_shell',
+                'recruitment.context_processors.study_player',
             ],
         },
     },
@@ -137,6 +138,8 @@ LANGUAGE_CODE = 'en'
 LANGUAGES = [
     ('en', 'English'),
     ('es', 'Español'),
+    ('fr', 'Français'),
+    ('sr-latn', 'Srpski (latinica)'),
 ]
 LOCALE_PATHS = [BASE_DIR / 'locale']
 LANGUAGE_COOKIE_NAME = 'modulearn_language'

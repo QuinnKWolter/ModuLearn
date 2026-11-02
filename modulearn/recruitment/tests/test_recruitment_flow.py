@@ -474,7 +474,7 @@ class RecruitmentEntryFlowTests(TestCase):
         study = Study.objects.get(title="Immediate Prolific URL Study")
         source = RecruitmentSource.objects.get(study=study, platform=RecruitmentSource.PLATFORM_PROLIFIC)
         self.assertTrue(source.is_active)
-        self.assertEqual(source.condition_strategy, RecruitmentSource.CONDITION_BALANCED)
+        self.assertEqual(source.condition_strategy, RecruitmentSource.CONDITION_RANDOM)
 
         dashboard_response = self.client.get(reverse("dashboard:instructor_dashboard"))
         self.assertEqual(dashboard_response.status_code, 200)

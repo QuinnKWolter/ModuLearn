@@ -44,7 +44,7 @@ class MainPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '<html lang="es">')
         self.assertContains(response, 'Herramientas libres y de código abierto')
-        self.assertContains(response, 'language-toggle-option is-active')
+        self.assertContains(response, 'language-menu-option is-active')
 
     def test_lang_query_parameter_sets_active_language_and_cookie(self):
         response = self.client.get(reverse('main:about') + '?lang=es')

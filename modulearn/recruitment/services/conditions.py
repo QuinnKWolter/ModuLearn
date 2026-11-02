@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import secrets
 
 from django.db import transaction
 from django.db.models import Count
@@ -13,6 +14,8 @@ def assign_condition(source: RecruitmentSource, external_pid: str, participant_s
     conditions = source.conditions
     if not conditions:
         return "default"
+    if source.condition_strategy == RecruitmentSource.CONDITION_RANDOM:
+        return secrets.choice(conditions)
 
     if source.condition_strategy == RecruitmentSource.CONDITION_SCHEDULE:
         condition = _assign_from_schedule(source, participant_session)

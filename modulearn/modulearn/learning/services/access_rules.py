@@ -5,6 +5,7 @@ from typing import Any
 
 from django.db.models import Max, Q
 from django.utils import timezone
+from main.i18n import translate as ui
 
 
 @dataclass(frozen=True)
@@ -95,30 +96,36 @@ def log_module_access(user, module, course_instance, *, event_type: str = "view"
 
 def evaluate_unit_access(unit, enrollment, *, include_hidden: bool = False) -> AccessState:
     if not unit.is_visible and not include_hidden:
-        return AccessState(False, False, "Hidden by instructor")
+        return AccessState(False, False, ui("Hidden by instructor"))
     now = timezone.now()
     if unit.opens_at and now < unit.opens_at:
-        return AccessState(True, False, f"Opens {timezone.localtime(unit.opens_at):%Y-%m-%d %H:%M %Z}", True)
+        return AccessState(True, False, ui("Opens {date}", date=timezone.localtime(unit.opens_at).strftime("%Y-%m-%d %H:%M %Z")), True)
     if unit.closes_at and now >= unit.closes_at:
-        return AccessState(True, False, f"Closed {timezone.localtime(unit.closes_at):%Y-%m-%d %H:%M %Z}", True)
+        return AccessState(True, False, ui("Closed {date}", date=timezone.localtime(unit.closes_at).strftime("%Y-%m-%d %H:%M %Z")), True)
     if not unit.is_locked:
         return AccessState(True, True)
     if _rule_passes(unit.unlock_rule, enrollment, subject_unit=unit):
         return AccessState(True, True)
-    return AccessState(True, False, _rule_reason(unit.unlock_rule, subject_unit=unit) or "Locked until the instructor conditions are met")
+    return AccessState(True, False, _rule_reason(unit.unlock_rule, subject_unit=unit) or ui("Locked until the instructor conditions are met"))
 
 
 def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None = None, include_hidden: bool = False) -> AccessState:
     if module.is_recommendation_only and not include_hidden:
-        return AccessState(False, False, "Available through recommendations only")
+        return AccessState(False, False, ui("Available through recommendations only"))
     if not module.is_visible and not include_hidden:
-        return AccessState(False, False, "Hidden by instructor")
+        return AccessState(False, False, ui("Hidden by instructor"))
+    if enrollment and not include_hidden:
+        from recruitment.services.flow import allows_activity
+        study_access = allows_activity(enrollment, module)
+        if study_access is not None:
+            return AccessState(bool(module.unit.is_visible), study_access,
+                '' if study_access else ui('Continue from your current study activity.'))
     has_dynamic_unlock = _has_dynamic_module_unlock(enrollment, module)
     has_branch_lock = _has_active_branch_target(module)
     if unit_state is not None and not unit_state.can_access:
         if unit_state.is_visible and has_dynamic_unlock and not unit_state.scheduled_lock:
             return AccessState(True, True)
-        return AccessState(unit_state.is_visible, False, unit_state.reason or "Unit is locked")
+        return AccessState(unit_state.is_visible, False, unit_state.reason or ui("Unit is locked"))
     if not module.is_locked and not has_branch_lock:
         return AccessState(True, True)
     if has_dynamic_unlock:
@@ -130,7 +137,7 @@ def evaluate_module_access(module, enrollment, *, unit_state: AccessState | None
         False,
         _rule_reason(module.unlock_rule, subject_module=module)
         or _branch_reason(module)
-        or "Locked until the instructor conditions are met",
+        or ui("Locked until the instructor conditions are met"),
     )
 
 
@@ -278,32 +285,32 @@ def _rule_reason(rule: dict[str, Any] | None, *, subject_unit=None, subject_modu
 
     if condition_type in {"module_accessed", "resource_accessed"}:
         target = _module_title(target_id)
-        return f"Unlocks after {target} is accessed" if target else "Unlocks after the selected activity is accessed"
+        return ui("Unlocks after {activity} is accessed", activity=target) if target else ui("Unlocks after the selected activity is accessed")
     if condition_type in {"module_completed", "form_completed", "survey_completed", "quiz_completed"}:
         target = _module_title(target_id)
-        return f"Unlocks after {target} is completed" if target else "Unlocks after the selected activity is completed"
+        return ui("Unlocks after {activity} is completed", activity=target) if target else ui("Unlocks after the selected activity is completed")
     if condition_type == "unit_accessed":
         target = _unit_title(target_id)
-        return f"Unlocks after {target} has been fully accessed" if target else "Unlocks after the selected unit has been fully accessed"
+        return ui("Unlocks after {activity} has been fully accessed", activity=target) if target else ui("Unlocks after the selected unit has been fully accessed")
     if condition_type == "unit_completed":
         target = _unit_title(target_id)
-        return f"Unlocks after {target} is completed" if target else "Unlocks after the selected unit is completed"
+        return ui("Unlocks after {activity} is completed", activity=target) if target else ui("Unlocks after the selected unit is completed")
     if condition_type == "previous_unit_accessed":
         previous_unit = _previous_unit(subject_unit or getattr(subject_module, "unit", None))
         return (
-            f"Unlocks after {previous_unit.title} has been fully accessed"
+            ui("Unlocks after {activity} has been fully accessed", activity=previous_unit.title)
             if previous_unit
-            else "Unlocks after the previous unit has been fully accessed"
+            else ui("Unlocks after the previous unit has been fully accessed")
         )
     if condition_type == "previous_unit_completed":
         previous_unit = _previous_unit(subject_unit or getattr(subject_module, "unit", None))
         return (
-            f"Unlocks after {previous_unit.title} is completed"
+            ui("Unlocks after {activity} is completed", activity=previous_unit.title)
             if previous_unit
-            else "Unlocks after the previous unit is completed"
+            else ui("Unlocks after the previous unit is completed")
         )
     if condition_type == "condition_equals":
-        return f"Unlocks for participants in condition {target_id}" if target_id else "Unlocks for participants assigned to the selected condition"
+        return ui("Unlocks for participants in condition {condition}", condition=target_id) if target_id else ui("Unlocks for participants assigned to the selected condition")
     return ""
 
 
@@ -348,14 +355,14 @@ def _branch_reason(module) -> str:
     def describe(rule):
         source_title = getattr(rule.source_module, "title", "the source activity")
         condition_labels = {
-            ModuleBranchRule.CONDITION_SUCCESS: f"{source_title} is answered correctly",
-            ModuleBranchRule.CONDITION_FAILURE: f"{source_title} is answered incorrectly",
-            ModuleBranchRule.CONDITION_COMPLETED: f"{source_title} is completed",
-            ModuleBranchRule.CONDITION_SCORE_GTE: f"{source_title} score is at least {rule.threshold or 70:g}%",
-            ModuleBranchRule.CONDITION_SCORE_LT: f"{source_title} score is below {rule.threshold or 70:g}%",
+            ModuleBranchRule.CONDITION_SUCCESS: ui("{activity} is answered correctly", activity=source_title),
+            ModuleBranchRule.CONDITION_FAILURE: ui("{activity} is answered incorrectly", activity=source_title),
+            ModuleBranchRule.CONDITION_COMPLETED: ui("{activity} is completed", activity=source_title),
+            ModuleBranchRule.CONDITION_SCORE_GTE: ui("{activity} score is at least {score}%", activity=source_title, score=f"{rule.threshold or 70:g}"),
+            ModuleBranchRule.CONDITION_SCORE_LT: ui("{activity} score is below {score}%", activity=source_title, score=f"{rule.threshold or 70:g}"),
         }
-        return condition_labels.get(rule.condition_type, f"{source_title} meets its branch condition")
+        return condition_labels.get(rule.condition_type, ui("{activity} meets its branch condition", activity=source_title))
 
     if len(rules) == 1:
-        return f"Unlocks when {describe(rules[0])}"
-    return "Unlocks when " + " or ".join(describe(rule) for rule in rules)
+        return ui("Unlocks when {condition}", condition=describe(rules[0]))
+    return ui("Unlocks when {first} or {second}", first=describe(rules[0]), second=describe(rules[1]))

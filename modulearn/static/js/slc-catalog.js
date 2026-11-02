@@ -144,7 +144,7 @@
     const eyebrow = node('div', null, 'slc-eyebrow');
     eyebrow.append(node('span', item.provider), node('span', item.source_label));
     card.append(eyebrow, node('h3', item.title), node('p', item.description || item.type));
-    card.append(badges([...item.languages, ...item.content_languages, item.protocols.includes('SPLICE') ? 'SPLICE' : item.protocols[0], item.status.startsWith('broken') ? 'Needs repair' : '']));
+    card.append(badges([...item.languages, ...item.content_languages, item.protocols.includes('SPLICE') ? 'SPLICE' : item.protocols[0], item.status.startsWith('broken') ? t('Needs repair') : '']));
     return card;
   }
   function renderResults() {
@@ -297,7 +297,7 @@
         'Authors': item.authors.join(', '), 'Programming languages': item.languages.join(', '),
         'Content languages': item.content_languages.join(', '), 'License': item.license,
         'Keywords': item.tags.join(', '), 'Knowledge components': item.concepts.join(', '),
-        'Delivery selected': item.selected_delivery ? (item.selected_delivery.protocol === 'SPLICE' ? t('{protocol} (preferred)', {protocol:item.selected_delivery.protocol}) : item.selected_delivery.protocol) : 'No usable endpoint published',
+        'Delivery selected': item.selected_delivery ? (item.selected_delivery.protocol === 'SPLICE' ? t('{protocol} (preferred)', {protocol:item.selected_delivery.protocol}) : item.selected_delivery.protocol) : t('No usable endpoint published'),
       };
       Object.entries(rows).filter(([,value]) => value).forEach(([label,value]) => metadata.append(node('dt', t(label)), node('dd', value)));
       detail.append(metadata);

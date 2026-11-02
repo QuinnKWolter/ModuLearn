@@ -48,7 +48,7 @@
     });
     return result;
   };
-  const number = value => Number(value).toLocaleString(undefined, {maximumFractionDigits:2});
+  const number = value => Number(value).toLocaleString(window.ModuLearnLanguage || 'en', {maximumFractionDigits:2});
   function render() {
     const body = $('gradeRows'); body.replaceChildren();
     const term = $('gradeSearch').value.toLocaleLowerCase();

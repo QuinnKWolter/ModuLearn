@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#f4f8fc">
-    <title>{% block title %}ModuLearn Content{% endblock %}</title>
+    <title>{% block title %}{% ui "ModuLearn Content" %}{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'img/logo_64.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,12 +31,13 @@
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
     {% block extra_css %}{% endblock %}
   </head>
-  <body class="content-shell-body min-h-screen p-0">
-    <div class="shell-background"></div>
+  <body class="{% if study_shell %}study-shell {% if study_preview %}study-preview {% endif %}{% endif %}content-shell-body min-h-screen p-0">
+    {% if not study_shell %}<div class="shell-background"></div>{% endif %}
     <main class="w-full flex flex-col">
+      {% include 'recruitment/player_controls.html' %}
       {% block content %}{% endblock %}
     </main>
-    {% include 'includes/app_footer.html' %}
+    {% if not study_shell %}{% include 'includes/app_footer.html' %}{% endif %}
     <script>
       window.ModuLearnLanguage = "{{ LANGUAGE_CODE|default:'en'|escapejs }}";
     </script>

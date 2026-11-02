@@ -1,0 +1,11 @@
+{% load ui_i18n %}
+<dialog class="translation-report" id="translation-report" aria-labelledby="translation-report-title">
+  <form method="post" data-translation-report-form action="{% url 'main:report_translation' %}">{% csrf_token %}
+    <div class="translation-report-heading"><h2 id="translation-report-title">{% ui 'Report a translation error' %}</h2><button type="button" data-report-close aria-label="{% ui 'Close' %}">×</button></div>
+    <p>{% ui 'Tell us which text needs attention. Reports are visible only to administrators.' %}</p>
+    <label>{% ui 'Text with an error' %}<textarea name="original_text" required maxlength="1000" rows="3" data-no-ui-translate></textarea></label>
+    <label>{% ui 'Suggested correction or explanation (optional)' %}<textarea name="suggestion" maxlength="2000" rows="3" data-no-ui-translate></textarea></label>
+    <p role="status" data-report-status></p>
+    <div class="translation-report-actions"><button type="button" data-report-close>{% ui 'Cancel' %}</button><button type="submit">{% ui 'Send report' %}</button></div>
+  </form>
+</dialog>

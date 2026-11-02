@@ -1,0 +1,224 @@
+{
+  "schema": "modulearn-legacy-assessment-v1",
+  "source": "pretest-2018-cs0401",
+  "authors": "Roya Hosseini, PAWS Lab",
+  "surveys_present": false,
+  "units": [
+    {
+      "phase": "pretest",
+      "title": "Java Pre-Test",
+      "instructions": "Please attempt all 10 questions in order. Avoid revisiting questions unless you think you made a mistake. You will not be penalized for wrong answers. Answer without seeking extra help and do your best. Your answers and attempts are saved as you submit each activity.",
+      "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2",
+      "questions": [
+        {
+          "id": "pretest_qj_if",
+          "position": 1,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_if&act=Decisions&sub=pretest_qj_if&svc=pretest&trace=false",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {  \n\n        int result = 9;\n        if ( 9 % 2 > 0 )\n            result += 2;\n   \n  }\n}\n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "pretest_qj_while",
+          "position": 2,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_while&act=Loops_while&sub=pretest_qj_while&svc=pretest&trace=false",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {\n\n    int result = 0 ;\n    int n = 3;\n    while (n > 0) {\n        result += n;\n        n--;\n    }\n  }\n} \n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "pretest_qj_for",
+          "position": 3,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_for&act=Loops_for&sub=pretest_qj_for&svc=pretest&trace=false",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {\n\n       int result = 0;\n       for (int i = 0 ; i < 5; i++) {\n            result = result + i;\n       }\n  }\n}\n\n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "pretest_qj_array",
+          "position": 4,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_array&act=Arrays&sub=pretest_qj_array&svc=pretest&trace=false",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {     \n\n       int[] numbers = new int[10];\n       for (int i = 0; i < numbers.length; i++)\n            numbers[i] = i * i;\n       int result = numbers[4];\n        \n  }\n}  \n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "pretest_qj_2darray",
+          "position": 5,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_2darray&act=Two-dimensional_Arrays&sub=pretest_qj_2darray&svc=pretest&trace=false",
+          "snapshot": {
+            "code": "public class Tester {\n   public static void main(String[] args) {      \n\n      int[][] matrix = { {0, 2, 5, 0},\n\t                 {1 ,2, 4, 3},\n                         {0, 7, 2, 0},\n\t                 {0, 0, 2, 9} };\n      int result = 5;\n      if (matrix[2][2] > 3) {\n            result++;\n      }\n      System.out.print(result);\n  }\n} \n",
+            "prompt": "What is the output?"
+          }
+        },
+        {
+          "id": "pretest_boolean",
+          "position": 6,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/378/embed?act=PCRS&sub=pretest_boolean",
+          "snapshot": {
+            "prompt": "Assume that the program has declared and initialized three integer variables named  a ,  b , and  c . Write a boolean expression to determine whether all these three variables have the same value. Store the result of this expression in the variable  result .  E.g. 1: if  a=5 ,  b=5 , and  c=5 , the value of  result  will be  true .  E.g. 2: if  a=4 ,  b=4 , and  c=7 , the value of  result  will be  false .  E.g. 3: if  a=3 ,  b=9 , and  c=3 , the value of  result  will be  false .",
+            "starter_code": "\n[file SCode.java]\n[blocked]\nboolean result;\n[/blocked]\n[student_code]\n// TODO: Write your code here\n\n        \n\n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "pretest_ifelse",
+          "position": 7,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/381/embed?act=PCRS&sub=pretest_ifelse",
+          "snapshot": {
+            "prompt": "Given an integer variable  age , write a code to determine the fare based on the value of variable  age . The fare is $2 for a child (no more than 11 years old ), $3 for a senior (at least 65 years old), or $5 for an adult. Store the fare in an integer variable called  fare .   Assume that the initial value of the variable  age  is already set to an integer value.  E.g. 1: if  age=7 , then  fare=2 . E.g. 2: if  age=65 , then  fare=3 . E.g. 3: if  age=23 , then  fare=5 .",
+            "starter_code": "\n[file SCode.java]\n[student_code]\n// TODO: Write your code here\n \n    \n \n        \n        \n\n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "pretest_array",
+          "position": 8,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/380/embed?act=PCRS&sub=pretest_array",
+          "snapshot": {
+            "prompt": "Assume that the program has declared and initialized an array of five integers named  arr . Complete the following code to increment all values in the array  arr  by 1.  E.g. 1: if  arr={1,2,3,4,5} , the code will change it to  arr={2,3,4,5,6} . E.g. 2: if  arr={10,20,30,40,50} , the code will change it to  arr={11,21,31,41,51} .",
+            "starter_code": "\n[file SCode.java]\n[student_code]\n// TODO: Complete the code here\nfor (\t\t\t\t\t) {\n \n}    \n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "pretest_nested_for",
+          "position": 9,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/379/embed?act=PCRS&sub=pretest_nested_for",
+          "snapshot": {
+            "prompt": "Write a  nested for loop  to print the following triangle with 4 rows:   * ** *** ****  ",
+            "starter_code": "\n[file SCode.java]\n[student_code]\n// TODO: Write your code here\n\n\n\n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "pretest_method",
+          "position": 10,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/382/embed?act=PCRS&sub=pretest_method",
+          "snapshot": {
+            "prompt": "Write a method called  firstTwo  that receives a string as its parameter and returns a string made of the first two characters in the given string. If the given string is  \"Hello\" , the method returns  \"He\" . If the length of the given string is shorter than 2, the method returns whatever the given string is.    Hint : You can use the charAt(int index) or substring(int beginIndex, int endIndex) method for getting the first two characters in the given string.     firstTwo(\"Hello\") → \"He\" firstTwo(\"abcdefg\") → \"ab\" firstTwo(\"ab\") → \"ab\" firstTwo(\"\") → \"\"  ",
+            "starter_code": "\n[file SCode.java]\n[student_code]\n//TODO: Write your method here\n    \n    \n    \n    \n    \n    \n[/student_code]\n[/file]"
+          }
+        }
+      ]
+    },
+    {
+      "phase": "posttest",
+      "title": "Java Post-Test",
+      "instructions": "Please attempt all 10 questions in order. Avoid revisiting questions unless you think you made a mistake. You will not be penalized for wrong answers. Answer without seeking extra help and do your best. Your answers and attempts are saved as you submit each activity.",
+      "source_sha256": "f824e0f9f451a52f75d9f16ab02939ccd85d99e06a01b143112c65d45c593046",
+      "questions": [
+        {
+          "id": "posttest_qj_if",
+          "position": 1,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_if&act=Decisions&sub=posttest_qj_if&svc=pretest",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {  \n\n        int result = 10;\n        if ( 10 % 3 > 0 )\n            result += 5;\n   \n  }\n}\n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "posttest_qj_while",
+          "position": 2,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_while&act=Loops_while&sub=posttest_qj_while&svc=pretest",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {\n\n    int result = 0 ;\n    int n = 5;\n    while (n > 2) {\n        result += n;\n        n--;\n    }\n  }\n} \n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "posttest_qj_for",
+          "position": 3,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_for&act=Loops_for&sub=posttest_qj_for&svc=pretest",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {\n\n       int result = 0;\n       for (int i = 0 ; i < 4; i++) {\n            result = result + i;\n       }\n  }\n}\n\n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "posttest_qj_array",
+          "position": 4,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_array&act=Arrays&sub=posttest_qj_array&svc=pretest",
+          "snapshot": {
+            "code": "public class Tester {\n  public static void main(String[] args) {     \n\n       int[] numbers = new int[10];\n       for (int i = 0; i < numbers.length; i++)\n            numbers[i] = i + i;\n       int result = numbers[5];\n        \n  }\n}  \n",
+            "prompt": "What is the final value of result?"
+          }
+        },
+        {
+          "id": "posttest_qj_2darray",
+          "position": 5,
+          "provider": "quizjet",
+          "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_2darray&act=Two-dimensional_Arrays&sub=posttest_qj_2darray&svc=pretest",
+          "snapshot": {
+            "code": "public class Tester {\n   public static void main(String[] args) {      \n\n      int[][] matrix = { {0, 2, 5, 0},\n\t                 {1 ,2, 4, 3},\n                         {0, 7, 2, 0},\n\t                 {0, 0, 2, 9} };\n      int result = 9;\n      if (matrix[2][1] > 2) {\n            result++;\n      }\n      System.out.print(result);\n  }\n} \n",
+            "prompt": "What is the output?"
+          }
+        },
+        {
+          "id": "posttest_oneBooleanFalse",
+          "position": 6,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/415/embed?act=PCRS&sub=posttest_oneBooleanFalse",
+          "snapshot": {
+            "prompt": "Assume that the program has declared and initialized three boolean variables named  a ,  b , and  c . Write a boolean expression to determine whether all variables except variable  a  are true. Store the result of this expression in a boolean variable called  result .  E.g. 1: if  a=true ,  b=true , and  c=true , the value of  result  will be  false .  E.g. 2: if  a=false ,  b=true , and  c=true , the value of  result  will be  true .",
+            "starter_code": "\n[file SCode.java]\n[blocked]\n// TODO: Write your code here\nboolean result;\n[/blocked]\n[student_code]\n\n\n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "posttest_ifelse",
+          "position": 7,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/411/embed?act=PCRS&sub=posttest_ifelse",
+          "snapshot": {
+            "prompt": "Given an integer variable  age , write a code to determine the fare based on the value of variable  age . The fare is $3 for a child (no more than 10 years old ), $4 for a senior (at least 60 years old), or $6 for an adult. Store the fare in an integer variable called  fare .   Assume that the initial value of the variable  age  is already set to an integer value.  E.g. 1: if  age=7 , then  fare=3 . E.g. 2: if  age=60 , then  fare=4 . E.g. 3: if  age=23 , then  fare=6 .",
+            "starter_code": "\n[file SCode.java]\n[blocked]\n// TODO: Write your code here\n[/blocked]\n[student_code]\nint fare;\n\n \n        \n        \n\n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "posttest_array",
+          "position": 8,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/413/embed?act=PCRS&sub=posttest_array",
+          "snapshot": {
+            "prompt": "Assume that the program has declared and initialized an array of 10 integers named  arr . Write a  for loop  to increment all values in the array  arr  by 5.  E.g. 1: if  arr={1,2,3,4,5,6,7,8,9,10} , the code will change it to  arr={6,7,8,9,10,11,12,13,14,15} . E.g. 2: if  arr={0,10,20,30,40,50,60,70,80,90} , the code will change it to  arr={5,15,25,35,45,55,65,75,85,95} .",
+            "starter_code": "\n[file SCode.java]\n[blocked]\n// TODO: Write your  code here\n[/blocked]\n[student_code]\nfor (\t\t   ) {\n \n}  \n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "posttest_nested_for",
+          "position": 9,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/412/embed?act=PCRS&sub=posttest_nested_for",
+          "snapshot": {
+            "prompt": "Write a  nested for loop  to print the following triangle with 6 rows:   * ** *** **** ***** ******  ",
+            "starter_code": "\n[file SCode.java]\n[blocked]\n// TODO: Write your code here\n[/blocked]\n[student_code]\n\n\n\n[/student_code]\n[/file]"
+          }
+        },
+        {
+          "id": "posttest_method",
+          "position": 10,
+          "provider": "pcrs",
+          "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/414/embed?act=PCRS&sub=posttest_method",
+          "snapshot": {
+            "prompt": "Write a method called  firstTwo  that receives a string as its parameter and returns a string made of the first two characters in the given string. If the given string is  \"Hello\" , the method returns  \"He\" . If the string length is less than 2, the method returns \"@@\".   Hint 1 : You can use the charAt(int index) or substring(int beginIndex, int endIndex) method for getting the first two characters in the given string.    firstTwo(\"Hello\") → \"He\" firstTwo(\"abcdefg\") → \"ab\" firstTwo(\"ab\") → \"ab\" firstTwo(\"j\") → \"@@\" firstTwo(\"\") → \"@@\"  ",
+            "starter_code": "\n[file SCode.java]\n[blocked]\n// TODO: Write your code here\n[/blocked]\n[student_code]\n public String firstTwo(String str) {\n   \n    \n    \n    \n    \n}   \n[/student_code]\n[/file]"
+          }
+        }
+      ]
+    }
+  ]
+}

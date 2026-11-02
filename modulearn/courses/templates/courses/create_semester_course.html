@@ -1,43 +1,44 @@
 {% extends 'base.html' %}
+{% load ui_i18n %}
 {% load static %}
 
-{% block title %}Creating Course - ModuLearn{% endblock %}
+{% block title %}{% ui "Creating Course - ModuLearn" %}{% endblock %}
 
 {% block breadcrumbs %}
-  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">{% ui "Home" %}</a></li>
   <li>/</li>
-  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">Instructor Dashboard</a></li>
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">{% ui "Instructor Dashboard" %}</a></li>
   <li>/</li>
-  <li class="text-slate-500 dark:text-slate-300">Create Course</li>
+  <li class="text-slate-500 dark:text-slate-300">{% ui "Create Course" %}</li>
 {% endblock %}
 
 {% block content %}
   <div class="max-w-2xl mx-auto py-8">
     <div id="manualState" class="card p-6{% if course_export_url %} hidden{% endif %}">
-      <div class="stat-kicker">Session Setup</div>
-      <h1 class="text-2xl font-bold mt-2">Create a custom course session</h1>
-      <p class="text-slate-600 dark:text-slate-300 mt-2">Start empty, then populate units and activities manually.</p>
+      <div class="stat-kicker">{% ui "Session Setup" %}</div>
+      <h1 class="text-2xl font-bold mt-2">{% ui "Create a custom course session" %}</h1>
+      <p class="text-slate-600 dark:text-slate-300 mt-2">{% ui "Start empty, then populate units and activities manually." %}</p>
 
       <form id="createRawSessionForm" class="grid gap-4 mt-5">
         {% csrf_token %}
         <div id="manualError" class="alert alert-danger hidden mb-0" role="alert"></div>
         <div>
-          <label for="rawCourseTitle" class="stat-kicker">Course title</label>
-          <input id="rawCourseTitle" name="course_title" class="form-control mt-1" placeholder="Untitled Course" required>
+          <label for="rawCourseTitle" class="stat-kicker">{% ui "Course title" %}</label>
+          <input id="rawCourseTitle" name="course_title" class="form-control mt-1" placeholder="{% ui "Untitled Course" %}" required>
         </div>
         <div>
-          <label for="rawSessionName" class="stat-kicker">Session name</label>
-          <input id="rawSessionName" name="group_name" class="form-control mt-1" placeholder="Fall 2026 - Section A" required>
+          <label for="rawSessionName" class="stat-kicker">{% ui "Session name" %}</label>
+          <input id="rawSessionName" name="group_name" class="form-control mt-1" placeholder="{% ui "Fall 2026 - Section A" %}" required>
         </div>
         <div>
-          <label for="rawCourseDescription" class="stat-kicker">Description (optional)</label>
+          <label for="rawCourseDescription" class="stat-kicker">{% ui "Description (optional)" %}</label>
           <textarea id="rawCourseDescription" name="course_description" class="form-control mt-1" rows="3" placeholder="Optional course description"></textarea>
         </div>
         <div class="flex flex-wrap gap-2 pt-1">
           <button id="createRawSessionButton" type="submit" class="btn btn-primary">
-            <i class="bi bi-plus-circle mr-2"></i>Create Custom Session
+            <i class="bi bi-plus-circle mr-2"></i>{% ui "Create Custom Session" %}
           </button>
-          <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+          <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">{% ui "Cancel" %}</a>
         </div>
       </form>
     </div>
@@ -46,8 +47,8 @@
       <div class="inline-flex mx-auto items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
         <span class="spinner-border" aria-hidden="true"></span>
       </div>
-      <h1 class="text-3xl font-bold mt-6">Importing your course structure</h1>
-      <p class="text-slate-600 dark:text-slate-300 mt-3">ModuLearn is pulling the authored structure, normalizing activities, and preparing instructor workflows.</p>
+      <h1 class="text-3xl font-bold mt-6">{% ui "Importing your course structure" %}</h1>
+      <p class="text-slate-600 dark:text-slate-300 mt-3">{% ui "ModuLearn is pulling the authored structure, normalizing activities, and preparing instructor workflows." %}</p>
       <div class="progress h-3 mt-6">
         <div class="progress-bar bg-blue-600 animate-pulse" style="width: 100%"></div>
       </div>
@@ -57,13 +58,13 @@
       <div class="inline-flex mx-auto items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-300">
         <i class="bi bi-exclamation-triangle-fill text-3xl"></i>
       </div>
-      <h1 class="text-3xl font-bold mt-6">Course creation hit a snag</h1>
+      <h1 class="text-3xl font-bold mt-6">{% ui "Course creation hit a snag" %}</h1>
       <div class="alert alert-danger mt-5">
         <p id="errorMessage" class="mb-0"></p>
       </div>
       <div class="flex flex-col sm:flex-row justify-center gap-3 mt-6">
-        <button type="button" onclick="window.location.reload()" class="btn btn-primary">Try Again</button>
-        <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">Return To Dashboard</a>
+        <button type="button" onclick="window.location.reload()" class="btn btn-primary">{% ui "Try Again" %}</button>
+        <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">{% ui "Return To Dashboard" %}</a>
       </div>
     </div>
   </div>

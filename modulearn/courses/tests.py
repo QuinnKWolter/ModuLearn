@@ -837,6 +837,26 @@ class CourseProgressTests(TestCase):
         self.assertIn('Module A', visible_titles)
         self.assertNotIn('Module B', visible_titles)
 
+    def test_practice_only_unit_displays_completion_without_changing_graded_counts(self):
+        practice_unit = Unit.objects.create(course=self.course, title='Survey')
+        practice = Module.objects.create(unit=practice_unit, title='Pre-Survey', is_graded=False)
+        progress, _ = ModuleProgress.get_or_create_progress(
+            user=self.student, module=practice, course_instance=self.instance)
+        apply_progress_snapshot(progress, source='test', progress=1, is_complete=True)
+        context = build_course_detail_context(self.student, self.instance)
+        card = next(c for c in context['unit_cards'] if c['unit'].pk == practice_unit.pk)
+        self.assertEqual(card['module_count'], 0)
+        self.assertEqual(card['display_total'], 1)
+        self.assertEqual(card['progress_percent'], 100)
+        self.assertTrue(card['is_complete'])
+        graded = next(c for c in context['unit_cards'] if c['unit'].pk == self.unit.pk)
+        self.assertEqual(graded['module_count'], 2)
+        self.assertEqual(graded['progress_percent'], 0)
+        self.client.force_login(self.student)
+        response = self.client.get(reverse('courses:course_detail', args=[self.instance.pk]))
+        self.assertNotContains(response, '0/0 graded')
+        self.assertContains(response, '1/1 practice')
+
     def test_locked_module_blocks_student_launch_and_logs_denial(self):
         self.client.force_login(self.student)
         self.module_a.is_locked = True
@@ -857,6 +877,8 @@ class CourseProgressTests(TestCase):
 
     def test_next_accessible_module_endpoint_reflects_new_unlocks(self):
         self.client.force_login(self.student)
+        later_unit = Unit.objects.create(course=self.course, title='Post-Survey', order=100)
+        Module.objects.create(unit=later_unit, title='Later unlocked survey')
         self.module_b.is_locked = True
         self.module_b.unlock_rule = {'mode': 'all', 'conditions': [{'type': 'module_completed', 'target_id': self.module_a.id}]}
         self.module_b.save(update_fields=['is_locked', 'unlock_rule'])
@@ -1550,7 +1572,7 @@ class CourseProgressTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         next_url = reverse('courses:launch_iframe_module', args=[self.instance.id, self.module_b.id])
-        self.assertContains(response, 'Next Module')
+        self.assertContains(response, 'Next Activity')
         self.assertContains(response, next_url)
 
     @override_settings(
@@ -1580,7 +1602,7 @@ class CourseProgressTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         next_url = reverse('courses:launch_iframe_module', args=[self.instance.id, self.module_b.id])
-        self.assertContains(response, 'No Unlocked Module')
+        self.assertContains(response, 'No Unlocked Activity')
         self.assertNotContains(response, next_url)
 
     @override_settings(

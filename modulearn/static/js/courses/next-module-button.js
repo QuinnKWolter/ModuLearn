@@ -119,6 +119,7 @@
       button.addEventListener('focus', warm);
       button.addEventListener('click', function (event) {
         event.preventDefault();
+        if (button.dataset.nextState === 'empty') return;
         warm().then(function (data) {
           if (data && data.available && data.url) {
             window.location.href = data.url;
@@ -127,6 +128,9 @@
       });
 
       scheduleRefresh(button, 250);
+      document.querySelectorAll('iframe').forEach(function (frame) {
+        frame.addEventListener('load', function () { scheduleRefresh(button, 120); });
+      });
     });
 
     document.addEventListener(REFRESH_EVENT, function () {

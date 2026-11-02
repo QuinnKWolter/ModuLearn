@@ -157,7 +157,7 @@ function updateMasteryGrid() {
     th.innerHTML = `
       <div class="flex flex-col items-center">
         <i class="fas fa-tasks text-blue-600 mb-1"></i>
-        <span class="text-sm break-words">${resource.name}</span>
+        <span class="text-sm break-words">${escapeHtml(resourceDisplayName(resource.name))}</span>
       </div>
     `;
     gridHeaders.appendChild(th);
@@ -179,7 +179,7 @@ function updateMasteryGrid() {
     topicCell.innerHTML = `
       <div class="flex items-center">
         <div class="flex-1">
-          <div class="font-bold mb-1">${topic.name}</div>
+          <div class="font-bold mb-1" data-no-ui-translate>${topic.name}</div>
           <div class="progress" style="height: 6px; background-color: rgba(0,0,0,0.1);">
             <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; background-color: ${getTextColor(topicProgress)};"></div>
           </div>
@@ -197,10 +197,10 @@ function updateMasteryGrid() {
       const textColor = getTextColor(value);
       cell.className = 'text-center border-0 py-2 progress-cell cursor-pointer';
       cell.style.cursor = 'pointer';
-      cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resource.name);
+      cell.onclick = () => handleCellClick(topic.id, resource.id, topic.name, resourceDisplayName(resource.name));
       cell.tabIndex = 0;
       cell.setAttribute('role', 'button');
-      cell.setAttribute('aria-label', `${topic.name} · ${resource.name}`);
+      cell.setAttribute('aria-label', `${topic.name} · ${resourceDisplayName(resource.name)}`);
       cell.addEventListener('keydown', event => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
@@ -247,8 +247,8 @@ function updatePerStudentView() {
   if (filterCount) {
     const total = learners.length;
     filterCount.textContent = studentTableFilter.trim()
-      ? `${sortedLearners.length} of ${total} students`
-      : `${total} students`;
+      ? window.ModuLearnI18n.t('{count} of {total} students', {count: sortedLearners.length, total})
+      : window.ModuLearnI18n.t('{count} students', {count: total});
   }
   updateStudentSortIndicators();
 
@@ -264,8 +264,8 @@ function updatePerStudentView() {
             <i class="fas fa-user text-white" style="font-size: 0.7rem;"></i>
           </div>
           <div>
-            <div class="font-bold" style="font-size: 0.9rem;">${escapeHtml(learner.id)}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(learner.name || learner.email || '')}</div>
+            <div class="font-bold" style="font-size: 0.9rem;" data-no-ui-translate>${escapeHtml(learner.id)}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400" data-no-ui-translate>${escapeHtml(learner.name || learner.email || '')}</div>
           </div>
         </div>
       </td>
@@ -353,13 +353,21 @@ function formatLastActive(value) {
   if (!value) return 'No timestamp';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'No timestamp';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(window.ModuLearnLanguage || 'en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function getLastActiveTime(value) {
   if (!value) return 0;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function resourceDisplayName(name) {
+  const value = String(name || 'Activity');
+  const suffix = value.match(/ · (Practice|Graded)$/);
+  const base = suffix ? value.slice(0, -suffix[0].length) : value;
+  const translate = message => window.ModuLearnI18n?.t(message) || message;
+  return translate(base) + (suffix ? ' · ' + translate(suffix[1]) : '');
 }
 
 function resourceColor(name) {
@@ -400,7 +408,7 @@ function renderResourceProfile(summary) {
     <div class="resource-profile" title="Relative activity by resource type">
       ${resources.map((resource, index) => {
         const width = Math.max(4, (resource.average / total) * 100);
-        return `<span class="resource-profile-segment" title="${escapeHtml(resource.name)} ${clampPercent(resource.average)}%" style="width:${width}%; background:${resourceColor(resource.name)};"></span>`;
+        return `<span class="resource-profile-segment" title="${escapeHtml(resourceDisplayName(resource.name))} ${clampPercent(resource.average)}%" style="width:${width}%; background:${resourceColor(resource.name)};"></span>`;
       }).join('')}
     </div>
   `;
@@ -507,7 +515,7 @@ function formatDateTime(value) {
   if (!value) return 'No timestamp';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'No timestamp';
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(window.ModuLearnLanguage || 'en', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -643,7 +651,7 @@ function showModuleCaptureHistoryModal(data) {
         <div class="raw-history-modal-header">
           <div class="raw-history-modal-heading">
             <div class="raw-history-modal-eyebrow">Raw Captured Data</div>
-            <h5 class="raw-history-modal-title">${escapeHtml(data.module?.title || 'Activity')}</h5>
+            <h5 class="raw-history-modal-title" data-no-ui-translate>${escapeHtml(data.module?.title || 'Activity')}</h5>
             <div class="raw-history-modal-meta">${escapeHtml(data.learner?.name || data.learner?.id || '')} · ${escapeHtml(data.module?.unit_title || '')}</div>
           </div>
           <button type="button" data-bs-dismiss="modal" class="raw-history-modal-close">&times;</button>
@@ -713,7 +721,7 @@ function renderStudentProgressSummary(learner) {
             <div class="analytics-card p-4">
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div>
-                  <h6 class="font-bold mb-1">${escapeHtml(topic.name)}</h6>
+                  <h6 class="font-bold mb-1" data-no-ui-translate>${escapeHtml(topic.name)}</h6>
                   <div class="text-xs text-gray-500 dark:text-gray-400">${pct}% overall progress</div>
                 </div>
                 <span class="badge font-bold" style="${Object.entries(getBadgeStyle(pct)).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">${pct}%</span>
@@ -726,7 +734,7 @@ function renderStudentProgressSummary(learner) {
                   return `
                     <details class="student-resource-detail" style="--completion:${resourcePct}%;--type-color:${resourceColor(resource.name)}">
                       <summary>
-                        <span>${escapeHtml(resource.name)}</span>
+                        <span>${escapeHtml(resourceDisplayName(resource.name))}</span>
                         <span>${resourcePct}% · ${activities.length} activities</span>
                       </summary>
                       <div class="mt-3 space-y-2">
@@ -737,7 +745,7 @@ function renderStudentProgressSummary(learner) {
                           return `
                             <div class="student-activity-row">
                               <div class="min-w-0">
-                                <div class="font-semibold truncate">${escapeHtml(activity.name || activity.id)}</div>
+                                <div class="font-semibold truncate" data-no-ui-translate>${escapeHtml(activity.name || activity.id)}</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">${analyticsText(activityMetrics.status)} · ${analyticsText('Score')}: ${activityMetrics.score === null ? '—' : `${Math.round(activityMetrics.score)}%`} · ${analyticsText('Attempts')}: ${activityMetrics.attempts ?? '—'}</div>
                               </div>
                               <div class="student-activity-actions">
@@ -782,27 +790,28 @@ function eventToneClass(eventType) {
 
 function renderEventPayloadChips(payload) {
   if (!payload || typeof payload !== 'object') return '';
+  const t = (message, value) => window.ModuLearnI18n.t(message, {value});
   const chips = [];
-  if (payload.reason) chips.push(`reason: ${payload.reason}`);
-  if (payload.elapsed_ms !== undefined) chips.push(`elapsed: ${formatDurationMs(payload.elapsed_ms)}`);
-  if (payload.visibility_state) chips.push(`visibility: ${payload.visibility_state}`);
-  if (payload.window_focused !== undefined && payload.window_focused !== null) chips.push(`focused: ${payload.window_focused ? 'yes' : 'no'}`);
-  if (payload.scoreText) chips.push(`score: ${payload.scoreText}`);
-  if (payload.result_type) chips.push(`result: ${payload.result_type}`);
-  if (payload.attempt_count !== undefined) chips.push(`attempts: ${payload.attempt_count}`);
-  if (payload.goal_name) chips.push(`goal: ${payload.goal_name}`);
+  if (payload.reason) chips.push(t('Reason: {value}', payload.reason));
+  if (payload.elapsed_ms !== undefined) chips.push(t('Elapsed: {value}', formatDurationMs(payload.elapsed_ms)));
+  if (payload.visibility_state) chips.push(t('Visibility: {value}', payload.visibility_state));
+  if (payload.window_focused !== undefined && payload.window_focused !== null) chips.push(t('Focused: {value}', window.ModuLearnI18n.t(payload.window_focused ? 'Yes' : 'No')));
+  if (payload.scoreText) chips.push(t('Score: {value}', payload.scoreText));
+  if (payload.result_type) chips.push(t('Result: {value}', payload.result_type));
+  if (payload.attempt_count !== undefined) chips.push(t('Attempts: {value}', payload.attempt_count));
+  if (payload.goal_name) chips.push(t('Goal: {value}', payload.goal_name));
   if (payload.iframe_origin) chips.push(payload.iframe_origin);
-  if (!chips.length && Array.isArray(payload.payload_keys)) chips.push(`payload: ${payload.payload_keys.join(', ')}`);
+  if (!chips.length && Array.isArray(payload.payload_keys)) chips.push(t('Payload: {value}', payload.payload_keys.join(', ')));
 
   return chips.length
-    ? `<div class="engagement-event-chips">${chips.map(chip => `<span>${escapeHtml(chip)}</span>`).join('')}</div>`
+    ? `<div class="engagement-event-chips" data-no-ui-translate>${chips.map(chip => `<span>${escapeHtml(chip)}</span>`).join('')}</div>`
     : '';
 }
 
 function renderEngagementEvent(event) {
-  const scoreText = event.score === null || event.score === undefined ? '' : `<span>Score ${Math.round(event.score)}%</span>`;
+  const scoreText = event.score === null || event.score === undefined ? '' : `<span>${escapeHtml(window.ModuLearnI18n.t('Score: {score}%', {score:Math.round(event.score)}))}</span>`;
   const progressText = event.progress_percent || event.event_type === 'progress' || event.event_type === 'completion'
-    ? `<span>${event.progress_percent}% progress</span>`
+    ? `<span>${escapeHtml(window.ModuLearnI18n.t('Progress: {progress}%', {progress:event.progress_percent}))}</span>`
     : '';
   const successText = event.success ? '<span>Successful</span>' : '';
   return `
@@ -811,7 +820,7 @@ function renderEngagementEvent(event) {
       <div class="engagement-event-body">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
-            <div class="font-bold">${escapeHtml(event.event_label || event.event_type)}</div>
+            <div class="font-bold">${escapeHtml(window.ModuLearnI18n.t(event.event_label || event.event_type))}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(event.source || 'system')}</div>
           </div>
           <div class="engagement-event-metrics">
@@ -852,7 +861,7 @@ function renderStudentEngagementView(data) {
         ${(data.units || []).map(unit => `
           <details class="engagement-unit" data-timeline-unit="${unit.id}">
             <summary>
-              <span>▸ ${escapeHtml(unit.title)}</span>
+              <span data-no-ui-translate>▸ ${escapeHtml(unit.title)}</span>
               <span>${unit.event_count || 0} events</span>
             </summary>
             <div class="engagement-unit-body">
@@ -860,8 +869,8 @@ function renderStudentEngagementView(data) {
                 <details class="engagement-module" data-timeline-module="${module.id}">
                   <summary>
                     <div class="min-w-0">
-                      <div class="font-bold truncate">▸ ${escapeHtml(module.title)}</div>
-                      <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(module.module_type || 'Activity')}</div>
+                      <div class="font-bold truncate" data-no-ui-translate>▸ ${escapeHtml(module.title)}</div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(resourceDisplayName(module.module_type))}</div>
                     </div>
                     <div class="engagement-module-actions">
                       <button
@@ -909,9 +918,9 @@ function showStudentDetails(learnerId) {
           <div>
             <h5 class="text-lg font-bold">
               <i class="fas fa-user-graduate mr-2"></i>
-              Student Details: ${escapeHtml(learner.id)}
+              ${escapeHtml(window.ModuLearnI18n.t('Student Details: {student}', {student: learner.id}))}
             </h5>
-            <div class="text-sm text-white/80">${escapeHtml(learner.name || learner.email || '')}</div>
+            <div class="text-sm text-white/80" data-no-ui-translate>${escapeHtml(learner.name || learner.email || '')}</div>
           </div>
           <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
         </div>

@@ -175,6 +175,7 @@ class CourseInstance(models.Model):
         return new_instance
 
 class Unit(models.Model):
+    time_limit_seconds = models.PositiveIntegerField(default=0)
     opens_at = models.DateTimeField(null=True, blank=True)
     closes_at = models.DateTimeField(null=True, blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='units')
@@ -202,6 +203,11 @@ class Unit(models.Model):
         ordering = ['order', 'id']
 
 class Module(models.Model):
+    COMPLETION_PROVIDER = 'provider'
+    COMPLETION_SUBMISSION = 'submission'
+    COMPLETION_RULE_CHOICES = [('provider', 'Provider completion'), ('submission', 'First submission')]
+    completion_rule = models.CharField(max_length=20, choices=COMPLETION_RULE_CHOICES, default='provider',
+        help_text='First submission completes the activity regardless of correctness; scores and attempts remain separate.')
     is_graded = models.BooleanField(default=True)
     is_recommendation_only = models.BooleanField(default=False, help_text="Available only as isolated recommendation practice; excluded from course requirements.")
     MODULE_TYPE_IMPORTED = 'imported'
@@ -993,6 +999,9 @@ class ModuleAccessLog(models.Model):
 
 class ModuleProgressEvent(models.Model):
     EVENT_TYPE_CHOICES = [
+        ('study_transition', 'Study Navigation'),
+        ('study_late_event', 'Study Event After Activity Closed'),
+        ('study_input', 'Study Form Input Summary'),
         ('provider_event', 'Provider Interaction'),
         ('attempt', 'Scored Attempt'),
         ('launch', 'Launch'),

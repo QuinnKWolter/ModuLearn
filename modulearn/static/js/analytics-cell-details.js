@@ -21,7 +21,7 @@ function renderCellExercises(learner, topicId, resourceId, activities, averages)
       const average = clampPercent(averages[activity.id] || 0);
       const difference = metrics.progress - average;
       return `<tr>
-        <td class="max-w-xs break-words" title="${escapeHtml(activity.name || activity.id)}">${escapeHtml(activity.name || activity.id)}</td>
+        <td class="max-w-xs break-words" title="${escapeHtml(activity.name || activity.id)}" data-no-ui-translate>${escapeHtml(activity.name || activity.id)}</td>
         <td>${analyticsText(metrics.status)}</td><td class="font-semibold">${metrics.progress}%</td>
         <td>${metrics.score === null || !Number.isFinite(metrics.score) ? '—' : `${Math.round(metrics.score)}%`}</td>
         <td>${metrics.attempts === null ? '—' : escapeHtml(metrics.attempts)}</td>
@@ -70,8 +70,8 @@ function handleCellClick(topicId, resourceId, topicName, resourceName) {
           <div class="space-y-2" data-cell-students>
             ${students.map((student, index) => `<details class="student-resource-detail" data-cell-student="${index}" style="--completion:${student.pct}%">
               <summary class="flex flex-wrap gap-2 items-center justify-between cursor-pointer">
-                <span class="min-w-0"><span class="font-semibold break-words">${escapeHtml(student.learner.name || student.learner.id)}</span>
-                ${student.learner.name && student.learner.name !== student.learner.id ? `<span class="block text-xs text-gray-500 dark:text-gray-400">${escapeHtml(student.learner.id)}</span>` : ''}</span>
+                <span class="min-w-0"><span class="font-semibold break-words" data-no-ui-translate>${escapeHtml(student.learner.name || student.learner.id)}</span>
+                ${student.learner.name && student.learner.name !== student.learner.id ? `<span class="block text-xs text-gray-500 dark:text-gray-400" data-no-ui-translate>${escapeHtml(student.learner.id)}</span>` : ''}</span>
                 <span class="text-sm">${analyticsText('{done}/{total} completed', {done: student.completed, total: activities.length})} · <strong>${student.pct}%</strong> <span aria-hidden="true">⌄</span></span>
               </summary><div class="mt-3" data-cell-exercises></div>
             </details>`).join('')}

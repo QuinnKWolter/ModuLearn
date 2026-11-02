@@ -1,0 +1,376 @@
+<!doctype html>
+
+<html>
+
+
+<head>
+    <meta charset="utf-8" />
+    <title>Java Postest</title>
+
+    <meta name="author" content="Roya Hosseini, PAWS lab" />
+    <meta name="description" content="Java Posttest" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="0" />
+
+    <script type="text/javascript" src="script/jquery-1.9.1.js"></script>
+    <link rel="stylesheet" type="text/css" href="style/smoothness/jquery-ui-1.10.1.custom.min.css" />
+    <link rel="stylesheet" type="text/css" href="style/study.css?v=102" />
+    <script type="text/javascript" src="script/$.js"></script>
+    <script type="text/javascript" src="script/study.js"></script>
+    <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/blitzer/jquery-ui.css" type="text/css" />
+    <script src="script/jquery.easy-confirm-dialog.min.js"></script>
+
+    <script>
+        var prevQuesIndx = -1;
+
+        var posttestQuestions = [{
+                id: "posttest_qj_if",
+                name: "Question 1",
+                url: "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_if&act=Decisions&sub=posttest_qj_if&svc=pretest"
+            },
+            {
+                id: "posttest_qj_while",
+                name: "Question 2",
+                url: "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_while&act=Loops_while&sub=posttest_qj_while&svc=pretest"
+            },
+            {
+                id: "posttest_qj_for",
+                name: "Question 3",
+                url: "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_for&act=Loops_for&sub=posttest_qj_for&svc=pretest"
+            },
+            {
+                id: "posttest_qj_array",
+                name: "Question 4",
+                url: "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_array&act=Arrays&sub=posttest_qj_array&svc=pretest"
+            },
+            {
+                id: "posttest_qj_2darray",
+                name: "Question 5",
+                url: "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=posttest_qj_2darray&act=Two-dimensional_Arrays&sub=posttest_qj_2darray&svc=pretest"
+            },
+            {
+                id: "posttest_oneBooleanFalse",
+                name: "Question 6",
+                //url: "https://pcrs.teach.cs.toronto.edu/dev_serve/problems/java/415/embed?act=PCRS&sub=posttest_oneBooleanFalse"
+                //url: "https://vm003.teach.cs.toronto.edu//dev_serve/problems/java/415/embed?act=PCRS&sub=posttest_oneBooleanFalse"
+                url: "https://pcrs.utm.utoronto.ca/mgrids/problems/java/415/embed?act=PCRS&sub=posttest_oneBooleanFalse"
+            },
+            {
+                id: "posttest_ifelse",
+                name: "Question 7",
+                //url: "https://pcrs.teach.cs.toronto.edu/dev_serve/problems/java/411/embed?act=PCRS&sub=posttest_ifelse"
+                //url: "https://vm003.teach.cs.toronto.edu/dev_serve/problems/java/411/embed?act=PCRS&sub=posttest_ifelse"
+                url: "https://pcrs.utm.utoronto.ca/mgrids/problems/java/411/embed?act=PCRS&sub=posttest_ifelse"
+            },
+            {
+                id: "posttest_array",
+                name: "Question 8",
+                //url: "https://pcrs.teach.cs.toronto.edu/dev_serve/problems/java/413/embed?act=PCRS&sub=posttest_array"
+                //url: "https://vm003.teach.cs.toronto.edu/dev_serve/problems/java/413/embed?act=PCRS&sub=posttest_array"
+                url: "https://pcrs.utm.utoronto.ca/mgrids/problems/java/413/embed?act=PCRS&sub=posttest_array"
+            },
+            {
+                id: "posttest_nested_for",
+                name: "Question 9",
+                //url: "https://pcrs.teach.cs.toronto.edu/dev_serve/problems/java/412/embed?act=PCRS&sub=posttest_nested_for"
+                //url: "https://vm003.teach.cs.toronto.edu/dev_serve/problems/java/412/embed?act=PCRS&sub=posttest_nested_for"
+                url: "https://pcrs.utm.utoronto.ca/mgrids/problems/java/412/embed?act=PCRS&sub=posttest_nested_for"
+            },
+            {
+                id: "posttest_method",
+                name: "Question 10",
+                //url: "https://pcrs.teach.cs.toronto.edu/dev_serve/problems/java/414/embed?act=PCRS&sub=posttest_method"
+                //url: "https://vm003.teach.cs.toronto.edu/dev_serve/problems/java/414/embed?act=PCRS&sub=posttest_method"
+                url: "https://pcrs.utm.utoronto.ca/mgrids/problems/java/414/embed?act=PCRS&sub=posttest_method"
+            }
+
+        ];
+        
+        var attemptInfo = [
+               { id: "posttest_qj_if", attempted: "0" } ,
+               { id: "posttest_qj_while", attempted: "0" } ,
+               { id: "posttest_qj_for", attempted: "0" } ,
+               { id: "posttest_qj_array", attempted: "0" } ,
+               { id: "posttest_qj_2darray", attempted: "0" } ,
+               { id: "posttest_oneBooleanFalse", attempted: "0" } ,
+               { id: "posttest_ifelse", attempted: "0" } ,
+               { id: "posttest_array", attempted: "0" } , 
+               { id: "posttest_nested_for", attempted: "0" } , 
+               { id: "posttest_method", attempted: "0" } ];
+
+
+
+
+        $(document).ready(function() {
+            getPastAttempts();
+            document.getElementById("frame-pretest-problem").addEventListener("load", loaded);
+            var params = $getQS();
+
+        var excluded_users = [];
+        if(!excluded_users.includes(params.usr)){
+
+            var pretestIframe = $("#frame-pretest-problem")[0];
+
+            if(params.grp!="WentworthSpring2021"){
+                pretestIframe.src = "posttest_instructions.html";
+            }else{
+                pretestIframe.src = "posttest_instructions_wentworth.html";
+            }
+            
+            for (var i = 0; i < posttestQuestions.length; i++) {
+                $("#q" + (i + 1)).bind('click', {
+                    currentIndex: i
+                }, function(event) {
+                    //document.getElementById("frame-pretest-problem").style.display = "none"
+                    document.getElementById("loader").style.display = "block";
+
+                    var display_width = 0.98*Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+                    var display_height = 0.98*Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
+                    document.getElementById("frame-pretest-problem").width = display_width + "px"; 
+                    document.getElementById("frame-pretest-problem").height = display_height + "px"
+
+                    $(".pretest-question").removeClass("pretest-current-question");
+                    // process attempt 
+                    if (prevQuesIndx != -1) processAttempt(posttestQuestions[prevQuesIndx].id);
+                    prevQuesIndx = event.data.currentIndex;
+                    pretestIframe.src = posttestQuestions[event.data.currentIndex].url + "&usr=" + params.usr + "&grp=" + params.grp + "&sid=" + params.sid;
+                    
+                    $("#q" + (event.data.currentIndex + 1)).addClass("pretest-current-question");
+                    if (event.data.currentIndex == 9) {
+                       document.getElementById("doneBtn").className = "doneBtn";
+                       document.getElementById("doneBtn").disabled = false;
+                      
+                    }
+                });
+           }
+		
+        document.getElementById("doneBtn").addEventListener("click", function() {            
+          		//check if last question clicked is submitted 
+          		if (prevQuesIndx != -1) processAttemptBeforeDoneClicked(posttestQuestions[prevQuesIndx].id);
+            });	
+        }else{
+            $("#body-pretest").empty();
+            $("#body-pretest").append("<p>Post-test is not ready for you yet...</p>");
+        }	
+     });
+        
+        function getPastAttempts(){
+            var questions = "";
+            for (var i = 0; i < posttestQuestions.length; i++) {
+                 questions += (questions === "" ? "" : ",") + posttestQuestions[i].id;
+            }
+            var uri = "https://adapt2.sis.pitt.edu/pretestServices/GetPastAttempts?usr=" + CONST.usr + 
+            		  "&grp=" + CONST.grp + "&questions=" + questions;
+            $call("GET", uri, null, getPastAttempts_cb, true, false);
+        }
+        
+        function getPastAttempts_cb(rsp) {
+			for(var l = 0; l < rsp.length; l++) {
+    			name = rsp[l].name;
+			    state = rsp[l].attempted;
+			    for (var i = 0; i < attemptInfo.length; ++i) {
+			        if (attemptInfo[i]['id'] === name ) {
+			            attemptInfo[i]['attempted'] = state;
+			            if ( attemptInfo[i].attempted === "1" ) {
+							 if (document.getElementById('q'+(i+1)).innerHTML.indexOf('Submitted') == -1 ) {
+								 document.getElementById('q'+(i+1)).innerHTML = 
+								 document.getElementById('q'+(i+1)).innerHTML +
+								 "<span style=\"color:blue;font-weight:bold;font-size: 10pt;float:right\">" +
+								 "(Submitted)</span>";
+						   }
+			            
+			            }
+			        }
+			    }
+            }
+		}
+
+        function loaded() {
+            document.getElementById("frame-pretest-problem").style.display = "block";
+            document.getElementById("loader").style.display = "none";
+
+            var display_width = 0.98*Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+            var display_height = 0.98*Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
+            document.getElementById("frame-pretest-problem").width = (display_width-1) + "px";
+            document.getElementById("frame-pretest-problem").height = (display_height-1) + "px";
+
+                    
+
+            //The following lines generate a cross-origin frame access exception
+            /* 
+            var iframe = document.querySelector('#frame-pretest-problem');
+            iframe.contentWindow.document.addEventListener('click', function(e) {
+                parent.window.dataLayer.push({
+                    'event': 'clickOccurred'
+                });
+            }, true);
+            */
+        }
+
+
+		function processAttempt(prevAttempt){
+			var uri = "https://adapt2.sis.pitt.edu/pretestServices/ProcessAttempt?usr=" + CONST.usr + 
+					  "&grp=" + CONST.grp + "&cid=" + CONST.cid +
+					  "&prevAttempt=" + prevAttempt + "&event=posttest&updatesm=no";
+			$call("GET", uri, null, processAttempt_cb, true, false);
+		}
+		
+		function processAttemptBeforeDoneClicked(prevAttempt){
+			var uri = "https://adapt2.sis.pitt.edu/pretestServices/ProcessAttempt?usr=" + CONST.usr + 
+					  "&grp=" + CONST.grp + "&cid=" + CONST.cid +
+					  "&prevAttempt=" + prevAttempt + "&event=posttest&updatesm=no";
+			$call("GET", uri, null, processAttemptBeforeDoneClicked_cb, true, false);
+		}
+
+		function processAttempt_cb(rsp) {
+			prevAttemptName = rsp.name;
+			prevAttemptState = rsp.attempted;
+			for (var i = 0; i < attemptInfo.length; ++i) {
+			   if (attemptInfo[i]['id'] === prevAttemptName ) {
+				   attemptInfo[i]['attempted'] = prevAttemptState;
+				   if ( attemptInfo[i].attempted === "1" ) {
+                       if (document.getElementById('q'+(i+1)).innerHTML.indexOf('Submitted') == -1 ) {
+                             document.getElementById('q'+(i+1)).innerHTML = 
+                             document.getElementById('q'+(i+1)).innerHTML +
+                             "<span style=\"color:blue;font-weight:bold;font-size: 10pt;float:right\">" +
+                             "(Submitted)</span>";
+                       }
+                            
+                  }
+			   }
+			}
+		}
+		
+		function processAttemptBeforeDoneClicked_cb(rsp) {
+			prevAttemptName = rsp.name;
+			prevAttemptState = rsp.attempted;
+			for (var i = 0; i < attemptInfo.length; ++i) {
+			   if (attemptInfo[i]['id'] === prevAttemptName ) {
+				   attemptInfo[i]['attempted'] = prevAttemptState;
+				   if ( attemptInfo[i].attempted === "1" ) {
+                       if (document.getElementById('q'+(i+1)).innerHTML.indexOf('Submitted') == -1 ) {
+                             document.getElementById('q'+(i+1)).innerHTML = 
+                             document.getElementById('q'+(i+1)).innerHTML +
+                             "<span style=\"color:blue;font-weight:bold;font-size: 10pt;float:right\">" +
+                             "(Submitted)</span>";
+                       }
+                            
+                  }
+			   }
+			}
+			var remainedQ = new Array();
+			for (var i = 0; i < attemptInfo.length; ++i) {
+			   if ( attemptInfo[i].attempted === "0" ) {
+				   remainedQ.push("Question" + (i+1));
+			   }
+			}
+			var remainedQnames = "";
+			for ( var i = 0; i < remainedQ.length; ++i) {
+				remainedQnames += (remainedQnames === "" ? "" : ", ") + remainedQ[i];
+			}
+			
+			var message = "";
+			if (remainedQnames.length > 0) {
+				message = "You have not submitted your answer for the following questions:" +
+						  "\n" + remainedQnames
+			}
+			message += (message === "" ? "" : "\n") + "Are you sure you finished the posttest?";
+			
+		    if (!confirm(message)) {
+				return;
+			} else {
+				processAttempt(posttestQuestions[prevQuesIndx].id);
+				finishTest();
+				window.location = "posttest_finished.html?usr=" + params.usr + "&grp=" + params.grp + "&sid=" + params.sid;;
+			}						
+		}
+		
+
+
+        /**
+        Added the following parts to track actions performed in iFrame
+        **/
+        // Use an IIFE to keep our code from polluting the global scope
+        (function(window) {
+
+            addEvent(window, 'message', function(message) {
+                // The namespace of the Data Layer is window.dataLayer by default,
+                // but this CAN be changed; ensure that this is not customized
+                // in the context this code will execute in
+                var dataLayer = window.dataLayer || (window.dataLayer = []); // Safely instantiate dataLayer locally
+
+                // The message.data value is arbitrary and can be customized
+                //    if (message.data === 'formSubmit' && message.origin === 'IFRAME_PROTOCOL_HOSTNAME_AND_PORT') { // Check this is a whitelisted message & origin
+                if (message.data === 'formSubmit') {
+                    dataLayer.push({
+                        // The key 'event' is required for GTM; the value is arbitrary and can be customized
+                        'event': 'formSubmit' // Notify GTM via pushing this event
+                    });
+                }
+
+            });
+
+            // Cross-browser event listener
+            function addEvent(el, evt, fn) {
+                if (el.addEventListener) {
+                    el.addEventListener(evt, fn);
+                } else if (el.attachEvent) {
+                    el.attachEvent('on' + evt, function(evt) {
+                        fn.call(el, evt);
+                    });
+                } else if (typeof el['on' + evt] === 'undefined' || el['on' + evt] === null) {
+                    el['on' + evt] = function(evt) {
+                        fn.call(el, evt);
+                    };
+                }
+            }
+
+        })(window);
+    </script>
+
+
+</head>
+
+
+<body id="body-pretest">
+    <table id="pretest-table" width="100%">
+        <tr>
+            <td id="pretest-menu">
+                <div id="pretest-menu-title">Posttest Questions</div>
+                <div class="pretest-question" id="q1">Question 1</div>
+                <div class="pretest-question" id="q2">Question 2</div>
+                <div class="pretest-question" id="q3">Question 3</div>
+                <div class="pretest-question" id="q4">Question 4</div>
+                <div class="pretest-question" id="q5">Question 5</div>
+                <div class="pretest-question" id="q6">Question 6</div>
+                <div class="pretest-question" id="q7">Question 7</div>
+                <div class="pretest-question" id="q8">Question 8</div>
+                <div class="pretest-question" id="q9">Question 9</div>
+                <div class="pretest-question" id="q10">Question 10</div>
+                <br>
+               <div align=center><input type="button" id="doneBtn" class="btnDisabled" value="Done" disabled />
+ 
+                </td>
+
+            </td>
+
+            <td id="pretest-content">
+                <div id="testIframeBox">
+
+                    <iframe id="frame-pretest-problem"></iframe>
+                    <div id="loader"><img src="img/load.gif">
+                    </div>
+
+                </div>
+            </td>
+
+        </tr>
+    </table>
+</body>
+
+</html>

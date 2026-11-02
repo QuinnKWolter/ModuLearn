@@ -12,34 +12,34 @@
         <div class="flex flex-wrap items-center gap-2">
           <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
-            Back To Course
+            {% ui "Back To Course" %}
           </a>
         </div>
         <div class="text-sm text-slate-600 dark:text-slate-300">
-          <span class="font-semibold text-slate-900 dark:text-slate-100">{{ module.title }}</span>
+          <span class="font-semibold text-slate-900 dark:text-slate-100" data-no-ui-translate>{{ module.title }}</span>
           <span class="mx-2 text-slate-400 dark:text-slate-500">/</span>
-          {{ course_instance.course.title }}
+          <span data-no-ui-translate>{{ course_instance.course.title }}</span>
         </div>
       </div>
     {% endif %}
 
     <div id="iframe-blocked-notice" class="{% if not refuses_iframe %}hidden{% endif %} card p-8 text-center max-w-2xl mx-auto mt-8">
-      <h3 class="text-2xl font-bold text-red-500">This tool cannot be embedded here</h3>
+      <h3 class="text-2xl font-bold text-red-500">{% ui "This tool cannot be embedded here" %}</h3>
       <p class="text-slate-600 dark:text-slate-300 mt-3">
         {% if refuses_iframe_reason %}
           {{ refuses_iframe_reason }}
         {% else %}
-          The external tool has security restrictions that prevent iframe embedding.
+          {% ui "The external tool has security restrictions that prevent iframe embedding." %}
         {% endif %}
       </p>
       <button id="open-in-new-window" onclick="window.open('{{ iframe_src|escapejs }}', '_blank')" class="btn btn-primary btn-lg mt-5">
-        Open In A New Window
+        {% ui "Open In A New Window" %}
       </button>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-4">Progress passback may be limited when the tool opens outside the embedded frame.</p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-4">{% ui "Progress passback may be limited when the tool opens outside the embedded frame." %}</p>
     </div>
 
     <div id="practice-layout">
-      {% if not preview_mode and course_instance and not recommendation_practice %}
+      {% if not preview_mode and course_instance and not recommendation_practice and not study_player %}
         {% include 'courses/components/recommendation_sidebar.html' %}
       {% endif %}
       <div id="practice-workspace">
@@ -51,12 +51,12 @@
               allowfullscreen
               allow="clipboard-write *"
               {% if refuses_iframe %}style="display:none"{% endif %}>
-        Your browser doesn't support iframes.
+        {% ui "Your browser doesn't support iframes." %}
       </iframe>
     </div>
 
     </div></div>
-    {% if not preview_mode and course_instance and not recommendation_practice %}
+    {% if not preview_mode and course_instance and not recommendation_practice and not study_player %}
       <div class="module-next-action-row module-frame-next-row">
         {% include 'courses/components/next_module_button.html' with button_class='btn-lg' %}
       </div>

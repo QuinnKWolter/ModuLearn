@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static ui_i18n %}
 {% block body_class %}home-viewport{% endblock %}
-{% block title %}{% ui 'Home' %} · ModuLearn{% endblock %}
+{% block title %}{% ui 'Home' %} {% ui "· ModuLearn" %}{% endblock %}
 {% block breadcrumbs_wrapper %}{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/home.css' %}">{% endblock %}
 {% block content %}
@@ -25,7 +25,7 @@
       </div>
     {% else %}
       <p class="home-context">{% ui 'Computing education, together' %}</p>
-      <h1 id="home-title">ModuLearn</h1>
+      <h1 id="home-title">{% ui "ModuLearn" %}</h1>
       <p class="home-description">{% ui 'Free and open-source tools for learning, teaching, and research in computing education.' %}</p>
       <div class="home-actions">
         {% if user.is_authenticated %}

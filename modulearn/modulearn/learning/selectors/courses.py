@@ -3,6 +3,7 @@ from __future__ import annotations
 from courses.models import CourseProgress, Enrollment, ModuleProgress
 from django.db.models import Q
 from django.utils.text import slugify
+from main.i18n import translate as ui
 
 from .timelines import get_course_timeline_for_student
 from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
@@ -26,7 +27,7 @@ def _build_provider_grid(unit_cards):
             if key not in columns_by_key:
                 columns_by_key[key] = {
                     "key": key,
-                    "label": (module.get("provider_label") or "Other") + (" · Practice" if not module.get("is_graded", True) else " · Graded"),
+                    "label": (module.get("provider_label") or ui("Other")) + " · " + ui("Practice" if not module.get("is_graded", True) else "Graded"),
                     "sublabels": [],
                     "module_count": 0,
                 }
@@ -99,8 +100,8 @@ def _build_provider_grid(unit_cards):
         rows.append({
             "unit": card["unit"],
             "progress_percent": card["progress_percent"],
-            "completed_count": card["completed_count"],
-            "module_count": card["module_count"],
+            "completed_count": card["display_completed"],
+            "module_count": card["display_total"],
             "cells": cells,
         })
 
@@ -160,7 +161,6 @@ def build_course_detail_context(user, course_instance):
         module_items = []
         module_count = 0
         completed_count = 0
-        progress_sum = 0.0
         practice_count = practice_completed = 0
 
         for module in unit.modules.all():
@@ -206,7 +206,6 @@ def build_course_detail_context(user, course_instance):
                 icon_class = "fa-regular fa-circle"
 
             if counts_for_grade:
-                progress_sum += int(is_complete)
                 completed_count += int(is_complete)
             elif module.id not in graded_ids:
                 practice_completed += int(is_complete)
@@ -232,8 +231,12 @@ def build_course_detail_context(user, course_instance):
                 "provider_sublabel": provider_sublabel,
             })
 
-        unit_percent = round((progress_sum / module_count) * 100) if module_count else 0
-        is_unit_complete = module_count > 0 and completed_count == module_count
+        # Practice-only units still have meaningful completion, without contributing
+        # to the course grade when other units contain graded activities.
+        display_total = module_count or practice_count
+        display_completed = completed_count if module_count else practice_completed
+        unit_percent = round(100 * display_completed / display_total) if display_total else 0
+        is_unit_complete = display_total > 0 and display_completed == display_total
         unit_cards.append({
             "unit": unit,
             "modules": module_items,
@@ -241,6 +244,8 @@ def build_course_detail_context(user, course_instance):
             "practice_count": practice_count,
             "practice_completed": practice_completed,
             "completed_count": completed_count,
+            "display_total": display_total,
+            "display_completed": display_completed,
             "progress_percent": unit_percent,
             "is_complete": is_unit_complete,
             "is_visible": unit.is_visible,

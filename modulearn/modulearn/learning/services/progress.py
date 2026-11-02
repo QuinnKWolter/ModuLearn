@@ -134,14 +134,23 @@ def apply_progress_snapshot(
     is_complete: bool | None = None,
     payload: Any = None,
     event_type: str | None = None,
+    submission: bool = False,
 ):
     from courses.models import RecommendationProgress
     from .recommendation_tracking import apply_practice_snapshot, observe_source_attempt
     if isinstance(module_progress, RecommendationProgress):
         return apply_practice_snapshot(module_progress, source=source, progress=progress, score=score,
             success=success, is_complete=is_complete, payload=payload, event_type=event_type)
+    from recruitment.services.flow import allows_activity
+    if allows_activity(module_progress.enrollment, module_progress.module) is False:
+        log_module_progress_event(module_progress, event_type='study_late_event', source=source,
+            payload=payload, score=score, success=success)
+        return module_progress
     observe_source_attempt(module_progress, source=source, payload=payload, score=score,
                            success=success, event_type=event_type)
+    from .recommendation_tracking import attempt_snapshot
+    attempt = attempt_snapshot(source, payload, score, success, event_type)
+    submission = submission or attempt is not None
     progress = _coerce_progress(progress if progress is not None else module_progress.progress)
     score = _coerce_score(score if score is not None else module_progress.score)
 
@@ -152,6 +161,16 @@ def apply_progress_snapshot(
 
     if is_complete is None:
         is_complete = bool(progress is not None and progress >= 1.0)
+
+    if module_progress.module.completion_rule == 'submission':
+        is_complete = bool(previous_complete or submission)
+        progress = 1.0 if is_complete else 0.0
+    if submission:
+        payload = dict(payload) if isinstance(payload, dict) else {'provider_payload': payload}
+        payload.update(submission=True, completion_rule=module_progress.module.completion_rule)
+        if attempt:
+            payload['attempt_score'] = attempt['score']
+            payload['attempt_success'] = attempt['success']
 
     module_progress.progress = progress or 0.0
     module_progress.score = score
@@ -203,10 +222,14 @@ def apply_progress_snapshot(
             event_type=current_event_type,
             source=source,
             payload=payload,
+            score=attempt['score'] if attempt and submission else None,
+            success=attempt['success'] if attempt and submission else None,
         )
         from modulearn.learning.services.adaptive_branching import handle_progress_event
 
         handle_progress_event(event)
+        from recruitment.services.flow import handle_study_event
+        handle_study_event(event)
 
     return module_progress
 

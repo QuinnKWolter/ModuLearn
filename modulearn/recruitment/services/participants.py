@@ -87,6 +87,10 @@ def user_can_access_participant_course(user, course_instance_id) -> bool:
 def get_participant_resume_module(participant_session):
     if not participant_session or not participant_session.enrollment:
         return None
+    study = participant_session.recruitment_source.study
+    if study and study.guided_flow:
+        from .flow import current_activity
+        return current_activity(participant_session)[0]
 
     from courses.models import EnrollmentModuleUnlock, ModuleProgress
     from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access

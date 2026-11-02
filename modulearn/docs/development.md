@@ -18,15 +18,17 @@ Run in `modulearn/`; production Docker builds the CSS in a separate Node stage. 
 
 ## Adding translated interface text
 
-The existing EN/ES switch and Django language middleware remain authoritative.
+English, Spanish, French and Serbian Latin (`sr-latn`) share Django's language
+middleware. The globe menu shows each language's own full name.
 The navbar posts to Django's `set_language` endpoint and stores the choice in the
-`modulearn_language` cookie. Opening a page with `?lang=en` or `?lang=es` also
+`modulearn_language` cookie. Opening a page with `?lang=fr` or `?lang=sr-latn` also
 changes the language and updates that cookie. Additional supported languages must
 be registered in `modulearn/settings.py` under `LANGUAGES`.
-Feature messages live in `main/locales/es/`, grouped into `public.json`,
-`configuration.json`, `catalog.json`, and `recommendations.json`. English source
-strings are the keys and are also the fallback when no translation is available.
-Adding another configured language uses a corresponding locale directory.
+Interface messages live in `main/locales/<language>/`. English source strings in
+`en/messages.json` are the canonical keys and fallback. Spanish retains its feature
+files; French and Serbian Latin use one `messages.json` each. File names need not
+match across languages, but the merged keys and named placeholders must agree.
+Adding a language requires a complete corresponding catalog and a `LANGUAGES` entry.
 
 For templates:
 
@@ -34,6 +36,7 @@ For templates:
 {% load ui_i18n %}
 {% ui "Go to your courses" %}
 {% ui "Adding to: {unit}" unit=unit.title %}
+{% ui_count "event" "events" events|length %}
 ```
 
 For JavaScript, use complete messages with named placeholders:
@@ -42,7 +45,8 @@ For JavaScript, use complete messages with named placeholders:
 ModuLearnI18n.t('Page {page} of {pages}', {page, pages});
 ```
 
-The template tag and JavaScript consume the same feature catalog. `base.html`
+Python services use `main.i18n.translate(message, **parameters)`. The template tag
+and JavaScript consume the same catalog. `base.html` and `content_base.html`
 embeds it with Django's safe `json_script` helper; no additional translation
 request or compile step is needed. Templates escape interpolated values, and
 interactive components insert translated messages using `textContent`. The server
@@ -58,12 +62,55 @@ provider metadata, delivery URLs, and source code retain the source language.
 Filter option values and saved preferences remain language-independent. Numeric
 catalog counts and recommendation similarities use the active locale.
 
-The existing automatic translator still covers older templates, including shared
-form labels and configuration controls. Feature catalogs extend that dictionary
-as well, so those pages can migrate incrementally. New public pages are translated
-on the server; their wording does not depend on a post-load DOM rewrite. New
-configuration labels and plugin text are covered by the feature catalogs, while
-older translations remain in `static/js/i18n.js`.
+The exact-match DOM fallback covers older dynamic controls. It no longer carries
+a separate Spanish dictionary or replaces arbitrary prefixes. Mutation batches
+deduplicate changed subtrees, skip authored/code regions, and cache text lookups.
+English does not start an observer or download a duplicate catalog. Only the
+selected language is embedded, so adding languages does not multiply page weight.
+At the November 2026 review, the 2,057-message translated catalogs are roughly
+150–175 KB uncompressed (about 50 KB compressed). Template rendering and catalog
+lookup make no external translation requests. The normal deployment must publish
+changed JS/CSS and restart workers to refresh their cached catalogs.
+
+Plural grammar must not be built by appending `s`. `ui_count` translates complete
+singular/plural count phrases; Serbian uses neutral labels such as `Događaji: 2`
+where an English two-form plural would be wrong. More complex JavaScript counts
+can use `ModuLearnI18n.plural` and `Intl.PluralRules`. Format numbers and dates with
+the selected locale; do not translate numeric IDs, URLs, protocol identifiers or
+saved option values.
+
+### Coverage and translation reports
+
+Run these from `modulearn/` after interface changes:
+
+```bash
+python manage.py audit_translations --write
+python manage.py test main.test_translations
+```
+
+[`translation-progress.json`](translation-progress.json) is a generated inventory
+of source files and their message keys, per-language counts, missing keys,
+placeholder errors, and unmarked template fragments requiring review. Regenerate
+it instead of maintaining a second handwritten checklist. The test fails for
+catalog gaps and new unmarked template fragments. This scan cannot prove linguistic
+quality or discover every sentence assembled dynamically; also open the affected
+dialogs and validation paths in each language. Keep the inventory free of student
+records and authored course contents. Provider iframe content and imported
+research questions/consent materials are intentionally outside the UI catalog.
+
+The language menu's report dialog creates private `main.TranslationReport` tickets.
+Admin → Main → Translation reports provides search, language/status filters,
+review notes, and Resolve/Ignore actions. There is no public listing. Reports
+require CSRF, have length limits and a short-lived submission rate limit, and
+store the page path without query parameters. They never store an IP address.
+Only authenticated reports link to their reporter. Study participant shells
+remain free of navigation and report controls.
+
+Deployment uses the usual rebuild/static publication and `python manage.py migrate`
+(new migration `main.0001_initial`). No course data migration or translation service
+credentials are required. Check the globe menu in desktop/mobile layouts and send
+one test report, then resolve it in Admin. Course titles, survey responses and code
+must remain unchanged when switching languages.
 
 
 ## Progress incident diagnosis and repair

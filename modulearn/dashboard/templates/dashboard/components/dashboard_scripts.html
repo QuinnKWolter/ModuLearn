@@ -904,7 +904,7 @@ function formatLastActive(value) {
     if (!value) return 'No timestamp';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return 'No timestamp';
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString(window.ModuLearnLanguage || 'en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function getLastActiveTime(value) {
@@ -1022,7 +1022,7 @@ function renderActivityMeta(values) {
     if (success !== undefined && success !== null && success !== '') {
         const successValue = Number(success);
         const successPercent = successValue > 1 ? successValue : successValue * 100;
-        items.push(Number.isFinite(successValue) ? `${Math.round(successPercent)}% success` : `${escapeHtml(success)} success`);
+        items.push(Number.isFinite(successValue) ? window.ModuLearnI18n.t('{percent}% success', {percent: Math.round(successPercent)}) : `${escapeHtml(success)} success`);
     }
     if (seq) {
         items.push(seq);
@@ -1106,13 +1106,13 @@ function updateAnalyticsNarrative(metrics) {
     title.textContent = 'Course signal';
 
     if (metrics.engagementScore >= 70 && metrics.overallProgressPercent <= 25) {
-        text.textContent = `${metrics.engagementScore}% of topic-resource cells have activity, but average completion is ${metrics.overallProgressPercent}%. Students are touching the course broadly without finishing much yet; the drill-downs below can separate exploration from stuck work.`;
+        text.textContent = window.ModuLearnI18n.t('Activity appears in {engagement}% of cells; average completion is {progress}%. Explore the details to distinguish exploration from difficulties.', {engagement: metrics.engagementScore, progress: metrics.overallProgressPercent});
     } else if (strugglingRate >= 70) {
-        text.textContent = `${strugglingRate}% of learners are behind the active class pattern. Treat the flag as a triage queue and sort into the most uneven topic-resource cells below.`;
+        text.textContent = window.ModuLearnI18n.t('{percent}% of learners are behind the class pattern. Review the flagged students and uneven cells below.', {percent: strugglingRate});
     } else if (metrics.overallProgressPercent >= 70) {
-        text.textContent = `The class is broadly moving through the material: ${metrics.overallProgressPercent}% average completion with ${metrics.engagementScore}% engagement. Look for low-completion cells and students with stale activity.`;
+        text.textContent = window.ModuLearnI18n.t('The class is progressing: {progress}% average completion and {engagement}% engagement. Check low-completion cells and students without recent activity.', {progress: metrics.overallProgressPercent, engagement: metrics.engagementScore});
     } else {
-        text.textContent = `Engagement is ${metrics.engagementScore}% and progress is ${metrics.overallProgressPercent}%. Use the cell status counts and per-student resource profiles to identify where effort is concentrated.`;
+        text.textContent = window.ModuLearnI18n.t('Engagement is {engagement}% and progress is {progress}%. Cell counts and resource profiles show where effort is concentrated.', {engagement: metrics.engagementScore, progress: metrics.overallProgressPercent});
     }
 
     container.classList.remove('hidden');
@@ -1339,7 +1339,7 @@ function updateMasteryGrid() {
         topicCell.innerHTML = `
             <div class="flex items-center">
                 <div class="flex-1">
-                    <div class="font-bold mb-1">${escapeHtml(topic.name)}</div>
+                    <div class="font-bold mb-1" data-no-ui-translate>${escapeHtml(topic.name)}</div>
                     ${topic.current || topic.covered ? `<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">${topic.current ? 'Current topic' : 'Covered'}</div>` : ''}
                     <div class="progress" style="height: 6px; background-color: rgba(0,0,0,0.1);">
                         <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; ${Object.entries(progressBarStyle).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}"></div>
@@ -1423,8 +1423,8 @@ function updatePerStudentView() {
     if (filterCount) {
         const total = responseData.learners?.length || 0;
         filterCount.textContent = studentTableFilter.trim()
-            ? `${sortedLearners.length} of ${total} students`
-            : `${total} students`;
+            ? window.ModuLearnI18n.t('{count} of {total} students', {count: sortedLearners.length, total})
+            : window.ModuLearnI18n.t('{count} students', {count: total});
     }
     updateStudentSortIndicators();
     
@@ -1441,8 +1441,8 @@ function updatePerStudentView() {
                         <i class="fas fa-user text-white" style="font-size: 0.7rem;"></i>
                     </div>
                     <div>
-                        <div class="font-bold" style="font-size: 0.9rem;">${escapeHtml(learner.id)}</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(learner.name || learner.email || '')}</div>
+                        <div class="font-bold" style="font-size: 0.9rem;" data-no-ui-translate>${escapeHtml(learner.id)}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400" data-no-ui-translate>${escapeHtml(learner.name || learner.email || '')}</div>
                     </div>
                 </div>
             </td>
@@ -1694,7 +1694,7 @@ async function showStudentDetails(learnerId) {
                             <i class="fas fa-user-graduate mr-2"></i>
                             ${escapeHtml(learner.id)}
                         </h5>
-                        <div class="text-sm text-white/80">${escapeHtml(learner.name || learner.email || 'Student details')}</div>
+                        <div class="text-sm text-white/80" data-no-ui-translate>${escapeHtml(learner.name || learner.email || 'Student details')}</div>
                     </div>
                     <button type="button" data-bs-dismiss="modal" class="text-white/80 hover:text-white text-2xl leading-none">&times;</button>
                 </div>
@@ -1729,7 +1729,7 @@ async function showStudentDetails(learnerId) {
                                             <div class="flex justify-between items-center mb-3">
                                                 <div class="min-w-0">
                                                     <div class="flex items-center gap-2">
-                                                        <h6 class="mb-0 font-bold truncate">${escapeHtml(topic.name)}</h6>
+                                                        <h6 class="mb-0 font-bold truncate" data-no-ui-translate>${escapeHtml(topic.name)}</h6>
                                                     </div>
                                                 </div>
                                                 <span class="badge" style="${Object.entries(getBadgeStyle(progressPercent)).map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`).join('; ')}">${progressPercent}%</span>
@@ -1752,7 +1752,7 @@ async function showStudentDetails(learnerId) {
                                                     return `
                                                             <tr>
                                                                 <td class="break-words">
-                                                                    <div class="font-semibold">${escapeHtml(activity.name || activity.id)}</div>
+                                                                    <div class="font-semibold" data-no-ui-translate>${escapeHtml(activity.name || activity.id)}</div>
                                                                     <div class="mt-1">${renderActivityMeta(values)}</div>
                                                                 </td>
                                                                 <td class="text-center">
@@ -1866,7 +1866,7 @@ function renderCellModalRows(studentData, learnerById, activitiesList, topicId, 
             const safeId = String(student.id).replace(/[^a-zA-Z0-9_-]/g, '') + '-' + idx;
             const learner = learnerById[student.id];
             const displayName = student.name && String(student.name) !== String(student.id)
-                ? `<div class="text-xs text-gray-500 dark:text-gray-400 ml-10">${escapeHtml(student.name)}</div>`
+                ? `<div class="text-xs text-gray-500 dark:text-gray-400 ml-10" data-no-ui-translate>${escapeHtml(student.name)}</div>`
                 : '';
             const activityRows = activitiesList.map(activity => {
                 const values = getActivityValues(learner, topicId, resourceId, activity.id);
@@ -1877,7 +1877,7 @@ function renderCellModalRows(studentData, learnerById, activitiesList, topicId, 
                 return `
                     <tr>
                         <td class="break-words">
-                            <div class="font-semibold">${escapeHtml(activity.name || activity.id)}</div>
+                            <div class="font-semibold" data-no-ui-translate>${escapeHtml(activity.name || activity.id)}</div>
                             <div class="mt-1">${renderActivityMeta(values)}</div>
                         </td>
                         <td class="text-center">
@@ -1899,7 +1899,7 @@ function renderCellModalRows(studentData, learnerById, activitiesList, topicId, 
                         <button class="btn btn-sm btn-outline-secondary mr-2" type="button" data-bs-toggle="collapse" data-bs-target="#act-${safeId}" aria-expanded="false" aria-controls="act-${safeId}">
                             <i class="fas fa-chevron-down"></i>
                         </button>
-                        <span>${escapeHtml(student.id)}</span>
+                        <span data-no-ui-translate>${escapeHtml(student.id)}</span>
                         ${displayName}
                     </td>
                     <td class="text-center">
@@ -2015,7 +2015,7 @@ async function handleCellClick(topicId, resourceId, topicName, resourceName) {
                                     <span class="c-none">○ ${cellStatusCounts.notStarted}</span>
                                 </div>
                                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    Mean ${averageProgressPercent}% - ${activitiesList.length} activities
+                                    ${escapeHtml(window.ModuLearnI18n.t('Mean {percent}% - {count} activities', {percent: averageProgressPercent, count: activitiesList.length}))}
                                 </div>
                             </div>
                         </div>

@@ -324,6 +324,8 @@ def create_study_for_instructor(
         description=description,
         version_label=version_label,
         course_instance=course_instance,
+        guided_flow=bool(_template_study_payload(template_data).get('guided_flow', not template_data)),
+        notes=_template_study_payload(template_data).get('notes', ''),
     )
     study.instructors.add(instructor)
 
@@ -333,10 +335,14 @@ def create_study_for_instructor(
         labels = template_labels
 
     for index, label in enumerate(labels, start=1):
+        definition = next((item for item in _template_study_payload(template_data).get('conditions', [])
+            if isinstance(item, dict) and item.get('label') == label), {})
         StudyCondition.objects.create(
             study=study,
             label=label,
-            name=label.replace("_", " ").title(),
+            name=definition.get('name') or label.replace("_", " ").title(),
+            description=definition.get('description', ''),
+            is_active=definition.get('is_active', True),
             order=index * 10,
         )
 
@@ -346,12 +352,14 @@ def create_study_for_instructor(
             platform=RecruitmentSource.PLATFORM_PROLIFIC,
             label="Prolific",
             is_active=True,
-            condition_strategy=RecruitmentSource.CONDITION_BALANCED,
+            condition_strategy=RecruitmentSource.CONDITION_RANDOM,
             condition_labels="",
         )
 
     if not template_data:
         _create_default_study_modules(course)
+        course.plugin_config = {'plugins': {'adaptive_branching': {'enabled': True, 'settings': {}}}}
+        course.save(update_fields=['plugin_config'])
 
     return study
 
@@ -367,6 +375,7 @@ def export_study_to_json(study: Study, *, include_file_data=True) -> dict:
             "version_label": study.version_label,
             "status": study.status,
             "notes": study.notes,
+            "guided_flow": study.guided_flow,
             "conditions": [
                 {
                     "label": condition.label,
@@ -462,6 +471,8 @@ def clear_study_participation(study: Study) -> dict[str, int]:
 
 @transaction.atomic
 def delete_study_completely(study: Study) -> dict[str, int]:
+    for preview in study.previews.all():
+        delete_study_completely(preview)
     counts = clear_study_participation(study)
     course = study.course_instance.course
     counts["studies"] = 1

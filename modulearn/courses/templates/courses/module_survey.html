@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load ui_i18n %}
+{% load study_text %}
+{% block title %}{{ module.title }} {% ui "· ModuLearn" %}{% endblock %}
+{% block body_class %}survey-page{% endblock %}
+{% block breadcrumbs_wrapper %}{% endblock %}
+{% block extra_css %}
+<style>
+.survey-page .footer-shell{position:static;box-shadow:none;margin-top:2rem;flex-shrink:0}
+.survey-page{padding-bottom:0}
+.survey-page:not(.study-shell){display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.survey-page:not(.study-shell) > .shell-section{flex:1 0 auto}
+.survey{max-width:960px;margin:2rem auto;padding:clamp(1rem,3vw,2rem);border:1px solid #94a3b84d;border-radius:16px;background:var(--surface,#fff);color:#172b45}
+.dark .survey{background:#142033;color:#e6edf7}.survey-head{display:flex;justify-content:space-between;gap:1rem;font-size:.9rem;color:#64748b}.dark .survey-head{color:#b1bfd1}
+.survey meter{width:100%;height:8px;margin:12px 0 24px}.survey-prose{font-size:1.1rem;line-height:1.65;margin-bottom:1.5rem}.survey-prose p{margin:.6rem 0}
+.survey fieldset{margin:1rem 0;border:0;padding:0}.survey legend{font-weight:600;margin-bottom:.65rem}.survey-options{display:grid;gap:.5rem}
+.survey-choice{display:flex;align-items:center;gap:.7rem;padding:.75rem 1rem;border:1px solid #94a3b84d;border-radius:7px;cursor:pointer}.survey-choice:has(input:checked){background:#0d948815;border-color:#0d9488}.survey input{accent-color:#0f766e}.survey input[type=text]{width:100%;padding:.6rem;border:1px solid #94a3b8;border-radius:5px;background:transparent;color:inherit}
+.survey-matrix{overflow-x:auto;margin:1.5rem 0}.survey table{border-collapse:collapse;width:100%;min-width:620px}.survey th,.survey td{padding:.75rem .5rem;border-bottom:1px solid #94a3b838;font-size:.95rem}.survey thead th{font-weight:600;text-align:center;width:13%}.survey tbody th{text-align:left;font-weight:400;min-width:220px}.survey td{text-align:center}.survey td label{display:grid;place-items:center;min-height:36px;cursor:pointer}.survey tbody tr:nth-child(even){background:#94a3b80a}
+.survey-actions{display:flex;justify-content:space-between;gap:1rem;margin-top:2rem}.survey button,.survey-link{padding:.7rem 1.3rem;border-radius:7px;font-weight:600;border:1px solid #94a3b86b}.survey button[type=submit]{background:#0f766e;color:white}.survey button[name=action][value=back]{background:transparent;color:inherit}.survey :focus-visible{outline:3px solid #38bdf8;outline-offset:3px}.survey-error{background:#be123c14;border-left:3px solid #be123c;padding:.8rem;margin:1rem 0}.survey-attachment{display:inline-block;margin-bottom:1rem;color:#0891b2;text-decoration:underline}.survey .hidden{display:none}.survey .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+{% endblock %}
+{% block content %}
+<section class="survey" aria-label="{{ module.title }}">
+{% if draft.finished %}
+  {% if draft.declined %}<h1>{% ui "Thank you" %}</h1><p>{% ui "You declined participation. No further survey questions will be asked." %}</p>
+  {% else %}<div class="survey-prose" data-no-ui-translate>{{ end_text|study_markdown }}</div>{% endif %}
+  {% if not participant_mode %}<div class="survey-actions"><a class="survey-link" href="{% url 'courses:course_detail' course_instance.pk %}">{% ui "Return to course" %}</a></div>{% endif %}
+{% else %}
+  <div class="survey-head"><span data-no-ui-translate>{{ module.title }}</span><span>{% ui "Page {page} of {pages}" page=number pages=total %}</span></div>
+  <meter min="0" max="100" value="{{ percent }}" aria-label="{% ui "Survey progress" %}">{{ percent }}%</meter>
+  <div class="survey-prose" id="survey-title" data-no-ui-translate>{{ page.title|study_markdown }}</div>
+  {% if number == 1 and module.content_file %}<a class="survey-attachment" href="{{ module.content_file.url }}" target="_blank" rel="noopener">{% ui "Read the consent form (PDF) ↗" %}</a>{% endif %}
+  {% if error %}<div class="survey-error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" aria-labelledby="survey-title">
+    {% csrf_token %}<input type="hidden" name="page_token" value="{{ draft.token }}">
+    {% if page.type == 'Matrix' %}
+    <p class="survey-head">{% ui "Select one response in each row. Scroll horizontally on small screens." %}</p>
+    <div data-no-ui-translate class="survey-matrix" tabindex="0" role="region" aria-label="{% ui "Response scale" %}"><table>
+      <thead><tr><th scope="col"><span class="sr-only">{% ui "Statement" %}</span></th>{% for option in page.options %}<th scope="col" id="scale-{{ forloop.counter }}">{{ option.label|default:forloop.counter }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in page.rows %}<tr><th scope="row" id="{{ row.key }}" data-no-ui-translate>{{ row.prompt|study_markdown }}</th>
+      {% for option in row.options %}<td><label><input type="radio" name="{{ row.key }}" value="{{ option.id }}" aria-labelledby="{{ row.key }} scale-{{ forloop.counter }}" {% if option.checked %}checked{% endif %} {% if row.required %}required{% endif %}></label></td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}
+      {% for row in page.rows %}<fieldset data-no-ui-translate><legend class="sr-only" data-no-ui-translate>{{ row.prompt }}</legend><div class="survey-options">
+      {% for option in row.options %}<div>
+        <label class="survey-choice"><input {% if row.multiple %}type="checkbox"{% else %}type="radio"{% endif %} name="{{ row.key }}" value="{{ option.id }}" {% if option.checked %}checked{% endif %} {% if row.required and not row.multiple %}required{% endif %} {% if option.text_entry %}data-text-target="text-{{ row.key }}-{{ option.id }}"{% endif %}><span>{{ option.label }}</span></label>
+        {% if option.text_entry %}<div id="text-{{ row.key }}-{{ option.id }}" {% if not option.checked %}hidden{% endif %}><label class="sr-only" for="entry-{{ row.key }}-{{ option.id }}">{{ option.label }}</label><input type="text" id="entry-{{ row.key }}-{{ option.id }}" name="{{ row.key }}_text_{{ option.id }}" value="{{ option.text }}" maxlength="4000"></div>{% endif %}
+      </div>{% endfor %}</div></fieldset>{% endfor %}
+    {% endif %}
+    <div class="survey-actions"><div>{% if can_back %}<button type="submit" name="action" value="back" formnovalidate>{% ui "Back" %}</button>{% endif %}</div><button type="submit" name="action" value="next">{% if is_last %}{% ui "Submit" %}{% else %}{% ui "Next" %}{% endif %} →</button></div>
+  </form>
+{% endif %}
+</section>
+{% endblock %}
+{% block extra_js %}{{ block.super }}
+<script>
+document.querySelectorAll('.survey input').forEach(input => input.addEventListener('change', () => {
+  document.querySelectorAll('[data-text-target]').forEach(choice => {
+    document.getElementById(choice.dataset.textTarget).hidden = !choice.checked;
+  });
+}));
+</script>
+{% endblock %}

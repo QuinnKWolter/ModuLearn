@@ -1,4 +1,5 @@
-{% if adaptive_branching_enabled %}
+
+{% load ui_i18n %}{% if adaptive_branching_enabled %}
 <div id="adaptiveBranchingFlowModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 items-center justify-center bg-black/60 p-3 sm:p-4" aria-hidden="true">
   <div class="modal-backdrop-close absolute inset-0"></div>
   <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl cfg-flow-modal flex flex-col overflow-hidden">
@@ -6,17 +7,17 @@
       <div class="flex items-center gap-3">
         <span class="cfg-create-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
         <div>
-          <div class="stat-kicker">Adaptive Branching</div>
-          <h2 class="text-lg font-bold mt-1 mb-0">Flow Mapper</h2>
+          <div class="stat-kicker">{% ui "Adaptive Branching" %}</div>
+          <h2 class="text-lg font-bold mt-1 mb-0">{% ui "Flow Mapper" %}</h2>
         </div>
       </div>
       <div class="cfg-flow-header-tools">
-        <div class="cfg-flow-stats cfg-flow-stats--header" aria-label="Flow map totals">
-          <span><strong>{{ branch_modules|length }}</strong> activities</span>
+        <div class="cfg-flow-stats cfg-flow-stats--header" aria-label="{% ui "Flow map totals" %}">
+          <span><strong>{{ branch_modules|length }}</strong> {% ui "activities" %}</span>
           {% if research_conditions %}
-            <span><strong>{{ research_conditions|length }}</strong> conditions</span>
+            <span><strong>{{ research_conditions|length }}</strong> {% ui "conditions" %}</span>
           {% else %}
-            <span><strong>Any</strong> participants</span>
+            <span><strong>{% ui "Any" %}</strong> {% ui "participants" %}</span>
           {% endif %}
         </div>
         <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
@@ -28,14 +29,14 @@
       <input type="hidden" name="action" value="update_branching">
 
       <div class="cfg-flow-body">
-        <section class="cfg-flow-map-shell" data-flow-map-shell aria-label="Adaptive branching activity map">
+        <section class="cfg-flow-map-shell" data-flow-map-shell aria-label="{% ui "Adaptive branching activity map" %}">
           <div class="cfg-flow-map" data-flow-map>
             <svg class="cfg-flow-lines" data-flow-lines aria-hidden="true"></svg>
             <div class="cfg-flow-units">
               {% for group in unit_groups %}
                 <section class="cfg-flow-unit">
                   <header>
-                    <strong><span>Unit {{ forloop.counter }}:</span> {{ group.unit.title }}</strong>
+                    <strong><span>{% ui "Unit" %} {{ forloop.counter }}:</span> <span data-no-ui-translate>{{ group.unit.title }}</span></strong>
                   </header>
                   <div class="cfg-flow-node-list">
                     {% for module in group.modules %}
@@ -50,38 +51,38 @@
                           <i class="bi bi-file-earmark-code"></i>
                         </span>
                         <span class="min-w-0">
-                          <strong>{{ module.title }}</strong>
+                          <strong><span data-no-ui-translate>{{ module.title }}</span></strong>
                           <small>{{ module.display_type_label }}</small>
                         </span>
                         <span class="cfg-flow-node-flags">
                           {% if module.is_locked or module.unlock_rule_type != 'none' %}
-                            <i class="fa-solid fa-lock" title="Locked" aria-label="Locked"></i>
+                            <i class="fa-solid fa-lock" title="{% ui "Locked" %}" aria-label="{% ui "Locked" %}"></i>
                           {% endif %}
                           {% if not module.is_visible %}
-                            <i class="fa-solid fa-eye-slash" title="Hidden" aria-label="Hidden"></i>
+                            <i class="fa-solid fa-eye-slash" title="{% ui "Hidden" %}" aria-label="{% ui "Hidden" %}"></i>
                           {% endif %}
                         </span>
                       </button>
                     {% empty %}
-                      <div class="cfg-tree-empty">No activities yet.</div>
+                      <div class="cfg-tree-empty">{% ui "No activities yet." %}</div>
                     {% endfor %}
                   </div>
                 </section>
               {% empty %}
-                <div class="empty-state">Add units and activities before mapping adaptive branches.</div>
+                <div class="empty-state">{% ui "Add units and activities before mapping adaptive branches." %}</div>
               {% endfor %}
             </div>
           </div>
         </section>
 
-        <section class="cfg-flow-connections" aria-label="Adaptive branching connections">
+        <section class="cfg-flow-connections" aria-label="{% ui "Adaptive branching connections" %}">
           <div class="cfg-flow-connections-head">
             <div class="cfg-flow-section-title">
-              <h3 class="font-bold text-slate-900 dark:text-white mb-0">Add and Tune Connections</h3>
-              <span class="cfg-flow-help" tabindex="0" aria-label="Branch rule help">
+              <h3 class="font-bold text-slate-900 dark:text-white mb-0">{% ui "Add and Tune Connections" %}</h3>
+              <span class="cfg-flow-help" tabindex="0" aria-label="{% ui "Branch rule help" %}">
                 ?
                 <span class="cfg-flow-help-bubble" role="tooltip">
-                  Correct/incorrect rules use the latest activity outcome. Score rules use a 0-100 threshold; Score Below 100 catches non-perfect submissions.
+                  {% ui "Correct/incorrect rules use the latest activity outcome. Score rules use a 0-100 threshold; Score Below 100 catches non-perfect submissions." %}
                 </span>
               </span>
             </div>
@@ -89,44 +90,44 @@
           </div>
 
           <div class="cfg-flow-builder">
-            <label class="text-sm font-semibold">From
+            <label class="text-sm font-semibold">{% ui "From" %}
               <select class="form-control mt-1" name="branch_source_module" data-flow-source-select>
-                <option value="">Choose source</option>
+                <option value="">{% ui "Choose source" %}</option>
                 {% for module in branch_modules %}
                   <option value="{{ module.id }}">{{ module.unit.title }} - {{ module.title }}</option>
                 {% endfor %}
               </select>
             </label>
-            <label class="text-sm font-semibold">When
+            <label class="text-sm font-semibold">{% ui "When" %}
               <select class="form-control mt-1" name="branch_condition_type" data-branch-condition data-flow-condition-select>
-                <option value="">Choose condition</option>
+                <option value="">{% ui "Choose condition" %}</option>
                 {% for value,label in branch_condition_types %}
                   <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
               </select>
             </label>
-            <label class="text-sm font-semibold">Unlock
+            <label class="text-sm font-semibold">{% ui "Unlock" %}
               <select class="form-control mt-1" name="branch_target_module" data-flow-target-select>
-                <option value="">Choose target</option>
+                <option value="">{% ui "Choose target" %}</option>
                 {% for module in branch_modules %}
                   <option value="{{ module.id }}">{{ module.unit.title }} - {{ module.title }}</option>
                 {% endfor %}
               </select>
             </label>
-            <label class="text-sm font-semibold">Participants
+            <label class="text-sm font-semibold">{% ui "Participants" %}
               <select class="form-control mt-1" name="branch_required_study_condition">
-                <option value="">Any condition</option>
+                <option value="">{% ui "Any condition" %}</option>
                 {% for condition in research_conditions %}
-                  <option value="{{ condition }}">{{ condition }}</option>
+                  <option data-no-ui-translate value="{{ condition }}">{{ condition }}</option>
                 {% endfor %}
               </select>
             </label>
-            <label class="text-sm font-semibold">Score
-              <input class="form-control mt-1" type="number" name="branch_threshold" min="0" max="100" step="1" placeholder="N/A" data-branch-threshold disabled>
+            <label class="text-sm font-semibold">{% ui "Score" %}
+              <input class="form-control mt-1" type="number" name="branch_threshold" min="0" max="100" step="1" placeholder="{% ui "N/A" %}" data-branch-threshold disabled>
             </label>
             <button type="submit" class="btn btn-primary btn-sm cfg-flow-add-button" name="branch_commit" value="1">
               <i class="bi bi-plus-circle" aria-hidden="true"></i>
-              <span>Add Connection</span>
+              <span>{% ui "Add Connection" %}</span>
             </button>
           </div>
           <div class="cfg-branch-rule-list">
@@ -139,13 +140,13 @@
                 data-target="{{ rule.target_module.id }}"
                 data-condition-type="{{ rule.condition_type }}"
                 data-active="{% if rule.active %}true{% else %}false{% endif %}"
-                data-label="{{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}{% if rule.required_study_condition %} / {{ rule.required_study_condition }}{% endif %}"
+                data-label="{{ rule.get_condition_type_display|ui_text }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}{% if rule.required_study_condition %} / {{ rule.required_study_condition }}{% endif %}"
               >
                 <div
                   class="cfg-branch-path"
                   data-branch-path
-                  data-rule-tooltip="{{ rule.source_module.unit.title }} - {{ rule.source_module.title }} if {{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}{% if rule.required_study_condition %} for {{ rule.required_study_condition }}{% endif %} unlock {{ rule.target_module.unit.title }} - {{ rule.target_module.title }}"
-                  aria-label="{{ rule.source_module.unit.title }} - {{ rule.source_module.title }} if {{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}{% if rule.required_study_condition %} for {{ rule.required_study_condition }}{% endif %} unlock {{ rule.target_module.unit.title }} - {{ rule.target_module.title }}"
+                  data-rule-tooltip="{% ui '{source_unit} / {source}: if {condition}, unlock {target_unit} / {target}.' source_unit=rule.source_module.unit.title source=rule.source_module.title condition=rule.get_condition_type_display|ui_text target_unit=rule.target_module.unit.title target=rule.target_module.title %}{% if rule.threshold is not None %} {% ui 'Threshold: {score}' score=rule.threshold|floatformat:0 %}{% endif %}{% if rule.required_study_condition %} {% ui 'Study condition: {condition}' condition=rule.required_study_condition %}{% endif %}"
+                  aria-label="{% ui '{source_unit} / {source}: if {condition}, unlock {target_unit} / {target}.' source_unit=rule.source_module.unit.title source=rule.source_module.title condition=rule.get_condition_type_display|ui_text target_unit=rule.target_module.unit.title target=rule.target_module.title %}{% if rule.threshold is not None %} {% ui 'Threshold: {score}' score=rule.threshold|floatformat:0 %}{% endif %}{% if rule.required_study_condition %} {% ui 'Study condition: {condition}' condition=rule.required_study_condition %}{% endif %}"
                   tabindex="0"
                 >
                   <span class="cfg-branch-condition-icon" aria-hidden="true">
@@ -162,48 +163,48 @@
                     {% endif %}
                   </span>
                   <span class="cfg-branch-summary">
-                    <span class="cfg-branch-token cfg-branch-token--module">{{ rule.source_module.unit.title|truncatechars:18 }} - {{ rule.source_module.title|truncatechars:30 }}</span>
-                    <span class="cfg-branch-word">if</span>
-                    <span class="cfg-condition-tag cfg-condition-tag--{{ rule.condition_type }}">{{ rule.get_condition_type_display }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}</span>
+                    <span class="cfg-branch-token cfg-branch-token--module"><span data-no-ui-translate>{{ rule.source_module.unit.title|truncatechars:18 }}</span> - <span data-no-ui-translate>{{ rule.source_module.title|truncatechars:30 }}</span></span>
+                    <span class="cfg-branch-word">{% ui "if" %}</span>
+                    <span class="cfg-condition-tag cfg-condition-tag--{{ rule.condition_type }}">{{ rule.get_condition_type_display|ui_text }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}</span>
                     {% if rule.required_study_condition %}
                       <span class="cfg-branch-token cfg-branch-token--condition">{{ rule.required_study_condition|truncatechars:18 }}</span>
                     {% endif %}
-                    <span class="cfg-branch-word">unlock</span>
-                    <span class="cfg-branch-token cfg-branch-token--module">{{ rule.target_module.unit.title|truncatechars:18 }} - {{ rule.target_module.title|truncatechars:30 }}</span>
+                    <span class="cfg-branch-word">{% ui "unlock" %}</span>
+                    <span class="cfg-branch-token cfg-branch-token--module"><span data-no-ui-translate>{{ rule.target_module.unit.title|truncatechars:18 }}</span> - <span data-no-ui-translate>{{ rule.target_module.title|truncatechars:30 }}</span></span>
                   </span>
                 </div>
                 <div class="cfg-branch-actions">
                   <label class="cfg-toggle">
                     <input type="checkbox" name="branch_rule_{{ rule.id }}_active" {% if rule.active %}checked{% endif %}>
-                    Active
+                    {% ui "Active" %}
                   </label>
-                  <select class="form-control form-control-sm" name="branch_rule_{{ rule.id }}_required_study_condition" style="width: 10.5rem;" aria-label="Participant condition">
-                    <option value="">Any condition</option>
+                  <select class="form-control form-control-sm" name="branch_rule_{{ rule.id }}_required_study_condition" style="width: 10.5rem;" aria-label="{% ui "Participant condition" %}">
+                    <option value="">{% ui "Any condition" %}</option>
                     {% for condition in research_conditions %}
-                      <option value="{{ condition }}" {% if rule.required_study_condition == condition %}selected{% endif %}>{{ condition }}</option>
+                      <option data-no-ui-translate value="{{ condition }}" {% if rule.required_study_condition == condition %}selected{% endif %}>{{ condition }}</option>
                     {% endfor %}
                   </select>
-                  <input type="number" name="branch_rule_{{ rule.id }}_priority" value="{{ rule.priority }}" class="form-control" style="width: 4.75rem;" aria-label="Rule priority">
+                  <input type="number" name="branch_rule_{{ rule.id }}_priority" value="{{ rule.priority }}" class="form-control" style="width: 4.75rem;" aria-label="{% ui "Rule priority" %}">
                   <label class="cfg-toggle cfg-toggle-danger">
                     <input type="checkbox" name="branch_rule_{{ rule.id }}_delete">
-                    Delete
+                    {% ui "Delete" %}
                   </label>
                 </div>
               </article>
             {% empty %}
-              <div class="empty-state">No branching rules have been created yet.</div>
+              <div class="empty-state">{% ui "No branching rules have been created yet." %}</div>
             {% endfor %}
           </div>
         </section>
       </div>
 
       <div class="cfg-wizard-footer cfg-flow-footer">
-        <span class="text-xs text-slate-500 dark:text-slate-300">Branch targets become visible and locked for branch-based access after saving.</span>
+        <span class="text-xs text-slate-500 dark:text-slate-300">{% ui "Branch targets become visible and locked for branch-based access after saving." %}</span>
         <div class="cfg-wizard-footer-actions">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Close" %}</button>
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-check2-circle" aria-hidden="true"></i>
-            Save Changes
+            {% ui "Save Changes" %}
           </button>
         </div>
       </div>

@@ -1,13 +1,13 @@
 {% comment %}
 Reusable Tailwind-styled Django form renderer.
 Usage: {% include 'includes/tailwind_form.html' with form=my_form %}
-Requires: {% load tailwind_filters %} in the parent template.
+Requires: {% load tailwind_filters ui_i18n %} in the parent template.
 {% endcomment %}
-{% load tailwind_filters %}
+{% load tailwind_filters ui_i18n %}
 {% if form.non_field_errors %}
   <div class="alert alert-danger mb-4" role="alert">
     {% for error in form.non_field_errors %}
-      <p class="mb-0">{{ error }}</p>
+      <p class="mb-0">{{ error|ui_text }}</p>
     {% endfor %}
   </div>
 {% endif %}
@@ -19,17 +19,17 @@ Requires: {% load tailwind_filters %} in the parent template.
       {% if field.field.widget.input_type == 'checkbox' %}
         <div class="flex items-center gap-2">
           {{ field|tw_input }}
-          <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ field.label }}</label>
+          <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ field.label|ui_text }}</label>
         </div>
       {% else %}
         {% if field.label %}
-          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}</label>
+          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label|ui_text }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}</label>
         {% endif %}
         {{ field|tw_input }}
       {% endif %}
-      {% if field.help_text %}<p class="form-text">{{ field.help_text|safe }}</p>{% endif %}
+      {% if field.help_text %}<p class="form-text">{{ field.help_text|ui_text|safe }}</p>{% endif %}
       {% for error in field.errors %}
-        <p class="invalid-feedback" style="display:block;">{{ error }}</p>
+        <p class="invalid-feedback" style="display:block;">{{ error|ui_text }}</p>
       {% endfor %}
     </div>
   {% endif %}

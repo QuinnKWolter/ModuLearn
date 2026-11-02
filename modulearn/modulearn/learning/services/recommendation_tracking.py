@@ -52,8 +52,9 @@ def attempt_snapshot(source, payload, score, success, event_type):
     elif source == 'lti_outcome' and data.get('attempt_score') is not None:
         score = data['attempt_score']
         success = score >= 100
-    elif source == 'quizjet' and score is not None:
-        pass
+    elif source in {'quizjet', 'quizpet'} and score is not None:
+        score = data.get('attempt_score', score)
+        success = bool(data.get('correct', success))
     elif source == 'splice' and score is not None:
         # PCEX uses the authoritative proxy callback; its SPLICE notification is
         # a duplicate, not an additional attempt.

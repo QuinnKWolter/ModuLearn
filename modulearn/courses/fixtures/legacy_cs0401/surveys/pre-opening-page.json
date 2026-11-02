@@ -1,0 +1,56 @@
+{
+  "source_url": "https://pitt.co1.qualtrics.com/jfe/form/SV_bBiUs28oqC5pAnI",
+  "capture_date": "2026-11-01",
+  "capture_scope": "opening_page_only",
+  "complete_survey": false,
+  "question_ids": [
+    "QID35"
+  ],
+  "questions": {
+    "QID35": {
+      "ChoiceOrder": [
+        "3",
+        "4"
+      ],
+      "Choices": {
+        "3": {
+          "Display": "I agree to participate in this research study."
+        },
+        "4": {
+          "Display": "I decline my participation in this study and will not answer the questionnaire."
+        }
+      },
+      "Configuration": {
+        "LabelPosition": "BELOW",
+        "QuestionDescriptionOption": "UseText"
+      },
+      "DataExportTag": "W1",
+      "Language": {
+        "EN": {
+          "Choices": {
+            "3": {
+              "Display": "I agree to participate in this research study."
+            },
+            "4": {
+              "Display": "I decline my participation in this study and will not answer the questionnaire."
+            }
+          },
+          "QuestionText": "<div style=\"text-align: center;\"><strong>Programming Questionnaire&nbsp;</strong>&nbsp;&nbsp;&nbsp;</div>\n\n<div>&nbsp;</div>\n\n<div>We are interested in your background, thoughts, feelings, and experience with computer programming and how you study/learn computer programming and in general.&nbsp;</div>\n\n<div>&nbsp;</div>\n\n<div>Please answer these questions&nbsp;<strong>as honestly as you can.&nbsp;</strong>There are <strong>no right or wrong answers</strong>—we only want to know what you think and feel about programming and other aspects of life that could be related to studying at a college-level with the support of technology.&nbsp; &nbsp;</div>\n\n<div><br>\nAnswers will <strong>have&nbsp;no impact on grading</strong>&nbsp;and will&nbsp;<strong>only be used for research purposes</strong>&nbsp;and&nbsp;the responses will&nbsp;be&nbsp;<strong>ANONYMIZED</strong>.&nbsp;<br>\n<br>\nPlease,&nbsp;read the attached<strong> <a href=\"https://pitt.co1.qualtrics.com/ControlPanel/File.php?F=F_Iu4rlWOLWvZNjJU\">consent form</a></strong>&nbsp;and<strong>&nbsp;please provide your consent</strong>&nbsp;by selecting one of the options below. Your participation in the study is completely voluntary.</div>"
+        }
+      },
+      "QuestionID": "QID35",
+      "QuestionType": "MC",
+      "Selector": "SAVR",
+      "SubSelector": "TX",
+      "SurveyLanguage": "EN",
+      "Validation": {
+        "Settings": {
+          "ForceResponse": "ON",
+          "Type": "None"
+        }
+      }
+    }
+  },
+  "next_button": true,
+  "previous_button": false
+}

@@ -1,19 +1,29 @@
 {% extends 'base.html' %}
+{% load ui_i18n %}
+{% load study_text %}
 
-{% block title %}{{ module.title }} - ModuLearn{% endblock %}
+{% block title %}{{ module.title }} {% ui "- ModuLearn" %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}
   {% if not participant_mode %}{{ block.super }}{% endif %}
 {% endblock %}
 
 {% block breadcrumbs %}
-  <li><a href="{% url 'courses:course_detail' course_instance.id %}">{{ course_instance.course.title }}</a></li>
+  <li><a href="{% url 'courses:course_detail' course_instance.id %}"><span data-no-ui-translate>{{ course_instance.course.title }}</span></a></li>
   <li>/</li>
-  <li class="text-slate-500 dark:text-slate-300">{{ module.title }}</li>
+  <li class="text-slate-500 dark:text-slate-300" data-no-ui-translate>{{ module.title }}</li>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+  .study-prose pre {white-space:pre-wrap;overflow:auto;padding:.8rem;background:#94a3b81a;border-radius:.4rem}
+  .study-prose code {font-family:monospace}
+  .study-prose ul {list-style:disc;padding-left:1.5rem}
+  .study-prose h2,.study-prose h3,.study-prose h4 {font-weight:750;margin:.7rem 0}
+  .student-question legend .study-prose > div {display:inline}
+  .participant-form .module-page-title {font-size:clamp(1.5rem,3vw,2.1rem)}
+  .participant-form .module-page-card-header {padding:1.25rem 1.5rem}
+  .participant-form .module-page-card-body {padding:1.5rem}
   .student-form-stack {
     display: grid;
     gap: 1rem;
@@ -59,39 +69,38 @@
   {% endif %}
 
   <div class="{% if participant_mode %}mx-auto max-w-3xl{% else %}grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)]{% endif %}">
-    <section class="card module-page-card {% if not participant_mode %}p-6{% endif %}">
+    <section class="card module-page-card {% if participant_mode %}participant-form{% else %}p-6{% endif %}">
       {% if participant_mode %}
         <div class="module-page-card-header">
-          <div class="module-page-eyebrow">Form / Survey</div>
-          <h1 class="module-page-title">{{ module.title }}</h1>
+          <h1 class="module-page-title" data-no-ui-translate>{{ module.title }}</h1>
           {% if module.description %}
-            <p class="module-page-description">{{ module.description }}</p>
+            <p class="module-page-description" data-no-ui-translate>{{ module.description }}</p>
           {% endif %}
         </div>
       {% endif %}
       <div class="{% if participant_mode %}module-page-card-body{% endif %}">
       {% if module_form.instructions %}
-        <div class="shell-surface p-4 rounded-2xl mb-5 text-slate-700 dark:text-slate-200">
-          {{ module_form.instructions|linebreaksbr }}
+        <div class="study-prose shell-surface p-4 rounded-2xl mb-5 text-slate-700 dark:text-slate-200" data-no-ui-translate>
+          {{ module_form.instructions|study_markdown }}
         </div>
       {% endif %}
 
       {% if existing_submission and not allows_resubmission %}
         <div class="empty-state">
-          <div class="text-xl font-bold text-slate-700 dark:text-slate-100">Response submitted</div>
-          <p class="mt-2">This form is complete. Your instructor has disabled resubmission.</p>
+          <div class="text-xl font-bold text-slate-700 dark:text-slate-100">{% ui "Response submitted" %}</div>
+          <p class="mt-2">{% ui "This form is complete. Your instructor has disabled resubmission." %}</p>
         </div>
       {% else %}
-        <form method="post" class="student-form-stack">
+        <form method="post" class="student-form-stack" data-study-form="{{ module.id }}">
           {% csrf_token %}
           {% for question in questions %}
-            <fieldset class="student-question">
+            <fieldset class="student-question" data-no-ui-translate>
               <legend class="font-bold text-lg">
-                {{ question.prompt }}
+                <span class="study-prose" data-no-ui-translate>{{ question.prompt|study_markdown }}</span>
                 {% if question.required %}<span class="text-red-500">*</span>{% endif %}
               </legend>
               {% if question.help_text %}
-                <p class="text-sm text-slate-500 dark:text-slate-300 mt-1">{{ question.help_text }}</p>
+                <div class="study-prose text-sm text-slate-500 dark:text-slate-300 mt-1">{{ question.help_text|study_markdown }}</div>
               {% endif %}
 
               <div class="mt-4">
@@ -134,16 +143,16 @@
               </div>
             </fieldset>
           {% empty %}
-            <div class="empty-state">This form does not have any questions yet.</div>
+            {% if not participant_mode %}<div class="empty-state">{% ui "This form does not have any questions yet." %}</div>{% endif %}
           {% endfor %}
 
-          {% if questions %}
+          {% if questions or participant_mode %}
             <div class="flex justify-end">
               <button type="submit" class="btn btn-primary btn-lg">{{ module_form.submit_button_label }}</button>
             </div>
           {% endif %}
           {% if is_instructor %}
-            <div class="empty-state">Instructor testing: your scores are saved separately and excluded from student analytics.</div>
+            <div class="empty-state">{% ui "Instructor testing: your scores are saved separately and excluded from student analytics." %}</div>
           {% endif %}
         </form>
       {% endif %}
@@ -152,15 +161,15 @@
 
     {% if not participant_mode %}
     <aside class="card p-6">
-      <div class="stat-kicker">Completion</div>
+      <div class="stat-kicker">{% ui "Completion" %}</div>
       <div class="text-2xl font-bold mt-2">
-        {% if progress.is_complete %}Complete{% else %}Not submitted{% endif %}
+        {% if progress.is_complete %}{% ui "Complete" %}{% else %}{% ui "Not submitted" %}{% endif %}
       </div>
-      <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">Submitting this form marks the activity complete and can unlock downstream content.</p>
+      <p class="text-sm text-slate-500 dark:text-slate-300 mt-2">{% ui "Submitting this form marks the activity complete and can unlock downstream content." %}</p>
       <div class="mt-5 grid gap-2">
         <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-secondary w-full justify-center">
           <i class="bi bi-arrow-left" aria-hidden="true"></i>
-          Back To Course
+          {% ui "Back To Course" %}
         </a>
       </div>
     </aside>

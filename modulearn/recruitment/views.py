@@ -1,4 +1,5 @@
 from __future__ import annotations
+from main.i18n import translate as ui
 
 import csv
 import hashlib
@@ -190,6 +191,8 @@ def _enter_source(request, source: RecruitmentSource):
 
     if not course_instance:
         return reject("This recruitment link is not attached to an active study session.", 500)
+    if source.study_id and source.study.preview_of_id:
+        return reject('Researcher previews cannot accept recruitment.', 403)
     if not _rate_limit_entry(request, source.id):
         return reject("Too many recruitment entry attempts. Please wait a minute and try again.", 429)
     if not source.is_active:
@@ -483,6 +486,19 @@ def complete(request, session_uuid):
     if request.user != participant_session.user and not request.user.is_staff:
         raise PermissionDenied("You cannot complete another participant session.")
 
+    study = participant_session.recruitment_source.study
+    if study and study.guided_flow:
+        if not participant_session.enrollment_id:
+            raise PermissionDenied('This study session has no participant enrollment.')
+        from recruitment.services.flow import current_activity
+        _, state = current_activity(participant_session)
+        if not state.get('finished'):
+            return redirect('recruitment:resume_session', session_uuid=participant_session.uuid)
+        if study.preview_of_id:
+            participant_session.mark_complete(ParticipantSession.STATUS_COMPLETED)
+            participant_session.save(update_fields=['status', 'completed_at'])
+            return render(request, 'recruitment/preview_finished.html')
+
     outcome = request.GET.get("outcome") or _determine_outcome(participant_session)
     valid_outcomes = {
         ParticipantSession.STATUS_COMPLETED,
@@ -566,6 +582,9 @@ def _user_can_manage_study(user, study: Study) -> bool:
 
 
 def _sync_study_conditions(study: Study, raw_labels: str):
+    # Recruitment code edits must not delete stable condition IDs or metadata.
+    if study.conditions.exists():
+        return
     labels = []
     for raw_label in (raw_labels or "").replace("\n", ",").split(","):
         label = raw_label.strip().lower().replace(" ", "_")
@@ -624,9 +643,9 @@ def create_study(request):
             condition_labels=request.POST.get("condition_labels", ""),
             template_data=template_data,
         )
-        messages.success(request, f"Created study '{study.title}'. Its Prolific study URL is ready to copy from Manage Studies.")
+        messages.success(request, ui('Created study {title}. Its Prolific study URL is ready to copy from Manage Studies.', title=study.title))
     except Exception as exc:
-        messages.error(request, f"The study could not be created: {exc}")
+        messages.error(request, ui('The study could not be created: {error}', error=str(exc)))
     return redirect("dashboard:instructor_dashboard")
 
 
@@ -696,7 +715,7 @@ def create_study_source(request, study_id):
     if study.status == Study.STATUS_DRAFT:
         study.status = Study.STATUS_ACTIVE
         study.save(update_fields=["status", "updated_at"])
-    messages.success(request, f"{'Created' if created else 'Updated'} Prolific recruitment for {study.title}.")
+    messages.success(request, ui('Created Prolific recruitment for {title}.' if created else 'Updated Prolific recruitment for {title}.', title=study.title))
     return _redirect_after_source_save(request, study=study)
 
 

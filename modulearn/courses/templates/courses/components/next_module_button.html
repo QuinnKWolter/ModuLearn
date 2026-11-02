@@ -1,12 +1,14 @@
-<a href="{% if next_module %}{% url 'courses:launch_iframe_module' course_instance.id next_module.id %}{% else %}#{% endif %}"
+
+{% load ui_i18n %}<a href="{% if next_module %}{% url 'courses:launch_iframe_module' course_instance.id next_module.id %}{% else %}#{% endif %}"
    class="btn {% if next_module %}btn-primary{% else %}btn-outline-secondary{% endif %} {{ button_class|default:'' }}"
    title="{% if next_module %}Open {{ next_module.title }}{% else %}Check for the next unlocked activity{% endif %}"
    data-next-module-button
+   {% if not next_module %}aria-disabled="true" data-next-state="empty"{% endif %}
    data-next-url="{% url 'courses:next_accessible_module' course_instance.id module.id %}"
    data-ready-label="Next Activity"
    data-checking-label="Checking..."
    data-empty-label="No Unlocked Activity"
    data-error-label="Try Again">
-  <span data-next-label>{% if next_module %}Next Activity{% else %}Check Next Activity{% endif %}</span>
-  <i class="bi {% if next_module %}bi-arrow-right{% else %}bi-search{% endif %}" aria-hidden="true" data-next-icon></i>
+  <span data-next-label>{% if next_module %}{% ui "Next Activity" %}{% else %}{% ui "No Unlocked Activity" %}{% endif %}</span>
+  <i class="bi {% if next_module %}bi-arrow-right{% else %}bi-lock{% endif %}" aria-hidden="true" data-next-icon></i>
 </a>

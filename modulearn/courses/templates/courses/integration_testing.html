@@ -6,7 +6,7 @@
   <header>
     <a href="{% url 'courses:course_configuration' instance.pk %}">{% ui 'Back to configuration' %}</a>
     <h1 class="text-3xl font-bold mt-4">{% ui 'Integration testing' %}</h1>
-    <p class="mt-2">{{ instance.course.title }} · {{ instance.group_name }}</p>
+    <p class="mt-2"><span data-no-ui-translate>{{ instance.course.title }}</span> · <span data-no-ui-translate>{{ instance.group_name }}</span></p>
     <p class="mt-3">{% ui 'Your instructor test activity only. Opening this page never changes progress or grades.' %}</p>
   </header>
   <div class="rounded-xl border border-slate-400 p-4 space-y-3">
@@ -20,7 +20,7 @@
       <thead><tr class="border-b border-slate-400"><th class="p-3">{% ui 'Activity' %}</th><th class="p-3">{% ui 'Provider / protocol' %}</th><th class="p-3">{% ui 'Saved progress' %}</th><th class="p-3">{% ui 'Evidence' %}</th></tr></thead>
       <tbody>{% for row in report.modules %}
         <tr class="border-b border-slate-400/30 align-top">
-          <td class="p-3"><a href="{{ row.launch_url }}" target="_blank" rel="noopener">{{ row.title }} ↗</a><div class="text-xs mt-1">{{ row.content_type }}</div></td>
+          <td class="p-3"><a href="{{ row.launch_url }}" target="_blank" rel="noopener"><span data-no-ui-translate>{{ row.title }}</span> ↗</a><div class="text-xs mt-1">{{ row.content_type }}</div></td>
           <td class="p-3">{{ row.provider }}<div>{{ row.protocol|upper }}</div></td>
           <td class="p-3 whitespace-nowrap">{% ui 'Score' %}: {{ row.score|default_if_none:'—' }}<br>{% ui 'Progress' %}: {{ row.progress }}%<br>{% ui 'Attempts' %}: {{ row.attempts }}{% if row.complete %}<br>✓ {% ui 'Complete' %}{% endif %}</td>
           <td class="p-3"><details><summary>{% ui 'Events and LTI outcomes' %}</summary>

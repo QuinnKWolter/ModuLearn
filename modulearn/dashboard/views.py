@@ -187,6 +187,7 @@ def export_study_analytics_csv(request, study_id):
         "is_complete",
         "score",
         "attempts",
+        "incorrect_attempts",
         "success",
         "first_accessed",
         "last_accessed",

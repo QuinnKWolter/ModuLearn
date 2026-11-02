@@ -1,13 +1,14 @@
-{% if course_instances %}
+
+{% load ui_i18n %}{% if course_instances %}
 <section class="mb-8">
   <div class="card overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
       <div class="flex justify-between items-center">
         <div>
-          <h2 class="text-lg font-semibold mb-0.5">Course Sessions</h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Manage your active course sessions</p>
+          <h2 class="text-lg font-semibold mb-0.5">{% ui "Course Sessions" %}</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{% ui "Manage your active course sessions" %}</p>
         </div>
-        <span class="badge badge-primary">{{ course_instances.count }} active session{{ course_instances.count|pluralize }}</span>
+        <span class="badge badge-primary">{% ui_count "active session" "active sessions" course_instances.count %}</span>
       </div>
     </div>
     <div class="p-6">
@@ -20,7 +21,7 @@
       {% else %}
       <div class="text-center py-12">
         <i class="bi bi-calendar-x text-gray-300 dark:text-gray-600 text-5xl"></i>
-        <p class="text-gray-400 mt-3">No course sessions to manage</p>
+        <p class="text-gray-400 mt-3">{% ui "No course sessions to manage" %}</p>
       </div>
       {% endif %}
     </div>

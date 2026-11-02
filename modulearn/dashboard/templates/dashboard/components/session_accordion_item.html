@@ -1,4 +1,5 @@
-<div class="card border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+{% load ui_i18n %}<div class="card border border-gray-200 dark:border-gray-700 overflow-hidden">
   <h2 id="heading{{ course_instance.id }}">
     <button class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
             type="button" data-bs-toggle="collapse"
@@ -9,14 +10,14 @@
           <i class="bi bi-book text-blue-600 dark:text-blue-400"></i>
         </div>
         <div>
-          <div class="font-semibold">{{ course_instance.course.title }}</div>
+          <div class="font-semibold" data-no-ui-translate>{{ course_instance.course.title }}</div>
           <div class="text-sm text-gray-500 dark:text-gray-400">
-            <i class="bi bi-tag mr-1"></i>{{ course_instance.group_name }}
+            <i class="bi bi-tag mr-1"></i><span data-no-ui-translate>{{ course_instance.group_name }}</span>
           </div>
         </div>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <span class="badge badge-info">{{ course_instance.enrollments.count }} student{{ course_instance.enrollments.count|pluralize }}</span>
+        <span class="badge badge-info">{% ui_count "student" "students" course_instance.enrollments.count %}</span>
         <i class="bi bi-chevron-down text-gray-400 accordion-arrow"></i>
       </div>
     </button>
@@ -29,7 +30,7 @@
           <div class="flex items-center gap-2">
             <i class="bi bi-people text-blue-600 dark:text-blue-400 text-lg"></i>
             <div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">Enrolled</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{% ui "Enrolled" %}</div>
               <div class="text-lg font-bold">{{ course_instance.enrollments.count }}</div>
             </div>
           </div>
@@ -38,7 +39,7 @@
           <div class="flex items-center gap-2">
             <i class="bi bi-calendar-check text-green-600 dark:text-green-400 text-lg"></i>
             <div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">Created</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{% ui "Created" %}</div>
               <div class="text-sm font-semibold">{{ course_instance.created_at|date:"M d, Y" }}</div>
             </div>
           </div>
@@ -47,7 +48,7 @@
           <div class="flex items-center gap-2">
             <i class="bi bi-graph-up text-yellow-500 text-lg"></i>
             <div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">Avg Progress</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{% ui "Avg Progress" %}</div>
               <div class="text-lg font-bold">{{ course_instance.avg_progress|floatformat:0|default:"0" }}%</div>
             </div>
           </div>
@@ -56,7 +57,7 @@
           <div class="flex items-center gap-2">
             <i class="bi bi-star text-cyan-500 text-lg"></i>
             <div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">Avg Score</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{% ui "Avg Score" %}</div>
               <div class="text-lg font-bold">{{ course_instance.avg_score|floatformat:0|default:"0" }}%</div>
             </div>
           </div>
@@ -66,21 +67,21 @@
       <!-- Action Buttons -->
       <div class="session-action-row mb-4">
         {% if not enrolled %}
-        <a href="{% url 'courses:course_configuration' course_instance.id %}" class="btn btn-outline-config session-action-btn is-config is-default-action" aria-label="Configure">
-          <i class="bi bi-sliders" aria-hidden="true"></i><span class="session-action-label">Configure</span>
+        <a href="{% url 'courses:course_configuration' course_instance.id %}" class="btn btn-outline-config session-action-btn is-config is-default-action" aria-label="{% ui "Configure" %}">
+          <i class="bi bi-sliders" aria-hidden="true"></i><span class="session-action-label">{% ui "Configure" %}</span>
         </a>
         {% endif %}
-        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-view session-action-btn is-view" aria-label="View Course">
-          <i class="bi bi-eye" aria-hidden="true"></i><span class="session-action-label">View Course</span>
+        <a href="{% url 'courses:course_detail' course_instance.id %}" class="btn btn-outline-view session-action-btn is-view" aria-label="{% ui "View Course" %}">
+          <i class="bi bi-eye" aria-hidden="true"></i><span class="session-action-label">{% ui "View Course" %}</span>
         </a>
         <button class="btn btn-outline-lti session-action-btn is-lti copy-lti-url"
                 type="button"
                 data-course-instance-id="{{ course_instance.id }}"
                 data-course-title="{{ course_instance.course.title }}"
                 data-group-name="{{ course_instance.group_name }}"
-                title="Open LTI setup"
-                aria-label="LTI Setup">
-          <i class="bi bi-link-45deg" aria-hidden="true"></i><span class="session-action-label">LTI Setup</span>
+                title="{% ui "Open LTI setup" %}"
+                aria-label="{% ui "LTI Setup" %}">
+          <i class="bi bi-link-45deg" aria-hidden="true"></i><span class="session-action-label">{% ui "LTI Setup" %}</span>
         </button>
         <button class="btn btn-outline-roster session-action-btn is-roster"
                 type="button"
@@ -89,11 +90,11 @@
                 data-course-instance-id="{{ course_instance.id }}"
                 data-course-title="{{ course_instance.course.title }}"
                 data-group-name="{{ course_instance.group_name }}"
-                aria-label="Enrollment">
-          <i class="bi bi-people" aria-hidden="true"></i><span class="session-action-label">Enrollment</span>
+                aria-label="{% ui "Enrollment" %}">
+          <i class="bi bi-people" aria-hidden="true"></i><span class="session-action-label">{% ui "Enrollment" %}</span>
         </button>
-        <a href="{% url 'dashboard:modulearn_analytics_dashboard' %}?instance_id={{ course_instance.id }}" class="btn btn-outline-analytics session-action-btn is-analytics" aria-label="Analytics">
-          <i class="bi bi-graph-up" aria-hidden="true"></i><span class="session-action-label">Analytics</span>
+        <a href="{% url 'dashboard:modulearn_analytics_dashboard' %}?instance_id={{ course_instance.id }}" class="btn btn-outline-analytics session-action-btn is-analytics" aria-label="{% ui "Analytics" %}">
+          <i class="bi bi-graph-up" aria-hidden="true"></i><span class="session-action-label">{% ui "Analytics" %}</span>
         </a>
         <button class="btn btn-outline-activity session-action-btn is-activity"
                 type="button"
@@ -103,8 +104,8 @@
                 data-session-activity-script="{{ course_instance.activity_script_id }}"
                 data-session-title="{{ course_instance.course.title }} - {{ course_instance.group_name }}"
                 data-session-activity-count="{{ course_instance.recent_activity_modal|length }}"
-                aria-label="Recent Activity">
-          <i class="bi bi-activity" aria-hidden="true"></i><span class="session-action-label">Recent Activity</span>
+                aria-label="{% ui "Recent Activity" %}">
+          <i class="bi bi-activity" aria-hidden="true"></i><span class="session-action-label">{% ui "Recent Activity" %}</span>
         </button>
         {% if not enrolled %}
         <button class="btn btn-outline-delete session-action-btn is-delete delete-session-btn"
@@ -113,8 +114,8 @@
                 data-course-title="{{ course_instance.course.title }}"
                 data-group-name="{{ course_instance.group_name }}"
                 data-enrollment-count="{{ course_instance.enrollments.count }}"
-                aria-label="Delete Session">
-          <i class="bi bi-trash" aria-hidden="true"></i><span class="session-action-label">Delete Session</span>
+                aria-label="{% ui "Delete Session" %}">
+          <i class="bi bi-trash" aria-hidden="true"></i><span class="session-action-label">{% ui "Delete Session" %}</span>
         </button>
         {% endif %}
       </div>

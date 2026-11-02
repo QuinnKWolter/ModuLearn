@@ -1,7 +1,7 @@
 (function () {
-  function t(value) {
+  function t(value, parameters = {}) {
     return window.ModuLearnI18n && typeof window.ModuLearnI18n.t === 'function'
-      ? window.ModuLearnI18n.t(value)
+      ? window.ModuLearnI18n.t(value, parameters)
       : value;
   }
 
@@ -83,7 +83,7 @@
     function activityEventLabel(value) {
       const normalized = String(value || '').replace(/_/g, ' ').trim();
       if (!normalized) return t('Activity');
-      return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+      return t(normalized.replace(/\b\w/g, (char) => char.toUpperCase()));
     }
 
     function activityEventClass(value) {
@@ -94,7 +94,7 @@
       if (!value) return '';
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return String(value);
-      return date.toLocaleString([], {
+      return date.toLocaleString(window.ModuLearnLanguage || 'en', {
         month: 'short',
         day: '2-digit',
         year: 'numeric',
@@ -171,7 +171,7 @@
 
       sessionActivityState.filtered = filtered;
       if (meta) {
-        meta.textContent = `${filtered.length} of ${sessionActivityState.events.length} events - reverse chronological by default.`;
+        meta.textContent = t('{shown} of {total} events — newest first by default.', {shown: filtered.length, total: sessionActivityState.events.length});
       }
 
       if (!filtered.length) {
@@ -196,7 +196,7 @@
               <div class="text-xs text-slate-500 dark:text-slate-300">${escapeHtml(learnerSub)}</div>
             </td>
             <td class="max-w-xs">
-              <div class="truncate font-semibold" title="${escapeHtml(event.module_title || '')}">${escapeHtml(event.module_title || t('Activity activity'))}</div>
+              <div class="truncate font-semibold" title="${escapeHtml(event.module_title || '')}" data-no-ui-translate>${escapeHtml(event.module_title || t('Activity activity'))}</div>
             </td>
             <td><span class="activity-event-pill ${activityEventClass(event.event_type)}">${escapeHtml(activityEventLabel(event.event_type))}</span></td>
             <td class="text-right font-semibold">${escapeHtml(progress)}</td>
@@ -732,8 +732,8 @@
       }
       if (hint) {
         hint.textContent = remaining > 0
-          ? t(`This session has ${remaining} of ${maxStudents} student slots remaining.`)
-          : t(`This session is at its ${maxStudents}-student limit.`);
+          ? t('Student places remaining: {remaining} of {total}.', {remaining, total: maxStudents})
+          : t('This session has reached its limit of {total} students.', {total: maxStudents});
       }
     }
 
@@ -768,7 +768,7 @@
             row.innerHTML = `
               <td>
                 <div class="font-semibold">${escapeHtml(studentName)}</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(enrollment.student.username || '')}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400" data-no-ui-translate>${escapeHtml(enrollment.student.username || '')}</div>
               </td>
               <td><span class="${emailClass}">${escapeHtml(emailLabel)}</span></td>
               <td>${enrollment.progress.modules_completed}/${enrollment.progress.total_modules} ${t('Graded')}<small class="block">${enrollment.progress.practice_completed || 0}/${enrollment.progress.practice_total || 0} ${t('Practice')}</small></td>
@@ -944,7 +944,7 @@
           emailList.value = '';
           await loadEnrollments(courseInstanceId);
 
-          let message = t(`Successfully enrolled ${data.success_count} students.`);
+          let message = t('Successfully enrolled {count} students.', {count: data.success_count});
           if (data.error_count > 0) {
             message += `\n\n${t('Errors:')}\n${data.error_details.join('\n')}`;
           }
@@ -986,7 +986,7 @@
         const maxCount = Number.parseInt(countInput.max, 10) || 500;
 
         if (!Number.isInteger(count) || count < 1 || count > maxCount) {
-          alert(t(`Generate between 1 and ${maxCount} accounts at a time.`));
+          alert(t('Generate between 1 and {count} accounts at a time.', {count: maxCount}));
           return;
         }
 
@@ -1283,7 +1283,7 @@
 
       if (legacyMeta) {
         legacyMeta.textContent = normalizedGroups.length
-          ? t(`${normalizedGroups.length} course${normalizedGroups.length === 1 ? '' : 's'} available`)
+          ? t('{count} courses available', {count: normalizedGroups.length})
           : t('No linked legacy courses were found.');
       }
 

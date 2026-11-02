@@ -1,0 +1,11 @@
+{% load ui_i18n %}{% ui_languages as languages %}
+<details class="language-menu">
+  <summary class="theme-toggle" title="{% ui 'Language' %}" aria-label="{% ui 'Language' %}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6.5h14M5 17.5h14"/></svg></summary>
+  <div class="language-menu-panel">
+    <form action="{% url 'set_language' %}" method="post">{% csrf_token %}
+      <input type="hidden" name="next" value="{% ui_return_path %}">
+      {% for language in languages %}<button class="language-menu-option{% if language.active %} is-active{% endif %}" type="submit" name="language" value="{{ language.code }}" lang="{{ language.code }}" data-no-ui-translate {% if language.active %}aria-current="true"{% endif %}>{{ language.name }}{% if language.active %}<span aria-hidden="true">✓</span>{% endif %}</button>{% endfor %}
+    </form>
+    <button type="button" class="language-report-trigger" data-report-translation>{% ui 'Report a translation error' %}</button>
+  </div>
+</details>

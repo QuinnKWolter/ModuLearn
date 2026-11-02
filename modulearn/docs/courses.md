@@ -1,5 +1,7 @@
 # Courses, analytics and studies
 
+For guided participant flow, study editing, timers, isolated previews and the remediation-study acceptance matrix, see [Study authoring and rehearsal](studies.md).
+
 ## Course configuration
 
 Course structure is shared across its sessions; enrollments, grades and recommendation settings are session-specific. Units/modules support ordering, visibility, locks and access rules. Student course lists load collapsed. Server-side access checks enforce hidden/locked content even when a launch URL is copied directly.
@@ -75,7 +77,7 @@ On accepted entry, ModuLearn:
 - assigns the participant to one of the Study conditions,
 - logs the entry attempt,
 - signs the participant in,
-- redirects to the reduced-access study sessions page.
+- redirects directly to the participant's resume activity (consent first in a new study).
 
 Anonymous participants are intentionally restricted. They are redirected away from profiles and dashboards, cannot browse the normal course hub, cannot enroll in other sessions, and can only resume assigned study sessions/modules.
 
@@ -83,6 +85,7 @@ Anonymous participants are intentionally restricted. They are redirected away fr
 
 Study conditions are configured on the Study, not on a course session. Current assignment strategies are:
 
+- `random`: independent random assignment (default for new studies).
 - `balanced`: assigns the least-filled condition first.
 - `hash`: deterministic assignment from the participant id.
 - `schedule`: claims preallocated `RecruitmentAssignmentSlot` rows.
@@ -97,7 +100,7 @@ The Study modal shows the end-of-study credit URL:
 https://<host>/r/study/<study_id>/complete-current/
 ```
 
-Add that URL as the final link/module in the study flow. It resolves the logged-in participant's Study session and redirects to Prolific with the configured completion code:
+Legacy, non-guided studies can use that URL as their final credit link. Guided studies automatically complete after their last step and reject premature completion. The endpoint resolves the logged-in participant's Study session and redirects to Prolific with the configured completion code:
 
 ```text
 https://app.prolific.com/submissions/complete?cc=<completion_code>
@@ -107,7 +110,7 @@ For Prolific credit to work end to end:
 
 - the Study's Prolific source must have a completion code configured,
 - the participant must enter through the generated Study launch URL,
-- the participant must click the end-of-study credit link while logged into the provisioned participant account.
+- the participant finishes the guided flow, or clicks the legacy credit link while logged into the provisioned participant account.
 
 The legacy `/r/prolific/<source_id>/` and `/r/complete-current/<course_instance_id>/` routes remain as compatibility fallbacks for older rows, but new UI should use Study routes only.
 
@@ -116,6 +119,8 @@ The legacy `/r/prolific/<source_id>/` and `/r/complete-current/<course_instance_
 SONA configuration is temporarily disabled in the instructor UI and rejected by the source-creation endpoint. Existing SONA model fields and services remain in place, but new SONA sources should not be created until the SONA flow is re-enabled.
 
 ### Local testing
+
+Prefer the isolated **Study Setup & Preview** workflow described in [studies](studies.md). The legacy synthetic-link method below creates participant records in the target study and should only be used on a disposable study.
 
 Use the generated Study launch URL and replace the placeholders with stable 24-character hex values, for example:
 
@@ -181,3 +186,7 @@ Configuration shows yellow graded stars in both its structure sidebar and activi
 Free-coding `answerChecked` events with a complete, consistent boolean `testCasesResults` list now record an equal-weight test percentage (3/4 = 75%). The latest accepted attempt supplies the score; activity progress retains the best percentage. Completion still requires Cupcake's overall `isCorrect=true`. Hidden tests contribute their reported boolean results, never inferred output. Invalid/missing test arrays retain the previous overall pass/fail behavior. Recommendation practice uses the same adapter but remains separate from course credit. Completion-based course grades, unit bars and completion counts still require completed activities.
 
 To reconcile historical **course activity** attempts, including ungraded classroom practice, run `python manage.py backfill_cupcake_partial_progress --sessions 42 43 --modules 3796 3797 3798 3799 3800` after verifying those IDs in the destination. Default mode is read-only PREVIEW. It prints each affected username/session/activity, before/after score and progress, changed attempt IDs, skipped records, and a plan SHA256. Progress values are fractions (0.75 = 75%). After a database-consistent backup, repeat with `--apply --expect-sha256 <preview-sha256>`; changed plans abort. Applications are atomic and audited; repeated runs are no-ops. Accepted attempt counts, completion flags/times, raw provider payloads, saved work and access timestamps are preserved. No provider submissions, recommendation activations or external LMS grade passbacks are replayed. This command does not backfill separate recommendation-practice records. Missing/mixed/malformed/contradictory evidence and mismatched attempt counters are skipped for manual review, not guessed. Existing scores/progress are never lowered during historical reconciliation. The existing `repair_cupcake_progress` command handles previously unprocessed events; this partial-score command only updates already accepted attempts.
+
+## Reusable CS0401 pre/post assessments
+
+The normalized legacy assessment package and provenance are in `courses/fixtures/legacy_cs0401/`. Use `build_legacy_assessment_course --output <directory>` to create a separate demo course and export its two unit packages; it never overwrites a course. `exports/legacy-cs0401/` contains the ready-to-import units and whole-course export. Students use ordinary ModuLearn enrollment, while the existing proxy supplies provider compatibility parameters. QuizJET/PCRS remain the external grading engines; the original archive does not include their graders or any pre/post survey instruments. See the package README for the exact logging scope and verification.

@@ -1,4 +1,5 @@
-<!-- Import JSON Course Structure Modal -->
+
+{% load ui_i18n %}<!-- Import JSON Course Structure Modal -->
 {% include 'dashboard/components/modals/import_json_modal.html' %}
 
 <!-- New Session Modal -->
@@ -7,7 +8,7 @@
   <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <h5 class="text-lg font-semibold flex items-center gap-2" id="newSessionModalLabel">
-        <i class="bi bi-plus-circle"></i>Create New Course Session
+        <i class="bi bi-plus-circle"></i>{% ui "Create New Course Session" %}
       </h5>
       <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
     </div>
@@ -15,14 +16,14 @@
       <form id="newSessionForm">
         <input type="hidden" id="courseId">
         <div class="mb-4">
-          <label for="groupName" class="form-label font-medium">Session Name</label>
-          <input type="text" class="form-control" id="groupName" required placeholder="e.g., Fall 2024, Section A">
+          <label for="groupName" class="form-label font-medium">{% ui "Session Name" %}</label>
+          <input type="text" class="form-control" id="groupName" required placeholder="{% ui "e.g., Fall 2024, Section A" %}">
           <div id="groupNameFeedback" class="mt-1"></div>
-          <p class="form-text">A unique identifier for this course session</p>
+          <p class="form-text">{% ui "A unique identifier for this course session" %}</p>
         </div>
         <div class="flex gap-2 justify-end">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Create Session</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
+          <button type="submit" class="btn btn-primary">{% ui "Create Session" %}</button>
         </div>
       </form>
     </div>
@@ -36,15 +37,15 @@
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <div>
         <h5 class="text-lg font-semibold flex items-center gap-2" id="ltiSetupModalLabel">
-          <i class="bi bi-link-45deg"></i>LTI Setup
+          <i class="bi bi-link-45deg"></i>{% ui "LTI Setup" %}
         </h5>
-        <p class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0" id="ltiSetupSubtitle">Copy launch values for this course session.</p>
+        <p class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0" id="ltiSetupSubtitle">{% ui "Copy launch values for this course session." %}</p>
       </div>
       <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
     </div>
     <div class="flex-1 overflow-y-auto p-6">
       <div id="ltiSetupLoading" class="empty-state">
-        <span class="spinner-border mr-2"></span>Loading LTI setup...
+        <span class="spinner-border mr-2"></span>{% ui "Loading LTI setup..." %}
       </div>
 
       <div id="ltiSetupContent" class="hidden space-y-5">
@@ -52,23 +53,23 @@
           <div class="flex items-start gap-3">
             <span class="lti-brand-mark" aria-hidden="true"><i class="bi bi-box-arrow-up-right"></i></span>
             <div>
-              <p class="stat-kicker">LMS Launch Setup</p>
-              <h6 class="font-bold text-slate-900 dark:text-white mb-1">Use the section that matches your LMS and LTI version.</h6>
+              <p class="stat-kicker">{% ui "LMS Launch Setup" %}</p>
+              <h6 class="font-bold text-slate-900 dark:text-white mb-1">{% ui "Use the section that matches your LMS and LTI version." %}</h6>
               <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">
-                LTI 1.3 is preferred for new Moodle and Canvas installs. LTI 1.1 remains available for legacy Canvas or Moodle tools that still rely on consumer key and shared secret launches.
+                {% ui "LTI 1.3 is preferred for new Moodle and Canvas installs. LTI 1.1 remains available for legacy Canvas or Moodle tools that still rely on consumer key and shared secret launches." %}
               </p>
             </div>
           </div>
         </section>
 
-        <section class="lti-platform-grid" aria-label="LTI setup by platform">
+        <section class="lti-platform-grid" aria-label="{% ui "LTI setup by platform" %}">
           <details class="lti-platform-card is-canvas" open>
             <summary>
               <span class="lti-platform-title">
                 <span class="lti-platform-icon"><i class="bi bi-easel2"></i></span>
                 <span>
-                  <span class="stat-kicker">Canvas</span>
-                  <strong>Developer Keys / External Apps</strong>
+                  <span class="stat-kicker">{% ui "Canvas" %}</span>
+                  <strong>{% ui "Developer Keys / External Apps" %}</strong>
                 </span>
               </span>
               <i class="bi bi-chevron-down"></i>
@@ -77,92 +78,92 @@
               <details class="lti-version-panel" open>
                 <summary>
                   <span>
-                    <span class="stat-kicker">LTI 1.3</span>
-                    <strong>Canvas Developer Key</strong>
+                    <span class="stat-kicker">{% ui "LTI 1.3" %}</span>
+                    <strong>{% ui "Canvas Developer Key" %}</strong>
                   </span>
                   <span class="flex items-center gap-2">
-                    <span class="badge badge-primary">Recommended</span>
+                    <span class="badge badge-primary">{% ui "Recommended" %}</span>
                     <i class="bi bi-chevron-down text-slate-400"></i>
                   </span>
                 </summary>
                 <div class="lti-panel-body">
                   <p class="lti-help-copy">
-                    In Canvas, create an LTI Developer Key. Manual entry requires the title, description, target link URL, OpenID Connect initiation URL, and a public JWK URL.
+                    {% ui "In Canvas, create an LTI Developer Key. Manual entry requires the title, description, target link URL, OpenID Connect initiation URL, and a public JWK URL." %}
                   </p>
                   <div class="grid gap-3 md:grid-cols-2">
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Tool name</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Tool name" %}</span>
                       <input id="ltiCanvas13ToolName" data-lti-value="tool.name" class="form-control font-mono text-xs" type="text" readonly>
                     </label>
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Default launch container</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Default launch container" %}</span>
                       <input id="ltiCanvas13LaunchContainer" data-lti-value="tool.default_launch_container" class="form-control font-mono text-xs" type="text" readonly>
                     </label>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas13Description">Tool description</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas13Description">{% ui "Tool description" %}</label>
                   <textarea id="ltiCanvas13Description" data-lti-value="tool.description" class="form-control font-mono text-xs mb-3" rows="2" readonly></textarea>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas13ToolUrl">Target link URI</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas13ToolUrl">{% ui "Target link URI" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiCanvas13ToolUrl" data-lti-value="lti_13.tool_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13ToolUrl" aria-label="Copy Target link URI" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13ToolUrl" aria-label="{% ui "Copy Target link URI" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas13LoginUrl">OpenID Connect initiation URL</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas13LoginUrl">{% ui "OpenID Connect initiation URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiCanvas13LoginUrl" data-lti-value="lti_13.login_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13LoginUrl" aria-label="Copy OpenID Connect initiation URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13LoginUrl" aria-label="{% ui "Copy OpenID Connect initiation URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas13RedirectUri">Redirect URI</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas13RedirectUri">{% ui "Redirect URI" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiCanvas13RedirectUri" data-lti-value="lti_13.redirect_uri" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13RedirectUri" aria-label="Copy Redirect URI" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13RedirectUri" aria-label="{% ui "Copy Redirect URI" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas13JwksUrl">JWK method / Public JWK URL</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas13JwksUrl">{% ui "JWK method / Public JWK URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiCanvas13JwksUrl" data-lti-value="lti_13.jwks_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13JwksUrl" aria-label="Copy Public JWK URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas13JwksUrl" aria-label="{% ui "Copy Public JWK URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas13CustomParams">Custom fields</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas13CustomParams">{% ui "Custom fields" %}</label>
                   <textarea id="ltiCanvas13CustomParams" data-lti-value="lti_13.custom_parameters" class="form-control font-mono text-xs" rows="2" readonly></textarea>
-                  <p class="lti-micro-note">Supports Deep Linking: leave off for now. Use a regular assignment/course navigation placement that launches the Target link URI.</p>
+                  <p class="lti-micro-note">{% ui "Supports Deep Linking: leave off for now. Use a regular assignment/course navigation placement that launches the Target link URI." %}</p>
                 </div>
               </details>
 
               <details class="lti-version-panel">
                 <summary>
                   <span>
-                    <span class="stat-kicker">LTI 1.1</span>
-                    <strong>Canvas External App</strong>
+                    <span class="stat-kicker">{% ui "LTI 1.1" %}</span>
+                    <strong>{% ui "Canvas External App" %}</strong>
                   </span>
                   <span class="flex items-center gap-2">
-                    <span class="badge badge-secondary">Legacy</span>
+                    <span class="badge badge-secondary">{% ui "Legacy" %}</span>
                     <i class="bi bi-chevron-down text-slate-400"></i>
                   </span>
                 </summary>
                 <div class="lti-panel-body">
-                  <p class="lti-help-copy">Use the cartridge XML URL when Canvas asks for configuration by URL, or enter the launch URL, consumer key, and shared secret manually.</p>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas11ConfigUrl">Configuration XML URL</label>
+                  <p class="lti-help-copy">{% ui "Use the cartridge XML URL when Canvas asks for configuration by URL, or enter the launch URL, consumer key, and shared secret manually." %}</p>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas11ConfigUrl">{% ui "Configuration XML URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiCanvas11ConfigUrl" data-lti-value="lti_11.cartridge_xml_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11ConfigUrl" aria-label="Copy Configuration XML URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11ConfigUrl" aria-label="{% ui "Copy Configuration XML URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiCanvas11LaunchUrl">Launch URL</label>
+                  <label class="form-label text-sm font-semibold" for="ltiCanvas11LaunchUrl">{% ui "Launch URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiCanvas11LaunchUrl" data-lti-value="lti_11.launch_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11LaunchUrl" aria-label="Copy Launch URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11LaunchUrl" aria-label="{% ui "Copy Launch URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
                   <div class="grid gap-2 md:grid-cols-2">
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Consumer key</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Consumer key" %}</span>
                       <span class="lti-copy-field block">
                         <input id="ltiCanvas11ConsumerKey" data-lti-value="lti_11.consumer_key" class="form-control font-mono text-xs" type="text" readonly>
-                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11ConsumerKey" aria-label="Copy Consumer key" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11ConsumerKey" aria-label="{% ui "Copy Consumer key" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                       </span>
                     </label>
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Shared secret</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Shared secret" %}</span>
                       <span class="lti-copy-field block">
                         <input id="ltiCanvas11SharedSecret" data-lti-value="lti_11.shared_secret" class="form-control font-mono text-xs" type="text" readonly>
-                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11SharedSecret" aria-label="Copy Shared secret" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiCanvas11SharedSecret" aria-label="{% ui "Copy Shared secret" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                       </span>
                     </label>
                   </div>
@@ -176,8 +177,8 @@
               <span class="lti-platform-title">
                 <span class="lti-platform-icon"><i class="bi bi-mortarboard"></i></span>
                 <span>
-                  <span class="stat-kicker">Moodle</span>
-                  <strong>External Tool</strong>
+                  <span class="stat-kicker">{% ui "Moodle" %}</span>
+                  <strong>{% ui "External Tool" %}</strong>
                 </span>
               </span>
               <i class="bi bi-chevron-down"></i>
@@ -186,104 +187,104 @@
               <details class="lti-version-panel" open>
                 <summary>
                   <span>
-                    <span class="stat-kicker">LTI 1.3</span>
-                    <strong>Moodle LTI Advantage tool</strong>
+                    <span class="stat-kicker">{% ui "LTI 1.3" %}</span>
+                    <strong>{% ui "Moodle LTI Advantage tool" %}</strong>
                   </span>
                   <span class="flex items-center gap-2">
-                    <span class="badge badge-primary">Recommended</span>
+                    <span class="badge badge-primary">{% ui "Recommended" %}</span>
                     <i class="bi bi-chevron-down text-slate-400"></i>
                   </span>
                 </summary>
                 <div class="lti-panel-body">
-                  <p class="lti-help-copy">In Moodle, configure a tool manually, choose LTI 1.3, set Public key type to Keyset URL, then paste the fields below.</p>
+                  <p class="lti-help-copy">{% ui "In Moodle, configure a tool manually, choose LTI 1.3, set Public key type to Keyset URL, then paste the fields below." %}</p>
                   <div class="grid gap-3 md:grid-cols-2">
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Tool name</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Tool name" %}</span>
                       <input id="ltiMoodle13ToolName" data-lti-value="tool.name" class="form-control font-mono text-xs" type="text" readonly>
                     </label>
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Default launch container</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Default launch container" %}</span>
                       <input id="ltiMoodle13LaunchContainer" data-lti-value="tool.default_launch_container" class="form-control font-mono text-xs" type="text" readonly>
                     </label>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle13Description">Tool description</label>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle13Description">{% ui "Tool description" %}</label>
                   <textarea id="ltiMoodle13Description" data-lti-value="tool.description" class="form-control font-mono text-xs mb-2" rows="2" readonly></textarea>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle13ToolUrl">Tool URL</label>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle13ToolUrl">{% ui "Tool URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiMoodle13ToolUrl" data-lti-value="lti_13.tool_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13ToolUrl" aria-label="Copy Tool URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13ToolUrl" aria-label="{% ui "Copy Tool URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
                   <div class="grid gap-3 md:grid-cols-2">
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">LTI version</span>
+                      <span class="form-label text-sm font-semibold">{% ui "LTI version" %}</span>
                       <input class="form-control font-mono text-xs" type="text" value="LTI 1.3" readonly>
                     </label>
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Public key type</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Public key type" %}</span>
                       <input class="form-control font-mono text-xs" type="text" value="Keyset URL" readonly>
                     </label>
                   </div>
-                  <label class="form-label text-sm font-semibold mt-2" for="ltiMoodle13JwksUrl">Public keyset</label>
+                  <label class="form-label text-sm font-semibold mt-2" for="ltiMoodle13JwksUrl">{% ui "Public keyset" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiMoodle13JwksUrl" data-lti-value="lti_13.jwks_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13JwksUrl" aria-label="Copy Public keyset" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13JwksUrl" aria-label="{% ui "Copy Public keyset" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle13LoginUrl">Initiate login URL</label>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle13LoginUrl">{% ui "Initiate login URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiMoodle13LoginUrl" data-lti-value="lti_13.login_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13LoginUrl" aria-label="Copy Initiate login URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13LoginUrl" aria-label="{% ui "Copy Initiate login URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle13RedirectUri">Redirection URI(s)</label>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle13RedirectUri">{% ui "Redirection URI(s)" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiMoodle13RedirectUri" data-lti-value="lti_13.redirect_uri" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13RedirectUri" aria-label="Copy Redirection URI" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle13RedirectUri" aria-label="{% ui "Copy Redirection URI" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle13CustomParams">Custom parameters</label>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle13CustomParams">{% ui "Custom parameters" %}</label>
                   <textarea id="ltiMoodle13CustomParams" data-lti-value="lti_13.custom_parameters" class="form-control font-mono text-xs" rows="2" readonly></textarea>
-                  <p class="lti-micro-note">Default launch container: Embed, without blocks. Supports Deep Linking: leave off for now.</p>
+                  <p class="lti-micro-note">{% ui "Default launch container: Embed, without blocks. Supports Deep Linking: leave off for now." %}</p>
                 </div>
               </details>
 
               <details class="lti-version-panel">
                 <summary>
                   <span>
-                    <span class="stat-kicker">LTI 1.1</span>
-                    <strong>Moodle legacy external tool</strong>
+                    <span class="stat-kicker">{% ui "LTI 1.1" %}</span>
+                    <strong>{% ui "Moodle legacy external tool" %}</strong>
                   </span>
                   <span class="flex items-center gap-2">
-                    <span class="badge badge-secondary">Legacy</span>
+                    <span class="badge badge-secondary">{% ui "Legacy" %}</span>
                     <i class="bi bi-chevron-down text-slate-400"></i>
                   </span>
                 </summary>
                 <div class="lti-panel-body">
-                  <p class="lti-help-copy">Moodle can add a legacy tool from the cartridge URL, or you can manually enter the launch URL, consumer key, shared secret, and custom parameters.</p>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle11ConfigUrl">Cartridge XML URL</label>
+                  <p class="lti-help-copy">{% ui "Moodle can add a legacy tool from the cartridge URL, or you can manually enter the launch URL, consumer key, shared secret, and custom parameters." %}</p>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle11ConfigUrl">{% ui "Cartridge XML URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiMoodle11ConfigUrl" data-lti-value="lti_11.cartridge_xml_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11ConfigUrl" aria-label="Copy Cartridge XML URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11ConfigUrl" aria-label="{% ui "Copy Cartridge XML URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
-                  <label class="form-label text-sm font-semibold" for="ltiMoodle11LaunchUrl">Launch URL / Tool URL</label>
+                  <label class="form-label text-sm font-semibold" for="ltiMoodle11LaunchUrl">{% ui "Launch URL / Tool URL" %}</label>
                   <div class="lti-copy-field mb-2">
                     <input id="ltiMoodle11LaunchUrl" data-lti-value="lti_11.launch_url" class="form-control font-mono text-xs" type="text" readonly>
-                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11LaunchUrl" aria-label="Copy Launch URL" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                    <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11LaunchUrl" aria-label="{% ui "Copy Launch URL" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                   </div>
                   <div class="grid gap-2 md:grid-cols-2">
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Consumer key</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Consumer key" %}</span>
                       <span class="lti-copy-field block">
                         <input id="ltiMoodle11ConsumerKey" data-lti-value="lti_11.consumer_key" class="form-control font-mono text-xs" type="text" readonly>
-                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11ConsumerKey" aria-label="Copy Consumer key" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11ConsumerKey" aria-label="{% ui "Copy Consumer key" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                       </span>
                     </label>
                     <label class="block">
-                      <span class="form-label text-sm font-semibold">Shared secret</span>
+                      <span class="form-label text-sm font-semibold">{% ui "Shared secret" %}</span>
                       <span class="lti-copy-field block">
                         <input id="ltiMoodle11SharedSecret" data-lti-value="lti_11.shared_secret" class="form-control font-mono text-xs" type="text" readonly>
-                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11SharedSecret" aria-label="Copy Shared secret" title="Copy"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">Copy</span></button>
+                        <button class="lti-copy-icon lti-copy-btn" type="button" data-copy-input="ltiMoodle11SharedSecret" aria-label="{% ui "Copy Shared secret" %}" title="{% ui "Copy" %}"><i class="bi bi-copy" aria-hidden="true"></i><span class="sr-only">{% ui "Copy" %}</span></button>
                       </span>
                     </label>
                   </div>
-                  <label class="form-label text-sm font-semibold mt-2" for="ltiMoodle11CustomParams">Custom parameters</label>
+                  <label class="form-label text-sm font-semibold mt-2" for="ltiMoodle11CustomParams">{% ui "Custom parameters" %}</label>
                   <textarea id="ltiMoodle11CustomParams" data-lti-value="lti_11.custom_parameters" class="form-control font-mono text-xs" rows="2" readonly></textarea>
                 </div>
               </details>
@@ -294,9 +295,9 @@
         <details class="lti-registration-card" id="ltiPlatformRegistrationPanel">
           <summary>
             <span>
-              <span class="stat-kicker">Platform registration</span>
-              <span class="block font-bold text-slate-900 dark:text-white">Store the LMS values ModuLearn needs to verify LTI 1.3 launches</span>
-              <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">After the LMS admin creates the tool, paste the platform details here.</span>
+              <span class="stat-kicker">{% ui "Platform registration" %}</span>
+              <span class="block font-bold text-slate-900 dark:text-white">{% ui "Store the LMS values ModuLearn needs to verify LTI 1.3 launches" %}</span>
+              <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">{% ui "After the LMS admin creates the tool, paste the platform details here." %}</span>
             </span>
             <i class="bi bi-chevron-down text-slate-400"></i>
           </summary>
@@ -304,87 +305,87 @@
           <div class="lti-registration-body">
             <aside class="lti-registration-help">
               <div class="lti-help-platform" data-lti-platform-help="moodle">
-                <div class="stat-kicker">Moodle values</div>
-                <p>In Moodle, go to <strong>Plugins > Activity activities > External tool > Manage tools</strong>, open the tool card, and use <strong>View configuration details</strong>.</p>
-                <p>Copy Platform ID, Client ID, Deployment ID, Authentication request URL, Access token URL, and Public keyset URL into the form.</p>
+                <div class="stat-kicker">{% ui "Moodle values" %}</div>
+                <p>{% ui "In Moodle, go to" %} <strong>Plugins > Activity activities > External tool > Manage tools</strong>{% ui ", open the tool card, and use" %} <strong>{% ui "View configuration details" %}</strong>.</p>
+                <p>{% ui "Copy Platform ID, Client ID, Deployment ID, Authentication request URL, Access token URL, and Public keyset URL into the form." %}</p>
               </div>
               <div class="lti-help-platform hidden" data-lti-platform-help="canvas">
-                <div class="stat-kicker">Canvas values</div>
-                <p>In Canvas, create or open the LTI Developer Key, copy its Client ID, then install the tool in the account or course.</p>
-                <p>Use the Canvas issuer and endpoints from your Canvas configuration. The defaults button fills the common Canvas paths from the issuer/base URL.</p>
+                <div class="stat-kicker">{% ui "Canvas values" %}</div>
+                <p>{% ui "In Canvas, create or open the LTI Developer Key, copy its Client ID, then install the tool in the account or course." %}</p>
+                <p>{% ui "Use the Canvas issuer and endpoints from your Canvas configuration. The defaults button fills the common Canvas paths from the issuer/base URL." %}</p>
               </div>
               <div class="lti-help-platform hidden" data-lti-platform-help="other">
-                <div class="stat-kicker">Other LMS values</div>
-                <p>Paste the exact issuer, client ID, deployment ID, OIDC authorization endpoint, OAuth token endpoint, and JWKS URL supplied by the LMS platform.</p>
+                <div class="stat-kicker">{% ui "Other LMS values" %}</div>
+                <p>{% ui "Paste the exact issuer, client ID, deployment ID, OIDC authorization endpoint, OAuth token endpoint, and JWKS URL supplied by the LMS platform." %}</p>
               </div>
             </aside>
 
             <form id="ltiPlatformRegistrationForm" class="grid gap-3">
               <div class="grid gap-3 md:grid-cols-3">
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Registration name</span>
-                  <input class="form-control" name="name" placeholder="Example: Pitt Moodle" required>
+                  <span class="form-label text-sm font-semibold">{% ui "Registration name" %}</span>
+                  <input class="form-control" name="name" placeholder="{% ui "Example: Pitt Moodle" %}" required>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">LMS platform</span>
+                  <span class="form-label text-sm font-semibold">{% ui "LMS platform" %}</span>
                   <select class="form-select" name="platform" data-lti-platform-select>
-                    <option value="moodle">Moodle</option>
-                    <option value="canvas">Canvas</option>
-                    <option value="other">Other</option>
+                    <option value="moodle">{% ui "Moodle" %}</option>
+                    <option value="canvas">{% ui "Canvas" %}</option>
+                    <option value="other">{% ui "Other" %}</option>
                   </select>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Deployment ID(s)</span>
-                  <input class="form-control" name="deployment_id" placeholder="Deployment ID, or comma-separated IDs" required>
+                  <span class="form-label text-sm font-semibold">{% ui "Deployment ID(s)" %}</span>
+                  <input class="form-control" name="deployment_id" placeholder="{% ui "Deployment ID, or comma-separated IDs" %}" required>
                 </label>
               </div>
 
               <div class="flex flex-wrap gap-2">
                 <button type="button" class="btn btn-outline-primary btn-sm" data-lti-fill-defaults="moodle">
-                  <i class="bi bi-mortarboard mr-1"></i>Fill Moodle defaults
+                  <i class="bi bi-mortarboard mr-1"></i>{% ui "Fill Moodle defaults" %}
                 </button>
                 <button type="button" class="btn btn-outline-primary btn-sm" data-lti-fill-defaults="canvas">
-                  <i class="bi bi-easel2 mr-1"></i>Fill Canvas defaults
+                  <i class="bi bi-easel2 mr-1"></i>{% ui "Fill Canvas defaults" %}
                 </button>
               </div>
 
               <div class="grid gap-3 md:grid-cols-2">
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Platform ID / Issuer</span>
+                  <span class="form-label text-sm font-semibold">{% ui "Platform ID / Issuer" %}</span>
                   <input class="form-control" name="issuer" placeholder="https://moodle.example.edu" required>
-                  <span class="form-text">Paste the exact issuer from the LMS. Moodle endpoint defaults fill from this URL.</span>
+                  <span class="form-text">{% ui "Paste the exact issuer from the LMS. Moodle endpoint defaults fill from this URL." %}</span>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Client ID</span>
-                  <input class="form-control" name="client_id" placeholder="Client ID" required>
+                  <span class="form-label text-sm font-semibold">{% ui "Client ID" %}</span>
+                  <input class="form-control" name="client_id" placeholder="{% ui "Client ID" %}" required>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Authentication request URL</span>
+                  <span class="form-label text-sm font-semibold">{% ui "Authentication request URL" %}</span>
                   <input class="form-control" name="auth_login_url" placeholder="https://moodle.example.edu/mod/lti/auth.php" required>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Access token URL</span>
+                  <span class="form-label text-sm font-semibold">{% ui "Access token URL" %}</span>
                   <input class="form-control" name="auth_token_url" placeholder="https://moodle.example.edu/mod/lti/token.php" required>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Public keyset URL</span>
+                  <span class="form-label text-sm font-semibold">{% ui "Public keyset URL" %}</span>
                   <input class="form-control" name="key_set_url" placeholder="https://moodle.example.edu/mod/lti/certs.php" required>
                 </label>
                 <label class="block">
-                  <span class="form-label text-sm font-semibold">Auth audience</span>
-                  <input class="form-control" name="auth_audience" placeholder="Usually the access token URL">
+                  <span class="form-label text-sm font-semibold">{% ui "Auth audience" %}</span>
+                  <input class="form-control" name="auth_audience" placeholder="{% ui "Usually the access token URL" %}">
                 </label>
               </div>
 
               <label class="block">
-                <span class="form-label text-sm font-semibold">Notes</span>
+                <span class="form-label text-sm font-semibold">{% ui "Notes" %}</span>
                 <textarea class="form-control" name="notes" rows="2" placeholder="Optional notes for this LMS registration"></textarea>
               </label>
 
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <p id="ltiPlatformRegistrationStatus" class="text-sm text-slate-500 dark:text-slate-300 mb-0"></p>
                 <button class="btn btn-primary" type="submit">
-                  <i class="bi bi-save mr-1"></i>Save Platform Registration
+                  <i class="bi bi-save mr-1"></i>{% ui "Save Platform Registration" %}
                 </button>
               </div>
             </form>
@@ -401,28 +402,28 @@
   <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <h5 class="text-lg font-semibold text-red-500 flex items-center gap-2" id="deleteCourseModalLabel">
-        <i class="bi bi-exclamation-triangle"></i>Confirm Course Deletion
+        <i class="bi bi-exclamation-triangle"></i>{% ui "Confirm Course Deletion" %}
       </h5>
       <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
     </div>
     <div class="p-6">
       <div class="alert alert-danger mb-4">
-        <h6 class="font-semibold mb-2">Warning: This action cannot be undone!</h6>
-        <p class="mb-2">You are about to delete the following course:</p>
+        <h6 class="font-semibold mb-2">{% ui "Warning: This action cannot be undone!" %}</h6>
+        <p class="mb-2">{% ui "You are about to delete the following course:" %}</p>
         <p class="font-bold mb-0" id="courseToDelete"></p>
       </div>
       <div id="courseInstancesList">
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">This will also delete the following course sessions:</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">{% ui "This will also delete the following course sessions:" %}</p>
         <ul class="divide-y divide-gray-100 dark:divide-gray-700 mb-3" id="instancesListGroup"></ul>
       </div>
       <div id="noInstancesMessage" class="hidden">
-        <p class="text-sm text-gray-500 dark:text-gray-400">This course has no active sessions.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{% ui "This course has no active sessions." %}</p>
       </div>
     </div>
     <div class="flex justify-end gap-2 px-6 py-3 border-t border-gray-200 dark:border-gray-700">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
       <button type="button" class="btn btn-danger" id="confirmDeleteButton">
-        <i class="bi bi-trash mr-1"></i>Delete Course
+        <i class="bi bi-trash mr-1"></i>{% ui "Delete Course" %}
       </button>
     </div>
   </div>
@@ -434,29 +435,29 @@
   <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <h5 class="text-lg font-semibold text-red-500 flex items-center gap-2" id="deleteSessionModalLabel">
-        <i class="bi bi-exclamation-triangle"></i>Confirm Session Deletion
+        <i class="bi bi-exclamation-triangle"></i>{% ui "Confirm Session Deletion" %}
       </h5>
       <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
     </div>
     <div class="p-6 space-y-4">
       <div class="alert alert-danger mb-0">
-        <h6 class="font-semibold mb-2">Warning: This action cannot be undone!</h6>
-        <p class="mb-2">You are about to delete this course session:</p>
+        <h6 class="font-semibold mb-2">{% ui "Warning: This action cannot be undone!" %}</h6>
+        <p class="mb-2">{% ui "You are about to delete this course session:" %}</p>
         <p class="font-bold mb-0" id="sessionToDelete"></p>
       </div>
       <div class="rounded-lg border border-red-200 bg-red-50/70 p-3 text-sm text-red-800 dark:border-red-400/25 dark:bg-red-400/10 dark:text-red-100">
-        <p class="mb-2">This deletes enrollments, activity progress, timeline events, access logs, LTI links for this session, and any dependent study record tied to this session.</p>
-        <p class="mb-0"><strong id="sessionDeleteEnrollmentCount">0</strong> enrolled student records are currently attached.</p>
+        <p class="mb-2">{% ui "This deletes enrollments, activity progress, timeline events, access logs, LTI links for this session, and any dependent study record tied to this session." %}</p>
+        <p class="mb-0"><strong id="sessionDeleteEnrollmentCount">0</strong> {% ui "enrolled student records are currently attached." %}</p>
       </div>
       <label class="block">
-        <span class="form-label text-sm font-semibold text-slate-700 dark:text-slate-200">Type DELETE SESSION to confirm</span>
-        <input id="deleteSessionConfirmText" class="form-control" type="text" autocomplete="off" placeholder="DELETE SESSION">
+        <span class="form-label text-sm font-semibold text-slate-700 dark:text-slate-200">{% ui "Type DELETE SESSION to confirm" %}</span>
+        <input id="deleteSessionConfirmText" class="form-control" type="text" autocomplete="off" placeholder="{% ui "DELETE SESSION" %}">
       </label>
     </div>
     <div class="flex justify-end gap-2 px-6 py-3 border-t border-gray-200 dark:border-gray-700">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
       <button type="button" class="btn btn-danger" id="confirmDeleteSessionButton" disabled>
-        <i class="bi bi-trash mr-1"></i>Delete Session
+        <i class="bi bi-trash mr-1"></i>{% ui "Delete Session" %}
       </button>
     </div>
   </div>
@@ -468,8 +469,8 @@
   <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <div>
-        <p class="stat-kicker mb-1">Roster Tool</p>
-        <h5 class="text-lg font-semibold mb-0" id="manageEnrollmentModalLabel">Manage Course Enrollment</h5>
+        <p class="stat-kicker mb-1">{% ui "Roster Tool" %}</p>
+        <h5 class="text-lg font-semibold mb-0" id="manageEnrollmentModalLabel">{% ui "Manage Course Enrollment" %}</h5>
       </div>
       <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
     </div>
@@ -483,18 +484,18 @@
               <i class="bi bi-envelope-plus"></i>
             </span>
             <div>
-              <h6 class="font-semibold mb-1 text-slate-900 dark:text-white">Add By Email</h6>
-              <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">Enroll existing accounts or create student accounts from email addresses.</p>
+              <h6 class="font-semibold mb-1 text-slate-900 dark:text-white">{% ui "Add By Email" %}</h6>
+              <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">{% ui "Enroll existing accounts or create student accounts from email addresses." %}</p>
             </div>
           </div>
           <form id="bulkEnrollmentForm" class="mt-4 space-y-3">
             <div>
-              <label for="emailList" class="form-label text-sm font-semibold text-slate-600 dark:text-slate-200">Comma-separated email addresses</label>
+              <label for="emailList" class="form-label text-sm font-semibold text-slate-600 dark:text-slate-200">{% ui "Comma-separated email addresses" %}</label>
               <textarea class="form-control" id="emailList" rows="3"
                         placeholder="student1@example.com, student2@example.com"></textarea>
             </div>
             <button type="submit" class="btn btn-primary btn-sm">
-              <i class="bi bi-person-plus mr-1"></i>Add Students
+              <i class="bi bi-person-plus mr-1"></i>{% ui "Add Students" %}
             </button>
           </form>
         </section>
@@ -505,55 +506,55 @@
               <i class="bi bi-incognito"></i>
             </span>
             <div>
-              <h6 class="font-semibold mb-1 text-slate-900 dark:text-white">Generate Anonymous Accounts</h6>
-              <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">Create enrolled student accounts with usernames and temporary passwords. Email can be added later from Profile.</p>
+              <h6 class="font-semibold mb-1 text-slate-900 dark:text-white">{% ui "Generate Anonymous Accounts" %}</h6>
+              <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">{% ui "Create enrolled student accounts with usernames and temporary passwords. Email can be added later from Profile." %}</p>
             </div>
           </div>
           <form id="anonymousEnrollmentForm" class="mt-4 space-y-3">
             <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
               <label class="grid gap-1">
-                <span class="form-label text-sm text-gray-500 dark:text-gray-400 mb-0">Username prefix</span>
-                <input id="anonymousUsernamePrefix" class="form-control" maxlength="32" value="anon" placeholder="anon">
+                <span class="form-label text-sm text-gray-500 dark:text-gray-400 mb-0">{% ui "Username prefix" %}</span>
+                <input id="anonymousUsernamePrefix" class="form-control" maxlength="32" value="anon" placeholder="{% ui "anon" %}">
               </label>
               <label class="grid gap-1">
-                <span class="form-label text-sm text-gray-500 dark:text-gray-400 mb-0">Count</span>
+                <span class="form-label text-sm text-gray-500 dark:text-gray-400 mb-0">{% ui "Count" %}</span>
                 <input id="anonymousStudentCount" type="number" min="1" max="500" value="10" class="form-control">
               </label>
             </div>
             <label class="flex items-start gap-2 rounded-md border border-emerald-200 bg-white/75 p-3 text-xs text-slate-600 dark:border-emerald-400/20 dark:bg-slate-950/25 dark:text-slate-300">
               <input id="anonymousPasswordMatchesUsername" type="checkbox" class="mt-0.5" checked>
               <span>
-                <span class="block font-semibold text-slate-800 dark:text-slate-100">Use username as temporary password</span>
-                <span>Uncheck to generate short random passwords instead.</span>
+                <span class="block font-semibold text-slate-800 dark:text-slate-100">{% ui "Use username as temporary password" %}</span>
+                <span>{% ui "Uncheck to generate short random passwords instead." %}</span>
               </span>
             </label>
             <p id="anonymousCapacityHint" class="text-xs text-slate-500 dark:text-slate-300 mb-0">
-              Sessions can include up to 500 active students.
+              {% ui "Sessions can include up to 500 active students." %}
             </p>
             <button type="submit" class="btn btn-success btn-sm">
-              <i class="bi bi-person-badge mr-1"></i>Generate Accounts
+              <i class="bi bi-person-badge mr-1"></i>{% ui "Generate Accounts" %}
             </button>
           </form>
         </section>
       </div>
 
       <div id="anonymousGenerationProgress" class="hidden rounded-lg border p-3" role="status" aria-live="polite">
-        <p id="anonymousGenerationStatus">Generating...</p>
-        <progress id="anonymousGenerationBar" value="0" max="100" aria-label="Account generation progress" style="width:100%;accent-color:#2563eb"></progress>
+        <p id="anonymousGenerationStatus">{% ui "Generating..." %}</p>
+        <progress id="anonymousGenerationBar" value="0" max="100" aria-label="{% ui "Account generation progress" %}" style="width:100%;accent-color:#2563eb"></progress>
       </div>
       <section id="anonymousRosterOutput" class="hidden rounded-lg border border-emerald-200 bg-white p-4 shadow-sm dark:border-emerald-400/20 dark:bg-slate-950/30">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h6 class="font-semibold mb-1">Generated Student Logins</h6>
-            <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">Copy this now. Temporary passwords cannot be recovered after this dialog closes.</p>
+            <h6 class="font-semibold mb-1">{% ui "Generated Student Logins" %}</h6>
+            <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">{% ui "Copy this now. Temporary passwords cannot be recovered after this dialog closes." %}</p>
           </div>
           <div class="flex items-center gap-2">
             <button
               type="button"
               class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200"
               id="copyAnonymousRosterButton"
-              title="Copy generated logins"
-              aria-label="Copy generated logins"
+              title="{% ui "Copy generated logins" %}"
+              aria-label="{% ui "Copy generated logins" %}"
             >
               <i class="bi bi-clipboard-check" aria-hidden="true"></i>
             </button>
@@ -561,8 +562,8 @@
               type="button"
               class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-blue-300 bg-blue-50 text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-200"
               id="downloadAnonymousRosterButton"
-              title="Download generated logins"
-              aria-label="Download generated logins"
+              title="{% ui "Download generated logins" %}"
+              aria-label="{% ui "Download generated logins" %}"
             >
               <i class="bi bi-download" aria-hidden="true"></i>
             </button>
@@ -575,25 +576,25 @@
       <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
           <div>
-            <h6 class="font-semibold mb-1">Current Students</h6>
-            <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">Manage enrolled students and check high-level progress.</p>
+            <h6 class="font-semibold mb-1">{% ui "Current Students" %}</h6>
+            <p class="text-xs text-slate-500 dark:text-slate-300 mb-0">{% ui "Manage enrolled students and check high-level progress." %}</p>
           </div>
         </div>
         <div class="overflow-x-auto">
           <table class="table table-hover table-sm align-middle">
             <thead>
               <tr>
-                <th>Student</th>
-                <th>Email</th>
-                <th>Progress</th>
-                <th class="text-right">Grade</th>
-                <th class="text-right">Actions</th>
+                <th>{% ui "Student" %}</th>
+                <th>{% ui "Email" %}</th>
+                <th>{% ui "Progress" %}</th>
+                <th class="text-right">{% ui "Grade" %}</th>
+                <th class="text-right">{% ui "Actions" %}</th>
               </tr>
             </thead>
             <tbody id="enrollmentTableBody">
               <tr>
                 <td colspan="5" class="text-center text-gray-400 py-4">
-                  <span class="spinner-border mr-2"></span>Loading...
+                  <span class="spinner-border mr-2"></span>{% ui "Loading..." %}
                 </td>
               </tr>
             </tbody>

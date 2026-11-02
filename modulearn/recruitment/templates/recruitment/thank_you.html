@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load ui_i18n %}
 
-{% block title %}Study Complete - ModuLearn{% endblock %}
+{% block title %}{% ui "Study Complete - ModuLearn" %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}{% endblock %}
 
@@ -8,10 +9,10 @@
 <section class="max-w-2xl mx-auto">
   <div class="card p-8 text-center">
     <div class="feature-icon mx-auto mb-4"><i class="bi bi-check2-circle" aria-hidden="true"></i></div>
-    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Study complete</h1>
-    <p class="mt-3 text-slate-600 dark:text-slate-300">Your response has been recorded. You may close this tab.</p>
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">{% ui "Study complete" %}</h1>
+    <p class="mt-3 text-slate-600 dark:text-slate-300">{% ui "Your response has been recorded. You may close this tab." %}</p>
     {% if participant_session.completion_code_used %}
-      <p class="mt-5 text-sm text-slate-500 dark:text-slate-400">Completion code: <strong>{{ participant_session.completion_code_used }}</strong></p>
+      <p class="mt-5 text-sm text-slate-500 dark:text-slate-400">{% ui "Completion code:" %} <strong>{{ participant_session.completion_code_used }}</strong></p>
     {% endif %}
   </div>
 </section>

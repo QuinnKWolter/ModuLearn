@@ -13,6 +13,8 @@ from .fields import EncryptedCharField
 
 
 class Study(models.Model):
+    guided_flow = models.BooleanField(default=False)
+    preview_of = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='previews')
     STATUS_DRAFT = "draft"
     STATUS_ACTIVE = "active"
     STATUS_ARCHIVED = "archived"
@@ -99,7 +101,9 @@ class RecruitmentSource(models.Model):
     CONDITION_HASH = "hash"
     CONDITION_BALANCED = "balanced"
     CONDITION_SCHEDULE = "schedule"
+    CONDITION_RANDOM = "random"
     CONDITION_STRATEGY_CHOICES = [
+        (CONDITION_RANDOM, "Independent random assignment"),
         (CONDITION_HASH, "Hash-based"),
         (CONDITION_BALANCED, "Balanced counter"),
         (CONDITION_SCHEDULE, "Preallocated schedule"),
@@ -230,6 +234,7 @@ class RecruitmentAssignmentSlot(models.Model):
 
 
 class ParticipantSession(models.Model):
+    flow_state = models.JSONField(default=dict, blank=True)
     STATUS_ENTERED = "entered"
     STATUS_CONSENTED = "consented"
     STATUS_IN_PROGRESS = "in_progress"

@@ -1,38 +1,38 @@
 {% extends 'base.html' %}
 {% load static ui_i18n %}
-{% block title %}Grade weighting · ModuLearn{% endblock %}
+{% block title %}{% ui "Grade weighting · ModuLearn" %}{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/grading.css' %}">{% endblock %}
 {% block content %}
 <main class="grade-workbench" id="gradeWorkbench">
   <header class="grade-header">
-    <div><a href="{% url 'courses:course_configuration' course_instance.id %}">← Configuration</a><h1>Grade weighting</h1><p>{{ course_instance.group_name }} · {{ course_instance.course.title }}</p></div>
-    <button type="button" id="saveGrades" class="btn btn-primary">Save grading rules</button>
+    <div><a href="{% url 'courses:course_configuration' course_instance.id %}">{% ui "← Configuration" %}</a><h1>{% ui "Grade weighting" %}</h1><p><span data-no-ui-translate>{{ course_instance.group_name }}</span> · <span data-no-ui-translate>{{ course_instance.course.title }}</span></p></div>
+    <button type="button" id="saveGrades" class="btn btn-primary">{% ui "Save grading rules" %}</button>
   </header>
-  <p>Only visible graded exercises count. Practice keeps its own activity history. These rules apply to this session only.</p>
+  <p>{% ui "Only visible graded exercises count. Practice keeps its own activity history. These rules apply to this session only." %}</p>
   <form id="gradeControls" class="shell-surface grade-controls">
     {% csrf_token %}
     <div class="grade-options">
-      <label>Calculation<select id="gradeMode"><option value="modules">Percentage of graded exercises completed</option><option value="units">Weighted unit completion targets</option></select></label>
-      <label>Course points (optional)<input id="gradePoints" type="number" min="0.01" step="any" placeholder="Percentage only"></label>
-      <label>Default unit target (%)<input id="gradeTarget" required type="number" min="0.01" max="100" step="any" value="100"></label>
-      <label>Deduction per missed unit<input id="gradeMissing" type="number" min="0" step="any" value="0"></label>
+      <label>{% ui "Calculation" %}<select id="gradeMode"><option value="modules">{% ui "Percentage of graded exercises completed" %}</option><option value="units">{% ui "Weighted unit completion targets" %}</option></select></label>
+      <label>{% ui "Course points (optional)" %}<input id="gradePoints" type="number" min="0.01" step="any" placeholder="{% ui "Percentage only" %}"></label>
+      <label>{% ui "Default unit target (%)" %}<input id="gradeTarget" required type="number" min="0.01" max="100" step="any" value="100"></label>
+      <label>{% ui "Deduction per missed unit" %}<input id="gradeMissing" type="number" min="0" step="any" value="0"></label>
     </div>
-    <p class="grade-help">A missed unit has graded exercises but none completed. Deductions use course points when set, otherwise percentage points. They add together; the final grade cannot fall below zero.</p>
+    <p class="grade-help">{% ui "A missed unit has graded exercises but none completed. Deductions use course points when set, otherwise percentage points. They add together; the final grade cannot fall below zero." %}</p>
     <details id="unitWeights"><summary>Unit targets &amp; deductions</summary>
-      <p class="grade-help">A unit earns its full weight at its target. Empty units are excluded. An incomplete-unit deduction applies unless every graded exercise in that unit is complete.</p>
-      <div class="grade-table-scroll"><table><thead><tr><th>Unit</th><th>Weight</th><th>Target (%)</th><th>Deduct if incomplete</th></tr></thead><tbody>
-        {% for unit in units %}<tr data-grade-unit="{{ unit.id }}"><th scope="row">{{ unit.title }}<small>{{ unit.graded_count }} {% ui "Graded" %}</small></th><td><input aria-label="Weight: {{ unit.title }}" data-field="weight" required type="number" min="0" step="any" value="1"></td><td><input aria-label="Target: {{ unit.title }}" data-field="target" type="number" min="0.01" max="100" step="any" placeholder="Default"></td><td><input aria-label="Deduction: {{ unit.title }}" data-field="incomplete_deduction" type="number" min="0" step="any" value="0"></td></tr>{% endfor %}
+      <p class="grade-help">{% ui "A unit earns its full weight at its target. Empty units are excluded. An incomplete-unit deduction applies unless every graded exercise in that unit is complete." %}</p>
+      <div class="grade-table-scroll"><table><thead><tr><th>{% ui "Unit" %}</th><th>{% ui "Weight" %}</th><th>{% ui "Target (%)" %}</th><th>{% ui "Deduct if incomplete" %}</th></tr></thead><tbody>
+        {% for unit in units %}<tr data-grade-unit="{{ unit.id }}"><th scope="row"><span data-no-ui-translate>{{ unit.title }}</span><small>{{ unit.graded_count }} {% ui "Graded" %}</small></th><td><input aria-label="{% ui 'Weight: {unit}' unit=unit.title %}" data-field="weight" required type="number" min="0" step="any" value="1"></td><td><input aria-label="{% ui 'Target: {unit}' unit=unit.title %}" data-field="target" type="number" min="0.01" max="100" step="any" placeholder="{% ui "Default" %}"></td><td><input aria-label="{% ui 'Deduction: {unit}' unit=unit.title %}" data-field="incomplete_deduction" type="number" min="0" step="any" value="0"></td></tr>{% endfor %}
       </tbody></table></div>
     </details>
-    <details><summary>Combined completion requirements</summary>
-      <p class="grade-help">Deduct once if any selected unit is not fully complete. Only units with graded exercises count.</p>
-      <div id="gradeGroups"></div><button type="button" id="addGradeGroup" class="btn btn-sm btn-outline-primary">Add requirement</button>
+    <details><summary>{% ui "Combined completion requirements" %}</summary>
+      <p class="grade-help">{% ui "Deduct once if any selected unit is not fully complete. Only units with graded exercises count." %}</p>
+      <div id="gradeGroups"></div><button type="button" id="addGradeGroup" class="btn btn-sm btn-outline-primary">{% ui "Add requirement" %}</button>
     </details>
   </form>
   <section class="shell-surface grade-results" aria-labelledby="resultsHeading">
-    <div class="grade-header"><div><h2 id="resultsHeading">Live grade preview</h2><span id="gradeStatus" role="status" aria-live="polite">Loading…</span></div><label>Find a student<input id="gradeSearch" type="search" placeholder="Name or username"></label></div>
-    <div class="grade-table-scroll"><table><thead><tr><th>Student</th><th>Graded completion</th><th>Before deductions</th><th>Deductions</th><th>Course grade</th></tr></thead><tbody id="gradeRows"></tbody></table></div>
-    <p class="grade-help">Preview changes do not affect saved grades. Saving recalculates course grades; individual exercise scores and logs stay intact. Instructor test accounts are excluded here.</p>
+    <div class="grade-header"><div><h2 id="resultsHeading">{% ui "Live grade preview" %}</h2><span id="gradeStatus" role="status" aria-live="polite">{% ui "Loading…" %}</span></div><label>{% ui "Find a student" %}<input id="gradeSearch" type="search" placeholder="{% ui "Name or username" %}"></label></div>
+    <div class="grade-table-scroll"><table><thead><tr><th>{% ui "Student" %}</th><th>{% ui "Graded completion" %}</th><th>{% ui "Before deductions" %}</th><th>{% ui "Deductions" %}</th><th>{% ui "Course grade" %}</th></tr></thead><tbody id="gradeRows"></tbody></table></div>
+    <p class="grade-help">{% ui "Preview changes do not affect saved grades. Saving recalculates course grades; individual exercise scores and logs stay intact. Instructor test accounts are excluded here." %}</p>
   </section>
 </main>
 {{ policy|json_script:'initialGradePolicy' }}

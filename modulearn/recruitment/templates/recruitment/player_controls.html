@@ -1,0 +1,22 @@
+
+{% load ui_i18n %}{% load static i18n %}
+{% if study_shell %}
+<style>
+  body.study-shell { background: var(--surface, #f8fafc); }
+  .study-shell > .shell-section { padding-top: 1rem; padding-bottom: 1rem; }
+  .study-shell .breadcrumb-nav { display: none; }
+  .study-preview > main { padding-top: 4.5rem; }
+  .study-preview > .shell-section { padding-top: 4.5rem; }
+  .study-exit { position: fixed; top: max(.75rem, env(safe-area-inset-top)); right: max(.75rem, env(safe-area-inset-right)); z-index: 10000; margin: 0; }
+  .study-exit button { display: inline-flex; align-items: center; gap: .5rem; padding: .65rem 1rem; border: 2px solid #fff; border-radius: .65rem; background: #b91c1c; color: #fff; font-size: 1rem; font-weight: 800; box-shadow: 0 3px 14px #0004; cursor: pointer; }
+  .study-exit button:hover { background: #991b1b; }
+  .study-exit button:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+</style>
+{% if study_preview %}
+<form class="study-exit" method="post" action="{% url 'recruitment:exit_preview' %}">{% csrf_token %}<button type="submit"><span aria-hidden="true">✕</span> {% ui 'Exit Preview' %}</button></form>
+{% endif %}
+{% endif %}
+{% if study_player %}
+{{ study_player|json_script:'study-player-config' }}
+<script defer src="{% static 'js/study-player.js' %}"></script>
+{% endif %}

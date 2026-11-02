@@ -1,3 +1,4 @@
+from main.i18n import translate as ui
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -196,6 +197,10 @@ def _user_can_access_module(user, course_instance, module):
         return True, ''
     if not enrollment:
         return False, "You are not enrolled in this course session."
+    from recruitment.services.flow import allows_activity
+    study_access = allows_activity(enrollment, module)
+    if study_access is not None:
+        return study_access, '' if study_access else 'Continue from your current study activity.'
     unit_state = evaluate_unit_access(module.unit, enrollment)
     module_state = evaluate_module_access(module, enrollment, unit_state=unit_state)
     return module_state.can_access, module_state.reason
@@ -204,6 +209,11 @@ def _user_can_access_module(user, course_instance, module):
 def _get_next_accessible_module(user, course_instance, current_module):
     is_instructor = _is_course_instructor(user, course_instance)
     enrollment = _get_active_enrollment(user, course_instance)
+    from recruitment.services.flow import guided_session, current_activity
+    session = guided_session(enrollment)
+    if session and not is_instructor:
+        activity, _ = current_activity(session)
+        return activity if activity and activity.id != current_module.id else None
     seen_current = False
 
     for unit in course_instance.course.units.prefetch_related("modules").all():
@@ -217,6 +227,8 @@ def _get_next_accessible_module(user, course_instance, current_module):
                 continue
             if not seen_current:
                 continue
+            if module.is_recommendation_only:
+                continue
 
             module_state = evaluate_module_access(
                 module,
@@ -224,8 +236,11 @@ def _get_next_accessible_module(user, course_instance, current_module):
                 unit_state=unit_state,
                 include_hidden=is_instructor,
             )
-            if is_instructor or module_state.can_access:
-                return module
+            if not is_instructor and not module_state.is_visible:
+                continue
+            # The next visible activity is a sequence boundary. Never jump over
+            # a locked question to an accessible activity in a later unit.
+            return module if is_instructor or module_state.can_access else None
     return None
 
 
@@ -368,7 +383,7 @@ def course_detail(request, instance_id):
                 student=request.user, 
                 course_instance=course_instance
             )
-            messages.success(request, f'You have been enrolled in {course_instance}')
+            messages.success(request, ui('You have been enrolled in {course}', course=course_instance))
             return redirect('courses:course_detail', instance_id=instance_id)
 
     return render(request, 'courses/course_detail.html', context)
@@ -691,6 +706,10 @@ def _update_course_structure_controls(request, course):
             module.is_visible = _parse_bool(request.POST.get(f"{module_prefix}_visible"))
             module.is_graded = _parse_bool(request.POST.get(f"{module_prefix}_is_graded", "1" if module.is_graded else "0"))
             module.allow_resubmission = _parse_bool(request.POST.get(f"{module_prefix}_allow_resubmission", "1"))
+            completion_rule = request.POST.get(f"{module_prefix}_completion_rule", module.completion_rule)
+            if completion_rule not in dict(Module.COMPLETION_RULE_CHOICES):
+                raise ValueError('Invalid activity completion rule.')
+            module.completion_rule = completion_rule
             target_unit_id = request.POST.get(f"{module_prefix}_unit_id")
             if target_unit_id:
                 try:
@@ -716,6 +735,7 @@ def _update_course_structure_controls(request, course):
                 "is_visible",
                 "is_locked",
                 "allow_resubmission",
+                "completion_rule",
                 "is_graded",
                 "unlock_rule",
                 "content_url",
@@ -1263,7 +1283,7 @@ def unenroll(request, course_id):
 
     if enrollment:
         enrollment.delete()
-        messages.success(request, f'You have unenrolled from {course_instance}.')
+        messages.success(request, ui('You have unenrolled from {course}.', course=course_instance))
     else:
         messages.error(request, 'You are not enrolled in this course.')
 
@@ -1317,6 +1337,10 @@ def launch_iframe_module(request, instance_id, module_id):
         log_module_access(request.user, module, course_instance, event_type=ModuleAccessLog.EVENT_UNLOCK_DENIED)
         messages.error(request, reason or "That activity is locked.")
         return redirect("courses:course_detail", instance_id=course_instance.id)
+    from recruitment.services.flow import guided_session, current_activity
+    study_session = guided_session(_get_active_enrollment(request.user, course_instance))
+    if study_session and not is_instructor:
+        current_activity(study_session, start_timer=True)
     
     # Use the get_or_create_progress class method instead of direct get_or_create
     if practice:
@@ -1658,11 +1682,18 @@ def launch_iframe_module(request, instance_id, module_id):
 
 
 def _handle_form_module(request, course_instance, module, module_progress, is_instructor):
+    if (module.content_data or {}).get('survey', {}).get('version') == 1:
+        from .surveys import handle_survey
+        return handle_survey(request, course_instance, module, module_progress, is_instructor)
     module_form = ensure_module_form(module)
     if module_form is None:
         module_form = get_object_or_404(ModuleForm, module=module)
     enrollment = module_progress.enrollment
     questions = list(module_form.questions.all())
+    if (module.content_data or {}).get('study_shuffle_questions') and enrollment:
+        import hashlib
+        questions.sort(key=lambda question: hashlib.sha256(
+            f'{enrollment.pk}:{module.pk}:{question.pk}'.encode()).digest())
     existing_submission = None
     if enrollment:
         existing_submission = (
@@ -1672,6 +1703,11 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
         )
     allows_resubmission = bool(getattr(module, "allow_resubmission", module_form.allow_resubmission))
     participant_mode = getattr(request.user, "is_anonymous_participant", False)
+
+    if participant_mode and request.method == 'GET':
+        from modulearn.learning.services.progress import log_module_progress_event
+        log_module_progress_event(module_progress, event_type='study_input', source='study_form',
+            payload={'kind': 'presentation', 'question_order': [question.pk for question in questions]})
 
     if (
         request.method == "GET"
@@ -1728,6 +1764,7 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
             apply_progress_snapshot(
                 module_progress,
                 source="module_form",
+                submission=True,
                 progress=1.0,
                 score=100.0,
                 success=True,
@@ -2885,7 +2922,7 @@ def remove_enrollment(request, enrollment_id):
         
         return JsonResponse({
             'success': True,
-            'message': f'Successfully removed {student_label} from the course'
+            'message': ui('Successfully removed {student} from the course', student=student_label)
         })
         
     except Enrollment.DoesNotExist:

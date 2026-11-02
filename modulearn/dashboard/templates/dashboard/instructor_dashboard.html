@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load ui_i18n %}
 {% load static %}
 
-{% block title %}Instructor Dashboard - ModuLearn{% endblock %}
+{% block title %}{% ui "Instructor Dashboard - ModuLearn" %}{% endblock %}
 
 {% block breadcrumbs %}
-  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">{% ui "Home" %}</a></li>
   <li>/</li>
-  <li class="text-slate-500 dark:text-slate-300">Instructor Dashboard</li>
+  <li class="text-slate-500 dark:text-slate-300">{% ui "Instructor Dashboard" %}</li>
 {% endblock %}
 
 {% block extra_css %}
@@ -1141,33 +1142,33 @@
 >
   <section class="dashboard-layout">
     <div>
-      <section class="dashboard-two-card-grid" aria-label="Instructor workspace">
+      <section class="dashboard-two-card-grid" aria-label="{% ui "Instructor workspace" %}">
         <article class="dashboard-overview-card">
           <div class="dashboard-overview-head">
             <div class="dashboard-overview-title">
-              <div class="stat-kicker">Courses</div>
-              <h2>Course Workspace</h2>
+              <div class="stat-kicker">{% ui "Courses" %}</div>
+              <h2>{% ui "Course Workspace" %}</h2>
             </div>
             <span class="dashboard-overview-icon"><i class="bi bi-layers" aria-hidden="true"></i></span>
           </div>
           <div class="dashboard-overview-stats">
             <div class="dashboard-overview-stat">
               <strong>{{ courses|length }}</strong>
-              <span class="stat-kicker">Structures</span>
+              <span class="stat-kicker">{% ui "Structures" %}</span>
             </div>
             <div class="dashboard-overview-stat">
               <strong>{{ course_session_count }}</strong>
-              <span class="stat-kicker">Sessions</span>
+              <span class="stat-kicker">{% ui "Sessions" %}</span>
             </div>
           </div>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Reusable course definitions, live teaching sessions, imports, rosters, configuration, and analytics live together here.</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">{% ui "Reusable course definitions, live teaching sessions, imports, rosters, configuration, and analytics live together here." %}</p>
           <div class="dashboard-overview-list">
-            <span><i class="bi bi-check2-circle text-blue-600" aria-hidden="true"></i>Import from authoring or JSON, create custom sessions, and clone reusable structures.</span>
-            <span><i class="bi bi-people text-blue-600" aria-hidden="true"></i>Manage enrollment by email, anonymous roster accounts, or LTI launch paths.</span>
+            <span><i class="bi bi-check2-circle text-blue-600" aria-hidden="true"></i>{% ui "Import from authoring or JSON, create custom sessions, and clone reusable structures." %}</span>
+            <span><i class="bi bi-people text-blue-600" aria-hidden="true"></i>{% ui "Manage enrollment by email, anonymous roster accounts, or LTI launch paths." %}</span>
           </div>
           <div class="dashboard-overview-actions">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseStructuresModal">
-              <i class="bi bi-layers mr-2" aria-hidden="true"></i>Manage Courses
+              <i class="bi bi-layers mr-2" aria-hidden="true"></i>{% ui "Manage Courses" %}
             </button>
           </div>
         </article>
@@ -1175,29 +1176,29 @@
         <article class="dashboard-overview-card is-study">
           <div class="dashboard-overview-head">
             <div class="dashboard-overview-title">
-              <div class="stat-kicker">Studies</div>
-              <h2>Research Workspace</h2>
+              <div class="stat-kicker">{% ui "Studies" %}</div>
+              <h2>{% ui "Research Workspace" %}</h2>
             </div>
             <span class="dashboard-overview-icon"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i></span>
           </div>
           <div class="dashboard-overview-stats">
             <div class="dashboard-overview-stat">
               <strong>{{ studies|length }}</strong>
-              <span class="stat-kicker">Protocols</span>
+              <span class="stat-kicker">{% ui "Protocols" %}</span>
             </div>
             <div class="dashboard-overview-stat">
-              <strong>Prolific</strong>
-              <span class="stat-kicker">Recruitment</span>
+              <strong>{% ui "Prolific" %}</strong>
+              <span class="stat-kicker">{% ui "Recruitment" %}</span>
             </div>
           </div>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">Study sessions keep participant entry, condition assignment, activity flow, completion links, resets, and exports in one place.</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mb-0">{% ui "Study sessions keep participant entry, condition assignment, activity flow, completion links, resets, and exports in one place." %}</p>
           <div class="dashboard-overview-list">
-            <span><i class="bi bi-diagram-3 text-emerald-600" aria-hidden="true"></i>Create condition-aware study flows with configurable activities.</span>
-            <span><i class="bi bi-file-earmark-spreadsheet text-emerald-600" aria-hidden="true"></i>Review participant progress and export study data as it accrues.</span>
+            <span><i class="bi bi-diagram-3 text-emerald-600" aria-hidden="true"></i>{% ui "Create condition-aware study flows with configurable activities." %}</span>
+            <span><i class="bi bi-file-earmark-spreadsheet text-emerald-600" aria-hidden="true"></i>{% ui "Review participant progress and export study data as it accrues." %}</span>
           </div>
           <div class="dashboard-overview-actions">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#studiesModal">
-              <i class="bi bi-clipboard2-pulse mr-2" aria-hidden="true"></i>Manage Studies
+              <i class="bi bi-clipboard2-pulse mr-2" aria-hidden="true"></i>{% ui "Manage Studies" %}
             </button>
           </div>
         </article>
@@ -1217,25 +1218,25 @@
     <div class="dashboard-management-modal relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden">
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div>
-          <div class="stat-kicker">Reusable Structures</div>
-          <h2 class="text-xl font-bold mt-1 mb-0">Courses</h2>
+          <div class="stat-kicker">{% ui "Reusable Structures" %}</div>
+          <h2 class="text-xl font-bold mt-1 mb-0">{% ui "Courses" %}</h2>
         </div>
         <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
       </div>
       <div class="dashboard-management-body p-6">
         <div class="grid gap-2 md:grid-cols-4 mb-5">
           <a class="btn btn-primary" href="{% url 'courses:create_semester_course' %}">
-            <i class="bi bi-mortarboard mr-2"></i>Create Custom Session
+            <i class="bi bi-mortarboard mr-2"></i>{% ui "Create Custom Session" %}
           </a>
           <button class="btn btn-outline-secondary" id="importCourseButton">
-            <i class="bi bi-upload mr-2"></i>Import From Authoring
+            <i class="bi bi-upload mr-2"></i>{% ui "Import From Authoring" %}
           </button>
           <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importJsonCourseModal">
-            <i class="bi bi-file-earmark-code mr-2"></i>Import JSON
+            <i class="bi bi-file-earmark-code mr-2"></i>{% ui "Import JSON" %}
           </button>
           {% if show_create_demo_course %}
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#demoCourseModal">
-              <i class="bi bi-stars mr-2"></i>Create Demo
+              <i class="bi bi-stars mr-2"></i>{% ui "Create Demo" %}
             </button>
           {% endif %}
         </div>
@@ -1253,11 +1254,11 @@
                     aria-controls="courseStructureCollapse{{ forloop.counter }}"
                   >
                     <span class="min-w-0">
-                      <span class="font-bold text-slate-900 dark:text-white">{{ course.title }}</span>
-                      <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">{{ course.description|truncatewords:24|default:"No description" }}</span>
+                      <span class="font-bold text-slate-900 dark:text-white" data-no-ui-translate>{{ course.title }}</span>
+                      <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1" data-no-ui-translate>{{ course.description|truncatewords:24|default:"No description" }}</span>
                     </span>
                     <span class="flex items-center gap-2 shrink-0">
-                      <span class="badge badge-secondary">{{ course.dashboard_sessions|length }} session{{ course.dashboard_sessions|length|pluralize }}</span>
+                      <span class="badge badge-secondary">{% ui_count "session" "sessions" course.dashboard_sessions|length %}</span>
                       <i class="bi bi-chevron-down text-gray-400 accordion-arrow"></i>
                     </span>
                   </button>
@@ -1270,10 +1271,10 @@
                   <div class="course-structure-body">
                     <div class="flex flex-wrap gap-2">
                       <button class="btn btn-sm btn-outline-success course-structure-action-btn new-session-btn" data-course-id="{{ course.id }}">
-                        <i class="bi bi-plus-circle mr-1"></i>New Session
+                        <i class="bi bi-plus-circle mr-1"></i>{% ui "New Session" %}
                       </button>
                       <button class="btn btn-sm btn-outline-danger course-structure-action-btn is-danger delete-course-btn" data-course-id="{{ course.id }}">
-                        <i class="bi bi-trash mr-1"></i>Delete Structure
+                        <i class="bi bi-trash mr-1"></i>{% ui "Delete Structure" %}
                       </button>
                     </div>
                     {% if course.dashboard_sessions %}
@@ -1284,7 +1285,7 @@
                       </div>
                     {% else %}
                       <div class="mt-4 rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-300">
-                        No sessions yet. Create one from this structure when you are ready to teach with it.
+                        {% ui "No sessions yet. Create one from this structure when you are ready to teach with it." %}
                       </div>
                     {% endif %}
                   </div>
@@ -1293,7 +1294,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="empty-state">No reusable course structures yet. Import JSON, use Course Authoring, or create a custom session.</div>
+          <div class="empty-state">{% ui "No reusable course structures yet. Import JSON, use Course Authoring, or create a custom session." %}</div>
         {% endif %}
       </div>
     </div>
@@ -1304,9 +1305,9 @@
     <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
       <div class="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div class="min-w-0">
-          <div class="stat-kicker">Session Activity</div>
-          <h2 id="sessionActivityModalTitle" class="text-xl font-bold mt-1 mb-0 truncate">Recent Activity</h2>
-          <p id="sessionActivityModalMeta" class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0">Reverse chronological activity across this session.</p>
+          <div class="stat-kicker">{% ui "Session Activity" %}</div>
+          <h2 id="sessionActivityModalTitle" class="text-xl font-bold mt-1 mb-0 truncate">{% ui "Recent Activity" %}</h2>
+          <p id="sessionActivityModalMeta" class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0">{% ui "Reverse chronological activity across this session." %}</p>
         </div>
         <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
       </div>
@@ -1314,12 +1315,12 @@
         <div class="session-activity-tools">
           <label class="relative mb-0">
             <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true"></i>
-            <input id="sessionActivitySearch" type="search" class="form-control pl-9" placeholder="Filter by student, activity, event, source, or email">
+            <input id="sessionActivitySearch" type="search" class="form-control pl-9" placeholder="{% ui "Filter by student, activity, event, source, or email" %}">
           </label>
           <select id="sessionActivityTypeFilter" class="form-select">
-            <option value="">All events</option>
+            <option value="">{% ui "All events" %}</option>
           </select>
-          <button id="downloadSessionActivityButton" class="session-activity-export-btn" type="button" title="Download activity CSV" aria-label="Download activity CSV">
+          <button id="downloadSessionActivityButton" class="session-activity-export-btn" type="button" title="{% ui "Download activity CSV" %}" aria-label="{% ui "Download activity CSV" %}">
             <i class="bi bi-download" aria-hidden="true"></i>
           </button>
         </div>
@@ -1328,19 +1329,19 @@
           <table class="table table-hover table-sm session-activity-table">
             <thead>
               <tr>
-                <th><button type="button" data-activity-sort="created_at">Time <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="learner">Student <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="module">Activity <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="event_type">Event <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th class="text-right"><button type="button" data-activity-sort="progress">Progress <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th class="text-right"><button type="button" data-activity-sort="score">Score <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="source">Source <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="success">Success <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="created_at">{% ui "Time" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="learner">{% ui "Student" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="module">{% ui "Activity" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="event_type">{% ui "Event" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th class="text-right"><button type="button" data-activity-sort="progress">{% ui "Progress" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th class="text-right"><button type="button" data-activity-sort="score">{% ui "Score" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="source">{% ui "Source" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+                <th><button type="button" data-activity-sort="success">{% ui "Success" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
               </tr>
             </thead>
             <tbody id="sessionActivityTableBody">
               <tr>
-                <td colspan="8" class="text-center text-slate-500 py-5">Choose a session activity button to load events.</td>
+                <td colspan="8" class="text-center text-slate-500 py-5">{% ui "Choose a session activity button to load events." %}</td>
               </tr>
             </tbody>
           </table>
@@ -1354,59 +1355,59 @@
     <div class="dashboard-management-modal relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl flex flex-col overflow-hidden">
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div>
-          <div class="stat-kicker">Research Protocols</div>
-          <h2 class="text-xl font-bold mt-1 mb-0">Studies</h2>
+          <div class="stat-kicker">{% ui "Research Protocols" %}</div>
+          <h2 class="text-xl font-bold mt-1 mb-0">{% ui "Studies" %}</h2>
         </div>
         <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
       </div>
       <div class="dashboard-management-body p-6">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
           <p class="text-sm text-slate-600 dark:text-slate-300">
-            Studies are research protocols with their own session, participant conditions, activities, and recruitment settings.
+            {% ui "Studies are research protocols with their own session, participant conditions, activities, and recruitment settings." %}
           </p>
           <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#createStudyPanel" aria-expanded="false" aria-controls="createStudyPanel">
-            <i class="bi bi-plus-circle mr-1" aria-hidden="true"></i>Create New Study
+            <i class="bi bi-plus-circle mr-1" aria-hidden="true"></i>{% ui "Create New Study" %}
           </button>
         </div>
 
         <section id="createStudyPanel" class="study-create-panel hidden mb-5">
           <div>
             <div class="flex flex-wrap items-center gap-2">
-              <h3 class="font-bold text-slate-900 dark:text-white mb-0">New Study</h3>
-              <span class="badge badge-primary">Activity-ready</span>
+              <h3 class="font-bold text-slate-900 dark:text-white mb-0">{% ui "New Study" %}</h3>
+              <span class="badge badge-primary">{% ui "Activity-ready" %}</span>
             </div>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">Creates a dedicated study session with default Consent, Instructions, Pretest, Main Task, Posttest, and Debrief activities.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">{% ui "Creates a dedicated study session with default Consent, Instructions, Pretest, Main Task, Posttest, and Debrief activities." %}</p>
           </div>
           <form method="post" action="{% url 'recruitment:create_study' %}" class="study-create-form" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="study-create-fields">
               <label class="study-field">
-                <span class="study-field-label">Study Title <span class="study-field-required">Required</span></span>
-                <input class="form-control" type="text" name="title" placeholder="Example: Python Branching Pilot" required>
+                <span class="study-field-label">{% ui "Study Title" %} <span class="study-field-required">{% ui "Required" %}</span></span>
+                <input class="form-control" type="text" name="title" placeholder="{% ui "Example: Python Branching Pilot" %}" required>
               </label>
               <label class="study-field">
-                <span class="study-field-label">Version</span>
-                <input class="form-control" type="text" name="version_label" value="v1.0" placeholder="v1.0">
-                <span class="study-field-help">Optional label for protocol revisions.</span>
+                <span class="study-field-label">{% ui "Version" %}</span>
+                <input class="form-control" type="text" name="version_label" value="v1.0" placeholder="{% ui "v1.0" %}">
+                <span class="study-field-help">{% ui "Optional label for protocol revisions." %}</span>
               </label>
               <label class="study-field">
-                <span class="study-field-label">Conditions</span>
-                <input class="form-control" type="text" name="condition_labels" value="control,treatment" placeholder="control,treatment">
-                <span class="study-field-help">Comma-separated; editable before participants enter.</span>
+                <span class="study-field-label">{% ui "Conditions" %}</span>
+                <input class="form-control" type="text" name="condition_labels" value="control,treatment" placeholder="{% ui "control,treatment" %}">
+                <span class="study-field-help">{% ui "Comma-separated; editable before participants enter." %}</span>
               </label>
               <label class="study-field study-field-description">
-                <span class="study-field-label">Description</span>
+                <span class="study-field-label">{% ui "Description" %}</span>
                 <textarea class="form-control" name="description" rows="2" placeholder="Briefly describe the research task, participant population, or purpose."></textarea>
               </label>
               <label class="study-field study-field-description">
-                <span class="study-field-label">Optional Template JSON</span>
+                <span class="study-field-label">{% ui "Optional Template JSON" %}</span>
                 <input class="form-control" type="file" name="study_template_json" accept=".json,application/json">
-                <span class="study-field-help">Use a ModuLearn study export or course export to clone its activities, forms, rules, and setup. Leave blank for the default study scaffold.</span>
+                <span class="study-field-help">{% ui "Use a ModuLearn study export or course export to clone its activities, forms, rules, and setup. Leave blank for the default study scaffold." %}</span>
               </label>
             </div>
             <div class="study-create-actions">
               <button class="btn btn-primary" type="submit">
-                <i class="bi bi-plus-circle mr-1" aria-hidden="true"></i>Create Study
+                <i class="bi bi-plus-circle mr-1" aria-hidden="true"></i>{% ui "Create Study" %}
               </button>
             </div>
           </form>
@@ -1427,21 +1428,21 @@
                   >
                     <span class="min-w-0">
                       <span class="flex flex-wrap items-center gap-2">
-                        <span class="font-bold text-slate-900 dark:text-white">{{ study.title }}</span>
+                        <span class="font-bold text-slate-900 dark:text-white" data-no-ui-translate>{{ study.title }}</span>
                         <span class="badge badge-secondary">{{ study.version_label }}</span>
                         <span class="badge {% if study.status == 'active' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200{% else %}badge-secondary{% endif %}">{{ study.get_status_display }}</span>
                       </span>
-                      <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1">{{ study.description|truncatewords:24|default:"No description" }}</span>
+                      <span class="block text-sm text-slate-500 dark:text-slate-300 mt-1" data-no-ui-translate>{{ study.description|truncatewords:24|default:"No description" }}</span>
                       <span class="study-summary-strip">
                         <span><i class="bi bi-diagram-3 mr-1" aria-hidden="true"></i>{{ study.condition_labels|default:"default" }}</span>
-                        <span><i class="bi bi-people mr-1" aria-hidden="true"></i>{{ study.participant_total }} participant{{ study.participant_total|pluralize }}</span>
+                        <span><i class="bi bi-people mr-1" aria-hidden="true"></i>{% ui_count "participant" "participants" study.participant_total %}</span>
                         {% with source=study.prolific_source %}
-                          <span><i class="bi bi-link-45deg mr-1" aria-hidden="true"></i>{% if source %}{% if source.is_active %}Prolific active{% else %}Prolific paused{% endif %}{% else %}No Prolific link{% endif %}</span>
+                          <span><i class="bi bi-link-45deg mr-1" aria-hidden="true"></i>{% if source %}{% if source.is_active %}{% ui "Prolific active" %}{% else %}{% ui "Prolific paused" %}{% endif %}{% else %}{% ui "No Prolific link" %}{% endif %}</span>
                         {% endwith %}
                       </span>
                     </span>
                     <span class="flex items-center gap-2 shrink-0">
-                      <span class="badge badge-secondary">Study</span>
+                      <span class="badge badge-secondary">{% ui "Study" %}</span>
                       <i class="bi bi-chevron-down text-gray-400 accordion-arrow"></i>
                     </span>
                   </button>
@@ -1450,25 +1451,26 @@
                   <div class="course-structure-body">
                     <div class="flex flex-wrap gap-2">
                       <a class="btn btn-sm btn-outline-primary" href="{% url 'courses:course_configuration' study.course_instance.id %}">
-                        <i class="bi bi-sliders mr-1"></i>Configure Activities
+                        <i class="bi bi-sliders mr-1"></i>{% ui "Configure Activities" %}
                       </a>
+                      <a class="btn btn-sm btn-outline-primary" href="{% url 'recruitment:studio' study.id %}">{% ui "Study Setup" %} &amp; {% ui "Preview" %}</a>
                       <a class="btn btn-sm btn-outline-secondary" href="{% url 'courses:course_detail' study.course_instance.id %}">
-                        <i class="bi bi-eye mr-1"></i>Preview
+                        <i class="bi bi-eye mr-1"></i>{% ui "Preview" %}
                       </a>
                       <a class="btn btn-sm btn-outline-info" href="{% url 'dashboard:study_analytics_dashboard' study.id %}">
-                        <i class="bi bi-bar-chart-line mr-1" aria-hidden="true"></i>Analytics
+                        <i class="bi bi-bar-chart-line mr-1" aria-hidden="true"></i>{% ui "Analytics" %}
                       </a>
                       <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#studyProlific{{ study.id }}" aria-expanded="false" aria-controls="studyProlific{{ study.id }}">
-                        <i class="bi bi-person-badge mr-1" aria-hidden="true"></i>Prolific Settings
+                        <i class="bi bi-person-badge mr-1" aria-hidden="true"></i>{% ui "Prolific Settings" %}
                       </button>
                       <a class="btn btn-sm btn-outline-secondary" href="{% url 'recruitment:export_study' study.id %}">
-                        <i class="bi bi-download mr-1" aria-hidden="true"></i>Export Study
+                        <i class="bi bi-download mr-1" aria-hidden="true"></i>{% ui "Export Study" %}
                       </a>
                       <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#studyResetModal{{ study.id }}">
-                        <i class="bi bi-arrow-counterclockwise mr-1" aria-hidden="true"></i>Clear &amp; Reset
+                        <i class="bi bi-arrow-counterclockwise mr-1" aria-hidden="true"></i>{% ui "Clear" %} &amp; {% ui "Reset" %}
                       </button>
                       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#studyDeleteModal{{ study.id }}">
-                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>Delete Study
+                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>{% ui "Delete Study" %}
                       </button>
                     </div>
 
@@ -1477,30 +1479,30 @@
                         <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
                           <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                              <strong class="text-slate-900 dark:text-white">Prolific Recruitment</strong>
+                              <strong class="text-slate-900 dark:text-white">{% ui "Prolific Recruitment" %}</strong>
                               {% if source %}
-                                <span class="badge {% if source.is_active %}bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200{% else %}badge-secondary{% endif %}">{% if source.is_active %}Active{% else %}Paused{% endif %}</span>
-                                <span class="text-xs text-slate-500 dark:text-slate-400">{% if source.prolific_completion_code_complete %}Completion code ready{% else %}Needs completion code{% endif %}</span>
+                                <span class="badge {% if source.is_active %}bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200{% else %}badge-secondary{% endif %}">{% if source.is_active %}{% ui "Active" %}{% else %}{% ui "Paused" %}{% endif %}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{% if source.prolific_completion_code_complete %}{% ui "Completion code ready" %}{% else %}{% ui "Needs completion code" %}{% endif %}</span>
                               {% else %}
-                                <span class="badge badge-secondary">Not configured</span>
+                                <span class="badge badge-secondary">{% ui "Not configured" %}</span>
                               {% endif %}
                             </div>
                             {% if source %}
                               <label class="study-field mt-3">
-                                <span class="study-field-label">Entry URL</span>
+                                <span class="study-field-label">{% ui "Entry URL" %}</span>
                                 <textarea class="form-control text-xs" rows="2" readonly data-copy-target="study-entry-url-{{ study.id }}">{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:study_launch' study.slug %}?PROLIFIC_PID={% templatetag openvariable %}%PROLIFIC_PID%{% templatetag closevariable %}&STUDY_ID={% templatetag openvariable %}%STUDY_ID%{% templatetag closevariable %}&SESSION_ID={% templatetag openvariable %}%SESSION_ID%{% templatetag closevariable %}</textarea>
                               </label>
                               <label class="study-field mt-2">
-                                <span class="study-field-label">Completion URL</span>
+                                <span class="study-field-label">{% ui "Completion URL" %}</span>
                                 <textarea class="form-control text-xs" rows="1" readonly data-copy-target="study-completion-url-{{ study.id }}">{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:complete_current_study' study.id %}</textarea>
                               </label>
                             {% endif %}
                           </div>
                           {% if source %}
                             <div class="flex flex-row xl:flex-col gap-2">
-                              <button type="button" class="btn btn-sm btn-outline-primary" data-copy-from="study-entry-url-{{ study.id }}">Copy Entry</button>
-                              <button type="button" class="btn btn-sm btn-outline-primary" data-copy-from="study-completion-url-{{ study.id }}">Copy Credit</button>
-                              <a class="btn btn-sm btn-outline-secondary" href="{% url 'recruitment:export_sessions' source.id %}">Export</a>
+                              <button type="button" class="btn btn-sm btn-outline-primary" data-copy-from="study-entry-url-{{ study.id }}">{% ui "Copy Entry" %}</button>
+                              <button type="button" class="btn btn-sm btn-outline-primary" data-copy-from="study-completion-url-{{ study.id }}">{% ui "Copy Credit" %}</button>
+                              <a class="btn btn-sm btn-outline-secondary" href="{% url 'recruitment:export_sessions' source.id %}">{% ui "Export" %}</a>
                             </div>
                           {% endif %}
                         </div>
@@ -1510,38 +1512,39 @@
                           <input type="hidden" name="platform" value="prolific">
                           <input type="hidden" name="label" value="{{ source.label|default:'Prolific' }}">
                           <label class="study-field">
-                            <span class="study-field-label">Participant Cap</span>
-                            <input class="form-control" type="number" min="1" name="max_participants" placeholder="Optional" value="{{ source.max_participants|default:'' }}">
+                            <span class="study-field-label">{% ui "Participant Cap" %}</span>
+                            <input class="form-control" type="number" min="1" name="max_participants" placeholder="{% ui "Optional" %}" value="{{ source.max_participants|default:'' }}">
                           </label>
                           <label class="study-field">
-                            <span class="study-field-label">Conditions</span>
-                            <input class="form-control" type="text" name="condition_labels" placeholder="control,treatment" value="{{ study.condition_labels|default:'control,treatment' }}">
+                            <span class="study-field-label">{% ui "Conditions" %}</span>
+                            <input class="form-control" type="text" name="condition_labels" readonly value="{{ study.condition_labels|default:'control,treatment' }}"><a href="{% url 'recruitment:studio' study.id %}" class="text-xs">{% ui "Edit In Study Setup" %}</a>
                           </label>
                           <label class="study-field">
-                            <span class="study-field-label">Assignment</span>
+                            <span class="study-field-label">{% ui "Assignment" %}</span>
                             <select class="form-control" name="condition_strategy">
-                              <option value="balanced" {% if not source or source.condition_strategy == 'balanced' %}selected{% endif %}>Balanced</option>
-                              <option value="hash" {% if source.condition_strategy == 'hash' %}selected{% endif %}>Hash</option>
-                              <option value="schedule" {% if source.condition_strategy == 'schedule' %}selected{% endif %}>Schedule</option>
+                              <option value="random" {% if source.condition_strategy == 'random' %}selected{% endif %}>{% ui "Independent Random" %}</option>
+                              <option value="balanced" {% if not source or source.condition_strategy == 'balanced' %}selected{% endif %}>{% ui "Balanced" %}</option>
+                              <option value="hash" {% if source.condition_strategy == 'hash' %}selected{% endif %}>{% ui "Hash" %}</option>
+                              <option value="schedule" {% if source.condition_strategy == 'schedule' %}selected{% endif %}>{% ui "Schedule" %}</option>
                             </select>
                           </label>
                           <input type="hidden" name="prolific_study_id" value="{{ source.prolific_study_id|default:'' }}">
                           <label class="study-field">
-                            <span class="study-field-label">Completion Code</span>
-                            <input class="form-control" type="text" name="prolific_completion_code_complete" placeholder="Complete code" value="{{ source.prolific_completion_code_complete|default:'' }}">
+                            <span class="study-field-label">{% ui "Completion Code" %}</span>
+                            <input class="form-control" type="text" name="prolific_completion_code_complete" placeholder="{% ui "Complete code" %}" value="{{ source.prolific_completion_code_complete|default:'' }}">
                           </label>
                           <label class="study-field">
-                            <span class="study-field-label">Screen-Out Code</span>
-                            <input class="form-control" type="text" name="prolific_completion_code_screened_out" placeholder="Optional" value="{{ source.prolific_completion_code_screened_out|default:'' }}">
+                            <span class="study-field-label">{% ui "Screen-Out Code" %}</span>
+                            <input class="form-control" type="text" name="prolific_completion_code_screened_out" placeholder="{% ui "Optional" %}" value="{{ source.prolific_completion_code_screened_out|default:'' }}">
                           </label>
                           <label class="study-field">
-                            <span class="study-field-label">Attention-Fail Code</span>
-                            <input class="form-control" type="text" name="prolific_completion_code_attention_failed" placeholder="Optional" value="{{ source.prolific_completion_code_attention_failed|default:'' }}">
+                            <span class="study-field-label">{% ui "Attention-Fail Code" %}</span>
+                            <input class="form-control" type="text" name="prolific_completion_code_attention_failed" placeholder="{% ui "Optional" %}" value="{{ source.prolific_completion_code_attention_failed|default:'' }}">
                           </label>
                           <label class="inline-flex items-center gap-2 text-sm font-semibold xl:col-span-1">
-                            <input type="checkbox" name="is_active" {% if not source or source.is_active %}checked{% endif %}> Active link
+                            <input type="checkbox" name="is_active" {% if not source or source.is_active %}checked{% endif %}> {% ui "Active link" %}
                           </label>
-                          <button class="btn btn-primary md:col-span-2 xl:col-span-3" type="submit">Save Prolific Settings</button>
+                          <button class="btn btn-primary md:col-span-2 xl:col-span-3" type="submit">{% ui "Save Prolific Settings" %}</button>
                         </form>
                       {% endwith %}
                     </div>
@@ -1557,8 +1560,8 @@
                         <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                       </span>
                       <div>
-                        <div class="stat-kicker text-red-700 dark:text-red-200">Destructive Reset</div>
-                        <h2 class="text-lg font-bold mt-1 mb-0 text-slate-900 dark:text-white">Clear {{ study.title }}</h2>
+                        <div class="stat-kicker text-red-700 dark:text-red-200">{% ui "Destructive Reset" %}</div>
+                        <h2 class="text-lg font-bold mt-1 mb-0 text-slate-900 dark:text-white">{% ui "Clear" %} <span data-no-ui-translate>{{ study.title }}</span></h2>
                       </div>
                     </div>
                     <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
@@ -1566,19 +1569,19 @@
                   <form method="post" action="{% url 'recruitment:reset_study_participation' study.id %}" class="p-6">
                     {% csrf_token %}
                     <p class="text-sm text-slate-700 dark:text-slate-200">
-                      This will delete all participant sessions, generated participant accounts, enrollments, activity progress, timeline events, form submissions, access logs, assignment claims, and recruitment entry logs for this study.
+                      {% ui "This will delete all participant sessions, generated participant accounts, enrollments, activity progress, timeline events, form submissions, access logs, assignment claims, and recruitment entry logs for this study." %}
                     </p>
                     <p class="mt-3 text-sm font-semibold text-red-700 dark:text-red-200">
-                      The study, activities, conditions, and Prolific settings will remain so you can test again with the same link.
+                      {% ui "The study, activities, conditions, and Prolific settings will remain so you can test again with the same link." %}
                     </p>
                     <label class="study-field mt-5">
-                      <span class="study-field-label">Type RESET to confirm</span>
-                      <input class="form-control" type="text" name="confirm_reset" autocomplete="off" placeholder="RESET" required>
+                      <span class="study-field-label">{% ui "Type RESET to confirm" %}</span>
+                      <input class="form-control" type="text" name="confirm_reset" autocomplete="off" placeholder="{% ui "RESET" %}" required>
                     </label>
                     <div class="mt-6 flex flex-wrap justify-end gap-2">
-                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
                       <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>Clear Participants &amp; Progress
+                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>{% ui "Clear Participants & Progress" %}
                       </button>
                     </div>
                   </form>
@@ -1593,8 +1596,8 @@
                         <i class="bi bi-trash3" aria-hidden="true"></i>
                       </span>
                       <div>
-                        <div class="stat-kicker text-red-700 dark:text-red-100">Permanent Delete</div>
-                        <h2 class="text-lg font-bold mt-1 mb-0 text-slate-900 dark:text-white">Delete {{ study.title }}</h2>
+                        <div class="stat-kicker text-red-700 dark:text-red-100">{% ui "Permanent Delete" %}</div>
+                        <h2 class="text-lg font-bold mt-1 mb-0 text-slate-900 dark:text-white">{% ui "Delete" %} <span data-no-ui-translate>{{ study.title }}</span></h2>
                       </div>
                     </div>
                     <button type="button" data-bs-dismiss="modal" class="text-red-700/70 hover:text-red-900 dark:text-red-100/70 dark:hover:text-white text-2xl leading-none">&times;</button>
@@ -1602,19 +1605,19 @@
                   <form method="post" action="{% url 'recruitment:delete_study' study.id %}" class="p-6">
                     {% csrf_token %}
                     <p class="text-sm text-slate-700 dark:text-slate-200">
-                      This will permanently delete the study, its dedicated course session, activities, recruitment settings, participant accounts, enrollments, progress, submissions, and timeline events.
+                      {% ui "This will permanently delete the study, its dedicated course session, activities, recruitment settings, participant accounts, enrollments, progress, submissions, and timeline events." %}
                     </p>
                     <p class="mt-3 text-sm font-semibold text-red-700 dark:text-red-200">
-                      This cannot be undone. Export the study first if you may need this setup again.
+                      {% ui "This cannot be undone. Export the study first if you may need this setup again." %}
                     </p>
                     <label class="study-field mt-5">
-                      <span class="study-field-label">Type DELETE to confirm</span>
-                      <input class="form-control" type="text" name="confirm_delete" autocomplete="off" placeholder="DELETE" required>
+                      <span class="study-field-label">{% ui "Type DELETE to confirm" %}</span>
+                      <input class="form-control" type="text" name="confirm_delete" autocomplete="off" placeholder="{% ui "DELETE" %}" required>
                     </label>
                     <div class="mt-6 flex flex-wrap justify-end gap-2">
-                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
                       <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>Delete Study
+                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>{% ui "Delete Study" %}
                       </button>
                     </div>
                   </form>
@@ -1623,7 +1626,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="empty-state">No studies yet. Create one above to generate a activity-ready research protocol.</div>
+          <div class="empty-state">{% ui "No studies yet. Create one above to generate a activity-ready research protocol." %}</div>
         {% endif %}
       </div>
     </div>
@@ -1637,8 +1640,8 @@
           <div class="flex items-center gap-3">
             <span class="demo-course-icon"><i class="bi bi-stars" aria-hidden="true"></i></span>
             <div>
-              <div class="stat-kicker">Demo Suite</div>
-              <h2 class="text-xl font-bold mt-1 mb-0">Create Demo Course</h2>
+              <div class="stat-kicker">{% ui "Demo Suite" %}</div>
+              <h2 class="text-xl font-bold mt-1 mb-0">{% ui "Create Demo Course" %}</h2>
             </div>
           </div>
           <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
@@ -1651,7 +1654,7 @@
                   <i class="bi {% if option.key == 'adaptive_branching' %}bi-diagram-3{% else %}bi-code-square{% endif %}" aria-hidden="true"></i>
                 </span>
                 <div class="min-w-0">
-                  <h3 class="font-bold text-slate-900 dark:text-white">{{ option.title }}</h3>
+                  <h3 class="font-bold text-slate-900 dark:text-white" data-no-ui-translate>{{ option.title }}</h3>
                   <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">{{ option.summary }}</p>
                 </div>
                 <form
@@ -1661,7 +1664,7 @@
                 >
                   {% csrf_token %}
                   <input type="hidden" name="demo_type" value="{{ option.key }}">
-                  <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap">Create</button>
+                  <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap">{% ui "Create" %}</button>
                 </form>
               </article>
             {% endfor %}

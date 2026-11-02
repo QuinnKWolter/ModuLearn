@@ -25,7 +25,7 @@ def has_dynamic_module_unlock(enrollment, module) -> bool:
 
 
 def handle_progress_event(event) -> list:
-    if not event or event.event_type not in {"progress", "outcome", "completion"}:
+    if not event or event.event_type not in {"attempt", "progress", "outcome", "completion"}:
         return []
 
     module_progress = event.module_progress

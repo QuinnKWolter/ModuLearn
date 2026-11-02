@@ -1,14 +1,15 @@
 {% extends 'base.html' %}
+{% load ui_i18n %}
 {% load static %}
 
-{% block title %}Learning Analytics Dashboard - ModuLearn{% endblock %}
+{% block title %}{% ui "Learning Analytics Dashboard - ModuLearn" %}{% endblock %}
 
 {% block breadcrumbs %}
-  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">Home</a></li>
+  <li><a href="{% url 'main:home' %}" class="text-blue-600 hover:underline">{% ui "Home" %}</a></li>
   <li>/</li>
-  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">Instructor Dashboard</a></li>
+  <li><a href="{% url 'dashboard:instructor_dashboard' %}" class="text-blue-600 hover:underline">{% ui "Instructor Dashboard" %}</a></li>
   <li>/</li>
-  <li class="text-slate-500 dark:text-slate-300">Legacy Analytics</li>
+  <li class="text-slate-500 dark:text-slate-300">{% ui "Legacy Analytics" %}</li>
 {% endblock %}
 
 {% block content %}

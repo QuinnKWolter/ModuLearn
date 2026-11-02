@@ -32,7 +32,7 @@ function initializeActivityTimeline(root, data, endpoint) {
   let start = earliest-fullSpan*.02, end = latest+fullSpan*.02+ (latest===earliest ? 60000:0);
   const initial = [start,end];
   const completions = series.filter(s => s.completed_at).map(s => Date.parse(s.completed_at));
-  const format = value => new Date(value).toLocaleString();
+  const format = value => new Date(value).toLocaleString(window.ModuLearnLanguage || 'en');
   host.className = 'activity-timeline';
   host.innerHTML = `<div class="activity-timeline-controls"><strong>${escapeHtml(t('Activity progress over time'))}</strong>
     <button type="button" data-zoom="in" aria-label="${escapeHtml(t('Zoom in'))}">+</button><button type="button" data-zoom="out" aria-label="${escapeHtml(t('Zoom out'))}">−</button>
