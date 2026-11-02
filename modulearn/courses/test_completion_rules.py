@@ -1,12 +1,15 @@
 import json
 import tempfile
 from pathlib import Path
-from django.test import TestCase, override_settings
+from django.test import TestCase, RequestFactory, override_settings
+from django.http import HttpResponse
+from django.urls import reverse
+from urllib.parse import urlencode, urlsplit
 from django.core.management import call_command
 from accounts.models import User
-from courses.models import Course, CourseInstance, Module, ModuleProgress, Enrollment
+from courses.models import Course, CourseInstance, Module, ModuleProgress, Enrollment, Unit
 from modulearn.learning.services.progress import apply_progress_snapshot
-from modulearn.learning.services.access_rules import evaluate_module_access
+from modulearn.learning.services.access_rules import evaluate_module_access, evaluate_unit_access
 from modulearn.learning.services.unit_packages import import_unit
 
 
@@ -39,6 +42,49 @@ class CompletionRuleTests(TestCase):
         self.assertEqual(progress.score,100)
         self.assertEqual(list(progress.events.filter(event_type='outcome').order_by('id').values_list('score',flat=True)),[0,100,0])
         self.assertEqual(progress.events.filter(event_type='completion').count(),1)
+
+    def test_pretest_unlocks_following_unit_only_after_all_ten_submissions(self):
+        """Exercise the real QuizJET/PCRS outcome handlers with incorrect answers."""
+        from modulearn.learning.services.quizjet_tracking import process_quizjet_response
+        from modulearn.learning.services.pcrs_tracking import capture_pcrs_result_if_possible
+        from modulearn.learning.selectors.courses import build_course_detail_context
+
+        pretest = self.modules[0].unit
+        target = Unit.objects.create(course=self.course, title='After pre-test', order=pretest.order + 1,
+            is_locked=True, unlock_rule={'conditions': [{'type': 'previous_unit_completed'}]})
+        activity = Module.objects.create(unit=target, title='Unlocked content', content_url='https://example.org/activity')
+        self.client.force_login(self.student)
+        launch = reverse('courses:launch_iframe_module', args=[self.instance.pk, activity.pk])
+        self.assertEqual(len(self.modules), 10)
+        self.assertFalse(evaluate_unit_access(target, self.enrollment).can_access)
+        self.assertEqual(self.client.get(launch).status_code, 302)
+        for index, module in enumerate(self.modules):
+            self.assertEqual(module.completion_rule, 'submission')
+            self.assertTrue(evaluate_module_access(module, self.enrollment).can_access)
+            params = {'cid': self.course.pk, 'usr': self.student.username,
+                      'course_instance_id': self.instance.pk, 'module_id': module.pk}
+            request = RequestFactory().post('/submit', {'inputans': 'wrong', 'submission': 'incorrect code', 'svc': 'pretest'})
+            request.user = self.student
+            request.META['HTTP_REFERER'] = 'http://testserver/embed?' + urlencode(params)
+            if module.provider_id == 'quizjet':
+                response = HttpResponse('<iframe src="/um-vis-notificator/remote_update.html?action=actDone&amp;param=0"></iframe>', content_type='text/html')
+                process_quizjet_response(request, 'adapt2.sis.pitt.edu', 'quizjet/EvaluateAnswer', response)
+            else:
+                response = HttpResponse(json.dumps({'score': 0, 'max_score': 1}), content_type='application/json')
+                capture_pcrs_result_if_possible(request, 'pcrs.utm.utoronto.ca',
+                    urlsplit(module.content_url).path.strip('/').replace('/embed', '/run'), response)
+            progress = ModuleProgress.objects.get(enrollment=self.enrollment, module=module)
+            self.assertTrue(progress.is_complete)
+            self.assertEqual(progress.attempts, 1)
+            self.assertEqual(progress.score, 0)
+            self.assertEqual(evaluate_unit_access(target, self.enrollment).can_access, index == 9)
+            context = build_course_detail_context(self.student, self.instance)
+            card = next(card for card in context['unit_cards'] if card['unit'].pk == pretest.pk)
+            self.assertEqual(card['completed_count'], index + 1)
+        self.assertEqual(self.client.get(launch).status_code, 200)
+        other = CourseInstance.objects.create(course=self.course, group_name='Other session')
+        other_enrollment = Enrollment.objects.create(student=self.student, course_instance=other)
+        self.assertFalse(evaluate_unit_access(target, other_enrollment).can_access)
 
     def test_unit_roundtrip_remaps_dependencies_and_defaults_legacy_packages(self):
         other=Course.objects.create(id='copy',title='Copy')

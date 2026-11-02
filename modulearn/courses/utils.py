@@ -368,7 +368,7 @@ def _restore_content_file(module, activity):
     return True
 
 
-def _portable_unlock_rule(rule, modules_by_id):
+def _portable_unlock_rule(rule, modules_by_id, units_by_id=None):
     rule = deepcopy(rule or {})
     if not rule:
         return {}
@@ -381,12 +381,17 @@ def _portable_unlock_rule(rule, modules_by_id):
                 condition["target_unit"] = target.unit.title
                 condition["target_module"] = target.title
                 condition["target_db_id"] = condition.pop("target_id", "")
+        elif condition.get('type') in {'unit_accessed', 'unit_completed'}:
+            target = (units_by_id or {}).get(str(condition.get('target_id')))
+            if target:
+                condition['target_unit'] = target.title
+            condition['target_db_id'] = condition.pop('target_id', '')
         conditions.append(condition)
     rule["conditions"] = conditions
     return rule
 
 
-def _resolve_unlock_rule(portable_rule, raw_rule, module_lookup):
+def _resolve_unlock_rule(portable_rule, raw_rule, module_lookup, unit_lookup=None):
     rule = deepcopy(portable_rule or raw_rule or {})
     if not rule:
         return {}
@@ -406,6 +411,15 @@ def _resolve_unlock_rule(portable_rule, raw_rule, module_lookup):
                 condition["target_id"] = target.id
             elif used_portable:
                 continue
+        elif condition_type in {'unit_accessed', 'unit_completed'}:
+            lookup = unit_lookup or {}
+            old_id = condition.pop('target_db_id', condition.pop('target_id', ''))
+            title = condition.pop('target_unit', None)
+            target = lookup.get(('id', str(old_id))) or lookup.get(('title', title))
+            if target:
+                condition['target_id'] = target.id
+            else:
+                condition = {'type': 'unresolved_import'}
         resolved_conditions.append(condition)
     if not resolved_conditions:
         return {}
@@ -558,6 +572,7 @@ def create_course_from_json(
     resource_metadata = _resource_metadata_by_id(course_data.get("resources"))
     provider_protocols_map = course_data.get("provider_protocols", {}) or {}
     module_lookup = {}
+    unit_lookup = {}
     pending_unlock_rules = []
 
     for unit_index, unit_data in enumerate(course_data.get("units", []), start=1):
@@ -597,6 +612,9 @@ def create_course_from_json(
             raise ValueError('Section timers must be between 0 and 86400 seconds.')
         unit.time_limit_seconds = seconds
         unit.save(update_fields=["opens_at", "closes_at", "time_limit_seconds"])
+        unit_lookup[('title', unit.title)] = unit
+        if unit_data.get('id') is not None:
+            unit_lookup[('id', str(unit_data['id']))] = unit
         pending_unlock_rules.append((unit, unit_data.get("unlock_rule") or {}, unit_data.get("unlock_rule_portable") or {}))
         logger.debug("Unit %s: %s", "created" if unit_created else "retrieved", unit)
 
@@ -704,7 +722,7 @@ def create_course_from_json(
             logger.debug("Activity %s: %s", "created" if module_created else "retrieved", module)
 
     for model_object, raw_rule, portable_rule in pending_unlock_rules:
-        resolved_rule = _resolve_unlock_rule(portable_rule, raw_rule, module_lookup)
+        resolved_rule = _resolve_unlock_rule(portable_rule, raw_rule, module_lookup, unit_lookup)
         if model_object.unlock_rule != resolved_rule:
             model_object.unlock_rule = resolved_rule
             model_object.save(update_fields=["unlock_rule"])
@@ -738,6 +756,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
     units = []
     course_modules_by_id = {}
     prefetched_units = list(course.units.prefetch_related("modules__form__questions").all())
+    course_units_by_id = {str(unit.id): unit for unit in prefetched_units}
     for unit in prefetched_units:
         for module in unit.modules.all():
             course_modules_by_id[str(module.id)] = module
@@ -778,7 +797,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
                 "is_locked": module.is_locked,
                 "allow_resubmission": module.allow_resubmission,
                 "unlock_rule": module.unlock_rule or {},
-                "unlock_rule_portable": _portable_unlock_rule(module.unlock_rule, course_modules_by_id),
+                "unlock_rule_portable": _portable_unlock_rule(module.unlock_rule, course_modules_by_id, course_units_by_id),
                 "content_data": module.content_data or {},
                 "content_file": _content_file_export_payload(module, include_file_data=include_file_data),
                 "keywords": module.keywords,
@@ -801,7 +820,7 @@ def export_course_to_json(course, *, course_instance=None, include_file_data=Tru
             "is_visible": unit.is_visible,
             "is_locked": unit.is_locked,
             "unlock_rule": unit.unlock_rule or {},
-            "unlock_rule_portable": _portable_unlock_rule(unit.unlock_rule, course_modules_by_id),
+            "unlock_rule_portable": _portable_unlock_rule(unit.unlock_rule, course_modules_by_id, course_units_by_id),
             "activities": activities,
             "modules": modules,
         })

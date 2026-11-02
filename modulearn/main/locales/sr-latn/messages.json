@@ -2059,5 +2059,14 @@
   "Course structure updated. Units removed: {units}; activities removed: {activities}.": "Struktura kursa je ažurirana. Obrisane celine: {units}; obrisane aktivnosti: {activities}.",
   "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.": "Označeno za brisanje. Sačuvajte izmene da biste obrisali ovu celinu i preostale aktivnosti u njoj ili kliknite na Opozovi.",
   "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.": "Označiti ovu celinu za brisanje? Čuvanjem izmena brišu se celina, preostale aktivnosti u njoj i njihov sačuvani napredak iz svih sesija ovog kursa. Pravila otključavanja koja zavise od njih biće uklonjena.",
-  "Undo unit deletion": "Opozovi brisanje celine"
+  "Undo unit deletion": "Opozovi brisanje celine",
+  "After previous activity accessed": "Nakon pristupa prethodnoj aktivnosti",
+  "After previous activity completed": "Nakon završetka prethodne aktivnosti",
+  "After selected unit accessed": "Nakon pristupa izabranoj celini",
+  "After selected unit completed": "Nakon završetka izabrane celine",
+  "Unlocks after the previous activity is accessed": "Otključava se nakon pristupa prethodnoj aktivnosti",
+  "Unlocks after the previous activity is completed": "Otključava se nakon završetka prethodne aktivnosti",
+  "Only earlier units are listed so unlocks cannot depend on future work.": "Prikazane su samo ranije celine kako otključavanje ne bi zavisilo od budućeg rada.",
+  "Uses the previous visible activity in course order, including across units.": "Koristi prethodnu vidljivu aktivnost po redosledu u kursu, čak i ako je u drugoj celini.",
+  "Choose an earlier unit as the unlock target.": "Izaberite raniju celinu kao uslov za otključavanje."
 }

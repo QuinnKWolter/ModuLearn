@@ -3,22 +3,22 @@
   "coverage_note": "Catalog parity and source references are automated. Runtime dialogs and new unmarked text still require browser review.",
   "languages": {
     "en": {
-      "messages": 2061,
+      "messages": 2070,
       "missing": 0,
       "invalid": 0
     },
     "es": {
-      "messages": 2061,
+      "messages": 2070,
       "missing": 0,
       "invalid": 0
     },
     "fr": {
-      "messages": 2061,
+      "messages": 2070,
       "missing": 0,
       "invalid": 0
     },
     "sr-latn": {
-      "messages": 2061,
+      "messages": 2070,
       "missing": 0,
       "invalid": 0
     }
@@ -720,10 +720,14 @@
       "Add unit",
       "Adding instructor...",
       "Adding...",
+      "After previous activity accessed",
+      "After previous activity completed",
       "After previous unit accessed",
       "After previous unit completed",
       "After selected activity accessed",
       "After selected activity completed",
+      "After selected unit accessed",
+      "After selected unit completed",
       "Allow resubmission",
       "Allow resubmissions",
       "Answer choices — one per line (at least two)",
@@ -907,6 +911,7 @@
       "One condition is assigned to this study session/source. Create a separate session for a separate condition.",
       "Only Quiz / Form activities collect questions.",
       "Only earlier activities are listed so unlocks cannot depend on future work.",
+      "Only earlier units are listed so unlocks cannot depend on future work.",
       "Open",
       "Open Flow Mapper",
       "Open by default",
@@ -1061,6 +1066,7 @@
       "Upload recommendation CSVs, review activity matches and similarity scores, and configure the student queue.",
       "Uploaded File",
       "Use secured external URLs only if your Prolific workspace has that feature enabled. Otherwise leave this off.",
+      "Uses the previous visible activity in course order, including across units.",
       "Visible",
       "Visible to students",
       "Weight",
@@ -1786,6 +1792,7 @@
       "Back",
       "Both email and code are required.",
       "Build",
+      "Choose an earlier unit as the unlock target.",
       "Configure",
       "Content URL",
       "Continue",
@@ -3976,11 +3983,14 @@
       "None",
       "Open",
       "Opens {date}",
+      "Previous",
       "Progress",
       "Q",
       "Unit",
       "Unit is locked",
       "Unlock",
+      "Unlocks after the previous activity is accessed",
+      "Unlocks after the previous activity is completed",
       "Unlocks after the previous unit has been fully accessed",
       "Unlocks after the previous unit is completed",
       "Unlocks after the selected activity is accessed",

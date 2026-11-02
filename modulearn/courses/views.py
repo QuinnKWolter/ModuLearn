@@ -295,12 +295,29 @@ def _remove_instructor_from_course_and_sessions(course, user):
             study.instructors.remove(user)
 
 
-def _module_rule_context(course):
+def _module_rule_context(course, controls=None):
     unit_groups = []
     prior_modules = []
     units = list(course.units.prefetch_related("modules").all())
+    modules_by_unit = {unit.id: [] for unit in units}
+    for unit in units:
+        if controls is not None:
+            unit.order = int(controls.get(f'unit_{unit.id}_order') or unit.order or 0)
+        for module in unit.modules.all():
+            if module.is_recommendation_only:
+                continue
+            if controls is not None:
+                module.order = int(controls.get(f'module_{module.id}_order') or module.order or 0)
+                try:
+                    target = int(controls.get(f'module_{module.id}_unit_id', unit.id))
+                except (ValueError, TypeError):
+                    target = unit.id
+                if target in modules_by_unit:
+                    module.unit_id = target
+            modules_by_unit[module.unit_id].append(module)
+    units.sort(key=lambda unit: (unit.order, unit.id))
     for index, unit in enumerate(units):
-        modules = [module for module in unit.modules.all() if not module.is_recommendation_only]
+        modules = sorted(modules_by_unit[unit.id], key=lambda module: (module.order, module.id))
         for module in modules:
             try:
                 module.config_form = module.form
@@ -319,11 +336,15 @@ def _module_rule_context(course):
             "unit": unit,
             "modules": modules,
             "has_previous_unit": index > 0,
+            "has_previous_module": bool(prior_modules),
+            "unlock_target_units": units[:index],
             "unlock_target_modules": list(prior_modules),
         }
         unit_groups.append(group)
         for module in modules:
             module.has_previous_unit = index > 0
+            module.has_previous_module = bool(prior_modules)
+            module.unlock_target_units = units[:index]
             module.unlock_target_modules = list(prior_modules)
             prior_modules.append(module)
     return unit_groups
@@ -664,7 +685,8 @@ def _unpack_structure_controls(request):
 
 
 def _update_course_structure_controls(request, course):
-    rule_context = _module_rule_context(course)
+    # Validate prerequisites against the submitted order/placement, not yesterday's layout.
+    rule_context = _module_rule_context(course, request.POST)
     valid_conditions = set(_course_research_conditions(course))
     valid_unit_ids = {group["unit"].id for group in rule_context}
     deleted_unit_ids = {
@@ -705,6 +727,8 @@ def _update_course_structure_controls(request, course):
                 valid_module_ids={module.id for module in group["unlock_target_modules"]},
                 valid_conditions=valid_conditions,
                 has_previous_unit=group["has_previous_unit"],
+                has_previous_module=group["has_previous_module"],
+                valid_unit_ids={target.id for target in group['unlock_target_units']},
             )
             from modulearn.learning.services.unit_packages import parse_schedule
             unit.opens_at, unit.closes_at = parse_schedule(
@@ -734,6 +758,8 @@ def _update_course_structure_controls(request, course):
                 valid_module_ids={target.id for target in getattr(module, "unlock_target_modules", [])},
                 valid_conditions=valid_conditions,
                 has_previous_unit=getattr(module, "has_previous_unit", False),
+                has_previous_module=module.has_previous_module,
+                valid_unit_ids={target.id for target in module.unlock_target_units},
             )
             module.save(update_fields=[
                 "title",
@@ -983,11 +1009,13 @@ def _parse_question_options(raw_options):
     ]
 
 
-def _normalize_unlock_settings(is_locked, rule_type, target_id, *, valid_module_ids, valid_conditions, has_previous_unit):
+def _normalize_unlock_settings(is_locked, rule_type, target_id, *, valid_module_ids, valid_conditions,
+                               has_previous_unit, has_previous_module=False, valid_unit_ids=()):
     rule_type = (rule_type or "none").strip()
     target_id = (str(target_id).strip() if target_id not in (None, "") else "")
     target_module_rules = {"module_accessed", "module_completed"}
     previous_unit_rules = {"previous_unit_accessed", "previous_unit_completed"}
+    previous_module_rules = {"previous_module_accessed", "previous_module_completed"}
 
     if rule_type == "none":
         return is_locked, {}
@@ -996,6 +1024,20 @@ def _normalize_unlock_settings(is_locked, rule_type, target_id, *, valid_module_
         if not has_previous_unit:
             return False, {}
         return True, build_unlock_rule(rule_type, None)
+
+    if rule_type in previous_module_rules:
+        if not has_previous_module:
+            return False, {}
+        return True, build_unlock_rule(rule_type, None)
+
+    if rule_type in {'unit_accessed', 'unit_completed'}:
+        try:
+            unit_id = int(target_id)
+        except (TypeError, ValueError):
+            unit_id = None
+        if unit_id not in valid_unit_ids:
+            raise ValueError(ui('Choose an earlier unit as the unlock target.'))
+        return True, build_unlock_rule(rule_type, unit_id)
 
     if rule_type == "condition_equals":
         if not target_id or target_id not in valid_conditions:

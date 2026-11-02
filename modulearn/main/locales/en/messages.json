@@ -2059,5 +2059,14 @@
   "Course structure updated. Units removed: {units}; activities removed: {activities}.": "Course structure updated. Units removed: {units}; activities removed: {activities}.",
   "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.": "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.",
   "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.": "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.",
-  "Undo unit deletion": "Undo unit deletion"
+  "Undo unit deletion": "Undo unit deletion",
+  "After previous activity accessed": "After previous activity accessed",
+  "After previous activity completed": "After previous activity completed",
+  "After selected unit accessed": "After selected unit accessed",
+  "After selected unit completed": "After selected unit completed",
+  "Unlocks after the previous activity is accessed": "Unlocks after the previous activity is accessed",
+  "Unlocks after the previous activity is completed": "Unlocks after the previous activity is completed",
+  "Only earlier units are listed so unlocks cannot depend on future work.": "Only earlier units are listed so unlocks cannot depend on future work.",
+  "Uses the previous visible activity in course order, including across units.": "Uses the previous visible activity in course order, including across units.",
+  "Choose an earlier unit as the unlock target.": "Choose an earlier unit as the unlock target."
 }

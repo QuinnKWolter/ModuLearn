@@ -2869,8 +2869,14 @@
                           <option value="previous_unit_completed" {% if group.unit.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>{% ui "After previous unit completed" %}</option>
                         {% endif %}
                         {% if group.unlock_target_modules %}
+                          <option value="previous_module_accessed" {% if group.unit.unlock_rule_type == 'previous_module_accessed' %}selected{% endif %}>{% ui "After previous activity accessed" %}</option>
+                          <option value="previous_module_completed" {% if group.unit.unlock_rule_type == 'previous_module_completed' %}selected{% endif %}>{% ui "After previous activity completed" %}</option>
                           <option value="module_accessed" {% if group.unit.unlock_rule_type == 'module_accessed' %}selected{% endif %}>{% ui "After selected activity accessed" %}</option>
                           <option value="module_completed" {% if group.unit.unlock_rule_type == 'module_completed' %}selected{% endif %}>{% ui "After selected activity completed" %}</option>
+                        {% endif %}
+                        {% if group.unlock_target_units %}
+                          <option value="unit_accessed" {% if group.unit.unlock_rule_type == 'unit_accessed' %}selected{% endif %}>{% ui "After selected unit accessed" %}</option>
+                          <option value="unit_completed" {% if group.unit.unlock_rule_type == 'unit_completed' %}selected{% endif %}>{% ui "After selected unit completed" %}</option>
                         {% endif %}
                         {% if research_conditions %}
                           <option value="condition_equals" {% if group.unit.unlock_rule_type == 'condition_equals' %}selected{% endif %}>{% ui "For selected research condition" %}</option>
@@ -2879,10 +2885,13 @@
                       <select name="unit_{{ group.unit.id }}_rule_target" class="form-control" data-unlock-target aria-label="{% ui "Unit unlock target" %}">
                         <option value="">{% ui "Choose target" %}</option>
                         {% for condition in research_conditions %}
-                          <option value="{{ condition }}" data-target-kind="condition" {% if group.unit.unlock_rule_target == condition %}selected{% endif %}>{% ui "Condition:" %} {{ condition }}</option>
+                          <option value="{{ condition }}" data-target-kind="condition" {% if group.unit.unlock_rule_type == 'condition_equals' and group.unit.unlock_rule_target == condition %}selected{% endif %}>{% ui "Condition:" %} {{ condition }}</option>
+                        {% endfor %}
+                        {% for target in group.unlock_target_units %}
+                          <option value="{{ target.id }}" data-target-kind="unit" {% if group.unit.unlock_rule_type == 'unit_accessed' or group.unit.unlock_rule_type == 'unit_completed' %}{% if group.unit.unlock_rule_target == target.id %}selected{% endif %}{% endif %}>{{ target.title }}</option>
                         {% endfor %}
                         {% for target in group.unlock_target_modules %}
-                          <option value="{{ target.id }}" data-target-kind="module" {% if group.unit.unlock_rule_target == target.id %}selected{% endif %}>{{ target.unit.title }} - {{ target.title }}</option>
+                          <option value="{{ target.id }}" data-target-kind="module" {% if group.unit.unlock_rule_type == 'module_accessed' or group.unit.unlock_rule_type == 'module_completed' %}{% if group.unit.unlock_rule_target == target.id %}selected{% endif %}{% endif %}>{{ target.unit.title }} - {{ target.title }}</option>
                         {% endfor %}
                       </select>
                     </div>
@@ -3050,8 +3059,14 @@
                                     <option value="previous_unit_completed" {% if module.unlock_rule_type == 'previous_unit_completed' %}selected{% endif %}>{% ui "After previous unit completed" %}</option>
                                   {% endif %}
                                   {% if module.unlock_target_modules %}
+                                    <option value="previous_module_accessed" {% if module.unlock_rule_type == 'previous_module_accessed' %}selected{% endif %}>{% ui "After previous activity accessed" %}</option>
+                                    <option value="previous_module_completed" {% if module.unlock_rule_type == 'previous_module_completed' %}selected{% endif %}>{% ui "After previous activity completed" %}</option>
                                     <option value="module_accessed" {% if module.unlock_rule_type == 'module_accessed' %}selected{% endif %}>{% ui "After selected activity accessed" %}</option>
                                     <option value="module_completed" {% if module.unlock_rule_type == 'module_completed' %}selected{% endif %}>{% ui "After selected activity completed" %}</option>
+                                  {% endif %}
+                                  {% if module.unlock_target_units %}
+                                    <option value="unit_accessed" {% if module.unlock_rule_type == 'unit_accessed' %}selected{% endif %}>{% ui "After selected unit accessed" %}</option>
+                                    <option value="unit_completed" {% if module.unlock_rule_type == 'unit_completed' %}selected{% endif %}>{% ui "After selected unit completed" %}</option>
                                   {% endif %}
                                   {% if research_conditions %}
                                     <option value="condition_equals" {% if module.unlock_rule_type == 'condition_equals' %}selected{% endif %}>{% ui "For selected research condition" %}</option>
@@ -3060,10 +3075,13 @@
                                 <select name="module_{{ module.id }}_rule_target" class="form-control" aria-label="{% ui "Activity unlock target" %}" data-unlock-target>
                                   <option value="">{% ui "Choose target" %}</option>
                                   {% for condition in research_conditions %}
-                                    <option value="{{ condition }}" data-target-kind="condition" {% if module.unlock_rule_target == condition %}selected{% endif %}>{% ui "Condition:" %} {{ condition }}</option>
+                                    <option value="{{ condition }}" data-target-kind="condition" {% if module.unlock_rule_type == 'condition_equals' and module.unlock_rule_target == condition %}selected{% endif %}>{% ui "Condition:" %} {{ condition }}</option>
+                                  {% endfor %}
+                                  {% for target in module.unlock_target_units %}
+                                    <option value="{{ target.id }}" data-target-kind="unit" {% if module.unlock_rule_type == 'unit_accessed' or module.unlock_rule_type == 'unit_completed' %}{% if module.unlock_rule_target == target.id %}selected{% endif %}{% endif %}>{{ target.title }}</option>
                                   {% endfor %}
                                   {% for target in module.unlock_target_modules %}
-                                    <option value="{{ target.id }}" data-target-kind="module" {% if module.unlock_rule_target == target.id %}selected{% endif %}>{{ target.unit.title }} - {{ target.title }}</option>
+                                    <option value="{{ target.id }}" data-target-kind="module" {% if module.unlock_rule_type == 'module_accessed' or module.unlock_rule_type == 'module_completed' %}{% if module.unlock_rule_target == target.id %}selected{% endif %}{% endif %}>{{ target.unit.title }} - {{ target.title }}</option>
                                   {% endfor %}
                                 </select>
                               </div>
@@ -4613,8 +4631,9 @@
       const control = select.closest('[data-unlock-control]');
       const value = select.value;
       const needsModule = ['module_accessed', 'module_completed'].includes(value);
+      const needsUnit = ['unit_accessed', 'unit_completed'].includes(value);
       const needsCondition = value === 'condition_equals';
-      const needsTarget = needsModule || needsCondition;
+      const needsTarget = needsModule || needsUnit || needsCondition;
       const hasAutomaticRules = Array.from(select.options).some(option => option.value && option.value !== 'none' && !option.disabled);
 
       select.disabled = !hasAutomaticRules;
@@ -4641,7 +4660,7 @@
         target.required = needsTarget;
         Array.from(target.options).forEach(option => {
           const kind = option.dataset.targetKind || '';
-          const shouldShow = !option.value || (needsModule && kind === 'module') || (needsCondition && kind === 'condition');
+          const shouldShow = !option.value || (needsModule && kind === 'module') || (needsUnit && kind === 'unit') || (needsCondition && kind === 'condition');
           option.hidden = !shouldShow;
           option.disabled = !shouldShow;
         });
@@ -4655,7 +4674,7 @@
           const firstValid = Array.from(target.options).find(option => option.value && !option.disabled);
           target.disabled = !firstValid;
           if (!target.value && firstValid) {
-            target.value = firstValid.value;
+            target.selectedIndex = firstValid.index;
           }
         } else {
           target.disabled = true;
@@ -4680,6 +4699,10 @@
           help.textContent = target && target.disabled
             ? t('No research conditions are configured for this course session.')
             : t('This unlock uses the participant condition assigned through study recruitment.');
+        } else if (needsUnit) {
+          help.textContent = t('Only earlier units are listed so unlocks cannot depend on future work.');
+        } else if (value.startsWith('previous_module_')) {
+          help.textContent = t('Uses the previous visible activity in course order, including across units.');
         } else {
           help.textContent = t('This unlock uses the previous unit and does not need a target.');
         }

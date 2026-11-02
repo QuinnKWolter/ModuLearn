@@ -198,6 +198,12 @@ def _condition_passes(condition: dict[str, Any], enrollment, *, subject_unit=Non
         unit = subject_unit or getattr(subject_module, "unit", None)
         previous_unit = _previous_unit(unit)
         return _unit_completed(enrollment, previous_unit.id) if previous_unit else True
+    if condition_type in {"previous_module_accessed", "previous_module_completed"}:
+        previous = _previous_module(subject_unit=subject_unit, subject_module=subject_module)
+        if not previous:
+            return True
+        check = _module_accessed if condition_type == "previous_module_accessed" else _module_completed
+        return check(enrollment, previous.id)
 
     return False
 
@@ -268,11 +274,26 @@ def _previous_unit(unit):
         return None
     return (
         unit.course.units.filter(is_visible=True)
-        .filter(order__lt=unit.order)
+        .filter(Q(order__lt=unit.order) | Q(order=unit.order, id__lt=unit.id))
         .order_by("-order", "-id")
         .first()
-        or unit.course.units.filter(is_visible=True, order=unit.order, id__lt=unit.id).order_by("-id").first()
     )
+
+
+def _previous_module(*, subject_unit=None, subject_module=None):
+    """Previous visible course activity, crossing unit boundaries when necessary."""
+    from courses.models import Module
+
+    unit = subject_unit or getattr(subject_module, 'unit', None)
+    if not unit:
+        return None
+    earlier = Q(unit__order__lt=unit.order) | Q(unit__order=unit.order, unit_id__lt=unit.id)
+    if subject_module:
+        earlier |= Q(unit_id=unit.id) & (
+            Q(order__lt=subject_module.order) | Q(order=subject_module.order, id__lt=subject_module.id)
+        )
+    return Module.objects.filter(earlier, unit__course_id=unit.course_id, unit__is_visible=True,
+        is_visible=True, is_recommendation_only=False).order_by('-unit__order', '-unit__id', '-order', '-id').first()
 
 
 def _rule_reason(rule: dict[str, Any] | None, *, subject_unit=None, subject_module=None) -> str:
@@ -309,6 +330,11 @@ def _rule_reason(rule: dict[str, Any] | None, *, subject_unit=None, subject_modu
             if previous_unit
             else ui("Unlocks after the previous unit is completed")
         )
+    if condition_type in {"previous_module_accessed", "previous_module_completed"}:
+        previous = _previous_module(subject_unit=subject_unit, subject_module=subject_module)
+        if condition_type == 'previous_module_accessed':
+            return ui('Unlocks after {activity} is accessed', activity=previous.title) if previous else ui('Unlocks after the previous activity is accessed')
+        return ui('Unlocks after {activity} is completed', activity=previous.title) if previous else ui('Unlocks after the previous activity is completed')
     if condition_type == "condition_equals":
         return ui("Unlocks for participants in condition {condition}", condition=target_id) if target_id else ui("Unlocks for participants assigned to the selected condition")
     return ""

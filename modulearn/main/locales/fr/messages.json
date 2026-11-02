@@ -2059,5 +2059,14 @@
   "Course structure updated. Units removed: {units}; activities removed: {activities}.": "Structure du cours mise à jour. Unités supprimées : {units} ; activités supprimées : {activities}.",
   "Marked for deletion. Save changes to remove this unit and its remaining activities, or click Undo.": "Suppression prévue. Enregistrez les modifications pour supprimer cette unité et les activités qui y restent, ou cliquez sur Annuler.",
   "Mark this unit for deletion? Saving removes the unit, its remaining activities, and their saved progress from all sessions of this course. Dependent unlock rules will be cleared.": "Marquer cette unité pour suppression ? L’enregistrement supprimera l’unité, les activités qui y restent et leur progression enregistrée dans toutes les sessions de ce cours. Les règles de déverrouillage qui en dépendent seront supprimées.",
-  "Undo unit deletion": "Annuler la suppression de l’unité"
+  "Undo unit deletion": "Annuler la suppression de l’unité",
+  "After previous activity accessed": "Après consultation de l’activité précédente",
+  "After previous activity completed": "Après achèvement de l’activité précédente",
+  "After selected unit accessed": "Après consultation de l’unité sélectionnée",
+  "After selected unit completed": "Après achèvement de l’unité sélectionnée",
+  "Unlocks after the previous activity is accessed": "Se déverrouille après consultation de l’activité précédente",
+  "Unlocks after the previous activity is completed": "Se déverrouille après achèvement de l’activité précédente",
+  "Only earlier units are listed so unlocks cannot depend on future work.": "Seules les unités précédentes sont proposées afin que le déverrouillage ne dépende pas d’un travail ultérieur.",
+  "Uses the previous visible activity in course order, including across units.": "Utilise l’activité visible précédente dans l’ordre du cours, même si elle appartient à une autre unité.",
+  "Choose an earlier unit as the unlock target.": "Choisissez une unité précédente comme condition de déverrouillage."
 }
