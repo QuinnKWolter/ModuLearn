@@ -52,5 +52,7 @@
   "A timer starts when a participant first opens a section. It continues through remediation and reloads. At expiry, the next section opens; unfinished answers are not marked correct. Set 0 for untimed.": "El temporizador comienza al abrir una sección por primera vez y continúa durante las actividades de refuerzo y las recargas. Al vencer, se abre la siguiente sección; las respuestas incompletas no se marcan como correctas. Usa 0 para no limitar el tiempo.",
   "Attempt scores, transitions, timing, provider interactions, and form input summaries.": "Puntuaciones por intento, transiciones, tiempos, interacciones del proveedor y resúmenes de entrada de formularios.",
   "Export a template first to keep a recoverable copy. Deletion removes its activities and associated branch rules; external unlock dependencies must be removed first.": "Exporta primero una plantilla para conservar una copia recuperable. La eliminación borra las actividades y sus reglas de ramificación; antes debes quitar las dependencias externas de desbloqueo.",
-  "Copies its rules into another condition without replacing existing rules. Adjust the remediation targets in Flow Mapper afterward.": "Copia sus reglas a otra condición sin reemplazar las existentes. Después, ajusta los destinos de refuerzo en el mapa de flujo."
+  "Copies its rules into another condition without replacing existing rules. Adjust the remediation targets in Flow Mapper afterward.": "Copia sus reglas a otra condición sin reemplazar las existentes. Después, ajusta los destinos de refuerzo en el mapa de flujo.",
+  "Correct": "Correcto",
+  "Incorrect": "Incorrecto"
 }

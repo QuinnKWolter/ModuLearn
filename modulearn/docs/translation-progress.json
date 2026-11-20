@@ -3,22 +3,22 @@
   "coverage_note": "Catalog parity and source references are automated. Runtime dialogs and new unmarked text still require browser review.",
   "languages": {
     "en": {
-      "messages": 2152,
+      "messages": 2154,
       "missing": 0,
       "invalid": 0
     },
     "es": {
-      "messages": 2152,
+      "messages": 2154,
       "missing": 0,
       "invalid": 0
     },
     "fr": {
-      "messages": 2152,
+      "messages": 2154,
       "missing": 0,
       "invalid": 0
     },
     "sr-latn": {
-      "messages": 2152,
+      "messages": 2154,
       "missing": 0,
       "invalid": 0
     }
@@ -414,6 +414,7 @@
       "Completed",
       "Completion",
       "Copy",
+      "Correct",
       "Correct / Successful",
       "Course",
       "Create",
@@ -425,6 +426,7 @@
       "ID",
       "Iframe Load",
       "Imported Activity",
+      "Incorrect",
       "Incorrect / Unsuccessful",
       "Info",
       "LTI 1.1",
@@ -567,6 +569,7 @@
       "Connection types",
       "Copy",
       "Copy Connections Between Conditions",
+      "Correct",
       "Correct / Successful",
       "Correct/incorrect rules use the latest activity outcome. Score rules use a 0-100 threshold; Score Below 100 catches non-perfect submissions.",
       "Delete",
@@ -580,6 +583,7 @@
       "Focus Selection",
       "From",
       "Hidden",
+      "Incorrect",
       "Incorrect / Unsuccessful",
       "Locked",
       "Map navigation",
@@ -836,6 +840,8 @@
       "Collapse all activities in this unit",
       "Collapse structure explorer",
       "Column",
+      "Complete",
+      "Completed",
       "Completion",
       "Completion Rule",
       "Completion and correctness are tracked separately. Opening an activity does not count as a submission.",
@@ -854,6 +860,7 @@
       "Copied",
       "Copy",
       "Copy the participant entry link above into Prolific.",
+      "Correct",
       "Count",
       "Course",
       "Course Access",
@@ -924,6 +931,7 @@
       "If no visible activities are marked graded, all visible course activities count equally. Practice activity is still recorded.",
       "Import Unit",
       "Import as New Unit",
+      "Incorrect",
       "Instructions",
       "Instructions & submission settings",
       "Instructions shown above the questions",
@@ -4309,6 +4317,7 @@
       "unlock"
     ],
     "modulearn/learning/services/cupcake_tracking.py": [
+      "Correct",
       "Event",
       "ID",
       "Name",
@@ -4438,6 +4447,7 @@
     ],
     "modulearn/learning/services/quizjet_tracking.py": [
       "Activity",
+      "Correct",
       "Course",
       "Done",
       "Enrollment",
@@ -5333,6 +5343,7 @@
       "Hash",
       "Hidden",
       "ID",
+      "Incorrect",
       "Independent Random",
       "Independent Random Assignment",
       "Instructor",
@@ -5786,10 +5797,13 @@
       "Activity completed — saved to your course.",
       "Answer correct — result saved.",
       "Attempt saved. Your earlier completion is retained.",
+      "Correct",
+      "Course",
       "Event",
       "Learn",
       "ModuLearn",
       "Name",
+      "Next",
       "No",
       "Progress",
       "Provider",
@@ -5801,6 +5815,7 @@
       "Score",
       "Session",
       "Status",
+      "Studies",
       "Text",
       "Time",
       "To",
@@ -5815,6 +5830,7 @@
       "if",
       "latest",
       "of",
+      "participant",
       "progress",
       "provider",
       "session",

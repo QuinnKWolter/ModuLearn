@@ -2,6 +2,7 @@
 .cfg-flow-body { grid-template-columns:minmax(0,1fr) minmax(22rem,28rem); grid-template-rows:auto minmax(0,1fr); }
 .cfg-flow-control-panel { grid-column:1/-1; }
 .cfg-flow-connections { min-width:0; }
+.cfg-flow-connections .cfg-branch-rule-list { align-content:start; }
 .cfg-flow-builder { grid-template-columns:1fr 1fr; }
 .cfg-flow-add-button { grid-column:1/-1; }
 .cfg-flow-add-panel > summary { cursor:pointer; color:var(--color-accent); font-weight:650; font-size:.85rem; padding:.45rem 0; }

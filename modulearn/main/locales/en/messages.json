@@ -2150,5 +2150,7 @@
   "Score threshold": "Score threshold",
   "Duplicate Connection": "Duplicate Connection",
   "Connection copied to the builder. Adjust it, then choose Add Connection.": "Connection copied to the builder. Adjust it, then choose Add Connection.",
-  "Unsaved changes": "Unsaved changes"
+  "Unsaved changes": "Unsaved changes",
+  "Correct": "Correct",
+  "Incorrect": "Incorrect"
 }

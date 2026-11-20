@@ -3343,7 +3343,6 @@
           <div class="cfg-wizard-footer">
             <span class="text-xs text-slate-500 dark:text-slate-300">{% ui "Plugin settings apply to this whole course structure." %}</span>
             <div class="cfg-wizard-footer-actions">
-              <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-activity aria-haspopup="dialog"><i class="bi bi-eye" aria-hidden="true"></i> {% ui "Activity Preview" %}</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
               <button type="submit" class="btn btn-primary btn-sm">{% ui "Save Plugin Settings" %}</button>
             </div>
@@ -3426,7 +3425,6 @@
           <div class="cfg-wizard-footer">
             <span class="text-xs text-slate-500 dark:text-slate-300">{% ui "New units are visible and unlocked by default." %}</span>
             <div class="cfg-wizard-footer-actions">
-              <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-activity aria-haspopup="dialog"><i class="bi bi-eye" aria-hidden="true"></i> {% ui "Activity Preview" %}</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
               <button type="submit" class="btn btn-primary btn-sm">{% ui "Add Unit" %}</button>
             </div>
@@ -5290,7 +5288,14 @@
             label.setAttribute('data-flow-rule-id', ruleId);
             label.setAttribute('data-source', sourceId);
             label.setAttribute('data-target', targetId);
-            label.textContent = labelText;
+            // Long condition names overlap the nodes in the narrow connector gap.
+            // Keep the full rule in the inspector and an SVG tooltip.
+            label.textContent = isPreview ? t('New connection') :
+              ({success:t('Correct'),failure:t('Incorrect'),completed:t('Completed')}[conditionType] ||
+                (conditionType === 'score_gte' ? '≥ ' : '< ') + (edges.find(edge=>edge.dataset.flowRuleId===ruleId)?.querySelector('[name$="_threshold"]')?.value || '0'));
+            const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+            title.textContent = labelText;
+            path.appendChild(title);
             flowLines.appendChild(label);
           }
         }

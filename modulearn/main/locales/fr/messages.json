@@ -2150,5 +2150,7 @@
   "Score threshold": "Seuil du score",
   "Duplicate Connection": "Dupliquer la connexion",
   "Connection copied to the builder. Adjust it, then choose Add Connection.": "Connexion copiée dans l’éditeur. Modifiez-la, puis choisissez Ajouter une connexion.",
-  "Unsaved changes": "Modifications non enregistrées"
+  "Unsaved changes": "Modifications non enregistrées",
+  "Correct": "Correct",
+  "Incorrect": "Incorrect"
 }

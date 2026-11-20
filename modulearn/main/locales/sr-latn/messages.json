@@ -2150,5 +2150,7 @@
   "Score threshold": "Prag rezultata",
   "Duplicate Connection": "Dupliraj vezu",
   "Connection copied to the builder. Adjust it, then choose Add Connection.": "Veza je kopirana u uređivač. Prilagodite je, pa izaberite Dodaj vezu.",
-  "Unsaved changes": "Nesačuvane izmene"
+  "Unsaved changes": "Nesačuvane izmene",
+  "Correct": "Tačno",
+  "Incorrect": "Netačno"
 }

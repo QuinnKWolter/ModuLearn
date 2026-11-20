@@ -40,6 +40,13 @@
     function showAnswerStatus(message, state, saved) {
       if (message !== latestAnswerCheck) return;
       var status = document.getElementById('activity-save-status');
+      // Studies use provider feedback and their own Next control. Course-completion
+      // advice is distracting here and may contradict attempt-based test completion.
+      // Keep transport failures visible: hiding a failed save would strand a participant.
+      if (document.body.classList.contains('study-shell') && state !== 'error') {
+        if (status) status.remove();
+        return;
+      }
       if (!status) {
         status = document.createElement('div');
         status.id = 'activity-save-status';
