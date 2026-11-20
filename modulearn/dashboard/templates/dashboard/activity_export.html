@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% load static ui_i18n %}
+{% block title %}{% ui 'Download activity CSV' %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/activity-browser.css' %}">{% endblock %}
+{% block content %}
+<section class="activity-export card" id="activityExportPage" data-url="{% url 'dashboard:activity_prepare' course_instance.id %}">
+  <h1 class="text-2xl font-bold">{% ui 'Download activity CSV' %}</h1>
+  <p data-no-ui-translate>{{ course_instance.course.title }} · {{ course_instance.group_name }}</p>
+  <p>{% ui 'Exports prepare in small batches. Keep this page open; you can retry safely if interrupted.' %}</p>
+  <p role="status" id="activityExportStatus"></p>
+  <button type="button" class="btn btn-outline-secondary" id="activityPrepareButton">{% ui 'Prepare CSV' %}</button>
+  <a id="activityExportLink" class="btn btn-primary" hidden>{% ui 'Save CSV' %}</a>
+  <a href="{% url 'dashboard:instructor_dashboard' %}" class="btn btn-outline-secondary">{% ui 'Instructor Dashboard' %}</a>
+</section>
+{{ activity_export_options|json_script:'activityExportOptions' }}
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/dashboard/activity-browser.js' %}"></script>{% endblock %}

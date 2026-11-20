@@ -6,7 +6,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build:css
+RUN npm run build:css && npm run build:editor
 
 
 # Use an official Python image as the runtime base
@@ -26,6 +26,7 @@ COPY . .
 
 # Copy the generated stylesheet without carrying Node into the runtime image
 COPY --from=frontend /build/static/css/tailwind.generated.css ./static/css/tailwind.generated.css
+COPY --from=frontend /build/static/js/inline-markdown.generated.js* ./static/js/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

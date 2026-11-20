@@ -325,6 +325,8 @@ def create_study_for_instructor(
         version_label=version_label,
         course_instance=course_instance,
         guided_flow=bool(_template_study_payload(template_data).get('guided_flow', not template_data)),
+        participant_paced=bool(_template_study_payload(template_data).get('participant_paced', True)),
+        retry_after_remediation=bool(_template_study_payload(template_data).get('retry_after_remediation', True)),
         notes=_template_study_payload(template_data).get('notes', ''),
     )
     study.instructors.add(instructor)
@@ -376,6 +378,8 @@ def export_study_to_json(study: Study, *, include_file_data=True) -> dict:
             "status": study.status,
             "notes": study.notes,
             "guided_flow": study.guided_flow,
+            "participant_paced": study.participant_paced,
+            "retry_after_remediation": study.retry_after_remediation,
             "conditions": [
                 {
                     "label": condition.label,

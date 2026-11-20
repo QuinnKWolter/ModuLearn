@@ -1,6 +1,6 @@
 
 {% load ui_i18n %}{% if adaptive_branching_enabled %}
-<div id="adaptiveBranchingFlowModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 items-center justify-center bg-black/60 p-3 sm:p-4" aria-hidden="true">
+<div id="adaptiveBranchingFlowModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 items-center justify-center bg-black/60 p-3 sm:p-4" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="flow-mapper-title">
   <div class="modal-backdrop-close absolute inset-0"></div>
   <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl cfg-flow-modal flex flex-col overflow-hidden">
     <div class="cfg-flow-modal-header border-b border-gray-200 dark:border-gray-700">
@@ -8,7 +8,7 @@
         <span class="cfg-create-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
         <div>
           <div class="stat-kicker">{% ui "Adaptive Branching" %}</div>
-          <h2 class="text-lg font-bold mt-1 mb-0">{% ui "Flow Mapper" %}</h2>
+          <h2 id="flow-mapper-title" class="text-lg font-bold mt-1 mb-0">{% ui "Flow Mapper" %}</h2>
         </div>
       </div>
       <div class="cfg-flow-header-tools">
@@ -20,7 +20,7 @@
             <span><strong>{% ui "Any" %}</strong> {% ui "participants" %}</span>
           {% endif %}
         </div>
-        <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+        <button type="button" data-bs-dismiss="modal" aria-label="{% ui 'Close' %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
       </div>
     </div>
 
@@ -29,7 +29,36 @@
       <input type="hidden" name="action" value="update_branching">
 
       <div class="cfg-flow-body">
-        <section class="cfg-flow-map-shell" data-flow-map-shell aria-label="{% ui "Adaptive branching activity map" %}">
+        <div class="cfg-flow-control-panel"><div class="cfg-flow-filters">
+          <label>{% ui 'Search Connections' %}<input class="form-control" type="search" data-flow-search></label>
+          <label>{% ui 'Participant condition' %}<select class="form-control" data-flow-filter><option value="">{% ui 'All Conditions' %}</option>{% for condition in research_conditions %}<option value="{{ condition }}" data-no-ui-translate>{{ condition }}</option>{% endfor %}</select></label>
+          <label><input type="checkbox" data-flow-show-lines> {% ui 'Show All Connections' %}</label>
+          <label><input type="checkbox" data-flow-connect-mode> {% ui 'Connect Activities' %}</label>
+        </div>
+        <div class="cfg-flow-toolbar" role="group" aria-label="{% ui 'Map navigation' %}">
+          <button type="button" data-flow-zoom-out title="{% ui 'Zoom Out' %}" aria-label="{% ui 'Zoom Out' %}">−</button>
+          <output data-flow-zoom-level aria-live="polite">100%</output>
+          <button type="button" data-flow-zoom-in title="{% ui 'Zoom In' %}" aria-label="{% ui 'Zoom In' %}">+</button>
+          <button type="button" data-flow-fit>{% ui 'Fit Map' %}</button>
+          <button type="button" data-flow-reset>{% ui 'Actual Size' %}</button>
+          <button type="button" data-flow-focus-view>{% ui 'Focus Selection' %}</button>
+          <button type="button" data-flow-clear>{% ui 'Clear Selection' %}</button>
+          <span class="cfg-flow-hint">{% ui 'Drag the canvas to pan. Ctrl/⌘ + wheel to zoom. Select an activity to inspect its connections.' %}</span>
+        </div>
+        <div class="cfg-flow-legend" aria-label="{% ui 'Connection types' %}">
+          <span style="--edge-color:#10b981">{% ui 'Correct / Successful' %}</span><span style="--edge-color:#ef4444">{% ui 'Incorrect / Unsuccessful' %}</span><span style="--edge-color:#2563eb">{% ui 'Completed' %}</span><span style="--edge-color:#f59e0b">{% ui 'Score threshold' %}</span>
+        </div></div>
+        <style>
+          .cfg-flow-filters{display:flex;gap:.75rem;align-items:end;flex-wrap:wrap;padding:.5rem}.cfg-flow-filters label{font-size:.85rem}
+          .cfg-flow-edit summary{cursor:pointer;white-space:nowrap;color:#2563eb}.cfg-flow-edit[open]{flex-basis:100%}
+          .cfg-flow-edit-fields{display:grid;grid-template-columns:2fr 1.5fr 2fr 5rem;gap:.5rem;padding:.5rem 0}
+          .cfg-flow-edit-fields label{display:grid;gap:.3rem;min-width:0;font-size:.8rem}
+          .cfg-branch-actions .cfg-flow-edit-fields .form-control{width:100%!important;height:2.25rem;min-width:0;font-size:.85rem;font-weight:500;line-height:1.25}
+          .cfg-branch-rule:has(.cfg-flow-edit[open]){grid-template-columns:minmax(0,1fr)}
+          .cfg-branch-actions{flex-wrap:wrap}.cfg-branch-rule[hidden]{display:none}
+          @media(max-width:700px){.cfg-flow-edit-fields{grid-template-columns:1fr}}
+        </style>
+        <section class="cfg-flow-map-shell" data-flow-map-shell tabindex="0" aria-label="{% ui "Adaptive branching activity map" %}">
           <div class="cfg-flow-map" data-flow-map>
             <svg class="cfg-flow-lines" data-flow-lines aria-hidden="true"></svg>
             <div class="cfg-flow-units">
@@ -86,10 +115,11 @@
                 </span>
               </span>
             </div>
+            {% if course_instance.study %}<a class="cfg-flow-copy-link" href="{% url 'recruitment:studio' course_instance.study.id %}#copy-connections" target="_blank" rel="noopener">{% ui 'Copy Connections Between Conditions' %} ↗</a>{% endif %}
             <span class="cfg-flow-status" data-flow-save-status aria-live="polite"></span>
           </div>
 
-          <div class="cfg-flow-builder">
+          <details class="cfg-flow-add-panel"><summary>{% ui "Add Connection" %}</summary><div class="cfg-flow-builder">
             <label class="text-sm font-semibold">{% ui "From" %}
               <select class="form-control mt-1" name="branch_source_module" data-flow-source-select>
                 <option value="">{% ui "Choose source" %}</option>
@@ -102,7 +132,7 @@
               <select class="form-control mt-1" name="branch_condition_type" data-branch-condition data-flow-condition-select>
                 <option value="">{% ui "Choose condition" %}</option>
                 {% for value,label in branch_condition_types %}
-                  <option value="{{ value }}">{{ label }}</option>
+                  <option value="{{ value }}">{{ label|ui_text }}</option>
                 {% endfor %}
               </select>
             </label>
@@ -130,7 +160,7 @@
               <span>{% ui "Add Connection" %}</span>
             </button>
           </div>
-          <div class="cfg-branch-rule-list">
+          </details><div class="cfg-branch-rule-list">
             {% for rule in branch_rules %}
               <article
                 class="cfg-branch-rule cfg-branch-rule--{{ rule.condition_type }} {% if not rule.active %}is-muted{% endif %}"
@@ -139,6 +169,7 @@
                 data-source="{{ rule.source_module.id }}"
                 data-target="{{ rule.target_module.id }}"
                 data-condition-type="{{ rule.condition_type }}"
+                data-study-condition="{{ rule.required_study_condition }}"
                 data-active="{% if rule.active %}true{% else %}false{% endif %}"
                 data-label="{{ rule.get_condition_type_display|ui_text }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}{% if rule.required_study_condition %} / {{ rule.required_study_condition }}{% endif %}"
               >
@@ -166,14 +197,21 @@
                     <span class="cfg-branch-token cfg-branch-token--module"><span data-no-ui-translate>{{ rule.source_module.unit.title|truncatechars:18 }}</span> - <span data-no-ui-translate>{{ rule.source_module.title|truncatechars:30 }}</span></span>
                     <span class="cfg-branch-word">{% ui "if" %}</span>
                     <span class="cfg-condition-tag cfg-condition-tag--{{ rule.condition_type }}">{{ rule.get_condition_type_display|ui_text }}{% if rule.threshold is not None %} {{ rule.threshold|floatformat:0 }}{% endif %}</span>
-                    {% if rule.required_study_condition %}
-                      <span class="cfg-branch-token cfg-branch-token--condition">{{ rule.required_study_condition|truncatechars:18 }}</span>
-                    {% endif %}
+                    <span class="cfg-branch-token cfg-branch-token--condition" data-no-ui-translate {% if not rule.required_study_condition %}hidden{% endif %}>{{ rule.required_study_condition|truncatechars:18 }}</span>
                     <span class="cfg-branch-word">{% ui "unlock" %}</span>
                     <span class="cfg-branch-token cfg-branch-token--module"><span data-no-ui-translate>{{ rule.target_module.unit.title|truncatechars:18 }}</span> - <span data-no-ui-translate>{{ rule.target_module.title|truncatechars:30 }}</span></span>
                   </span>
                 </div>
                 <div class="cfg-branch-actions">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" data-flow-duplicate title="{% ui 'Duplicate Connection' %}" aria-label="{% ui 'Duplicate Connection' %}"><span aria-hidden="true">⧉</span></button>
+                  <details class="cfg-flow-edit"><summary>{% ui 'Edit Connection' %}</summary>
+                    <div class="cfg-flow-edit-fields">
+                      <label>{% ui 'From' %}<select class="form-control" name="branch_rule_{{ rule.id }}_source">{% for module in branch_modules %}<option data-no-ui-translate value="{{ module.id }}" {% if module.id == rule.source_module_id %}selected{% endif %}>{{ module.unit.title }} · {{ module.title }}</option>{% endfor %}</select></label>
+                      <label>{% ui 'When' %}<select class="form-control" name="branch_rule_{{ rule.id }}_condition">{% for value,label in branch_condition_types %}<option value="{{ value }}" {% if value == rule.condition_type %}selected{% endif %}>{{ label|ui_text }}</option>{% endfor %}</select></label>
+                      <label>{% ui 'Unlock' %}<select class="form-control" name="branch_rule_{{ rule.id }}_target">{% for module in branch_modules %}<option data-no-ui-translate value="{{ module.id }}" {% if module.id == rule.target_module_id %}selected{% endif %}>{{ module.unit.title }} · {{ module.title }}</option>{% endfor %}</select></label>
+                      <label>{% ui 'Score' %}<input class="form-control" type="number" min="0" max="100" step="any" name="branch_rule_{{ rule.id }}_threshold" value="{{ rule.threshold|default_if_none:'' }}"></label>
+                    </div>
+                  </details>
                   <label class="cfg-toggle">
                     <input type="checkbox" name="branch_rule_{{ rule.id }}_active" {% if rule.active %}checked{% endif %}>
                     {% ui "Active" %}

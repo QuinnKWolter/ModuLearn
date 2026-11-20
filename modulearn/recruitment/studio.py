@@ -19,6 +19,26 @@ from recruitment.models import Study, StudyCondition, ParticipantSession
 from recruitment.services.studies import create_study_for_instructor, export_study_to_json, delete_study_completely
 
 
+@login_required
+@require_POST
+def text_preview(request):
+    if not (request.user.is_instructor or request.user.is_staff):
+        raise PermissionDenied('Instructor access required.')
+    if 'activity' in request.POST:
+        from courses.authoring_preview import activity_preview_response
+        return activity_preview_response(request, request.POST['activity'])
+    from courses.templatetags.study_text import study_markdown
+    if 'texts' in request.POST:
+        texts = request.POST.getlist('texts')
+        if len(texts) > 500 or sum(map(len, texts)) > 250000 or any(len(text) > 50000 for text in texts):
+            return JsonResponse({'error': 'Preview text is too long.'}, status=400)
+        return JsonResponse({'html': [str(study_markdown(text)) for text in texts]})
+    text = request.POST.get('text', '')
+    if len(text) > 50000:
+        return JsonResponse({'error': 'Preview text is too long.'}, status=400)
+    return JsonResponse({'html': str(study_markdown(text))})
+
+
 def managed_study(user, pk):
     study = get_object_or_404(Study.objects.select_related('course_instance__course'), pk=pk)
     if not (user.is_staff or study.instructors.filter(pk=user.pk).exists()):
@@ -49,10 +69,14 @@ def studio(request, study_id):
                     rules = ModuleBranchRule.objects.filter(course=study.course_instance.course,
                         required_study_condition=source)
                     for rule in rules:
-                        ModuleBranchRule.objects.get_or_create(course=rule.course,
-                            source_module=rule.source_module, target_module=rule.target_module,
-                            condition_type=rule.condition_type, required_study_condition=target,
-                            defaults={'threshold': rule.threshold, 'priority': rule.priority, 'active': rule.active})
+                        # Different score thresholds/priorities are distinct connections.
+                        # Retain existing destination rules and make repeated copies idempotent.
+                        values = dict(course=rule.course, source_module=rule.source_module,
+                            target_module=rule.target_module, condition_type=rule.condition_type,
+                            required_study_condition=target, threshold=rule.threshold,
+                            priority=rule.priority, active=rule.active)
+                        if not ModuleBranchRule.objects.filter(**values).exists():
+                            ModuleBranchRule.objects.create(**values)
                 elif action == 'delete_unit':
                     unit = get_object_or_404(study.course_instance.course.units, pk=request.POST.get('unit_id'))
                     if request.POST.get('confirm_title') != unit.title:
@@ -76,6 +100,8 @@ def studio(request, study_id):
                     study.version_label = request.POST.get('version_label', '').strip()[:64]
                     study.notes = request.POST.get('notes', '').strip()
                     study.guided_flow = request.POST.get('guided_flow') == 'on'
+                    study.participant_paced = request.POST.get('participant_paced') == 'on'
+                    study.retry_after_remediation = request.POST.get('retry_after_remediation') == 'on'
                     study.save()
                     strategy = request.POST.get('assignment', '')
                     from recruitment.models import RecruitmentSource
@@ -125,6 +151,12 @@ def studio(request, study_id):
                     for module in Module.objects.filter(unit__course=study.course_instance.course, module_type__in=Module.FORM_LIKE_TYPES):
                         data = dict(module.content_data or {})
                         data['study_shuffle_questions'] = request.POST.get(f'shuffle_{module.pk}') == 'on'
+                        module.content_data = data
+                        module.save(update_fields=['content_data'])
+                    for module in Module.objects.filter(unit__course=study.course_instance.course,
+                            module_type__in=[Module.MODULE_TYPE_IMPORTED, Module.MODULE_TYPE_SPLICE_SMART_CONTENT]):
+                        data = dict(module.content_data or {})
+                        data['study_allow_next'] = request.POST.get(f'allow_next_{module.pk}') == 'on'
                         module.content_data = data
                         module.save(update_fields=['content_data'])
             messages.success(request, 'Study setup saved.')
@@ -217,7 +249,7 @@ def flow_status(request, session_uuid):
         uuid=session_uuid, user=request.user, enrollment__isnull=False)
     if not session.recruitment_source.study or not session.recruitment_source.study.guided_flow:
         return JsonResponse({'error': 'Guided study flow is not enabled.'}, status=400)
-    from recruitment.services.flow import current_activity
+    from recruitment.services.flow import current_activity, can_acknowledge
     activity, state = current_activity(session)
     url = reverse('courses:launch_iframe_module', args=[session.enrollment.course_instance_id, activity.pk]) if activity else reverse(
         'recruitment:complete', args=[session.uuid])
@@ -226,6 +258,8 @@ def flow_status(request, session_uuid):
         and (activity and int(key) == activity.unit_id or state.get('return_to') and Module.objects.filter(
             pk=state['return_to'], unit_id=key).exists())]
     response = JsonResponse({'url': url, 'finished': state.get('finished', False),
+        'activity_id': activity.pk if activity else None,
+        'can_continue': bool(state.get('pending_transition')) or can_acknowledge(activity),
         'deadline': min(active_deadlines) if active_deadlines else None, 'server_time': timezone.now().isoformat(),
         'trace': list(ModuleProgressEvent.objects.filter(study_participant_session=session,
             event_type__in=['attempt', 'completion', 'study_transition', 'study_late_event']).order_by('-pk')
@@ -298,17 +332,27 @@ def input_summary(request, session_uuid):
 def continue_resource(request, session_uuid):
     session = get_object_or_404(ParticipantSession, uuid=session_uuid, user=request.user,
         enrollment__isnull=False, recruitment_source__study__guided_flow=True)
-    from recruitment.services.flow import current_activity
+    from recruitment.services.flow import current_activity, can_acknowledge, advance_pending
     from courses.models import ModuleProgress
     from modulearn.learning.services.progress import apply_progress_snapshot
-    activity, _ = current_activity(session)
-    if not activity or activity.module_type not in {Module.MODULE_TYPE_FILE, Module.MODULE_TYPE_EXTERNAL_LINK}:
+    activity, state = current_activity(session)
+    try:
+        requested_id = int(request.POST.get('activity_id', activity.pk if activity else 0))
+    except (TypeError, ValueError):
+        raise PermissionDenied('Invalid activity.')
+    if not activity or activity.pk != requested_id:
+        return JsonResponse({'error': 'This activity has already changed. Refresh to continue.'}, status=409)
+    if state.get('pending_transition'):
+        advance_pending(session, requested_id)
+        return redirect('recruitment:resume_session', session_uuid=session.uuid)
+    if not can_acknowledge(activity):
         raise PermissionDenied('This activity must report its own result.')
     progress = get_object_or_404(ModuleProgress, enrollment=session.enrollment, module=activity, user=request.user)
     if not progress.events.filter(event_type='launch').exists():
         raise PermissionDenied('Open this resource before continuing.')
     apply_progress_snapshot(progress, source='participant_acknowledgement', event_type='completion',
-        progress=1, is_complete=True, success=True, payload={'acknowledged': True})
+        progress=1, is_complete=True, payload={'acknowledged': True, 'meaning': 'finished_reviewing_not_assessed'})
+    advance_pending(session, requested_id)
     return redirect('recruitment:resume_session', session_uuid=session.uuid)
 
 

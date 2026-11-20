@@ -1,0 +1,541 @@
+{
+  "schema": "modulearn.unit.v2",
+  "unit": {
+    "opens_at": null,
+    "time_limit_seconds": 0,
+    "closes_at": null,
+    "name": "Java Pre-Test",
+    "title": "Java Pre-Test",
+    "description": "Please attempt all 10 questions in order. Avoid revisiting questions unless you think you made a mistake. You will not be penalized for wrong answers. Answer without seeking extra help and do your best. Your answers and attempts are saved as you submit each activity.",
+    "order": 20,
+    "is_visible": true,
+    "is_locked": false,
+    "unlock_rule": {},
+    "modules": [
+      {
+        "name": "01 · Decisions",
+        "title": "01 · Decisions",
+        "description": "Tracing · Java Pre-Test",
+        "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_if&act=Decisions&sub=pretest_qj_if&svc=pretest&trace=false",
+        "content_url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_if&act=Decisions&sub=pretest_qj_if&svc=pretest&trace=false",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Tracing",
+        "resource_id": "Tracing",
+        "provider_id": "quizjet",
+        "platform_name": "Tracing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 10,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": false,
+        "allow_resubmission": true,
+        "unlock_rule": {},
+        "content_data": {
+          "provider_id": "quizjet",
+          "resource_id": "quizjet",
+          "display_type_label": "Tracing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_qj_if",
+            "position": 1,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m0"
+      },
+      {
+        "name": "02 · While Loops",
+        "title": "02 · While Loops",
+        "description": "Tracing · Java Pre-Test",
+        "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_while&act=Loops_while&sub=pretest_qj_while&svc=pretest&trace=false",
+        "content_url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_while&act=Loops_while&sub=pretest_qj_while&svc=pretest&trace=false",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Tracing",
+        "resource_id": "Tracing",
+        "provider_id": "quizjet",
+        "platform_name": "Tracing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 20,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m0"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "quizjet",
+          "resource_id": "quizjet",
+          "display_type_label": "Tracing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_qj_while",
+            "position": 2,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m1"
+      },
+      {
+        "name": "03 · For Loops",
+        "title": "03 · For Loops",
+        "description": "Tracing · Java Pre-Test",
+        "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_for&act=Loops_for&sub=pretest_qj_for&svc=pretest&trace=false",
+        "content_url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_for&act=Loops_for&sub=pretest_qj_for&svc=pretest&trace=false",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Tracing",
+        "resource_id": "Tracing",
+        "provider_id": "quizjet",
+        "platform_name": "Tracing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 30,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m1"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "quizjet",
+          "resource_id": "quizjet",
+          "display_type_label": "Tracing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_qj_for",
+            "position": 3,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m2"
+      },
+      {
+        "name": "04 · Arrays",
+        "title": "04 · Arrays",
+        "description": "Tracing · Java Pre-Test",
+        "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_array&act=Arrays&sub=pretest_qj_array&svc=pretest&trace=false",
+        "content_url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_array&act=Arrays&sub=pretest_qj_array&svc=pretest&trace=false",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Tracing",
+        "resource_id": "Tracing",
+        "provider_id": "quizjet",
+        "platform_name": "Tracing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 40,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m2"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "quizjet",
+          "resource_id": "quizjet",
+          "display_type_label": "Tracing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_qj_array",
+            "position": 4,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m3"
+      },
+      {
+        "name": "05 · Two-dimensional Arrays",
+        "title": "05 · Two-dimensional Arrays",
+        "description": "Tracing · Java Pre-Test",
+        "url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_2darray&act=Two-dimensional_Arrays&sub=pretest_qj_2darray&svc=pretest&trace=false",
+        "content_url": "https://adapt2.sis.pitt.edu/quizjet/displayQuiz.jsp?rdfID=pretest_qj_2darray&act=Two-dimensional_Arrays&sub=pretest_qj_2darray&svc=pretest&trace=false",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Tracing",
+        "resource_id": "Tracing",
+        "provider_id": "quizjet",
+        "platform_name": "Tracing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 50,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m3"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "quizjet",
+          "resource_id": "quizjet",
+          "display_type_label": "Tracing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_qj_2darray",
+            "position": 5,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m4"
+      },
+      {
+        "name": "06 · Boolean Expressions",
+        "title": "06 · Boolean Expressions",
+        "description": "Code Writing · Java Pre-Test",
+        "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/378/embed?act=PCRS&sub=pretest_boolean",
+        "content_url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/378/embed?act=PCRS&sub=pretest_boolean",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Code Writing",
+        "resource_id": "Code Writing",
+        "provider_id": "pcrs",
+        "platform_name": "Code Writing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 60,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m4"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "pcrs",
+          "resource_id": "pcrs",
+          "display_type_label": "Code Writing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_boolean",
+            "position": 6,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m5"
+      },
+      {
+        "name": "07 · Conditionals",
+        "title": "07 · Conditionals",
+        "description": "Code Writing · Java Pre-Test",
+        "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/381/embed?act=PCRS&sub=pretest_ifelse",
+        "content_url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/381/embed?act=PCRS&sub=pretest_ifelse",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Code Writing",
+        "resource_id": "Code Writing",
+        "provider_id": "pcrs",
+        "platform_name": "Code Writing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 70,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m5"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "pcrs",
+          "resource_id": "pcrs",
+          "display_type_label": "Code Writing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_ifelse",
+            "position": 7,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m6"
+      },
+      {
+        "name": "08 · Arrays",
+        "title": "08 · Arrays",
+        "description": "Code Writing · Java Pre-Test",
+        "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/380/embed?act=PCRS&sub=pretest_array",
+        "content_url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/380/embed?act=PCRS&sub=pretest_array",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Code Writing",
+        "resource_id": "Code Writing",
+        "provider_id": "pcrs",
+        "platform_name": "Code Writing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 80,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m6"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "pcrs",
+          "resource_id": "pcrs",
+          "display_type_label": "Code Writing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_array",
+            "position": 8,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m7"
+      },
+      {
+        "name": "09 · Nested Loops",
+        "title": "09 · Nested Loops",
+        "description": "Code Writing · Java Pre-Test",
+        "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/379/embed?act=PCRS&sub=pretest_nested_for",
+        "content_url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/379/embed?act=PCRS&sub=pretest_nested_for",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Code Writing",
+        "resource_id": "Code Writing",
+        "provider_id": "pcrs",
+        "platform_name": "Code Writing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 90,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m7"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "pcrs",
+          "resource_id": "pcrs",
+          "display_type_label": "Code Writing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_nested_for",
+            "position": 9,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m8"
+      },
+      {
+        "name": "10 · Methods",
+        "title": "10 · Methods",
+        "description": "Code Writing · Java Pre-Test",
+        "url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/382/embed?act=PCRS&sub=pretest_method",
+        "content_url": "https://pcrs.utm.utoronto.ca/mgrids/problems/java/382/embed?act=PCRS&sub=pretest_method",
+        "module_type": "splice_smart_content",
+        "module_type_label": "Smart Learning Content",
+        "display_type_label": "Code Writing",
+        "resource_id": "Code Writing",
+        "provider_id": "pcrs",
+        "platform_name": "Code Writing",
+        "author_id": "Roya Hosseini / PAWS Lab",
+        "author": "Roya Hosseini / PAWS Lab",
+        "order": 100,
+        "is_visible": true,
+        "is_recommendation_only": false,
+        "is_graded": true,
+        "completion_rule": "submission",
+        "is_locked": true,
+        "allow_resubmission": true,
+        "unlock_rule": {
+          "mode": "all",
+          "conditions": [
+            {
+              "type": "module_completed",
+              "target_ref": "m8"
+            }
+          ]
+        },
+        "content_data": {
+          "provider_id": "pcrs",
+          "resource_id": "pcrs",
+          "display_type_label": "Code Writing",
+          "supported_protocols": [
+            "html"
+          ],
+          "legacy_assessment": {
+            "phase": "pretest",
+            "item_id": "pretest_method",
+            "position": 10,
+            "source_sha256": "bd916d6ef77e99d85a33f6d8db0c24b65b7a6ecec8edf70d9be600b5b9d30ae2"
+          }
+        },
+        "content_file": null,
+        "keywords": "",
+        "resource_link_id": null,
+        "supported_protocols": [
+          "html"
+        ],
+        "form": null,
+        "ref": "m9"
+      }
+    ]
+  },
+  "branch_rules": [],
+  "warnings": []
+}

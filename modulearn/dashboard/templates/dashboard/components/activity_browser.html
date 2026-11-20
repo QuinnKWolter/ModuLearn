@@ -1,0 +1,41 @@
+{% load ui_i18n %}
+<div class="activity-browser" id="activityBrowser">
+  <form class="activity-filters" id="activityFilters">
+    <input type="hidden" name="student"><input type="hidden" name="module"><input type="hidden" name="original">
+    <label class="activity-search">{% ui 'Search' %}<input name="q" type="search" class="form-control" placeholder="{% ui 'Student, activity, event, or source' %}" autocomplete="off"></label>
+    <label>{% ui 'Activity stream' %}<select name="context" class="form-select">
+      <option value="course">{% ui 'Course activity' %}</option>
+      <option value="practice">{% ui 'Recommendation practice' %}</option>
+      <option value="access">{% ui 'Access logs' %}</option>
+    </select></label>
+    <label>{% ui 'Event' %}<select name="event" class="form-select"><option value="">{% ui 'All events' %}</option></select></label>
+    <label>{% ui 'From (UTC)' %}<input name="from" type="date" class="form-control"></label>
+    <label>{% ui 'Through (UTC)' %}<input name="to" type="date" class="form-control"></label>
+    <button type="reset" class="btn btn-outline-secondary" title="{% ui 'Reset filters' %}">{% ui 'Reset' %}</button>
+  </form>
+  <div id="activityLinkedFilter" hidden><span data-no-ui-translate></span> <button type="button" class="btn btn-outline-secondary">{% ui 'Reset filters' %}</button></div>
+  <div class="activity-downloads">
+    <button type="button" class="btn btn-outline-secondary" data-export="filtered"><i class="bi bi-download" aria-hidden="true"></i> {% ui 'Download filtered CSV' %}</button>
+    <button type="button" class="btn btn-outline-secondary" data-export="all">{% ui 'Download all interactions' %}</button>
+    <span id="activityExportStatus" role="status"></span>
+    <a id="activityExportLink" class="btn btn-primary" hidden>{% ui 'Save CSV' %}</a>
+  </div>
+  <details class="activity-practice-links">
+    <summary>{% ui 'Recommendations and practice' %}</summary>
+    <p>{% ui 'Practice events remain separate from course credit. Review assignments, unvisited recommendations, and feedback, or filter this list to practice events.' %}</p>
+    <button type="button" class="btn btn-outline-secondary" id="activityShowPractice">{% ui 'Show practice events' %}</button>
+    <a id="activityPracticeLink" class="btn btn-outline-secondary">{% ui 'Assignments and feedback' %} ↗</a>
+    <button type="button" class="btn btn-outline-secondary" data-export="summary">{% ui 'Download practice summary' %}</button>
+  </details>
+  <p id="activityStatus" role="status" aria-live="polite"></p>
+  <div class="activity-table-scroll" tabindex="0" aria-label="{% ui 'Activity' %}">
+    <table class="activity-table"><thead><tr>
+      <th>{% ui 'Time' %}</th><th>{% ui 'Student' %}</th><th>{% ui 'Activity' %}</th>
+      <th>{% ui 'Event' %}</th><th>{% ui 'Progress' %}</th><th>{% ui 'Score' %}</th><th>{% ui 'Details' %}</th>
+    </tr></thead><tbody id="activityRows"></tbody></table>
+  </div>
+  <div class="activity-page-controls"><button id="activityPrevious" type="button" class="btn btn-outline-secondary">{% ui 'Previous' %}</button>
+    <span id="activityPage" role="status"></span><button id="activityNext" type="button" class="btn btn-outline-secondary">{% ui 'Next' %}</button>
+    <button id="activityRefresh" type="button" class="btn btn-outline-secondary">{% ui 'Refresh' %}</button>
+  </div>
+</div>

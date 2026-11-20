@@ -1,0 +1,44 @@
+.study-prose pre {white-space:pre-wrap;overflow:auto;padding:.8rem;background:#94a3b81a;border-radius:.4rem}
+  .study-prose code {font-family:monospace}
+  .study-prose ul {list-style:disc;padding-left:1.5rem}
+  .study-prose h2,.study-prose h3,.study-prose h4 {font-weight:750;margin:.7rem 0}
+  .student-question legend .study-prose > :is(p,div):only-child {display:inline}
+  .participant-form .module-page-title {font-size:clamp(1.5rem,3vw,2.1rem)}
+  .participant-form .module-page-card-header {padding:1.25rem 1.5rem}
+  .participant-form .module-page-card-body {padding:1.5rem}
+  .student-form-stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .student-question {
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .dark .student-question {
+    border-color: rgba(71, 85, 105, 0.7);
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  .choice-stack {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .choice-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.6rem;
+    padding: 0.65rem 0.75rem;
+    background: #f8fafc;
+  }
+
+  .dark .choice-chip {
+    border-color: rgba(71, 85, 105, 0.65);
+    background: rgba(30, 41, 59, 0.65);
+  }

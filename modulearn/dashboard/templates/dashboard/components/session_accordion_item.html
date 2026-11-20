@@ -101,11 +101,12 @@
                 data-bs-toggle="modal"
                 data-bs-target="#sessionActivityModal"
                 data-session-activity-button
-                data-session-activity-script="{{ course_instance.activity_script_id }}"
+                data-activity-url="{% url 'dashboard:activity_events' course_instance.id %}"
+                data-export-url="{% url 'dashboard:activity_prepare' course_instance.id %}"
+                data-practice-url="{% url 'courses:recommendation_logs' course_instance.id %}"
                 data-session-title="{{ course_instance.course.title }} - {{ course_instance.group_name }}"
-                data-session-activity-count="{{ course_instance.recent_activity_modal|length }}"
-                aria-label="{% ui "Recent Activity" %}">
-          <i class="bi bi-activity" aria-hidden="true"></i><span class="session-action-label">{% ui "Recent Activity" %}</span>
+                aria-label="{% ui "Activity" %}">
+          <i class="bi bi-activity" aria-hidden="true"></i><span class="session-action-label">{% ui "Activity" %}</span>
         </button>
         {% if not enrolled %}
         <button class="btn btn-outline-delete session-action-btn is-delete delete-session-btn"
@@ -119,7 +120,6 @@
         </button>
         {% endif %}
       </div>
-      {{ course_instance.recent_activity_modal|json_script:course_instance.activity_script_id }}
 
     </div>
   </div>

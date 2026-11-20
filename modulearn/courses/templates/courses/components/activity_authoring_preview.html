@@ -1,0 +1,13 @@
+{% load ui_i18n study_text %}
+<article class="activity-preview-document" data-no-ui-translate>
+  {% if module.title %}<h1 class="module-page-title">{{ module.title }}</h1>{% endif %}
+  {% if module.description %}<div class="study-prose activity-preview-description">{{ module.description|study_markdown }}</div>{% endif %}
+  {% if is_form %}
+    {% include 'courses/components/form_instructions.html' %}
+    <div class="student-form-stack">
+      {% include 'courses/components/form_questions.html' %}
+    </div>
+  {% else %}
+    <p class="activity-preview-note">{% ui "This preview shows authored text. External activities and files are opened separately." %}</p>
+  {% endif %}
+</article>

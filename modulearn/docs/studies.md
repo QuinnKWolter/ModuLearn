@@ -1,6 +1,6 @@
 # Study authoring, rehearsal, and participant flow
 
-Requirement and acceptance map for Gillian's October 19–27 email chain and the remediation-study preregistration supplied October 28, 2026. Platform features are separate from unpublished content and experimental decisions.
+Requirement and acceptance map for Gillian's October–November email chains and the remediation-study preregistration. Updated November 16, 2026. Platform features are separate from unpublished content and experimental decisions.
 
 ## Requirements and resolution conditions
 
@@ -13,7 +13,7 @@ Requirement and acceptance map for Gillian's October 19–27 email chain and the
 | Straight to consent | Entry → resume → first visible main activity | Approved consent is first; no dashboard or course chooser intervenes. |
 | Remove Back to Course / distractions | Guided player, form shell and central access policy | No course navbar, ordinary recommendations or arbitrary Next Activity. Copied activity URLs cannot skip the current step. |
 | Correctness-driven routing | Provider adapters → canonical progress events → Adaptive Branching → study cursor | Cupcake scored attempts now reach branching. Incorrect → first matching condition rule → remediation → original. Correct → matching success rule or next main activity. Never infer correctness from visible output. |
-| Three intervention conditions | Failure rules scoped to practice/similar/matched | Same main sequence; only assigned remediation. Practice returns after one scored submission, examples after reported completion. Further original mistakes repeat intervention; researchers must confirm that policy. |
+| Three intervention conditions | Failure rules scoped to practice/similar/matched | Same main sequence; only assigned remediation. Practice returns after one scored submission and Next; examples allow an explicit Next acknowledgment without requiring a score. Further original mistakes repeat intervention; researchers must confirm that policy. |
 | Scroll content editor | Activity Builder flex-body/textarea overflow | Long modal bodies and textareas scroll within viewport. |
 | Markdown / rich text | `study_text.study_markdown`, form renderer | Bold, italic, inline/fenced code, headings, bullets. Raw HTML escaped. Deliberately limited Markdown, not arbitrary HTML or a full rich-text editor. |
 | Timed sections | `Unit.time_limit_seconds`, persisted `ParticipantSession.flow_state` deadlines | Starts on first launch, survives refresh, continues through remediation. Expiry advances sections without fabricated completion/grades; late grade-changing events are rejected and logged separately. |
@@ -54,7 +54,7 @@ python manage.py build_study_preview_lab --teacher RITEL_DEMO_Teacher
 
 The command prints the setup URL and retains an existing lab on repeat runs. It never changes account passwords. The recruitment-disabled lab has consent/baseline placeholders, illustrative Q01/Q09, three remediation paths, post-session placeholder, a 60-second final-test demonstration and debrief. Forms substitute for unpublished providers and do not execute Python; use branch simulation to test correctness routing.
 
-Deploy code/image, migrations and collected static assets using the normal deployment flow. No SSH, additional service, provider secret or production data repair is required. Existing courses and existing studies default to their previous behavior.
+Deploy code/image, migrations and collected static assets using the normal deployment flow. No SSH, additional service, provider secret or production data repair is required. Ordinary courses keep their existing navigation. Migration recruitment.0009 enables participant-paced Next by default for guided studies; the researcher can configure pacing and original-problem retries before participant data exists.
 
 ## Question-bank audit and outstanding study materials
 
@@ -62,13 +62,13 @@ Reference outputs (line breaks shown as `/`): Q01 `18`; Q02 `60`; Q03 `14`; **Q0
 
 Q04's output cell says `15`, but Python 3 prints `15.0`; its explanation is already correct. Fix the provider's expected output. Q16's knowledge-component label mentions two if/else blocks, but the second has no else; prompt, code and output agree.
 
-Still needed: final eight IDs and all remediation pairings; published Cupcake/WEAT URLs or actual authoring files; approved consent/debrief; `indices.docx`; final transfer questions and `rubric.docx`; section durations; confirmation of repeated-failure/remediation stopping policy. The 30-minute participation estimate does not specify section limits.
+For the current November package, activity IDs, pairings, and URLs are wired. Still needed: approved consent/debrief and survey instruments, review of test feedback and the revised four-item post-test, section durations if any, and confirmation of the repeated-failure/remediation stopping policy. The 30-minute participation estimate does not specify section limits.
 
 ## Verification
 
 `recruitment.tests.test_study_studio` covers condition routing, return, skipping, late callbacks, timers, hidden content, completion/access guards, simulation isolation, clones, Markdown and randomization. Existing recruitment/Cupcake suites provide regression checks. Browser rehearsals exercise desktop/mobile setup and participant navigation. Unpublished providers still need an actual activity pilot.
 
-## Eight-problem experiment template
+## Earlier eight-problem experiment template (superseded mapping)
 
 Share/import `exports/python-remediation-study-template.json` using **Manage Studies → Create Study → Optional Template JSON** (the study importer, not course/unit import). This is a draft configuration template, not approved participant materials. It contains seven units, 38 activities and 24 condition-specific failure branches. Independent random assignment is configured; Prolific recruitment is disabled and completion codes are empty.
 
@@ -85,3 +85,25 @@ The main sequence is consent → baseline measures/pretest → eight learning pr
 ### Published material mapping (2026-10-29)
 
 Quinn approved Q09–Q16 as the eight main activities, paired in order with M01–M04 and H01–H04 for additional practice. The distributed JSON now contains these 16 published Cupcake SPLICE URLs and catalog identities. The other 12 variants are documented as reserves, not assigned to the baseline or transfer test. See `exports/python-remediation-study-mapping.md` for the complete inventory and comparison caveats. All 16 worked-example targets remain connected placeholders pending real WEAT/example URLs. The template is not ready for recruitment until these and the remaining approved instruments are provided and tested.
+
+
+## November lab package and feedback fixes
+
+Use `exports/gillian-lab-study-2026-11-16.json` for the current study; its companion guide contains the final mapping, production steps, remaining draft instruments, and verification scope. It has 44 activities, 24 branches, the eight selected learning pairs, and the supplied real coding/worked-example URLs. The repeated diagram pairs occur once. Each intervention returns to the original problem, as Quinn confirmed November 16.
+
+| November request | Implementation and acceptance |
+| --- | --- |
+| Keep submission feedback until Next | `Study.participant_paced` stores a pending server-owned transition. Access stays on the submitted activity; Next applies it. Paired completion events cannot overwrite it. Timed-section expiry still takes precedence. |
+| Participant-controlled examples | `content_data.study_allow_next` permits explicit review completion after launch without inventing a score. Enabled for all 16 example placements in this package. |
+| Remove retry later | `Study.retry_after_remediation` chooses original retry versus following main problem. Both flags round-trip in study JSON. |
+| Unwieldy Flow Mapper | Drag-to-pan canvas, Ctrl/⌘+wheel zoom, zoom buttons, Fit Map, Actual Size and Focus Selection. Search/condition filters and selected-path inspection limit clutter. Desktop keeps a compact connection inspector beside the map; mobile stacks them. Navigation does not change activity order or rules. |
+| Edit existing connections | Edit Connection exposes source, target, trigger and score threshold; condition, priority, active and deletion controls remain available. Diagram and summaries update before saving. Server validation saves the rule set atomically. |
+| Copy flows without rebuilding | Duplicate Connection fills the Add Connection builder for adjustment; it saves only when Add Connection is selected. Copy Connections Between Conditions in Study Setup copies a condition's full rules. Duplicate Study and template import/export copy the entire protocol; there is no arbitrary graph clipboard. |
+| What reuse means | Condition copies add independent connections **to the same activities**, in the chosen destination condition. Existing destination rules remain. Repeated exact copies are skipped; distinct thresholds/priorities remain distinct. Later edits to the source are not inherited. The mapper links directly to this section in Study Setup. |
+| Markdown above forms | Activity Description, instructions and completion text use the shared safe Markdown renderer. Description and form-content authoring use the reusable in-field editor. |
+| Preview without leaving editing | Activity Preview is at the top of each expanded activity (and the new-activity wizard footer). One themed, keyboard-accessible modal combines unsaved description, instructions, questions and continuation text with the participant templates. Preview inputs never save responses. External activities must still be launched separately. |
+| Time without expiration | Each transition records visit start and elapsed seconds including feedback review, even with section seconds set to zero. Existing launch/focus/blur/provider events remain available. Duration is elapsed time, not attention. |
+
+`test_participant_pacing` and `test_gillian_package` exercise pacing, retries, acknowledgments, timeout precedence, stale requests, safe preview, atomic connection edits, and every packaged intervention path across all three conditions. The old template tests explicitly retain automatic-navigation coverage.
+
+Mapper keyboard controls: focus the canvas, then use `+`/`-`, `0` (actual size), or `F` (fit); arrow keys scroll. Space+drag or middle-button drag also pans. Click an activity to inspect its connections, or explicitly enable Connect Activities to choose a source and target. Clear Selection returns to all matching rules. Escape closes the modal and restores focus. Canvas zoom/position persist while reopening or saving within the page.

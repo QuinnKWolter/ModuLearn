@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load ui_i18n %}
-{% load study_text %}
+{% load study_text static %}
 
 {% block title %}{{ module.title }} {% ui "- ModuLearn" %}{% endblock %}
 
@@ -15,57 +15,12 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
-  .study-prose pre {white-space:pre-wrap;overflow:auto;padding:.8rem;background:#94a3b81a;border-radius:.4rem}
-  .study-prose code {font-family:monospace}
-  .study-prose ul {list-style:disc;padding-left:1.5rem}
-  .study-prose h2,.study-prose h3,.study-prose h4 {font-weight:750;margin:.7rem 0}
-  .student-question legend .study-prose > div {display:inline}
-  .participant-form .module-page-title {font-size:clamp(1.5rem,3vw,2.1rem)}
-  .participant-form .module-page-card-header {padding:1.25rem 1.5rem}
-  .participant-form .module-page-card-body {padding:1.5rem}
-  .student-form-stack {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .student-question {
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.9);
-  }
-
-  .dark .student-question {
-    border-color: rgba(71, 85, 105, 0.7);
-    background: rgba(15, 23, 42, 0.5);
-  }
-
-  .choice-stack {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .choice-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 0.6rem;
-    padding: 0.65rem 0.75rem;
-    background: #f8fafc;
-  }
-
-  .dark .choice-chip {
-    border-color: rgba(71, 85, 105, 0.65);
-    background: rgba(30, 41, 59, 0.65);
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/form-activity.css' %}">
 {% endblock %}
 
 {% block content %}
   {% if not participant_mode %}
-    {% include 'includes/page_header.html' with eyebrow='Form / Survey' title=module.title description=module.description %}
+    {% include 'includes/page_header.html' with eyebrow='Form / Survey' title=module.title description=module.description markdown_description=True %}
   {% endif %}
 
   <div class="{% if participant_mode %}mx-auto max-w-3xl{% else %}grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)]{% endif %}">
@@ -74,16 +29,12 @@
         <div class="module-page-card-header">
           <h1 class="module-page-title" data-no-ui-translate>{{ module.title }}</h1>
           {% if module.description %}
-            <p class="module-page-description" data-no-ui-translate>{{ module.description }}</p>
+            <div class="module-page-description study-prose" data-no-ui-translate>{{ module.description|study_markdown }}</div>
           {% endif %}
         </div>
       {% endif %}
       <div class="{% if participant_mode %}module-page-card-body{% endif %}">
-      {% if module_form.instructions %}
-        <div class="study-prose shell-surface p-4 rounded-2xl mb-5 text-slate-700 dark:text-slate-200" data-no-ui-translate>
-          {{ module_form.instructions|study_markdown }}
-        </div>
-      {% endif %}
+      {% include 'courses/components/form_instructions.html' %}
 
       {% if existing_submission and not allows_resubmission %}
         <div class="empty-state">
@@ -93,64 +44,7 @@
       {% else %}
         <form method="post" class="student-form-stack" data-study-form="{{ module.id }}">
           {% csrf_token %}
-          {% for question in questions %}
-            <fieldset class="student-question" data-no-ui-translate>
-              <legend class="font-bold text-lg">
-                <span class="study-prose" data-no-ui-translate>{{ question.prompt|study_markdown }}</span>
-                {% if question.required %}<span class="text-red-500">*</span>{% endif %}
-              </legend>
-              {% if question.help_text %}
-                <div class="study-prose text-sm text-slate-500 dark:text-slate-300 mt-1">{{ question.help_text|study_markdown }}</div>
-              {% endif %}
-
-              <div class="mt-4">
-                {% if question.question_type == 'likert' %}
-                  <div class="grid gap-3 md:grid-cols-5">
-                    {% for value in '12345' %}
-                      <label class="choice-chip justify-center">
-                        <input type="radio" name="question_{{ question.id }}" value="{{ value }}" {% if question.required %}required{% endif %}>
-                        <span>{{ value }}</span>
-                      </label>
-                    {% endfor %}
-                  </div>
-                  <div class="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-300">
-                    <span>{{ question.likert_min_label }}</span>
-                    <span>{{ question.likert_max_label }}</span>
-                  </div>
-                {% elif question.question_type == 'single_choice' %}
-                  <div class="choice-stack">
-                    {% for option in question.options %}
-                      <label class="choice-chip">
-                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" {% if question.required %}required{% endif %}>
-                        <span>{{ option }}</span>
-                      </label>
-                    {% endfor %}
-                  </div>
-                {% elif question.question_type == 'multiple_choice' %}
-                  <div class="choice-stack">
-                    {% for option in question.options %}
-                      <label class="choice-chip">
-                        <input type="checkbox" name="question_{{ question.id }}" value="{{ option }}">
-                        <span>{{ option }}</span>
-                      </label>
-                    {% endfor %}
-                  </div>
-                {% elif question.question_type == 'long_answer' %}
-                  <textarea name="question_{{ question.id }}" rows="6" class="form-control" {% if question.required %}required{% endif %}></textarea>
-                {% else %}
-                  <input name="question_{{ question.id }}" class="form-control" {% if question.required %}required{% endif %}>
-                {% endif %}
-              </div>
-            </fieldset>
-          {% empty %}
-            {% if not participant_mode %}<div class="empty-state">{% ui "This form does not have any questions yet." %}</div>{% endif %}
-          {% endfor %}
-
-          {% if questions or participant_mode %}
-            <div class="flex justify-end">
-              <button type="submit" class="btn btn-primary btn-lg">{{ module_form.submit_button_label }}</button>
-            </div>
-          {% endif %}
+          {% include 'courses/components/form_questions.html' %}
           {% if is_instructor %}
             <div class="empty-state">{% ui "Instructor testing: your scores are saved separately and excluded from student analytics." %}</div>
           {% endif %}

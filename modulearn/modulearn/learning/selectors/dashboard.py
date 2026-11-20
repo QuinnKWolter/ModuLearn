@@ -10,7 +10,7 @@ from modulearn.integrations.course_authoring import (
 )
 from modulearn.core.roles import get_user_role_snapshot
 
-from .timelines import get_course_instance_recent_activity, get_course_timeline_for_student, get_student_timeline
+from .timelines import get_course_timeline_for_student, get_student_timeline
 
 
 def build_student_dashboard_context(user):
@@ -74,9 +74,6 @@ def build_instructor_dashboard_context(user):
         else:
             instance.avg_progress = 0
             instance.avg_score = 0
-        instance.recent_activity_modal = get_course_instance_recent_activity(instance, limit=200, event_types=None)
-        instance.recent_activity = instance.recent_activity_modal[:5]
-        instance.activity_script_id = f"sessionActivityData-{instance.id}"
 
     sessions_by_course_id = {course.id: [] for course in courses}
     for instance in course_instances:

@@ -11,6 +11,7 @@ Course configuration changes must retain atomic saves, multipart uploads, CSRF, 
 ```bash
 npm ci
 npm run build:css
+npm run build:editor
 python manage.py collectstatic --noinput
 ```
 
@@ -67,7 +68,7 @@ a separate Spanish dictionary or replaces arbitrary prefixes. Mutation batches
 deduplicate changed subtrees, skip authored/code regions, and cache text lookups.
 English does not start an observer or download a duplicate catalog. Only the
 selected language is embedded, so adding languages does not multiply page weight.
-At the November 2026 review, the 2,070-message translated catalogs are roughly
+At the November 2026 review, the 2,093-message translated catalogs are roughly
 150–175 KB uncompressed (about 50 KB compressed). Template rendering and catalog
 lookup make no external translation requests. The normal deployment must publish
 changed JS/CSS and restart workers to refresh their cached catalogs.
@@ -146,3 +147,9 @@ Documentation cleanup is not a security repair. Preserve these actionable findin
 ## Documentation and artifact policy
 
 Keep one maintained guide per area, linked from [README](../README.md). Update existing sections rather than adding dated fix reports, speculative designs or generated file maps. Keep public deployment packages, schemas, test fixtures and certificate provenance; put disposable captures/logs in ignored scratch space. Do not use blanket JSON/TXT deletion: translations, package locks and replay fixtures are functional inputs.
+
+The in-field Markdown browser regression checks run with `python tests/browser/test_markdown_editor.py` from `modulearn/` (development-only Playwright and Chrome required). They need no server or accounts and cover list continuation, nesting, table rendering, checklist editing, source preservation, undo and unsafe markup. Server renderer coverage is in `courses.test_study_markdown`. Rebuild the committed editor bundle and license notices with `npm run build:editor` after changing its source or dependencies.
+
+Reusable Markdown fields: include `includes/markdown_editor_assets.html` once on an authoring page, and add `data-markdown-editor` to a named textarea. The shared `markdown-field.js` component enhances visible fields lazily and handles dynamically inserted fields, labels, validation, reset and input events. It does not require the preview endpoint. `ModuLearnMarkdownField.mount(textarea)` also opts in a field and returns `focus()`, `sync()` and `destroy()`; destroying restores the native textarea. Keep `maxlength`, labels and form names on the original field. The editor and toolbar use `markdown-field.css`; form-builder-specific behavior stays in `form-authoring.js`.
+
+Flow Mapper viewport regressions: `python tests/browser/test_flow_viewport.py` (Playwright + Chrome; no server/accounts). These cover anchored zoom, drag panning, fit/focus, view preservation on remount and modal keyboard focus. `flow-viewport.js` owns only view navigation; the configuration form still owns rules, validation and persistence. Never use canvas position as activity sequence data.

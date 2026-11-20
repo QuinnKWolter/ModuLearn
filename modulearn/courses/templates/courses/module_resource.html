@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load ui_i18n %}
+{% load ui_i18n study_text %}
 
 {% block title %}{{ module.title }} {% ui "- ModuLearn" %}{% endblock %}
 
@@ -15,7 +15,7 @@
 
 {% block content %}
   {% if not participant_mode %}
-    {% include 'includes/page_header.html' with eyebrow=module.display_type_label title=module.title description=module.description %}
+    {% include 'includes/page_header.html' with eyebrow=module.display_type_label title=module.title description=module.description markdown_description=True %}
   {% endif %}
 
   <div class="{% if participant_mode %}mx-auto max-w-5xl{% else %}grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]{% endif %}">
@@ -25,7 +25,7 @@
           <div class="module-page-eyebrow">{{ module.display_type_label }}</div>
           <h1 class="module-page-title" data-no-ui-translate>{{ module.title }}</h1>
           {% if module.description %}
-            <p class="module-page-description" data-no-ui-translate>{{ module.description }}</p>
+            <div class="module-page-description study-prose" data-no-ui-translate>{{ module.description|study_markdown }}</div>
           {% endif %}
         </div>
       {% endif %}
@@ -85,7 +85,7 @@
   </div>
 
   <div class="module-next-action-row">
-      {% if study_player %}<form method="post" action="{{ study_player.continue_url }}">{% csrf_token %}<button class="btn btn-primary">{% ui "Continue" %}</button></form>{% else %}
+      {% if not study_player %}
     {% include 'courses/components/next_module_button.html' with button_class='btn-lg' %}
       {% endif %}
   </div>

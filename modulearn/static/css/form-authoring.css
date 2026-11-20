@@ -1,0 +1,35 @@
+/* A quiet document editor: one question open, a flat outline, in-field Markdown. */
+.cfg-shell, .cfg-unit-stage, .cfg-field-grid { min-width: 0; }
+.cfg-form-content-panel, .dark .cfg-form-content-panel { background: transparent; border: 0; border-top: 1px solid var(--color-border); border-radius: 0; padding: 1.25rem 0 0; }
+.cfg-form-content-head { margin-bottom: 1rem; }
+.cfg-authoring-tools { display: flex; gap: .5rem; flex-wrap: wrap; }
+.cfg-authoring-tools [hidden] { display: none; }
+.cfg-form-introduction { display: grid; gap: .75rem; }
+.cfg-submit-label { display: flex; gap: .75rem; align-items: center; font-size: .85rem; }
+.cfg-submit-label input { max-width: 15rem; }
+.cfg-question-list, #questionBuilder { gap: 0; border-top: 1px solid var(--color-border); margin-top: 1rem; }
+.cfg-question-item, .dark .cfg-question-item { border: 0; border-bottom: 1px solid var(--color-border); border-radius: 0; background: transparent; overflow: visible; }
+.cfg-question-summary { padding: .85rem .25rem; }
+.cfg-question-summary:hover { background: var(--color-accent-soft); }
+.cfg-question-summary strong { font-size: .95rem; font-weight: 600; }
+.cfg-question-item[open] > .cfg-question-summary { color: var(--color-ink); box-shadow: inset 3px 0 var(--color-accent); padding-left: .75rem; }
+.cfg-question-type-badge { border-radius: .2rem; background: transparent; color: var(--color-ink-soft); font-size: .75rem; font-weight: 500; }
+.cfg-question-item > .cfg-question-body { padding: 1rem .25rem 1.25rem; gap: .75rem; border: 0; }
+.cfg-question-properties { display: grid; grid-template-columns: 5rem minmax(0,1fr); gap: .75rem; }
+.cfg-question-properties .cfg-prompt-field { grid-column: 1/-1; grid-row: 2; }
+.cfg-question-properties > label:last-child { grid-column: 2; grid-row: 1; }
+.cfg-inline-question { border-top: 1px solid var(--color-border); margin-top: .5rem; }
+.cfg-inline-question > summary { padding: .8rem .25rem; cursor: pointer; font-weight: 650; color: var(--color-accent); }
+.cfg-inline-question > .cfg-question-body { padding: .75rem 0; }
+.cfg-form-content-panel .stat-kicker { font-size: .75rem; letter-spacing: .02em; text-transform: none; }
+.cfg-form-content-panel .form-control, .cfg-question-body .form-control { border-radius: .3rem; font-size: .95rem; background: var(--color-surface-strong); color: var(--color-ink); }
+.cfg-question-hint > summary { font-size: .85rem; color: var(--color-ink-soft); cursor: pointer; padding: .35rem 0; }
+
+
+
+
+
+
+
+
+@media(max-width:700px) { .cfg-submit-label { align-items: start; flex-direction: column; gap: .35rem; } }

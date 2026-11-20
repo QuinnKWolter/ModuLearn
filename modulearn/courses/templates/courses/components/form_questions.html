@@ -1,0 +1,59 @@
+{% load ui_i18n study_text %}
+          {% for question in questions %}
+            <fieldset class="student-question" data-no-ui-translate>
+              <legend class="font-bold text-lg" id="question_prompt_{{ question.id }}">
+                <span class="study-prose" data-no-ui-translate>{{ question.prompt|study_markdown }}</span>
+                {% if question.required %}<span class="text-red-500">*</span>{% endif %}
+              </legend>
+              {% if question.help_text %}
+                <div class="study-prose text-sm text-slate-500 dark:text-slate-300 mt-1">{{ question.help_text|study_markdown }}</div>
+              {% endif %}
+
+              <div class="mt-4">
+                {% if question.question_type == 'likert' %}
+                  <div class="grid gap-3 md:grid-cols-5">
+                    {% for value in '12345' %}
+                      <label class="choice-chip justify-center">
+                        <input type="radio" name="question_{{ question.id }}" value="{{ value }}" {% if question.required %}required{% endif %}>
+                        <span>{{ value }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                  <div class="mt-2 flex justify-between text-xs text-slate-500 dark:text-slate-300">
+                    <span>{{ question.likert_min_label }}</span>
+                    <span>{{ question.likert_max_label }}</span>
+                  </div>
+                {% elif question.question_type == 'single_choice' %}
+                  <div class="choice-stack">
+                    {% for option in question.options %}
+                      <label class="choice-chip">
+                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" {% if question.required %}required{% endif %}>
+                        <span>{{ option }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                {% elif question.question_type == 'multiple_choice' %}
+                  <div class="choice-stack">
+                    {% for option in question.options %}
+                      <label class="choice-chip">
+                        <input type="checkbox" name="question_{{ question.id }}" value="{{ option }}">
+                        <span>{{ option }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                {% elif question.question_type == 'long_answer' %}
+                  <textarea name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" rows="6" class="form-control" {% if question.required %}required{% endif %}></textarea>
+                {% else %}
+                  <input name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" class="form-control" {% if question.required %}required{% endif %}>
+                {% endif %}
+              </div>
+            </fieldset>
+          {% empty %}
+            {% if not participant_mode %}<div class="empty-state">{% ui "This form does not have any questions yet." %}</div>{% endif %}
+          {% endfor %}
+
+          {% if questions or participant_mode %}
+            <div class="flex justify-end">
+              <button type="{% if preview_only %}button{% else %}submit{% endif %}" class="btn btn-primary btn-lg">{{ module_form.submit_button_label }}</button>
+            </div>
+          {% endif %}

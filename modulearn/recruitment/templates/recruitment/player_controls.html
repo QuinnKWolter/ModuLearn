@@ -17,6 +17,14 @@
 {% endif %}
 {% endif %}
 {% if study_player %}
+<form class="study-next" method="post" action="{{ study_player.continue_url }}" data-study-next hidden>
+  {% csrf_token %}<input type="hidden" name="activity_id"><button type="submit" class="btn btn-primary">{% ui 'Next' %} <span aria-hidden="true">→</span></button>
+</form>
+<style>
+.study-next{position:fixed;bottom:max(1rem,env(safe-area-inset-bottom));right:max(1rem,env(safe-area-inset-right));z-index:1000;margin:0}
+.study-next[hidden]{display:none}.study-next button{min-width:7rem;padding:.7rem 1.3rem;font-size:1rem;box-shadow:0 3px 16px #0003}
+body:has(.study-next:not([hidden])){padding-bottom:4.5rem}
+</style>
 {{ study_player|json_script:'study-player-config' }}
 <script defer src="{% static 'js/study-player.js' %}"></script>
 {% endif %}

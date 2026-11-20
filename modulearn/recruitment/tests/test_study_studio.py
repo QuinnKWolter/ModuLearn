@@ -23,6 +23,9 @@ class StudyStudioTests(TestCase):
         self.teacher = User.objects.create_user(username='researcher', password='pass', is_instructor=True)
         self.student = User.objects.create_user(username='participant', is_student=True, is_anonymous_participant=True)
         self.study = create_study_for_instructor(self.teacher, title='Study', condition_labels='practice,similar,matched')
+        # These tests retain coverage of optional automatic progression.
+        self.study.participant_paced = False
+        self.study.save(update_fields=['participant_paced'])
         self.course = self.study.course_instance.course
         self.course.units.all().delete()
         self.unit = Unit.objects.create(course=self.course, title='Learning', order=10)

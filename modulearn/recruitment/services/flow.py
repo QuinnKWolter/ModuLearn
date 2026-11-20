@@ -50,6 +50,10 @@ def _main_modules(session, modules):
 
 def _transition(session, state, target, reason, event=None):
     before = state.get('current')
+    started = parse_datetime(state.get('visit_started_at', ''))
+    elapsed = max(0, (timezone.now() - started).total_seconds()) if started else None
+    state.pop('pending_transition', None)
+    state.pop('visit_started_at', None)
     state['current'] = target.id if target else None
     state['finished'] = target is None
     # Separate audit rows, not an ever-growing JSON history on the session.
@@ -63,13 +67,56 @@ def _transition(session, state, target, reason, event=None):
                 event_type='study_transition', source='study_flow',
                 progress=progress.progress, score=progress.score, success=progress.success,
                 payload={'from': before, 'to': state['current'], 'reason': reason,
+                         'elapsed_seconds': elapsed, 'visit_started_at': started.isoformat() if started else None,
                          'trigger_event_id': event.id if event else None})
+
+
+def _route(session, state, target, reason, event, return_to=None):
+    """Keep access to the current activity while its feedback is being reviewed."""
+    if session.recruitment_source.study.participant_paced and event.module.module_type not in Module.FORM_LIKE_TYPES:
+        state['pending_transition'] = {'from': event.module_id, 'to': target.id if target else None,
+            'reason': reason, 'event_id': event.pk, 'return_to': return_to}
+    else:
+        state.pop('return_to', None)
+        if return_to:
+            state['return_to'] = return_to
+        _transition(session, state, target, reason, event)
+
+
+def can_acknowledge(activity):
+    if not activity:
+        return False
+    return activity.module_type in {Module.MODULE_TYPE_FILE, Module.MODULE_TYPE_EXTERNAL_LINK} or (
+        activity.module_type in {Module.MODULE_TYPE_SPLICE_SMART_CONTENT, Module.MODULE_TYPE_IMPORTED} and
+        (activity.content_data or {}).get('study_allow_next') is True)
+
+
+@transaction.atomic
+def advance_pending(session, activity_id):
+    session = ParticipantSession.objects.select_for_update().get(pk=session.pk)
+    current, _ = current_activity(session)
+    session.refresh_from_db(fields=['flow_state'])
+    state = deepcopy(session.flow_state)
+    pending = state.get('pending_transition')
+    if not current or current.pk != activity_id or not pending or pending['from'] != activity_id:
+        return False
+    modules = {m.pk: m for m in _modules(session)}
+    if pending['to'] is not None and pending['to'] not in modules:
+        return False
+    state.pop('return_to', None)
+    if pending.get('return_to'):
+        state['return_to'] = pending['return_to']
+    event = ModuleProgressEvent.objects.filter(pk=pending['event_id'], study_participant_session=session).first()
+    _transition(session, state, modules.get(pending['to']), pending['reason'], event)
+    session.flow_state = state
+    session.save(update_fields=['flow_state'])
+    return True
 
 
 def _next(session, modules, current):
     main = _main_modules(session, modules)
     ids = [m.id for m in main]
-    if current.id not in ids:
+    if not current or current.id not in ids:
         return None
     index = ids.index(current.id) + 1
     return main[index] if index < len(main) else None
@@ -105,6 +152,8 @@ def current_activity(session, *, start_timer=False):
         _transition(session, state, later[0] if later else None, 'section_timeout')
         current = by_id.get(state.get('current'))
     state['expired_units'] = sorted(expired_units)
+    if start_timer and current:
+        state.setdefault('visit_started_at', timezone.now().isoformat())
     if start_timer and current and current.unit.time_limit_seconds:
         deadlines.setdefault(str(current.unit_id), (timezone.now() + timedelta(
             seconds=current.unit.time_limit_seconds)).isoformat())
@@ -127,6 +176,8 @@ def handle_study_event(event):
     session = ParticipantSession.objects.select_for_update(of=('self',)).select_related(
         'recruitment_source__study', 'enrollment__course_instance').get(pk=session.pk)
     state = dict(session.flow_state)
+    if state.get('pending_transition') and event.event_type not in {'attempt', 'outcome'}:
+        return  # Paired completion callbacks must not overwrite the submission's branch.
     if event.event_type == 'progress' and not (state.get('return_to') and event.progress >= 1):
         return
     if event.id <= state.get('last_event_id', 0):
@@ -138,10 +189,11 @@ def handle_study_event(event):
     by_id = {m.id: m for m in modules}
     if state.get('return_to'):
         # A practice submission, correct or incorrect, ends this remediation visit.
-        target = by_id.get(state.pop('return_to'))
-        _transition(session, state, target, 'return_from_remediation', event)
+        origin = by_id.get(state['return_to'])
+        target = origin if session.recruitment_source.study.retry_after_remediation else _next(session, modules, origin)
+        _route(session, state, target, 'return_from_remediation', event)
         # A completion emitted alongside this attempt belongs to the same visit.
-    elif event.success or event.event_type == 'completion':
+    elif event.success or event.event_type == 'completion' or current.completion_rule == Module.COMPLETION_SUBMISSION:
         target = _next(session, modules, current)
         from modulearn.learning.services.adaptive_branching import _rule_matches
         course = session.recruitment_source.resolved_course_instance.course
@@ -152,8 +204,9 @@ def handle_study_event(event):
                 and _rule_matches(r, event, event.module_progress, session.enrollment)), None)
             if rule:
                 target = by_id[rule.target_module_id]
-        _transition(session, state, target, 'correct_or_complete', event)
+        _route(session, state, target, 'correct_or_complete', event)
     else:
+        state.pop('pending_transition', None)
         from modulearn.learning.services.adaptive_branching import _rule_matches
         course = session.recruitment_source.resolved_course_instance.course
         if is_course_plugin_enabled(course, 'adaptive_branching'):
@@ -162,8 +215,7 @@ def handle_study_event(event):
             rule = next((r for r in rules if r.target_module_id in by_id and r.target_module_id != current.id
                 and _rule_matches(r, event, event.module_progress, session.enrollment)), None)
             if rule:
-                state['return_to'] = current.id
-                _transition(session, state, by_id[rule.target_module_id], 'incorrect_remediation', event)
+                _route(session, state, by_id[rule.target_module_id], 'incorrect_remediation', event, return_to=current.id)
     session.flow_state = state
     session.save(update_fields=['flow_state'])
 

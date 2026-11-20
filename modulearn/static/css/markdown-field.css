@@ -1,0 +1,48 @@
+.form-markdown { min-width: 0; border: 1px solid var(--color-border); border-radius: .35rem; overflow: hidden; font-weight: 400; }
+.form-markdown-toolbar { display: flex; flex-wrap: wrap; gap: .25rem; justify-content: space-between; align-items: center; padding: .35rem .65rem; background: var(--color-accent-soft); font-size: .75rem; color: var(--color-ink-soft); }
+.form-markdown-toolbar button { border: 0; border-radius: .2rem; padding: .2rem .4rem; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.form-markdown-toolbar button[aria-pressed=true] { color: var(--color-ink); background: var(--color-surface); }
+ .form-markdown-tools { display: flex; flex-wrap: wrap; gap: .2rem; }
+.form-markdown-toolbar .form-markdown-tools button { min-width: 1.8rem; font-size: .9rem; }
+.form-markdown-tools svg { width: 1.1rem; height: 1.1rem; display: inline-block; vertical-align: middle; }
+.form-format-bold { font-weight: 800 !important; }
+.form-format-italic { font-style: italic; }
+.form-format-strike { text-decoration: line-through; }
+.form-markdown-toolbar button:hover { background: var(--color-accent-soft); color: var(--color-ink); }
+.form-markdown [hidden] { display: none; }
+.form-markdown-editor { color: var(--color-ink); background: var(--color-surface-strong); }
+.form-markdown-editor .cm-editor { font: .95rem/1.65 var(--font-body, sans-serif); }
+.form-markdown-editor .cm-editor.cm-focused { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.form-markdown-editor .cm-scroller { font-family: inherit; max-height: 28rem; overflow: auto; }
+.form-markdown-editor .cm-content { min-height: 8rem; padding: .75rem; caret-color: var(--color-ink); }
+.form-markdown-editor .cm-line { padding: 0; }
+.form-markdown-editor .cm-cursor { border-left-color: var(--color-ink); }
+.form-markdown-editor .cm-placeholder { color: var(--color-ink-soft); }
+.form-markdown-editor .cm-md-bold { font-weight: 750; }
+.form-markdown-editor .cm-md-italic { font-style: italic; }
+.form-markdown-editor .cm-md-strike { text-decoration: line-through; }
+.form-markdown-editor .cm-md-link { color: var(--color-accent); text-decoration: underline; }
+.form-markdown-editor .cm-md-image { color: var(--color-ink-soft); }
+.form-markdown-editor .cm-md-marker { color: var(--color-accent); font-weight: 650; }
+.form-markdown-editor .cm-md-quote { border-left: 3px solid var(--color-accent); padding-left: .6rem; color: var(--color-ink-soft); }
+.form-markdown-editor .cm-md-task { appearance: none; border: 0; background: transparent; color: var(--color-accent); cursor: pointer; font-size: 1.15em; padding: 0 .2em; line-height: 1; }
+.form-markdown-editor .cm-md-table-source { font-family: ui-monospace, monospace; background: #94a3b81a; white-space: pre; }
+.form-markdown-editor .cm-md-rendered { cursor: text; margin: .5rem 0; white-space: normal; }
+.form-markdown-editor .cm-md-rendered table { margin: 0; }
+.form-markdown-editor .cm-md-rendered a { pointer-events: none; }
+.form-markdown-editor .cm-md-rendered img { max-height: 18rem; object-fit: contain; object-position: left; }
+.form-markdown-editor .cm-md-bullet { color: var(--color-accent); font-weight: 650; }
+.form-markdown-editor .cm-md-code { font-family: ui-monospace, monospace; background: #94a3b81a; border-radius: .15rem; }
+.form-markdown-editor .cm-md-heading { font-weight: 750; margin: .4rem 0; }
+.form-markdown-editor .cm-md-h1 { font-size: 1.35rem; }
+.form-markdown-editor .cm-md-h2 { font-size: 1.15rem; }
+.form-markdown-editor .cm-md-h3 { font-size: 1.05rem; }
+.form-markdown-editor .cm-md-syntax { opacity: .5; font-weight: 400; }
+.form-markdown-editor .cm-md-codeblock { font-family: ui-monospace, monospace; background: #94a3b81a; padding-inline: .5rem; }
+.form-markdown-editor .cm-md-fence { font-family: ui-monospace, monospace; color: var(--color-ink-soft); font-size: .8rem; }
+.form-markdown-editor .cm-md-list:not(.cm-md-active) { padding-left: 1.25rem; position: relative; }
+.form-markdown-editor .cm-md-list:not(.cm-md-active)::before { content: '•'; position: absolute; left: .25rem; }
+.form-markdown-editor.is-markdown-source .cm-editor { font-family: ui-monospace, monospace; }
+.form-markdown-error { margin: 0; padding: .4rem .75rem; color: var(--color-danger); font-size: .85rem; }
+
+@media(max-width:700px) { .form-markdown-editor .cm-scroller { max-height: 20rem; } }

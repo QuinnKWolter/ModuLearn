@@ -1,10 +1,15 @@
 from django.urls import path
 from . import views
+from . import views_activity
 from .views import generate_course_auth_url, reset_course_authoring_password_view, proxy_course_authoring_x_login
 
 app_name = 'dashboard'
 
 urlpatterns = [
+    path('activity/<int:instance_id>/', views_activity.events, name='activity_events'),
+    path('activity/<int:instance_id>/export/', views_activity.export_page, name='activity_export'),
+    path('activity/<int:instance_id>/prepare/', views_activity.prepare_export, name='activity_prepare'),
+    path('activity/<int:instance_id>/download/', views_activity.download, name='activity_download'),
     path('student/', views.student_dashboard, name='student_dashboard'),
     path('instructor/', views.instructor_dashboard, name='instructor_dashboard'),
     path('instructor/create-demo-course/', views.create_demo_course, name='create_demo_course'),

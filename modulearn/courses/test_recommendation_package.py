@@ -1,5 +1,7 @@
+from dashboard.test_activity import follow_activity_export
 import json
-from pathlib import Path
+import csv
+import io
 from unittest.mock import patch
 
 from django.contrib.admin.models import LogEntry
@@ -32,6 +34,44 @@ class RecommendationPackageTests(TestCase):
         self.url = reverse('courses:static_recommendations', args=[self.instance.pk])
 
     def raw(self): return json.dumps(self.data).encode()
+
+    def portable_package(self):
+        """Two coursework sources share recommendations across all three types."""
+        data = json.loads(self.raw())
+        data['activities'].extend([
+            {'id': 'second', 'title': 'Second problem', 'unit': 'Next unit',
+             'provider': 'pcrs', 'protocols': ['html', 'pitt'], 'url': 'https://example.org/second'},
+            {'id': 'animation', 'title': 'Animation', 'unit': 'Basics',
+             'provider': 'animatedexamples', 'protocols': ['splice'], 'url': 'https://example.org/animation'},
+            {'id': 'completion', 'title': 'Completion', 'unit': 'Next unit',
+             'provider': 'quizjet', 'protocols': ['html'], 'url': 'https://example.org/completion'},
+        ])
+        data['recommendations'] = [
+            {'source': source, 'target': target, 'type': kind, 'rank': 1}
+            for source in ['problem', 'second']
+            for target, kind in [('example', 'worked_example'), ('animation', 'animation'),
+                                 ('completion', 'completion_problem')]
+        ]
+        return data
+
+    def linked_csv(self):
+        data = self.portable_package()
+        activities = {item['id']: item for item in data['activities']}
+        rows = []
+        for link in data['recommendations']:
+            row = {'format': 'modulearn.recommendations.csv.v1'}
+            for prefix in ['source', 'target']:
+                activity = activities[link[prefix]]
+                for field in ['id', 'title', 'unit', 'provider', 'url']:
+                    row[f'{prefix}_{field}'] = activity[field]
+                row[f'{prefix}_protocols'] = '|'.join(activity['protocols'])
+            row.update(type=link['type'], rank=link['rank'], incorrect_attempts=1, per_type=2)
+            rows.append(row)
+        stream = io.StringIO(newline='')
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+        return stream.getvalue().encode('utf-8')
 
     def test_course_outline_excludes_practice_for_instructors_and_students(self):
         from modulearn.learning.selectors.courses import build_course_detail_context
@@ -168,6 +208,7 @@ class RecommendationPackageTests(TestCase):
         self.assertContains(self.client.get(logs), 'Normal course activity')
         for export in ['course_csv', 'csv', 'summary']:
             response = self.client.get(logs, {'download': export, 'q': self.student.username})
+            response = follow_activity_export(self.client, response)
             text = b''.join(response.streaming_content).decode()
             self.assertIn(self.student.username, text)
             self.assertIn('Problem', text)
@@ -216,21 +257,22 @@ class RecommendationPackageTests(TestCase):
         self.assertFalse(Module.objects.get(title='New problem').is_recommendation_only)
         self.assertTrue(Module.objects.get(title='Example').is_recommendation_only)
 
-    def test_cs007_artifact_installs_without_local_ids_or_manual_bindings(self):
-        raw=(Path(__file__).resolve().parents[2]/'ML_Recs/2026-10-11/CS007.recommendations.json').read_bytes()
+    def test_portable_package_installs_without_local_ids_or_manual_bindings(self):
+        raw=json.dumps(self.portable_package()).encode('utf-8')
         report=install_package(self.course.pk, raw, actor=self.teacher)
-        self.assertEqual((report['activities'], report['links']), (247,684))
+        self.assertEqual((report['activities'], report['links']), (5,6))
         dataset=StaticRecommendationSet.objects.get(course=self.course)
         self.assertFalse(resolve_nodes(dataset,self.course)[1])
-        self.assertEqual(Module.objects.filter(unit__course=self.course,is_recommendation_only=False).count(),115)
+        self.assertEqual(Module.objects.filter(unit__course=self.course,is_recommendation_only=False).count(),2)
+        self.assertEqual(Module.objects.filter(unit__course=self.course,is_recommendation_only=True).count(),3)
         self.assertEqual(install_package(self.course.pk,raw,actor=self.teacher)['created_modules'],[])
 
     def test_linked_csv_upload_matches_every_exercise_and_repeats_safely(self):
         from modulearn.learning.services.recommendation_package import install_csv_package, csv_to_package
-        raw=(Path(__file__).resolve().parents[2]/'ML_Recs/2026-10-11/CS007.linked-recommendations.csv').read_bytes()
+        raw=self.linked_csv()
         self.client.force_login(self.teacher)
         response=self.client.post(self.url, {'action':'upload','files':SimpleUploadedFile('CS007.linked-recommendations.csv',raw)},follow=True)
-        self.assertContains(response,'Recommendations ready: 247 activities, 684 links.')
+        self.assertContains(response,'Recommendations ready: 5 activities, 6 links.')
         self.assertNotContains(response,'Unresolved activities (0)')
         dataset=StaticRecommendationSet.objects.get(course=self.course)
         resolved,issues,_=resolve_nodes(dataset,self.course)
@@ -240,12 +282,14 @@ class RecommendationPackageTests(TestCase):
         self.assertEqual(install_csv_package(self.course.pk,raw,actor=self.teacher)['created_modules'],[])
 
     def test_linked_csv_rejects_conflicting_identity_before_writes(self):
-        from modulearn.learning.services.recommendation_package import csv_to_package
-        raw=(Path(__file__).resolve().parents[2]/'ML_Recs/2026-10-11/CS007.linked-recommendations.csv').read_bytes()
-        import csv,io
+        from modulearn.learning.services.recommendation_package import install_csv_package
+        raw=self.linked_csv()
         reader=csv.DictReader(io.StringIO(raw.decode('utf-8-sig')));rows=list(reader)
         rows[0]['source_title']='Different title for same ID'
         stream=io.StringIO();writer=csv.DictWriter(stream,fieldnames=reader.fieldnames);writer.writeheader();writer.writerows(rows)
         with self.assertRaisesMessage(ValueError,'conflicting activity details'):
-            csv_to_package(stream.getvalue().encode())
+            install_csv_package(self.course.pk, stream.getvalue().encode(), actor=self.teacher)
         self.assertFalse(StaticRecommendationSet.objects.exists())
+        self.assertEqual(Module.objects.count(), 1)
+        self.assertEqual(Unit.objects.count(), 1)
+        self.assertFalse(LogEntry.objects.exists())

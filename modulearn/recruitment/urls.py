@@ -5,6 +5,7 @@ from . import views, studio
 app_name = "recruitment"
 
 urlpatterns = [
+    path('text-preview/', studio.text_preview, name='text_preview'),
     path('study/<int:study_id>/setup/', studio.studio, name='studio'),
     path('study/<int:study_id>/duplicate/', studio.duplicate, name='duplicate'),
     path('study/<int:study_id>/previews/clear/', studio.clear_previews, name='clear_previews'),

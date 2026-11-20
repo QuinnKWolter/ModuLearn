@@ -1,0 +1,6 @@
+{% load study_text %}
+      {% if module_form.instructions %}
+        <div class="study-prose shell-surface p-4 rounded-2xl mb-5 text-slate-700 dark:text-slate-200" data-no-ui-translate>
+          {{ module_form.instructions|study_markdown }}
+        </div>
+      {% endif %}

@@ -1072,6 +1072,7 @@ def _branch_rule_context(course):
     )
 
 
+@transaction.atomic
 def _update_branching_rules(request, course):
     modules = {
         module.id: module
@@ -1085,13 +1086,37 @@ def _update_branching_rules(request, course):
             rule.delete()
             continue
         rule.active = _parse_bool(request.POST.get(f"{prefix}_active"))
+        if f'{prefix}_source' in request.POST:
+            import math
+            try:
+                source = modules[int(request.POST[f'{prefix}_source'])]
+                target = modules[int(request.POST[f'{prefix}_target'])]
+            except (KeyError, ValueError, TypeError):
+                raise ValueError('Choose a valid source and target activity for the branch rule.')
+            kind = request.POST.get(f'{prefix}_condition')
+            if kind not in dict(ModuleBranchRule.CONDITION_CHOICES) or source == target:
+                raise ValueError('Choose a valid branch condition and two different activities.')
+            threshold = None
+            if kind in {'score_lt', 'score_gte'}:
+                try:
+                    threshold = float(request.POST.get(f'{prefix}_threshold'))
+                except (TypeError, ValueError):
+                    raise ValueError('Score-based branch rules need a numeric threshold.')
+                if not math.isfinite(threshold) or not 0 <= threshold <= 100:
+                    raise ValueError('Choose a score between 0 and 100.')
+            old_target_id = rule.target_module_id
+            rule.source_module, rule.target_module = source, target
+            rule.condition_type, rule.threshold = kind, threshold
+            if target.pk != old_target_id:
+                target.is_visible, target.is_locked, target.unlock_rule = True, True, {}
+                target.save(update_fields=['is_visible','is_locked','unlock_rule'])
         try:
             rule.priority = int(request.POST.get(f"{prefix}_priority") or rule.priority or 0)
         except (TypeError, ValueError):
             rule.priority = 0
         requested_condition = (request.POST.get(f"{prefix}_required_study_condition") or "").strip()
         rule.required_study_condition = requested_condition if requested_condition in valid_conditions else ""
-        rule.save(update_fields=["active", "priority", "required_study_condition", "updated_at"])
+        rule.save()
 
     source_id = request.POST.get("branch_source_module")
     target_id = request.POST.get("branch_target_module")

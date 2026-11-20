@@ -4,6 +4,8 @@
   if (!node) return;
   const config = JSON.parse(node.textContent);
   let pending = false, deadline = null, offset = 0;
+  const next = document.querySelector('[data-study-next]');
+  next?.addEventListener('submit', () => { next.querySelector('button').disabled = true; });
   const form = document.querySelector('[data-study-form]');
   const fields = {}, visitId = crypto.randomUUID();
   if (form) {
@@ -37,6 +39,10 @@
       const data = await response.json();
       offset = Date.parse(data.server_time) - Date.now();
       deadline = data.deadline ? Date.parse(data.deadline) : null;
+      if (next) {
+        next.hidden = !data.can_continue;
+        next.elements.activity_id.value = data.activity_id || '';
+      }
       if (data.url && new URL(data.url, location.href).pathname !== location.pathname) location.replace(data.url);
     } catch (_) { /* Retry on the next poll. */ }
     finally { pending = false; }

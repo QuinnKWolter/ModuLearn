@@ -96,11 +96,12 @@ class DashboardViewTests(TestCase):
         response = self.client.get(reverse('dashboard:instructor_dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Variable Assignment')
-        self.assertContains(response, 'Demo Learner')
-        self.assertContains(response, 'student1@example.com')
         self.assertContains(response, 'sessionActivityModal')
-        self.assertContains(response, '"event_type": "completion"')
+        events = self.client.get(reverse('dashboard:activity_events', args=[self.instance.pk])).json()['rows']
+        self.assertEqual(events[0]['activity'], 'Variable Assignment')
+        self.assertEqual(events[0]['student_name'], 'Demo Learner')
+        self.assertEqual(events[0]['email'], 'student1@example.com')
+        self.assertEqual(events[0]['event'], 'completion')
 
     def test_timelines_hide_redundant_100_percent_progress_events(self):
         unit = Unit.objects.create(course=self.course, title='Unit 1')

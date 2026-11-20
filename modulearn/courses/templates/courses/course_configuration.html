@@ -1477,7 +1477,7 @@
 
   .cfg-flow-body {
     display: grid;
-    grid-template-rows: minmax(16rem, 1fr) minmax(12.5rem, 0.72fr);
+    grid-template-rows: auto minmax(14rem, 1fr) minmax(12.5rem, 0.9fr);
     gap: 0.7rem;
     min-height: 0;
     overflow-y: auto;
@@ -2584,7 +2584,7 @@
     }
 
     .cfg-flow-body {
-      grid-template-rows: minmax(12rem, 0.82fr) minmax(13rem, 1fr);
+      grid-template-rows: auto minmax(12rem, 0.82fr) minmax(13rem, 1fr);
       padding: 0.55rem;
     }
 
@@ -2613,7 +2613,7 @@
     }
 
     .cfg-flow-body {
-      grid-template-rows: minmax(13rem, 0.78fr) minmax(10.5rem, 1fr);
+      grid-template-rows: auto minmax(13rem, 0.78fr) minmax(10.5rem, 1fr);
       gap: 0.52rem;
       padding: 0.58rem;
     }
@@ -2637,8 +2637,8 @@
   .cfg-settings-modal p,.cfg-settings-modal hr {margin:.8rem 0;}.cfg-grade-actions {display:flex;gap:.5rem;align-items:center;margin:.6rem 0;}.cfg-grade-actions select {min-width:0;flex:1;}.cfg-grade-actions button {flex-shrink:0;}
   @media(prefers-reduced-motion:reduce){.cfg-chip-toggle [data-chip-label]{transition:none;}}
 .cfg-graded-star, [data-grade-toggle][aria-pressed="true"] i {color:#eab308;}
-.cfg-builder-toolbar,.cfg-question-actions {display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}.cfg-builder-toolbar {margin:.6rem 0;}.cfg-builder-toolbar>span {margin-right:auto;font-size:.85rem;}.cfg-question-actions {border-top:1px solid #94a3b844;padding-top:.6rem;}.cfg-question-actions [data-remove-question]{margin-left:auto;}.cfg-question-summary strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}.cfg-question-body label {font-size:.85rem;font-weight:600;}.cfg-question-preview {padding:1rem;border:1px solid #94a3b866;border-radius:.5rem;}.cfg-question-preview[hidden]{display:none;}.cfg-question-preview fieldset {padding:.8rem 0;border-bottom:1px solid #94a3b844;}.cfg-question-preview legend {font-weight:600;}.cfg-question-preview label {display:block;margin:.4rem 0;}.cfg-question-preview input[type=radio],.cfg-question-preview input[type=checkbox]{margin-right:.4rem;}
-#questionBuilder[hidden]{display:none;}.cfg-quiz-settings {border-bottom:1px solid #94a3b844;padding-bottom:.6rem;font-size:.85rem;}.cfg-quiz-settings summary {cursor:pointer;font-weight:600;}.cfg-quiz-settings label{display:block;margin-top:.6rem;}.cfg-question-body .form-control,.cfg-quiz-settings .form-control{padding:.5rem .65rem;font-size:.9rem;border-radius:.4rem;}.cfg-question-body{gap:.5rem;padding:.7rem;}.cfg-question-body textarea[data-question-prompt]{min-height:4rem;}.cfg-question-add-button{width:auto!important;height:auto!important;border-radius:.4rem!important;padding:.4rem .65rem!important;gap:.25rem;}.cfg-question-summary{padding:.55rem .7rem;}.cfg-question-preview{background:var(--surface,rgba(148,163,184,.05));}
+.cfg-builder-toolbar,.cfg-question-actions {display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}.cfg-builder-toolbar {margin:.6rem 0;}.cfg-builder-toolbar>span {margin-right:auto;font-size:.85rem;}.cfg-question-actions {border-top:1px solid #94a3b844;padding-top:.6rem;}.cfg-question-actions [data-remove-question]{margin-left:auto;}.cfg-question-summary strong {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}.cfg-question-body label {font-size:.85rem;font-weight:600;}
+#questionBuilder[hidden]{display:none;}.cfg-quiz-settings {border-bottom:1px solid #94a3b844;padding-bottom:.6rem;font-size:.85rem;}.cfg-quiz-settings summary {cursor:pointer;font-weight:600;}.cfg-quiz-settings label{display:block;margin-top:.6rem;}.cfg-question-body .form-control,.cfg-quiz-settings .form-control{padding:.5rem .65rem;font-size:.9rem;border-radius:.4rem;}.cfg-question-body{gap:.5rem;padding:.7rem;}.cfg-question-body textarea[data-question-prompt]{min-height:4rem;}.cfg-question-add-button{width:auto!important;height:auto!important;border-radius:.4rem!important;padding:.4rem .65rem!important;gap:.25rem;}.cfg-question-summary{padding:.55rem .7rem;}
   .cfg-source-body label {align-content:start;}
   [data-grade-toggle].is-on {color:#854d0e;background:#fef3c7;border-color:#facc15;}
   [data-grade-toggle].is-off,[data-schedule-toggle].is-off {color:#475569;background:#f1f5f9;border-color:#cbd5e1;}
@@ -2920,7 +2920,7 @@
 
                   <div class="cfg-modules" data-module-list data-unit-id="{{ group.unit.id }}">
                     {% for module in group.modules %}
-                      <details class="cfg-module" data-module-block data-module-id="{{ module.id }}" data-module-unit-id="{{ group.unit.id }}">
+                      <details class="cfg-module" data-module-block data-module-id="{{ module.id }}" data-module-unit-id="{{ group.unit.id }}" data-activity-type="{{ module.module_type }}">
                         <summary class="cfg-module-summary">
                           <span class="cfg-module-order" data-module-order-label>#{{ module.order }}</span>
                           <span class="cfg-module-title">
@@ -2950,6 +2950,7 @@
                           </span>
                         </summary>
                         <div class="cfg-module-body">
+                          <header class="cfg-activity-header"><h4 data-no-ui-translate>{{ module.title }}</h4><button type="button" class="btn btn-outline-secondary btn-sm cfg-activity-preview-button" data-preview-activity aria-haspopup="dialog"><i class="bi bi-eye" aria-hidden="true"></i> {% ui "Activity Preview" %}</button></header>
                           <div class="cfg-module-grid">
                             <div>
                               <input type="hidden" name="module_{{ module.id }}_unit_id" value="{{ group.unit.id }}" data-module-unit-input>
@@ -2975,7 +2976,7 @@
                                 <span class="text-xs text-slate-500">{% ui "Completion and correctness are tracked separately. Opening an activity does not count as a submission." %}</span>
                               </label>
                               <input id="module_{{ module.id }}_title" name="module_{{ module.id }}_title" value="{{ module.title }}" class="form-control font-semibold">
-                              <textarea name="module_{{ module.id }}_description" rows="2" class="form-control" placeholder="Activity description">{{ module.description }}</textarea>
+                              <textarea data-markdown-editor name="module_{{ module.id }}_description" rows="2" class="form-control" placeholder="Activity description">{{ module.description }}</textarea>
                               {% if module.is_smart_content_configurable %}
                                 <details class="cfg-source-panel">
                                   <summary>
@@ -3093,18 +3094,17 @@
                                       <div class="stat-kicker">{% ui "Form Content" %}</div>
                                       <h4 class="text-sm font-bold text-slate-900 dark:text-white mb-0">{% ui "Participant-facing copy and questions" %}</h4>
                                     </div>
-                                    <button type="button" class="btn btn-outline-primary btn-sm cfg-question-add-button" title="{% ui "Add question" %}" aria-label="{% ui "Add question" %}" data-bs-toggle="modal" data-bs-target="#addQuestionModal{{ module.id }}">
-                                      <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                                    </button>
+                                    <div class="cfg-authoring-tools">
+                                      <button type="button" class="btn btn-outline-primary btn-sm" data-add-inline-question="addQuestionModal{{ module.id }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> {% ui "Add question" %}</button>
+                                    </div>
                                   </div>
 
-                                  <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(10rem,0.35fr)] mt-3">
+                                  <div class="cfg-form-introduction">
                                     <label class="grid gap-1">
                                       <span class="stat-kicker">{% ui "Instructions" %}</span>
-                                      <textarea name="module_{{ module.id }}_form_instructions" rows="3" class="form-control" placeholder="Instructions shown above the questions">{{ module.config_form.instructions }}</textarea>
-                                      <small>{% ui "Markdown: **bold**, *italic*, `code`, # headings, - lists, and fenced code blocks. HTML is displayed as text." %}</small>
+                                      <textarea data-markdown-editor name="module_{{ module.id }}_form_instructions" rows="3" class="form-control" placeholder="Instructions shown above the questions">{{ module.config_form.instructions }}</textarea>
                                     </label>
-                                    <label class="grid gap-1">
+                                    <label class="cfg-submit-label">
                                       <span class="stat-kicker">{% ui "Submit Button" %}</span>
                                       <input name="module_{{ module.id }}_form_submit_button_label" value="{{ module.config_form.submit_button_label }}" class="form-control" placeholder="{% ui "Submit" %}">
                                     </label>
@@ -3117,18 +3117,18 @@
                                           <span class="cfg-arrow" aria-hidden="true">
                                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                                           </span>
-                                          <strong>{% ui "Q" %}{{ forloop.counter }}: {{ question.get_question_type_display }}</strong>
+                                          <strong data-config-question-title data-no-ui-translate title="{{ question.prompt }}">{{ forloop.counter }}. {{ question.prompt }}</strong>
                                           <span class="cfg-question-type-badge">{% if question.required %}{% ui "Required" %}{% else %}{% ui "Optional" %}{% endif %}</span>
                                         </summary>
                                         <div class="cfg-question-body">
-                                          <div class="grid gap-2 lg:grid-cols-[4.5rem_minmax(0,1fr)_minmax(11rem,0.4fr)]">
+                                          <div class="cfg-question-properties">
                                             <label class="grid gap-1">
                                               <span class="stat-kicker">{% ui "Order" %}</span>
                                               <input type="number" name="module_{{ module.id }}_question_{{ question.id }}_order" value="{{ question.order }}" class="form-control">
                                             </label>
-                                            <label class="grid gap-1">
+                                            <label class="grid gap-1 cfg-prompt-field">
                                               <span class="stat-kicker">{% ui "Prompt" %}</span>
-                                              <textarea name="module_{{ module.id }}_question_{{ question.id }}_prompt" rows="2" class="form-control">{{ question.prompt }}</textarea>
+                                              <textarea data-markdown-editor name="module_{{ module.id }}_question_{{ question.id }}_prompt" rows="2" class="form-control">{{ question.prompt }}</textarea>
                                             </label>
                                             <label class="grid gap-1">
                                               <span class="stat-kicker">{% ui "Type" %}</span>
@@ -3139,7 +3139,7 @@
                                               </select>
                                             </label>
                                           </div>
-                                          <input name="module_{{ module.id }}_question_{{ question.id }}_help_text" value="{{ question.help_text }}" class="form-control" placeholder="{% ui "Optional helper text" %}">
+                                          <details class="cfg-question-hint"{% if question.help_text %} open{% endif %}><summary>{% ui "Optional helper text" %}</summary><textarea maxlength="255" data-markdown-editor name="module_{{ module.id }}_question_{{ question.id }}_help_text" rows="2" class="form-control" aria-label="{% ui "Optional helper text" %}" placeholder="{% ui "Optional helper text" %}">{{ question.help_text }}</textarea></details>
                                           <textarea name="module_{{ module.id }}_question_{{ question.id }}_options" rows="2" class="form-control" placeholder="Choices, one per line" data-choice-options {% if question.question_type != 'single_choice' and question.question_type != 'multiple_choice' %}hidden{% endif %}>{{ question.options|join:"&#10;" }}</textarea>
                                           <div class="grid gap-2 md:grid-cols-2" data-likert-options {% if question.question_type != 'likert' %}hidden{% endif %}>
                                             <input name="module_{{ module.id }}_question_{{ question.id }}_likert_min_label" value="{{ question.likert_min_label }}" class="form-control" placeholder="{% ui "Likert low label" %}">
@@ -3163,21 +3163,12 @@
                                       </div>
                                     {% endfor %}
                                   </div>
-                                </section>
-                                <div id="addQuestionModal{{ module.id }}" class="modal-overlay hidden fixed inset-0 z-[90] items-center justify-center bg-black/50 p-4" aria-hidden="true">
-                                  <div class="modal-backdrop-close absolute inset-0"></div>
-                                  <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-xl overflow-hidden">
-                                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                                      <div>
-                                        <div class="stat-kicker">{% ui "Add Question" %}</div>
-                                        <h2 class="text-lg font-bold mt-1 mb-0" data-no-ui-translate>{{ module.title }}</h2>
-                                      </div>
-                                      <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
-                                    </div>
-                                    <div class="p-6 grid gap-3" data-config-question>
+                                <details id="addQuestionModal{{ module.id }}" class="cfg-inline-question">
+                                  <summary>{% ui "Add question" %}</summary>
+                                    <div class="cfg-question-body" data-config-question>
                                       <label class="grid gap-1">
                                         <span class="stat-kicker">{% ui "Prompt" %}</span>
-                                        <textarea name="module_{{ module.id }}_form_new_question_1_prompt" rows="3" class="form-control" placeholder="New question prompt"></textarea>
+                                        <textarea data-markdown-editor name="module_{{ module.id }}_form_new_question_1_prompt" rows="3" class="form-control" placeholder="New question prompt"></textarea>
                                       </label>
                                       <label class="grid gap-1">
                                         <span class="stat-kicker">{% ui "Type" %}</span>
@@ -3187,7 +3178,7 @@
                                           {% endfor %}
                                         </select>
                                       </label>
-                                      <input name="module_{{ module.id }}_form_new_question_1_help_text" class="form-control" placeholder="{% ui "Optional helper text" %}">
+                                      <details class="cfg-question-hint"><summary>{% ui "Optional helper text" %}</summary><textarea maxlength="255" data-markdown-editor name="module_{{ module.id }}_form_new_question_1_help_text" rows="2" class="form-control" aria-label="{% ui "Optional helper text" %}" placeholder="{% ui "Optional helper text" %}"></textarea></details>
                                       <textarea name="module_{{ module.id }}_form_new_question_1_options" rows="3" class="form-control" placeholder="Choices, one per line" data-choice-options hidden></textarea>
                                       <div class="grid gap-2 md:grid-cols-2" data-likert-options hidden>
                                         <input name="module_{{ module.id }}_form_new_question_1_likert_min_label" class="form-control" placeholder="{% ui "Likert low label" %}">
@@ -3198,14 +3189,14 @@
                                         {% ui "Required" %}
                                       </label>
                                       <div class="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-close-inline-question>{% ui "Collapse" %}</button>
                                         <button type="submit" class="btn btn-primary btn-sm">
                                           <i class="bi bi-plus-lg mr-1" aria-hidden="true"></i>{% ui "Add And Save" %}
                                         </button>
                                       </div>
                                     </div>
-                                  </div>
-                                </div>
+                                </details>
+                                </section>
                               {% endif %}
                             </div>
                           </div>
@@ -3352,6 +3343,7 @@
           <div class="cfg-wizard-footer">
             <span class="text-xs text-slate-500 dark:text-slate-300">{% ui "Plugin settings apply to this whole course structure." %}</span>
             <div class="cfg-wizard-footer-actions">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-activity aria-haspopup="dialog"><i class="bi bi-eye" aria-hidden="true"></i> {% ui "Activity Preview" %}</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
               <button type="submit" class="btn btn-primary btn-sm">{% ui "Save Plugin Settings" %}</button>
             </div>
@@ -3434,6 +3426,7 @@
           <div class="cfg-wizard-footer">
             <span class="text-xs text-slate-500 dark:text-slate-300">{% ui "New units are visible and unlocked by default." %}</span>
             <div class="cfg-wizard-footer-actions">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-activity aria-haspopup="dialog"><i class="bi bi-eye" aria-hidden="true"></i> {% ui "Activity Preview" %}</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
               <button type="submit" class="btn btn-primary btn-sm">{% ui "Add Unit" %}</button>
             </div>
@@ -3515,7 +3508,7 @@
 
               <div>
                 <label class="stat-kicker">{% ui "Description" %}</label>
-                <textarea name="description" rows="3" class="form-control mt-1" placeholder="Optional description"></textarea>
+                <textarea data-markdown-editor name="description" rows="3" class="form-control mt-1" placeholder="Optional description"></textarea>
               </div>
               <label class="cfg-toggle justify-center">
                 <input type="checkbox" name="allow_resubmission" checked>
@@ -3542,7 +3535,7 @@
 
             <section class="cfg-wizard-step cfg-module-form-only" data-module-step="3" data-module-form-step hidden>
               <details class="cfg-quiz-settings"><summary>{% ui "Instructions & submission settings" %} <span class="text-xs">{% ui "(optional)" %}</span></summary>
-                <label for="quizInstructions">{% ui "Instructions" %}</label><textarea id="quizInstructions" name="form_instructions" rows="2" class="form-control" placeholder="Optional instructions shown above questions"></textarea><small>{% ui "Markdown: **bold**, *italic*, `code`, # headings, - lists, and fenced code blocks." %}</small>
+                <label for="quizInstructions">{% ui "Instructions" %}</label><textarea data-markdown-editor id="quizInstructions" name="form_instructions" rows="2" class="form-control" placeholder="Optional instructions shown above questions"></textarea><small>{% ui "Markdown: **bold**, *italic*, `code`, # headings, - lists, and fenced code blocks." %}</small>
                 <label for="quizSubmitLabel">{% ui "Submit button label" %}</label><input id="quizSubmitLabel" name="submit_button_label" class="form-control" placeholder="{% ui "Submit" %}">
               </details>
               <div class="cfg-form-builder-head">
@@ -3554,15 +3547,15 @@
                   <span aria-hidden="true">＋</span> {% ui "Add question" %}
                 </button>
               </div>
-              <div class="cfg-builder-toolbar"><span id="questionCount" role="status">{% ui "0 questions" %}</span><button type="button" class="btn btn-sm btn-outline-secondary" id="collapseQuestions">{% ui "Collapse all" %}</button><button type="button" class="btn btn-sm btn-outline-primary" id="previewQuestions" aria-expanded="false">{% ui "Preview" %}</button></div>
+              <div class="cfg-builder-toolbar"><span id="questionCount" role="status">{% ui "0 questions" %}</span><button type="button" class="btn btn-sm btn-outline-secondary" id="collapseQuestions">{% ui "Collapse all" %}</button></div>
               <div id="questionBuilder" class="grid gap-2"></div>
-              <section id="questionPreview" class="cfg-question-preview" aria-label="{% ui "Student preview" %}" hidden></section>
             </section>
           </div>
 
           <div class="cfg-wizard-footer">
             <span class="text-xs text-slate-500 dark:text-slate-300" data-module-wizard-note>{% ui "Pick a unit and activity type." %}</span>
             <div class="cfg-wizard-footer-actions">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-preview-activity aria-haspopup="dialog"><i class="bi bi-eye" aria-hidden="true"></i> {% ui "Activity Preview" %}</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{% ui "Cancel" %}</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" data-module-step-back hidden>{% ui "Back" %}</button>
               <button type="button" class="btn btn-outline-primary btn-sm" data-module-step-next>{% ui "Next" %}</button>
@@ -3768,6 +3761,17 @@
 {% endblock %}
 
 {% block extra_js %}
+<span hidden data-activity-authoring data-study-text-preview-url="{% url 'recruitment:text_preview' %}"></span>
+<script defer src="{% static 'js/study-text-preview.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/study-text-preview.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-authoring.css' %}">
+{% include 'includes/markdown_editor_assets.html' %}
+<script defer src="{% static 'js/form-authoring.js' %}"></script>
+<script defer src="{% static 'js/activity-preview.js' %}"></script>
+<script defer src="{% static 'js/flow-viewport.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/flow-mapper.css' %}">
+<link rel="stylesheet" href="{% static 'css/activity-preview.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-activity.css' %}">
 <script src="{% static 'js/courses/grading-controls.js' %}" defer></script>
 {% include 'courses/components/slc_catalog.html' %}
 <script src="{% static 'js/slc-catalog.js' %}" defer></script>
@@ -4078,9 +4082,6 @@
     function addQuestion() {
       if (!builder) return;
       builder.hidden = false;
-      document.getElementById('questionPreview').hidden = true;
-      document.getElementById('previewQuestions').textContent = t('Preview');
-      document.getElementById('previewQuestions').setAttribute('aria-expanded', 'false');
       const wrapper = document.createElement('details');
       wrapper.className = 'cfg-question-item';
       wrapper.open = true;
@@ -4093,8 +4094,8 @@
           <span class="cfg-question-type-badge" data-question-badge>Question</span>
         </summary>
         <div class="cfg-question-body">
-          <label for="${questionId}-prompt">Question</label><textarea id="${questionId}-prompt" class="form-control" data-question-prompt rows="2" placeholder="What would you like to ask?"></textarea>
-          <label for="${questionId}-help">Hint or instructions <span class="text-xs">(optional)</span></label><input id="${questionId}-help" class="form-control" data-question-help placeholder="Help students understand what to enter">
+          <label for="${questionId}-prompt">Question</label><textarea data-markdown-editor id="${questionId}-prompt" class="form-control" data-question-prompt rows="2" placeholder="What would you like to ask?"></textarea>
+          <details class="cfg-question-hint"><summary>Optional helper text</summary><textarea maxlength="255" data-markdown-editor id="${questionId}-help" rows="2" class="form-control" data-question-help aria-label="Optional helper text" placeholder="Help students understand what to enter"></textarea></details>
           <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-1">
             <label>Response type<select class="form-control" data-question-type>
               {% for value,label in question_types %}
@@ -4195,7 +4196,7 @@
             const choices = options.value.split('\n').map(value => value.trim()).filter(Boolean);
             const invalid = !prompt.value.trim() ? prompt : (['single_choice','multiple_choice'].includes(kind) && (choices.length < 2 || new Set(choices).size !== choices.length) ? options : null);
             if (invalid) {
-              event.preventDefault(); wrapper.open = true;
+              event.preventDefault(); builder.hidden = false; wrapper.open = true;
               invalid.setCustomValidity(t(invalid === prompt ? 'Enter a question.' : 'Enter at least two distinct answer choices.'));
               invalid.reportValidity(); invalid.focus(); return;
             }
@@ -4205,29 +4206,6 @@
       });
       builder.addEventListener('input', event => { event.target.setCustomValidity?.(''); renumberQuestions(); });
       document.getElementById('collapseQuestions').addEventListener('click', () => { [...builder.children].forEach(question => question.open = false); });
-      document.getElementById('previewQuestions').addEventListener('click', event => {
-        const preview = document.getElementById('questionPreview');
-        preview.hidden = !preview.hidden;
-        event.currentTarget.setAttribute('aria-expanded', String(!preview.hidden));
-        event.currentTarget.textContent = t(preview.hidden ? 'Preview' : 'Edit questions');
-        builder.hidden = !preview.hidden;
-        if (preview.hidden) return;
-        preview.replaceChildren();
-        const title = document.createElement('h4'); title.textContent = t('Student preview'); preview.append(title);
-        const instructions = document.createElement('p'); instructions.dataset.noUiTranslate = ''; instructions.textContent = form.elements.form_instructions.value; preview.append(instructions);
-        [...builder.children].forEach((question, index) => {
-          const field = document.createElement('fieldset'); field.dataset.noUiTranslate = '';
-          const legend = document.createElement('legend');legend.textContent = `${index+1}. ${question.querySelector('[data-question-prompt]').value || t('Untitled question')}`;if (question.querySelector('[data-question-required]').checked) legend.append(document.createTextNode(' *'));field.append(legend);
-          const help = document.createElement('p');help.textContent = question.querySelector('[data-question-help]').value;field.append(help);
-          const kind = question.querySelector('[data-question-type]').value;
-          if (['single_choice','multiple_choice','likert'].includes(kind)) {
-            const choices = kind === 'likert' ? ['1','2','3','4','5'] : question.querySelector('[data-question-options]').value.split('\n').filter(value=>value.trim());
-            choices.forEach(choice=>{const label=document.createElement('label');const input=document.createElement('input');input.type=kind==='multiple_choice'?'checkbox':'radio';input.name=`preview-${index}`;label.append(input,document.createTextNode(' '+choice));field.append(label);});
-            if(kind==='likert'){const labels=document.createElement('p');labels.textContent=`${question.querySelector('[data-likert-min]').value} → ${question.querySelector('[data-likert-max]').value}`;field.append(labels);}
-          } else { const input=document.createElement(kind==='long_answer'?'textarea':'input');input.className='form-control';input.setAttribute('aria-label',legend.textContent);field.append(input); }
-          preview.append(field);
-        });
-      });
       if (stepNextButton) {
         stepNextButton.addEventListener('click', () => showModuleStep(currentModuleStep + 1));
       }
@@ -4996,7 +4974,8 @@
       let targetSelect = flowModal.querySelector('[data-flow-target-select]');
       let conditionSelect = flowModal.querySelector('[data-flow-condition-select]');
       let nextPick = 'source';
-      let activeFocus = null;
+      let activeFocus = null, pinnedFocus = null;
+      let viewport = null;
 
       const conditionColors = {
         success: '#10b981',
@@ -5012,6 +4991,69 @@
         return Array.from(flowModal.querySelectorAll('[data-flow-edge]'));
       }
 
+      function filterConnections() {
+        const query = flowModal.querySelector('[data-flow-search]').value.trim().toLowerCase();
+        const condition = flowModal.querySelector('[data-flow-filter]').value;
+        currentRules().forEach(edge => {
+          const path = edge.querySelector('[data-branch-path]');
+          const searchable = `${path.textContent} ${path.dataset.ruleTooltip || ''}`.toLowerCase();
+          edge.hidden = Boolean((condition && edge.dataset.studyCondition && edge.dataset.studyCondition !== condition) ||
+            (query && !searchable.includes(query)) || (pinnedFocus && !relatedRule(edge,pinnedFocus)));
+        });
+        drawFlowLines();
+      }
+      bind(flowModal.querySelector('[data-flow-search]'), 'input', filterConnections);
+      bind(flowModal.querySelector('[data-flow-search]'), 'keydown', event => {
+        if (event.key === 'Enter') event.preventDefault();
+      });
+      bind(flowModal.querySelector('[data-flow-filter]'), 'change', filterConnections);
+      bind(flowModal.querySelector('[data-flow-show-lines]'), 'change', drawFlowLines);
+      bind(flowModal.querySelector('[data-flow-connect-mode]'),'change',event=>{flowModal.querySelector('.cfg-flow-add-panel').open=event.target.checked;});
+
+      bind(flowModal.querySelector('[data-flow-clear]'),'click',()=>{
+        pinnedFocus=null;activeFocus=null;if(sourceSelect)sourceSelect.value='';if(targetSelect)targetSelect.value='';nextPick='source';syncNodeSelection();filterConnections();
+      });
+      bind(flowLines,'click',event=>{
+        const line=event.target.closest('[data-flow-line]');
+        const row=currentRules().find(r=>r.dataset.flowRuleId===line?.dataset.flowRuleId);
+        if(!row)return;
+        pinnedFocus={ruleId:row.dataset.flowRuleId,conditionType:row.dataset.conditionType};filterConnections();setFlowFocus(pinnedFocus);
+        row.querySelector('.cfg-flow-edit').open=true;row.scrollIntoView({block:'nearest'});row.querySelector('.cfg-flow-edit summary').focus();
+      });
+      function syncRule(row) {
+        const id=row.dataset.flowRuleId, field=suffix=>row.querySelector(`[name="branch_rule_${id}_${suffix}"]`);
+        const source=field('source'),target=field('target'),condition=field('condition'),threshold=field('threshold');
+        row.dataset.source=source.value;row.dataset.target=target.value;row.dataset.conditionType=condition.value;
+        row.dataset.studyCondition=field('required_study_condition').value;
+        row.dataset.active=String(field('active').checked&&!field('delete').checked);
+        threshold.disabled=!['score_lt','score_gte'].includes(condition.value);
+        const summary=`${source.selectedOptions[0].textContent} → ${target.selectedOptions[0].textContent}`;
+        row.dataset.label=condition.selectedOptions[0].textContent+(threshold.disabled?'':` ${threshold.value}`)+(row.dataset.studyCondition?` / ${row.dataset.studyCondition}`:'');
+        const path=row.querySelector('[data-branch-path]');path.dataset.ruleTooltip=summary+' · '+row.dataset.label;path.setAttribute('aria-label',path.dataset.ruleTooltip);
+        const modules=row.querySelectorAll('.cfg-branch-token--module');modules[0].textContent=source.selectedOptions[0].textContent;modules[1].textContent=target.selectedOptions[0].textContent;
+        modules.forEach(token=>token.setAttribute('data-no-ui-translate',''));
+        const tag=row.querySelector('.cfg-condition-tag');tag.textContent=condition.selectedOptions[0].textContent+(threshold.disabled?'':` ${threshold.value}`);tag.className='cfg-condition-tag cfg-condition-tag--'+condition.value;
+        row.className=row.className.replace(/cfg-branch-rule--[\w]+/g,'')+' cfg-branch-rule--'+condition.value;
+        const conditionToken=row.querySelector('.cfg-branch-token--condition');
+        if(conditionToken){conditionToken.textContent=row.dataset.studyCondition;conditionToken.hidden=!row.dataset.studyCondition;}
+        const icon=row.querySelector('.cfg-branch-condition-icon i');
+        if(icon)icon.className='bi '+({success:'bi-check2-circle',failure:'bi-x-octagon',completed:'bi-flag',score_gte:'bi-arrow-up-circle',score_lt:'bi-arrow-down-circle'}[condition.value]);
+        setStatus(t('Unsaved changes'),'');
+        row.classList.toggle('is-muted',row.dataset.active==='false');
+        filterConnections();
+      }
+      currentRules().forEach(row=>{
+        row.querySelectorAll('input,select').forEach(field=>bind(field,'change',()=>syncRule(row)));
+        const threshold=row.querySelector('[name$="_threshold"]');threshold.disabled=!['score_lt','score_gte'].includes(row.dataset.conditionType);
+        bind(row.querySelector('[data-flow-duplicate]'),'click',()=>{
+          flowModal.querySelector('.cfg-flow-add-panel').open=true;
+          syncRule(row);sourceSelect.value=row.dataset.source;targetSelect.value=row.dataset.target;conditionSelect.value=row.dataset.conditionType;
+          flowForm.elements.branch_required_study_condition.value=row.dataset.studyCondition;
+          syncBranchThreshold(conditionSelect);flowForm.elements.branch_threshold.value=threshold.value;
+          syncNodeSelection();drawFlowLines();conditionSelect.scrollIntoView({block:'nearest'});conditionSelect.focus();
+          setStatus(t('Connection copied to the builder. Adjust it, then choose Add Connection.'),'');
+        });
+      });
       let ruleTooltip = null;
       let activeTooltipPath = null;
 
@@ -5121,6 +5163,7 @@
         const relatedIds = relatedNodeIds(activeFocus);
         nodes.forEach(node => {
           node.classList.toggle('is-related', hasFocus && relatedIds.has(node.dataset.flowNodeId));
+          node.setAttribute('aria-pressed', String(node.dataset.flowNodeId === pinnedFocus?.moduleId || node.classList.contains('is-source') || node.classList.contains('is-target')));
           if (hasFocus) node.style.setProperty('--flow-focus-color', color);
           else node.style.removeProperty('--flow-focus-color');
         });
@@ -5150,7 +5193,7 @@
       }
 
       function clearFlowFocus() {
-        activeFocus = null;
+        activeFocus = pinnedFocus;
         requestAnimationFrame(() => {
           drawFlowLines();
           applyFlowFocus();
@@ -5179,7 +5222,7 @@
           marker.setAttribute('refX', '8');
           marker.setAttribute('refY', '3');
           marker.setAttribute('orient', 'auto');
-          marker.setAttribute('markerUnits', 'strokeWidth');
+          marker.setAttribute('markerUnits', 'userSpaceOnUse');
           const arrow = document.createElementNS(svgNS, 'path');
           arrow.setAttribute('d', 'M0,0 L0,6 L9,3 z');
           arrow.setAttribute('fill', color);
@@ -5208,16 +5251,19 @@
 
           const sourceRect = source.getBoundingClientRect();
           const targetRect = target.getBoundingClientRect();
-          const x1 = sourceRect.right - mapRect.left;
-          const y1 = sourceRect.top + sourceRect.height / 2 - mapRect.top;
-          const x2 = targetRect.left - mapRect.left;
-          const y2 = targetRect.top + targetRect.height / 2 - mapRect.top;
-          const curve = Math.max(46, Math.abs(x2 - x1) / 2);
+          const scale = viewport?.scale || 1;
+          const sameColumn = Math.abs(sourceRect.left-targetRect.left)<2;
+          const backwards = !sameColumn && targetRect.left<sourceRect.left;
+          const x1 = ((backwards?sourceRect.left:sourceRect.right)-mapRect.left)/scale;
+          const y1 = (sourceRect.top+sourceRect.height/2-mapRect.top)/scale;
+          const x2 = ((sameColumn||backwards?targetRect.right:targetRect.left)-mapRect.left)/scale;
+          const y2 = (targetRect.top+targetRect.height/2-mapRect.top)/scale;
+          const curve = sameColumn?44:Math.max(46,Math.abs(x2-x1)/2)*(backwards?-1:1);
           const stroke = isPreview
             ? conditionColors.preview
             : (isActive ? (conditionColors[conditionType] || conditionColors.completed) : conditionColors.inactive);
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('d', `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`);
+          path.setAttribute('d', `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${sameColumn?x2+curve:x2-curve} ${y2}, ${x2} ${y2}`);
           path.setAttribute('fill', 'none');
           path.setAttribute('stroke', stroke);
           path.setAttribute('stroke-width', isPreview ? '3' : '2.5');
@@ -5234,9 +5280,9 @@
           }
           flowLines.appendChild(path);
 
-          if (labelText) {
+          if (labelText && (isPreview || activeFocus?.ruleId===ruleId)) {
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            label.setAttribute('x', String((x1 + x2) / 2));
+            label.setAttribute('x', String(sameColumn?x1+28:(x1+x2)/2));
             label.setAttribute('y', String((y1 + y2) / 2 - 6));
             label.setAttribute('text-anchor', 'middle');
             label.setAttribute('class', 'cfg-flow-line-label');
@@ -5250,6 +5296,10 @@
         }
 
         edges.forEach(edge => {
+          if (edge.hidden) return;
+          if (!flowModal.querySelector('[data-flow-show-lines]').checked &&
+              !(activeFocus && (edge.dataset.flowRuleId === activeFocus.ruleId || edge.dataset.source === activeFocus.moduleId || edge.dataset.target === activeFocus.moduleId)) &&
+              edge.dataset.source !== sourceSelect?.value && edge.dataset.target !== sourceSelect?.value) return;
           drawEdge({
             sourceId: edge.dataset.source,
             targetId: edge.dataset.target,
@@ -5278,6 +5328,9 @@
         bind(node, 'click', () => {
           const nodeId = node.dataset.flowNodeId;
           if (!nodeId) return;
+          if (!flowModal.querySelector('[data-flow-connect-mode]').checked) {
+            pinnedFocus={moduleId:nodeId};filterConnections();setFlowFocus(pinnedFocus);return;
+          }
           if (nextPick === 'source' || !sourceSelect?.value) {
             if (sourceSelect) sourceSelect.value = nodeId;
             if (targetSelect && targetSelect.value === nodeId) targetSelect.value = '';
@@ -5398,20 +5451,22 @@
         requestAnimationFrame(drawFlowLines);
       });
       bind(flowModal, 'hidden.bs.modal', hideRuleTooltip);
-      bind(flowShell, 'scroll', () => {
-        hideRuleTooltip();
-        requestAnimationFrame(drawFlowLines);
-      }, { passive: true });
+      bind(flowShell, 'scroll', hideRuleTooltip, { passive: true });
       bind(ruleList, 'scroll', hideRuleTooltip, { passive: true });
       bind(window, 'resize', () => {
         if (activeTooltipPath) positionRuleTooltip(activeTooltipPath);
         requestAnimationFrame(drawFlowLines);
       });
+      if (window.ModuLearnFlowViewport) {
+        viewport=window.ModuLearnFlowViewport.mount({modal:flowModal,map:flowMap,shell:flowShell,redraw:drawFlowLines});
+        flowModal.__flowCleanup.push(()=>viewport.destroy());
+      }
       syncNodeSelection();
       requestAnimationFrame(drawFlowLines);
     }
 
-    initializeFlowMapper();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeFlowMapper, {once:true});
+    else initializeFlowMapper();
 
     document.querySelectorAll('[data-copy-from]').forEach(button => {
       button.addEventListener('click', async () => {

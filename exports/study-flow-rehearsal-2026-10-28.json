@@ -1,0 +1,1651 @@
+{
+  "schema": "modulearn-study-export-v1",
+  "study": {
+    "title": "Remediation Study — Flow Rehearsal",
+    "slug": "remediation-study-flow-rehearsal",
+    "description": "Routing rehearsal only. Sample forms substitute for unpublished Cupcake/WEAT activities. Not the final experimental protocol.",
+    "version_label": "v1.0",
+    "status": "draft",
+    "notes": "REHEARSAL ONLY. Q01 and Q09 are illustrative, not the selected final eight. Final activity URLs, pairings, consent, indices.docx, rubric.docx and section durations remain outstanding. Q04 expected Python output must be 15.0, not 15. Review whether a second incorrect original submission repeats remediation; current flow does so. Practice remediation returns after one scored submission; examples return after provider completion.",
+    "guided_flow": true,
+    "conditions": [
+      {
+        "label": "practice",
+        "name": "Practice",
+        "description": "",
+        "order": 10,
+        "is_active": true
+      },
+      {
+        "label": "similar",
+        "name": "Similar",
+        "description": "",
+        "order": 20,
+        "is_active": true
+      },
+      {
+        "label": "matched",
+        "name": "Matched",
+        "description": "",
+        "order": 30,
+        "is_active": true
+      }
+    ]
+  },
+  "course_instance": {
+    "group_name": "Remediation Study — Flow Rehearsal Participants",
+    "active": true
+  },
+  "course": {
+    "schema": "modulearn-course-export-v2",
+    "id": "study-54928123f2fc48b7",
+    "name": "Remediation Study — Flow Rehearsal",
+    "title": "Remediation Study — Flow Rehearsal",
+    "description": "Routing rehearsal only. Sample forms substitute for unpublished Cupcake/WEAT activities. Not the final experimental protocol.",
+    "is_locked_for_research": true,
+    "plugin_config": {
+      "plugins": {
+        "guided_sequence": {
+          "enabled": false,
+          "settings": {}
+        },
+        "adaptive_branching": {
+          "enabled": true,
+          "settings": {}
+        },
+        "static_recommendations": {
+          "enabled": false,
+          "settings": {}
+        },
+        "dynamic_recommendations": {
+          "enabled": false,
+          "settings": {}
+        }
+      }
+    },
+    "schedule_timezone": "",
+    "provider_protocols": {},
+    "instructors": [
+      {
+        "username": "RITEL_DEMO_Teacher",
+        "email": "",
+        "name": ""
+      }
+    ],
+    "branch_rules": [
+      {
+        "source_unit": "Learning Session",
+        "source_module": "Q01 · Update a Score",
+        "target_unit": "Condition Remediation",
+        "target_module": "Q01 · Update a Score · practice",
+        "condition_type": "failure",
+        "condition_type_label": "Incorrect / Unsuccessful",
+        "threshold": null,
+        "required_study_condition": "practice",
+        "priority": 0,
+        "active": true
+      },
+      {
+        "source_unit": "Learning Session",
+        "source_module": "Q01 · Update a Score",
+        "target_unit": "Condition Remediation",
+        "target_module": "Q01 · Update a Score · similar",
+        "condition_type": "failure",
+        "condition_type_label": "Incorrect / Unsuccessful",
+        "threshold": null,
+        "required_study_condition": "similar",
+        "priority": 0,
+        "active": true
+      },
+      {
+        "source_unit": "Learning Session",
+        "source_module": "Q01 · Update a Score",
+        "target_unit": "Condition Remediation",
+        "target_module": "Q01 · Update a Score · matched",
+        "condition_type": "failure",
+        "condition_type_label": "Incorrect / Unsuccessful",
+        "threshold": null,
+        "required_study_condition": "matched",
+        "priority": 0,
+        "active": true
+      },
+      {
+        "source_unit": "Learning Session",
+        "source_module": "Q09 · Compare a Sum",
+        "target_unit": "Condition Remediation",
+        "target_module": "Q09 · Compare a Sum · practice",
+        "condition_type": "failure",
+        "condition_type_label": "Incorrect / Unsuccessful",
+        "threshold": null,
+        "required_study_condition": "practice",
+        "priority": 0,
+        "active": true
+      },
+      {
+        "source_unit": "Learning Session",
+        "source_module": "Q09 · Compare a Sum",
+        "target_unit": "Condition Remediation",
+        "target_module": "Q09 · Compare a Sum · similar",
+        "condition_type": "failure",
+        "condition_type_label": "Incorrect / Unsuccessful",
+        "threshold": null,
+        "required_study_condition": "similar",
+        "priority": 0,
+        "active": true
+      },
+      {
+        "source_unit": "Learning Session",
+        "source_module": "Q09 · Compare a Sum",
+        "target_unit": "Condition Remediation",
+        "target_module": "Q09 · Compare a Sum · matched",
+        "condition_type": "failure",
+        "condition_type_label": "Incorrect / Unsuccessful",
+        "threshold": null,
+        "required_study_condition": "matched",
+        "priority": 0,
+        "active": true
+      }
+    ],
+    "units": [
+      {
+        "id": 4,
+        "opens_at": null,
+        "time_limit_seconds": 0,
+        "closes_at": null,
+        "name": "Consent & Baseline",
+        "title": "Consent & Baseline",
+        "description": "",
+        "order": 10,
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "unlock_rule_portable": {},
+        "activities": {
+          "Form / Survey": [
+            {
+              "id": 7,
+              "name": "Consent — Rehearsal",
+              "title": "Consent — Rehearsal",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "**Preview only**\nThis is not approved consent text. Replace it with the study consent and eligibility information.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Ready to continue?",
+                    "help_text": "",
+                    "question_type": "single_choice",
+                    "question_type_label": "Multiple Choice - One Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [
+                      "Continue"
+                    ],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 8,
+              "name": "Baseline Measures — Placeholder",
+              "title": "Baseline Measures — Placeholder",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 20,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "Insert the approved confidence, interest, experience, and pretest items.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "modules": [
+          {
+            "id": 7,
+            "name": "Consent — Rehearsal",
+            "title": "Consent — Rehearsal",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "**Preview only**\nThis is not approved consent text. Replace it with the study consent and eligibility information.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Ready to continue?",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [
+                    "Continue"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 8,
+            "name": "Baseline Measures — Placeholder",
+            "title": "Baseline Measures — Placeholder",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 20,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Insert the approved confidence, interest, experience, and pretest items.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "opens_at": null,
+        "time_limit_seconds": 0,
+        "closes_at": null,
+        "name": "Learning Session",
+        "title": "Learning Session",
+        "description": "",
+        "order": 20,
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "unlock_rule_portable": {},
+        "activities": {
+          "Form / Survey": [
+            {
+              "id": 9,
+              "name": "Q01 · Update a Score",
+              "title": "Q01 · Update a Score",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "Set `score` to 10, add 5, then add 3. Print `score`.\n\n**Rehearsal:** use “Test A Branch” to simulate correctness. This form does not execute or grade Python.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 13,
+              "name": "Q09 · Compare a Sum",
+              "title": "Q09 · Compare a Sum",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 20,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "Set `x` to 12 and `y` to 5. If their sum is greater than 15, set `result` to 1; otherwise 0. Print `result`.\n\n**Rehearsal:** use “Test A Branch” to simulate correctness. This form does not execute or grade Python.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "modules": [
+          {
+            "id": 9,
+            "name": "Q01 · Update a Score",
+            "title": "Q01 · Update a Score",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Set `score` to 10, add 5, then add 3. Print `score`.\n\n**Rehearsal:** use “Test A Branch” to simulate correctness. This form does not execute or grade Python.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 13,
+            "name": "Q09 · Compare a Sum",
+            "title": "Q09 · Compare a Sum",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 20,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Set `x` to 12 and `y` to 5. If their sum is greater than 15, set `result` to 1; otherwise 0. Print `result`.\n\n**Rehearsal:** use “Test A Branch” to simulate correctness. This form does not execute or grade Python.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "opens_at": null,
+        "time_limit_seconds": 0,
+        "closes_at": null,
+        "name": "Condition Remediation",
+        "title": "Condition Remediation",
+        "description": "",
+        "order": 30,
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "unlock_rule_portable": {},
+        "activities": {
+          "Form / Survey": [
+            {
+              "id": 10,
+              "name": "Q01 · Update a Score · practice",
+              "title": "Q01 · Update a Score · practice",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": true,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "Start `x` at 2, add 1, then add 4. Print `x`.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 11,
+              "name": "Q01 · Update a Score · similar",
+              "title": "Q01 · Update a Score · similar",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": true,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "**Similar example**\nStart `x` at 2, add 1, then add 4. Print `x`.\nStudy the same operations with different starting values. Replace this placeholder with the selected WEAT example.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Ready to continue?",
+                    "help_text": "",
+                    "question_type": "single_choice",
+                    "question_type_label": "Multiple Choice - One Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [
+                      "Continue"
+                    ],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 12,
+              "name": "Q01 · Update a Score · matched",
+              "title": "Q01 · Update a Score · matched",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": true,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "```python\nscore = 10\nscore = score + 5\nscore = score + 3\nprint(score)\n```\nThe first update makes 15; the next makes 18. Each assignment uses the current value.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Ready to continue?",
+                    "help_text": "",
+                    "question_type": "single_choice",
+                    "question_type_label": "Multiple Choice - One Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [
+                      "Continue"
+                    ],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 14,
+              "name": "Q09 · Compare a Sum · practice",
+              "title": "Q09 · Compare a Sum · practice",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 20,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": true,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "Set `a` to 3 and `b` to 4. Print 1 if their sum is greater than 5, otherwise 0.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 15,
+              "name": "Q09 · Compare a Sum · similar",
+              "title": "Q09 · Compare a Sum · similar",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 20,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": true,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "**Similar example**\nSet `a` to 3 and `b` to 4. Print 1 if their sum is greater than 5, otherwise 0.\nStudy the same operations with different starting values. Replace this placeholder with the selected WEAT example.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Ready to continue?",
+                    "help_text": "",
+                    "question_type": "single_choice",
+                    "question_type_label": "Multiple Choice - One Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [
+                      "Continue"
+                    ],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": 16,
+              "name": "Q09 · Compare a Sum · matched",
+              "title": "Q09 · Compare a Sum · matched",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 20,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": true,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "```python\nx = 12\ny = 5\nif x + y > 15:\n    result = 1\nelse:\n    result = 0\nprint(result)\n```\nThe sum is 17. Since 17 > 15, the first branch assigns 1.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Ready to continue?",
+                    "help_text": "",
+                    "question_type": "single_choice",
+                    "question_type_label": "Multiple Choice - One Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [
+                      "Continue"
+                    ],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "modules": [
+          {
+            "id": 10,
+            "name": "Q01 · Update a Score · practice",
+            "title": "Q01 · Update a Score · practice",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": true,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Start `x` at 2, add 1, then add 4. Print `x`.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 11,
+            "name": "Q01 · Update a Score · similar",
+            "title": "Q01 · Update a Score · similar",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": true,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "**Similar example**\nStart `x` at 2, add 1, then add 4. Print `x`.\nStudy the same operations with different starting values. Replace this placeholder with the selected WEAT example.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Ready to continue?",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [
+                    "Continue"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 12,
+            "name": "Q01 · Update a Score · matched",
+            "title": "Q01 · Update a Score · matched",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": true,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "```python\nscore = 10\nscore = score + 5\nscore = score + 3\nprint(score)\n```\nThe first update makes 15; the next makes 18. Each assignment uses the current value.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Ready to continue?",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [
+                    "Continue"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 14,
+            "name": "Q09 · Compare a Sum · practice",
+            "title": "Q09 · Compare a Sum · practice",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 20,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": true,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Set `a` to 3 and `b` to 4. Print 1 if their sum is greater than 5, otherwise 0.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 15,
+            "name": "Q09 · Compare a Sum · similar",
+            "title": "Q09 · Compare a Sum · similar",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 20,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": true,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "**Similar example**\nSet `a` to 3 and `b` to 4. Print 1 if their sum is greater than 5, otherwise 0.\nStudy the same operations with different starting values. Replace this placeholder with the selected WEAT example.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Ready to continue?",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [
+                    "Continue"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "id": 16,
+            "name": "Q09 · Compare a Sum · matched",
+            "title": "Q09 · Compare a Sum · matched",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 20,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": true,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "```python\nx = 12\ny = 5\nif x + y > 15:\n    result = 1\nelse:\n    result = 0\nprint(result)\n```\nThe sum is 17. Since 17 > 15, the first branch assigns 1.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Ready to continue?",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [
+                    "Continue"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "opens_at": null,
+        "time_limit_seconds": 0,
+        "closes_at": null,
+        "name": "Post-session Questionnaire",
+        "title": "Post-session Questionnaire",
+        "description": "",
+        "order": 40,
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "unlock_rule_portable": {},
+        "activities": {
+          "Form / Survey": [
+            {
+              "id": 17,
+              "name": "Post-session Measures — Placeholder",
+              "title": "Post-session Measures — Placeholder",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "Insert the approved distraction, interest, confidence, judgments of learning, expected test score, and confidence-in-estimate items.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "modules": [
+          {
+            "id": 17,
+            "name": "Post-session Measures — Placeholder",
+            "title": "Post-session Measures — Placeholder",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Insert the approved distraction, interest, confidence, judgments of learning, expected test score, and confidence-in-estimate items.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "opens_at": null,
+        "time_limit_seconds": 60,
+        "closes_at": null,
+        "name": "Final Test — Timer Demonstration",
+        "title": "Final Test — Timer Demonstration",
+        "description": "",
+        "order": 50,
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "unlock_rule_portable": {},
+        "activities": {
+          "Form / Survey": [
+            {
+              "id": 18,
+              "name": "Transfer Test — Placeholder",
+              "title": "Transfer Test — Placeholder",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": true
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "**Rehearsal timer: 60 seconds.**\nReplace these two questions and this duration with the approved test and rubric.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Your response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  },
+                  {
+                    "prompt": "Second transfer response",
+                    "help_text": "",
+                    "question_type": "long_answer",
+                    "question_type_label": "Long Answer",
+                    "required": true,
+                    "order": 20,
+                    "options": [],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "modules": [
+          {
+            "id": 18,
+            "name": "Transfer Test — Placeholder",
+            "title": "Transfer Test — Placeholder",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": true
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "**Rehearsal timer: 60 seconds.**\nReplace these two questions and this duration with the approved test and rubric.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Your response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "Second transfer response",
+                  "help_text": "",
+                  "question_type": "long_answer",
+                  "question_type_label": "Long Answer",
+                  "required": true,
+                  "order": 20,
+                  "options": [],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "opens_at": null,
+        "time_limit_seconds": 0,
+        "closes_at": null,
+        "name": "Debrief",
+        "title": "Debrief",
+        "description": "",
+        "order": 60,
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "unlock_rule_portable": {},
+        "activities": {
+          "Form / Survey": [
+            {
+              "id": 19,
+              "name": "Debrief — Rehearsal",
+              "title": "Debrief — Rehearsal",
+              "description": "",
+              "url": "",
+              "content_url": "",
+              "module_type": "form",
+              "module_type_label": "Form / Survey",
+              "display_type_label": "Form / Survey",
+              "resource_id": "Form / Survey",
+              "provider_id": "Form / Survey",
+              "platform_name": "",
+              "author_id": "",
+              "author": "",
+              "order": 10,
+              "is_visible": true,
+              "is_recommendation_only": false,
+              "is_graded": true,
+              "is_locked": false,
+              "allow_resubmission": true,
+              "unlock_rule": {},
+              "unlock_rule_portable": {},
+              "content_data": {
+                "rehearsal_only": true,
+                "study_shuffle_questions": false
+              },
+              "content_file": null,
+              "keywords": "",
+              "resource_link_id": null,
+              "supported_protocols": [],
+              "form": {
+                "instructions": "This rehearsal is complete. No recruitment credit will be issued.",
+                "allow_resubmission": true,
+                "submit_button_label": "Continue",
+                "questions": [
+                  {
+                    "prompt": "Ready to continue?",
+                    "help_text": "",
+                    "question_type": "single_choice",
+                    "question_type_label": "Multiple Choice - One Answer",
+                    "required": true,
+                    "order": 0,
+                    "options": [
+                      "Continue"
+                    ],
+                    "likert_min_label": "Strongly disagree",
+                    "likert_max_label": "Strongly agree"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "modules": [
+          {
+            "id": 19,
+            "name": "Debrief — Rehearsal",
+            "title": "Debrief — Rehearsal",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": true,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "rehearsal_only": true,
+              "study_shuffle_questions": false
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "This rehearsal is complete. No recruitment credit will be issued.",
+              "allow_resubmission": true,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "Ready to continue?",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 0,
+                  "options": [
+                    "Continue"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "course_instance": {
+      "id": 1,
+      "group_name": "Remediation Study — Flow Rehearsal Participants",
+      "active": true,
+      "canvas_course_id": null,
+      "canvas_assignment_id": null,
+      "lis_outcome_service_url": null,
+      "instructors": [
+        {
+          "username": "RITEL_DEMO_Teacher",
+          "email": "",
+          "name": ""
+        }
+      ]
+    }
+  },
+  "recruitment_sources": [
+    {
+      "platform": "prolific",
+      "label": "Prolific",
+      "is_active": false,
+      "max_participants": null,
+      "condition_strategy": "random",
+      "condition_labels": "",
+      "prolific_study_id": "",
+      "prolific_completion_code_complete": "",
+      "prolific_completion_code_screened_out": "",
+      "prolific_completion_code_attention_failed": "",
+      "prolific_use_secured_url": false,
+      "sona_base_url": "",
+      "sona_experiment_id": "",
+      "sona_grant_server_side": true
+    }
+  ]
+}

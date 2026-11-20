@@ -11,6 +11,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/activity-browser.css' %}">
 <style>
   .instructor-dashboard-tight .card {
     border-radius: 0.55rem;
@@ -671,336 +672,6 @@
     padding-bottom: 0.65rem;
   }
 
-  .session-activity {
-    margin: 0.85rem 0 1rem;
-  }
-
-  .session-activity-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.35rem;
-  }
-
-  .session-activity-heading {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin: 0;
-    color: #334155;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0;
-    text-transform: uppercase;
-  }
-
-  .session-activity-heading i {
-    color: #2563eb;
-    font-size: 0.9rem;
-  }
-
-  .session-activity-count {
-    color: #64748b;
-    font-size: 0.72rem;
-    font-weight: 700;
-  }
-
-  .session-activity-feed {
-    border-top: 1px solid rgba(148, 163, 184, 0.3);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-  }
-
-  .session-activity-row {
-    display: grid;
-    grid-template-columns: 2rem minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: 0.65rem;
-    min-height: 3.65rem;
-    padding: 0.55rem 0.35rem;
-    transition: background-color 140ms ease;
-  }
-
-  .session-activity-row + .session-activity-row {
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
-  }
-
-  .session-activity-row:hover {
-    background: rgba(241, 245, 249, 0.72);
-  }
-
-  .session-activity-avatar {
-    width: 1.9rem;
-    height: 1.9rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(37, 99, 235, 0.18);
-    border-radius: 0.4rem;
-    color: #1d4ed8;
-    background: #eff6ff;
-    font-size: 0.66rem;
-    font-weight: 800;
-  }
-
-  .session-activity-copy {
-    min-width: 0;
-  }
-
-  .session-activity-module {
-    overflow: hidden;
-    margin: 0;
-    color: #0f172a;
-    font-size: 0.84rem;
-    font-weight: 750;
-    line-height: 1.25;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .session-activity-learner {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 0.35rem;
-    margin-top: 0.18rem;
-    color: #64748b;
-    font-size: 0.72rem;
-    line-height: 1.25;
-  }
-
-  .session-activity-learner-name {
-    overflow: hidden;
-    color: #475569;
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .session-activity-email {
-    overflow: hidden;
-    color: #64748b;
-    text-decoration: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .session-activity-email:hover {
-    color: #2563eb;
-    text-decoration: underline;
-  }
-
-  .session-activity-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    min-height: 1.45rem;
-    padding: 0.18rem 0.45rem;
-    border: 1px solid transparent;
-    border-radius: 0.35rem;
-    font-size: 0.68rem;
-    font-weight: 800;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .session-activity-status.is-complete {
-    border-color: rgba(16, 185, 129, 0.2);
-    color: #047857;
-    background: rgba(16, 185, 129, 0.1);
-  }
-
-  .session-activity-status.is-outcome {
-    border-color: rgba(14, 165, 233, 0.2);
-    color: #0369a1;
-    background: rgba(14, 165, 233, 0.1);
-  }
-
-  .session-activity-status.is-reopened {
-    border-color: rgba(245, 158, 11, 0.24);
-    color: #b45309;
-    background: rgba(245, 158, 11, 0.11);
-  }
-
-  .session-activity-status.is-progress {
-    border-color: rgba(100, 116, 139, 0.2);
-    color: #475569;
-    background: rgba(100, 116, 139, 0.09);
-  }
-
-  .session-activity-time {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    color: #64748b;
-    font-size: 0.7rem;
-    white-space: nowrap;
-  }
-
-  .session-activity-tools {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(9rem, auto) auto;
-    gap: 0.6rem;
-    align-items: center;
-  }
-
-  .session-activity-export-btn {
-    width: 2.25rem;
-    height: 2.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(5, 150, 105, 0.32);
-    border-radius: 0.45rem;
-    color: #047857;
-    background: rgba(16, 185, 129, 0.08);
-    transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
-  }
-
-  .session-activity-export-btn:hover,
-  .session-activity-export-btn:focus-visible {
-    color: #047857;
-    background: rgba(16, 185, 129, 0.14);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12), 0 10px 20px rgba(15, 23, 42, 0.08);
-    transform: translateY(-1px);
-  }
-
-  .session-activity-table-wrap {
-    max-height: min(58vh, 42rem);
-    overflow: auto;
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 0.55rem;
-  }
-
-  .session-activity-table {
-    min-width: 58rem;
-    margin: 0;
-  }
-
-  .session-activity-table th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #f8fafc;
-    color: #475569;
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .session-activity-table th button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    color: inherit;
-    font-weight: 900;
-  }
-
-  .session-activity-table td {
-    vertical-align: middle;
-  }
-
-  .activity-event-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.28rem;
-    border-radius: 0.35rem;
-    padding: 0.22rem 0.48rem;
-    font-size: 0.7rem;
-    font-weight: 850;
-    white-space: nowrap;
-  }
-
-  .activity-event-pill.is-completion {
-    color: #047857;
-    background: rgba(16, 185, 129, 0.12);
-  }
-
-  .activity-event-pill.is-outcome {
-    color: #0369a1;
-    background: rgba(14, 165, 233, 0.12);
-  }
-
-  .activity-event-pill.is-launch,
-  .activity-event-pill.is-iframe-load {
-    color: #5b21b6;
-    background: rgba(124, 58, 237, 0.12);
-  }
-
-  .activity-event-pill.is-tab-blur,
-  .activity-event-pill.is-tab-focus {
-    color: #92400e;
-    background: rgba(245, 158, 11, 0.13);
-  }
-
-  .activity-event-pill.is-progress {
-    color: #475569;
-    background: rgba(100, 116, 139, 0.12);
-  }
-
-  .dark .session-activity-heading,
-  .dark .session-activity-module {
-    color: #e2e8f0;
-  }
-
-  .dark .session-activity-feed {
-    border-color: rgba(71, 85, 105, 0.72);
-  }
-
-  .dark .session-activity-row + .session-activity-row {
-    border-color: rgba(71, 85, 105, 0.52);
-  }
-
-  .dark .session-activity-row:hover {
-    background: rgba(30, 41, 59, 0.5);
-  }
-
-  .dark .session-activity-avatar {
-    border-color: rgba(96, 165, 250, 0.25);
-    color: #bfdbfe;
-    background: rgba(37, 99, 235, 0.15);
-  }
-
-  .dark .session-activity-learner,
-  .dark .session-activity-email,
-  .dark .session-activity-time,
-  .dark .session-activity-count {
-    color: #94a3b8;
-  }
-
-  .dark .session-activity-learner-name {
-    color: #cbd5e1;
-  }
-
-  .dark .session-activity-status.is-complete {
-    color: #6ee7b7;
-    background: rgba(16, 185, 129, 0.13);
-  }
-
-  .dark .session-activity-status.is-outcome {
-    color: #7dd3fc;
-    background: rgba(14, 165, 233, 0.13);
-  }
-
-  .dark .session-activity-status.is-reopened {
-    color: #fcd34d;
-    background: rgba(245, 158, 11, 0.13);
-  }
-
-  .dark .session-activity-status.is-progress {
-    color: #cbd5e1;
-    background: rgba(100, 116, 139, 0.16);
-  }
-
-  .dark .session-activity-table th {
-    color: #cbd5e1;
-    background: #0f172a;
-  }
-
-  .dark .session-activity-table-wrap {
-    border-color: rgba(71, 85, 105, 0.72);
-  }
-
   .dashboard-right-col {
     position: sticky;
     top: calc(var(--site-header-height, 0px) + 0.8rem);
@@ -1091,25 +762,7 @@
       justify-content: center;
     }
 
-    .session-activity-row {
-      grid-template-columns: 1.9rem minmax(0, 1fr) auto;
-      gap: 0.5rem;
-      padding: 0.62rem 0.2rem;
     }
-
-    .session-activity-time {
-      grid-column: 2 / -1;
-      margin-top: -0.25rem;
-    }
-
-    .session-activity-email {
-      display: none;
-    }
-
-    .session-activity-tools {
-      grid-template-columns: 1fr;
-    }
-  }
 </style>
 {% endblock %}
 
@@ -1300,53 +953,16 @@
     </div>
   </div>
 
-  <div id="sessionActivityModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 z-[80] items-center justify-center bg-black/55 p-4" aria-hidden="true">
+  <div id="sessionActivityModal" class="modal-overlay modal-overlay--nested-action hidden fixed inset-0 z-[80] items-center justify-center bg-black/55 p-4" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sessionActivityModalTitle">
     <div class="modal-backdrop-close absolute inset-0"></div>
     <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
-      <div class="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="min-w-0">
-          <div class="stat-kicker">{% ui "Session Activity" %}</div>
-          <h2 id="sessionActivityModalTitle" class="text-xl font-bold mt-1 mb-0 truncate">{% ui "Recent Activity" %}</h2>
-          <p id="sessionActivityModalMeta" class="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-0">{% ui "Reverse chronological activity across this session." %}</p>
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="min-w-0"><div class="stat-kicker">{% ui "Activity" %}</div>
+          <h2 id="sessionActivityModalTitle" class="text-xl font-bold mt-1 mb-0 truncate">{% ui "Activity" %}</h2>
         </div>
-        <button type="button" data-bs-dismiss="modal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none">&times;</button>
+        <button type="button" data-bs-dismiss="modal" aria-label="{% ui 'Close' %}" class="text-gray-400 text-2xl leading-none">&times;</button>
       </div>
-      <div class="flex-1 overflow-y-auto p-6 space-y-4">
-        <div class="session-activity-tools">
-          <label class="relative mb-0">
-            <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true"></i>
-            <input id="sessionActivitySearch" type="search" class="form-control pl-9" placeholder="{% ui "Filter by student, activity, event, source, or email" %}">
-          </label>
-          <select id="sessionActivityTypeFilter" class="form-select">
-            <option value="">{% ui "All events" %}</option>
-          </select>
-          <button id="downloadSessionActivityButton" class="session-activity-export-btn" type="button" title="{% ui "Download activity CSV" %}" aria-label="{% ui "Download activity CSV" %}">
-            <i class="bi bi-download" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div class="session-activity-table-wrap">
-          <table class="table table-hover table-sm session-activity-table">
-            <thead>
-              <tr>
-                <th><button type="button" data-activity-sort="created_at">{% ui "Time" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="learner">{% ui "Student" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="module">{% ui "Activity" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="event_type">{% ui "Event" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th class="text-right"><button type="button" data-activity-sort="progress">{% ui "Progress" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th class="text-right"><button type="button" data-activity-sort="score">{% ui "Score" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="source">{% ui "Source" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-                <th><button type="button" data-activity-sort="success">{% ui "Success" %} <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
-              </tr>
-            </thead>
-            <tbody id="sessionActivityTableBody">
-              <tr>
-                <td colspan="8" class="text-center text-slate-500 py-5">{% ui "Choose a session activity button to load events." %}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div class="flex-1 overflow-y-auto p-4">{% include 'dashboard/components/activity_browser.html' %}</div>
     </div>
   </div>
 
@@ -1678,5 +1294,6 @@
 
 {% block extra_js %}
 <script src="{% static 'js/shared/course-resources-modal.js' %}"></script>
+<script src="{% static 'js/dashboard/activity-browser.js' %}"></script>
 <script src="{% static 'js/dashboard/instructor-dashboard.js' %}"></script>
 {% endblock %}

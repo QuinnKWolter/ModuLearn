@@ -15,6 +15,8 @@ class ExperimentTemplateTests(TestCase):
         template = json.loads((Path(__file__).resolve().parents[3] / 'exports' / 'python-remediation-study-template.json').read_text(encoding='utf-8'))
         teacher = get_user_model().objects.create_user(username='template-researcher', is_instructor=True)
         study = create_study_for_instructor(teacher, title=template['study']['title'], template_data=template)
+        study.participant_paced = False
+        study.save(update_fields=['participant_paced'])
         course = study.course_instance.course
         self.assertEqual(course.branch_rules.count(), 24)
         self.assertEqual(Module.objects.filter(unit__course=course).count(), 38)

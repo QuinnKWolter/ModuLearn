@@ -14,6 +14,8 @@ from .fields import EncryptedCharField
 
 class Study(models.Model):
     guided_flow = models.BooleanField(default=False)
+    participant_paced = models.BooleanField(default=True)
+    retry_after_remediation = models.BooleanField(default=True)
     preview_of = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='previews')
     STATUS_DRAFT = "draft"
     STATUS_ACTIVE = "active"

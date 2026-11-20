@@ -1,3 +1,4 @@
+from dashboard.test_activity import follow_activity_export
 import json
 from urllib.parse import urlencode
 from unittest.mock import patch
@@ -115,6 +116,7 @@ class PracticeTests(TestCase):
         # Instructor practice must never appear in student research exports.
         for download in ('course_csv', 'csv', 'summary'):
             exported = self.client.get(reverse('courses:recommendation_logs', args=[self.instance.pk]), {'download': download})
+            exported = follow_activity_export(self.client, exported)
             content = b''.join(exported.streaming_content) if exported.streaming else exported.content
             self.assertNotIn(b'teacher,', content)
         self.client.force_login(self.student)
@@ -308,6 +310,7 @@ class PracticeTests(TestCase):
         self.client.force_login(self.teacher)
         self.assertContains(self.client.get(url),'source_attempt')
         response=self.client.get(url,{'download':'csv','event':'source_attempt'})
+        response = follow_activity_export(self.client, response)
         text=b''.join(response.streaming_content).decode()
         self.assertIn('attempt_score',text);self.assertEqual(text.count('source_attempt'),2)
 
@@ -376,7 +379,8 @@ class PracticeTests(TestCase):
         self.assertEqual(item.events.filter(event_type='visit').count(),1)
         self.client.force_login(self.teacher)
         response=self.client.get(reverse('courses:recommendation_logs',args=[self.instance.pk]),{'download':'summary'})
-        text=b''.join(response.streaming_content).decode();self.assertIn('impressions,visits,submissions',text);self.assertIn(str(item.pk),text)
+        response = follow_activity_export(self.client, response)
+        text=b''.join(response.streaming_content).decode();self.assertIn('visits,impressions,submissions',text);self.assertIn(str(item.pk),text)
 
     def test_practice_scores_reject_nonfinite_values(self):
         item=self.activate();url=reverse('courses:recommendation_practice_progress',args=[self.instance.pk,item.pk])

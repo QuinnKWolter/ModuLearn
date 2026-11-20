@@ -323,15 +323,9 @@ def practice_event_view(request, instance_id, recommendation_id):
 @login_required
 @require_GET
 def research_logs(request, instance_id):
-    import csv
-    import io
-    import json
     from django.core.paginator import Paginator
     from django.db.models import Count
-    from django.http import StreamingHttpResponse
     from courses.models import RecommendationEvent, RecommendationProgress, ModuleProgressEvent
-    def rank_method(activation):
-        return 'explicit_rank' if any(p.get('ranking') == 'explicit_rank' for p in activation.configuration.get('provenance', [])) else 'cosine_similarity'
     instance = get_object_or_404(CourseInstance.objects.select_related('course'), pk=instance_id)
     if not _is_course_instructor(request.user, instance):
         raise PermissionDenied
@@ -345,21 +339,11 @@ def research_logs(request, instance_id):
         course_events = course_events.filter(Q(user__username__icontains=query) | Q(module__title__icontains=query))
     if kind:
         course_events = course_events.filter(event_type=kind)
-    if request.GET.get('download') == 'course_csv':
-        def course_rows():
-            stream = io.StringIO(); writer = csv.writer(stream)
-            writer.writerow(['context', 'event_id', 'time_utc', 'student', 'enrollment_id', 'module_id', 'activity',
-                             'event', 'source', 'attempt_score', 'progress', 'success', 'payload'])
-            yield stream.getvalue()
-            for event in course_events.iterator(chunk_size=500):
-                values = ['course', event.pk, event.created_at.isoformat(), event.user.username,
-                    event.module_progress.enrollment_id, event.module_id, event.module.title, event.event_type,
-                    event.source, event.score, event.progress, event.success, json.dumps(event.payload, ensure_ascii=False)]
-                values = ["'" + v if isinstance(v, str) and v.startswith(('=', '+', '-', '@', '\t', '\r')) else v for v in values]
-                stream.seek(0); stream.truncate(0); writer.writerow(values); yield stream.getvalue()
-        response = StreamingHttpResponse(course_rows(), content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="course-activity-{instance.pk}.csv"'
-        return response
+    if request.GET.get('download') in ('course_csv', 'csv', 'summary'):
+        from urllib.parse import urlencode
+        context = {'course_csv': 'course', 'csv': 'practice', 'summary': 'summary'}[request.GET['download']]
+        return redirect(reverse('dashboard:activity_export', args=[instance.pk]) + '?' + urlencode({
+            'context': context, 'q': query, 'event': kind}))
     if query:
         events = events.filter(Q(activation__enrollment__student__username__icontains=query) |
             Q(activation__source_module__title__icontains=query) | Q(recommendation__module__title__icontains=query))
@@ -373,45 +357,6 @@ def research_logs(request, instance_id):
     if query:
         assignments = assignments.filter(Q(activation__enrollment__student__username__icontains=query) |
             Q(activation__source_module__title__icontains=query) | Q(module__title__icontains=query))
-    if request.GET.get('download') == 'summary':
-        def summary_rows():
-            stream=io.StringIO(); writer=csv.writer(stream)
-            writer.writerow(['recommendation_id','enrollment_id','student','original_problem','recommended_activity',
-                'provider','rank','similarity','activated_at','impressions','visits','submissions','score','progress','completed_at','feedback','retired_at','ranking_method'])
-            yield stream.getvalue()
-            for item in assignments.iterator(chunk_size=500):
-                values=[str(item.pk),item.activation.enrollment_id,item.activation.enrollment.student.username,
-                    item.activation.source_module.title,item.module.title,item.provider,item.rank,item.similarity if rank_method(item.activation) != 'explicit_rank' else '',
-                    item.activation.activated_at.isoformat() if item.activation.activated_at else '',item.impressions,item.visits,
-                    item.submissions,item.score,item.progress,item.completed_at.isoformat() if item.completed_at else '',item.feedback,
-                    item.retired_at.isoformat() if item.retired_at else '', rank_method(item.activation)]
-                values=["'"+v if isinstance(v,str) and v.startswith(('=','+','-','@','\t','\r')) else v for v in values]
-                stream.seek(0);stream.truncate(0);writer.writerow(values);yield stream.getvalue()
-        response=StreamingHttpResponse(summary_rows(),content_type='text/csv; charset=utf-8')
-        response['Content-Disposition']=f'attachment; filename="recommendation-summary-{instance.pk}.csv"'
-        return response
-    if request.GET.get('download') == 'csv':
-        def rows():
-            stream = io.StringIO()
-            writer = csv.writer(stream)
-            writer.writerow(['event_id', 'time_utc', 'student', 'enrollment_id', 'source_module_id', 'original_problem',
-                'recommendation_id', 'target_module_id', 'recommended_activity', 'provider', 'rank', 'similarity',
-                'event', 'source', 'attempt_score', 'progress', 'success', 'payload', 'ranking_method'])
-            yield stream.getvalue()
-            for event in events.iterator(chunk_size=500):
-                item = event.recommendation
-                values = [event.pk, event.created_at.isoformat(), event.activation.enrollment.student.username,
-                    event.activation.enrollment_id, event.activation.source_module_id, event.activation.source_module.title,
-                    item.pk if item else '', item.module_id if item else '', item.module.title if item else '',
-                    item.provider if item else '', item.rank if item else '', item.similarity if item and rank_method(event.activation) != 'explicit_rank' else '',
-                    event.event_type, event.source, event.score, event.progress, event.success, json.dumps(event.payload, ensure_ascii=False), rank_method(event.activation)]
-                # Prevent spreadsheet formula execution when instructors open exports.
-                values = ["'"+v if isinstance(v, str) and v.startswith(('=', '+', '-', '@', '\t', '\r')) else v for v in values]
-                stream.seek(0); stream.truncate(0); writer.writerow(values)
-                yield stream.getvalue()
-        response = StreamingHttpResponse(rows(), content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="recommendation-events-{instance.pk}.csv"'
-        return response
     params = request.GET.copy(); params.pop('page', None); params.pop('assignments_page', None); params.pop('course_page', None); params.pop('download', None)
     items = RecommendationProgress.objects.filter(activation__enrollment__course_instance=instance)
     return render(request, 'courses/recommendation_logs.html', {'course_instance': instance,
