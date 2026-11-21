@@ -556,7 +556,7 @@
                     {% if is_instructor and not card.is_visible %}
                       <span class="course-visibility-chip is-hidden"><i class="fa-solid fa-eye-slash"></i> {% ui "Hidden" %}</span>
                     {% endif %}
-                    {% if card.is_locked %}
+                    {% if not card.can_access or is_instructor and card.is_locked %}
                       <span class="course-visibility-chip is-locked"><i class="fa-solid fa-lock"></i> {% ui "Locked" %}</span>
                     {% endif %}
                   </span>

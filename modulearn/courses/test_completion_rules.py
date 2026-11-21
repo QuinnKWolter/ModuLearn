@@ -86,6 +86,60 @@ class CompletionRuleTests(TestCase):
         other_enrollment = Enrollment.objects.create(student=self.student, course_instance=other)
         self.assertFalse(evaluate_unit_access(target, other_enrollment).can_access)
 
+    def test_unit_badge_follows_student_access_without_changing_prerequisite(self):
+        import re
+
+        pretest = self.modules[0].unit
+        target = Unit.objects.create(course=self.course, title='Selected pre-test prerequisite', order=999,
+            is_locked=True, unlock_rule={'conditions': [{'type': 'unit_completed', 'target_id': pretest.pk}]})
+        activity = Module.objects.create(unit=target, title='Available after pre-test',
+                                        content_url='https://example.org/activity')
+        saved_rule = target.unlock_rule
+        detail = reverse('courses:course_detail', args=[self.instance.pk])
+        launch = reverse('courses:launch_iframe_module', args=[self.instance.pk, activity.pk])
+        self.client.force_login(self.student)
+
+        def badge():
+            response = self.client.get(detail)
+            self.assertEqual(response.status_code, 200)
+            summaries = re.findall(r'<summary class="course-unit-summary">(.*?)</summary>',
+                                   response.content.decode(), flags=re.DOTALL)
+            summary = next(element for element in summaries if target.title in element)
+            return re.search(r'class="course-visibility-chip is-locked"', summary)
+
+        self.assertIsNotNone(badge())
+        for index, module in enumerate(self.modules):
+            if index == 9:
+                # Nine submissions do not satisfy a ten-question pre-test.
+                self.assertFalse(evaluate_unit_access(target, self.enrollment).can_access)
+                self.assertIsNotNone(badge())
+                self.assertEqual(self.client.get(launch).status_code, 302)
+            progress, _ = ModuleProgress.get_or_create_progress(
+                user=self.student, module=module, course_instance=self.instance)
+            apply_progress_snapshot(progress, source='quizjet', score=0, success=False,
+                progress=0, event_type='outcome', payload={'attempt_score': 0, 'correct': False})
+
+        self.assertEqual(ModuleProgress.objects.filter(enrollment=self.enrollment,
+                         module__unit=pretest, is_complete=True).count(), 10)
+        self.assertTrue(evaluate_unit_access(target, self.enrollment).can_access)
+        self.assertIsNone(badge())
+        self.assertEqual(self.client.get(launch).status_code, 200)
+        target.refresh_from_db()
+        self.assertTrue(target.is_locked)
+        self.assertEqual(target.unlock_rule, saved_rule)
+
+        # The same saved rule must still lock out a different, incomplete student.
+        other = User.objects.create_user(username='pretest-incomplete', is_student=True)
+        Enrollment.objects.create(student=other, course_instance=self.instance)
+        self.client.force_login(other)
+        self.assertIsNotNone(badge())
+        self.assertEqual(self.client.get(launch).status_code, 302)
+
+        # Instructors retain their configuration indicator and preview access.
+        self.client.force_login(self.instance.instructors.first())
+        self.assertIsNotNone(badge())
+        self.assertEqual(self.client.get(launch).status_code, 200)
+
     def test_unit_roundtrip_remaps_dependencies_and_defaults_legacy_packages(self):
         other=Course.objects.create(id='copy',title='Copy')
         for phase in ['pretest','posttest']:
