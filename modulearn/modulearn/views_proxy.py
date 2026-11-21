@@ -8,7 +8,9 @@ from django.views.decorators.csrf import csrf_exempt
 import logging
 import re
 import json
-from modulearn.learning.services.pcrs_tracking import PCRS_HOST, capture_pcrs_result_if_possible
+from modulearn.learning.services.pcrs_tracking import (PCRS_HOST, capture_pcrs_result_if_possible,
+    is_pcrs_run_path, record_pcrs_submission, finish_pcrs_submission)
+from django.core.exceptions import PermissionDenied
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +386,7 @@ def http_get_proxy(request, _redirect_depth=0):
                 json_data = request.body
                 headers['Content-Type'] = 'application/json'
                 logger.debug(f"DEBUG PROXY: POST JSON body (length: {len(json_data)} bytes)")
-                timeout = 30 if 'j_security_check' in target else 8
+                timeout = _upstream_timeout(request.method, u)
                 with client.post(target, headers=headers, data=json_data, stream=True, timeout=timeout, allow_redirects=False) as r:
                     return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
             else:
@@ -401,17 +403,17 @@ def http_get_proxy(request, _redirect_depth=0):
                 if content_type:
                     headers['Content-Type'] = content_type
                 
-                logger.debug(f"DEBUG PROXY: POST form data: {data}")
+                logger.debug("Proxying form submission (%s fields)", len(data))
                 # Use longer timeout for authentication endpoints (j_security_check)
-                timeout = 30 if 'j_security_check' in target else 8
+                timeout = _upstream_timeout(request.method, u)
                 with client.post(target, headers=headers, data=data, stream=True, timeout=timeout, allow_redirects=False) as r:
                     return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
         else:
             # GET or HEAD request
             with client.get(target, headers=headers, stream=True, timeout=8, allow_redirects=False) as r:
                 return _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0)
-    except requests.Timeout as e:
-        logger.warning(f"Proxy request timed out: {e}")
+    except requests.Timeout:
+        logger.warning("Proxy timeout: method=%s host=%s path=%s", request.method, u.hostname, u.path)
         return HttpResponse("Request timeout - the server took too long to respond", status=504)
     except requests.RequestException as e:
         logger.error(f"Proxy request failed: {e}")
@@ -420,6 +422,14 @@ def http_get_proxy(request, _redirect_depth=0):
     finally:
         if client is not requests:
             client.close()
+
+
+def _upstream_timeout(method, parsed_url):
+    # Compiling/grading is slower than fetching an activity. Do not retry POSTs:
+    # PCRS may have accepted a submission even when its response timed out.
+    if method == 'POST' and is_pcrs_run_path(parsed_url.hostname, parsed_url.path):
+        return (5, settings.PCRS_RUN_READ_TIMEOUT)
+    return 30 if 'j_security_check' in parsed_url.path else 8
 
 
 def _handle_proxy_response(r, u, request, follow_redirects=True, max_redirects=5, _redirect_depth=0):
@@ -710,6 +720,11 @@ def _is_paws_activity_page(parsed_url) -> bool:
 
 
 def _inject_activity_api_rewrite_script(content: str) -> str:
+    from main.i18n import translate
+    run_messages = {
+        'waiting': translate('PCRS is still checking your code. Please wait before submitting again.'),
+        'failed': translate('No grading result was received. Your code is still in the editor. Please try submitting again shortly.'),
+    }
     script_name = getattr(settings, "FORCE_SCRIPT_NAME", "") or ""
     script_name = script_name.rstrip("/")
     pcrs_feedback_assets = {
@@ -795,6 +810,7 @@ button.btn.modu-material-icon-button span {{
 <script>
 (function() {{
   const moduLearnPrefix = {json.dumps(script_name)};
+  const pcrsRunMessages = {json.dumps(run_messages)};
   const pcrsFeedbackAssets = {json.dumps(pcrs_feedback_assets)};
   const materialIconFallbacks = new Set({json.dumps(sorted(MATERIAL_ICON_FALLBACK_NAMES))});
   const materialIconMarkup = {{
@@ -834,6 +850,9 @@ button.btn.modu-material-icon-button span {{
   }}
   function localizeActivityUrl(url) {{
     if (typeof url !== 'string') return url;
+    // Normalize only our mount/proxy boundary, never upstream paths or queries.
+    const duplicatePrefix = moduLearnPrefix + '//proxy/';
+    if (url.startsWith(duplicatePrefix)) url = moduLearnPrefix + '/proxy/' + url.slice(duplicatePrefix.length);
     if (url.startsWith('/dbqa/')) return moduLearnPrefix + '/proxy/https/codesmell.org' + url;
     if (url.startsWith('/sqlknotserver/')) return moduLearnPrefix + '/proxy/https/adapt2.sis.pitt.edu' + url;
     if (pcrsFeedbackAssets[url]) return pcrsFeedbackAssets[url];
@@ -868,6 +887,26 @@ button.btn.modu-material-icon-button span {{
     if (init && init.method) return String(init.method);
     if (resource && resource.method) return String(resource.method);
     return 'GET';
+  }}
+
+  function beginPcrsRun(method, url) {{
+    if (String(method).toUpperCase() !== 'POST' || !/\\/mgrids\\/problems\\/[^/]+\\/\\d+\\/run(?:[?]|$)/.test(url)) return function() {{}};
+    let status = document.getElementById('modulearn-pcrs-status');
+    if (!status) {{
+      status = document.createElement('p');
+      status.id = 'modulearn-pcrs-status';
+      status.setAttribute('role', 'status');
+      status.style.cssText = 'clear:both;padding:12px;border:1px solid #9aaab8;border-radius:4px;background:#f1f5f9;color:#172b3a;font:16px/1.5 sans-serif';
+      (document.querySelector('form') || document.body).appendChild(status);
+    }}
+    status.hidden = true;
+    const timer = setTimeout(function() {{ status.textContent = pcrsRunMessages.waiting; status.hidden = false; }}, 2000);
+    return function(code) {{
+      clearTimeout(timer);
+      const failed = !code || code >= 400;
+      status.hidden = !failed;
+      if (failed) status.textContent = pcrsRunMessages.failed;
+    }};
   }}
 
   function shouldNotifyParentForActivityPost(method, url) {{
@@ -930,9 +969,14 @@ button.btn.modu-material-icon-button span {{
         }}
       }}
       const requestUrl = requestUrlString(resource);
+      const finishRun = beginPcrsRun(requestMethod, requestUrl);
       return originalFetch(resource, init).then(function(response) {{
+        finishRun(response.status);
         notifyParentActivityPost(requestMethod, response && response.url ? response.url : requestUrl, response ? response.status : 0);
         return response;
+      }}, function(error) {{
+        finishRun(0);
+        throw error;
       }});
     }};
   }}
@@ -943,11 +987,20 @@ button.btn.modu-material-icon-button span {{
       const localizedUrl = localizeActivityUrl(url);
       this.__moduLearnActivityMethod = method;
       this.__moduLearnActivityUrl = localizedUrl;
-      this.addEventListener('loadend', function() {{
-        notifyParentActivityPost(this.__moduLearnActivityMethod, this.__moduLearnActivityUrl, this.status);
-      }});
+      if (!this.__moduLearnActivityListener) {{
+        this.__moduLearnActivityListener = true;
+        this.addEventListener('loadend', function() {{
+          if (this.__moduLearnFinishRun) this.__moduLearnFinishRun(this.status);
+          notifyParentActivityPost(this.__moduLearnActivityMethod, this.__moduLearnActivityUrl, this.status);
+        }});
+      }}
       arguments[1] = localizedUrl;
       return originalOpen.apply(this, arguments);
+    }};
+    const originalSend = window.XMLHttpRequest.prototype.send;
+    window.XMLHttpRequest.prototype.send = function() {{
+      this.__moduLearnFinishRun = beginPcrsRun(this.__moduLearnActivityMethod, this.__moduLearnActivityUrl);
+      return originalSend.apply(this, arguments);
     }};
   }}
 
@@ -1579,11 +1632,12 @@ def _capture_pcex_explanation_if_possible(request, rest: str, response: HttpResp
             event_type="progress",
         )
         logger.info(
-            "[PCEX Tracking] Recorded worked-example explanation for user=%s module=%s progress=%s/%s",
+            "[PCEX Tracking] Recorded explanation user=%s module=%s incoming_steps=%s/%s saved_progress=%.3f",
             user.username,
             module.id,
             completed,
             total,
+            module_progress.progress,
         )
     except Exception:
         logger.exception("[PCEX Tracking] Failed to record worked-example progress")
@@ -2132,8 +2186,10 @@ def http_get_proxy_path(request, rest: str):
     logger.debug(f"DEBUG PATH PROXY: target={target}")
 
     # For path-based proxy, handle POST differently from GET/HEAD
+    receipt = None
     try:
         if request.method == "POST":
+            receipt = record_pcrs_submission(request, host, path_rest)
             # For POST, we need to make http_get_proxy extract URL from PATH_INFO
             # Create a modified request with PATH_INFO set to the proxy path
             class ProxyRequest:
@@ -2158,6 +2214,8 @@ def http_get_proxy_path(request, rest: str):
             redirect_depth = getattr(request, '_redirect_depth', 0)
             result = http_get_proxy(proxy_request, _redirect_depth=redirect_depth)
             if result is None:
+                finish_pcrs_submission(receipt, None)
+                receipt = None
                 return HttpResponseServerError("Proxy request returned None")
             if host in {"pawscomp2.sis.pitt.edu", "adapt2.sis.pitt.edu"} and path_rest.startswith("pcex/"):
                 pcex_rest = path_rest[len("pcex/"):]
@@ -2165,7 +2223,9 @@ def http_get_proxy_path(request, rest: str):
                 _capture_pcex_explanation_if_possible(request, pcex_rest, result)
                 _capture_pcex_result_if_possible(request, pcex_rest, result)
             _capture_acos_pcex_event_if_possible(request, host, path_rest, result)
-            capture_pcrs_result_if_possible(request, host, path_rest, result)
+            recorded = capture_pcrs_result_if_possible(request, host, path_rest, result)
+            finish_pcrs_submission(receipt, result, recorded=recorded is not None)
+            receipt = None
             from modulearn.learning.services.sqlknot_tracking import capture_sqlknot_result
             capture_sqlknot_result(request, host, path_rest, result)
             from modulearn.learning.services.dbqa_tracking import capture_dbqa_result
@@ -2193,7 +2253,14 @@ def http_get_proxy_path(request, rest: str):
                 return HttpResponseServerError("Proxy request returned None")
             from modulearn.learning.services.quizjet_tracking import process_quizjet_response
             return process_quizjet_response(request, host, path_rest, result)
+    except PermissionDenied:
+        return HttpResponseForbidden("Activity access is unavailable.")
     except Exception as e:
+        if receipt:
+            try:
+                finish_pcrs_submission(receipt, None)
+            except Exception:
+                logger.error('Could not finalize PCRS transport receipt; original receipt retained')
         logger.error(f"ERROR PROXY PATH: Exception in http_get_proxy_path: {e}")
         logger.exception("Exception in http_get_proxy_path")
-        return HttpResponseServerError(f"Proxy error: {str(e)}")
+        return HttpResponseServerError("The activity request could not be processed. Please try again shortly.")

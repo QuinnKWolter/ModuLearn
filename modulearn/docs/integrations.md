@@ -64,6 +64,61 @@ Flow:
 4. Learners are enrolled in the `CourseInstance`; instructors are attached as instructors.
 5. If Canvas sends `lis_result_sourcedid`, it is stored on `CourseProgress` for legacy grade passback.
 
+## PCRS submission reliability (2026-11-21)
+
+Only PCRS `POST /mgrids/problems/.../run` gets a five-second connection timeout
+and a 30-second read timeout, instead of the ordinary eight-second limit.
+`PCRS_RUN_READ_TIMEOUT` can adjust the read limit (bounded to 8–45 seconds).
+The Docker entrypoint gives Gunicorn 60 seconds. Submissions are never automatically
+retried: after a timeout the provider may have accepted work without returning a
+result. No attempt or grade is invented in that situation. The editor retains its
+code and shows a retry message; ordinary provider feedback still displays normally.
+
+Local Chrome submissions on 2026-11-21 passed PCRS Java 358, 359, 360, and 478
+(8/8 each), and 453 (6/6). Database checks confirmed completion, grade, attempt
+counts and submitted source. Live responses took approximately 1–2 seconds; this
+does not reproduce the reported production load. A real local HTTP response
+delayed nine seconds verifies the former timeout boundary and successful tracking.
+Isolated browser checks cover waiting, failure, retry, and mount-prefix normalization.
+
+PCEX worked-example snapshots compare against locked current progress before
+retaining the best result; incoming explanation-step counts remain in the event
+payload and are labeled as incoming counts in logs. A completion-on-submission
+pre-test can correctly show progress 100% and score 0%; correctness is separate.
+Application logs redact session/password query values and omit verbose launch
+URLs at production log level. This does not scrub historical logs or configure
+external nginx/provider access logs. KT group discovery reuses results, including
+empty results, on the current user object; a new request still checks memberships.
+
+### Submission receipts and diagnostics
+
+Authenticated PCRS course/practice submissions are now saved **before** the
+upstream request as `provider_event` / `pcrs_transport`. The receipt stores
+submitted source, a request ID, HTTP outcome and elapsed seconds. Its status is
+`pending` while awaiting a response, `recorded` after local result handling,
+`failed` on an HTTP/transport error, or `ungraded_response` when no score was
+accepted. A pending receipt after a worker interruption has an unknown outcome.
+These receipts are not scored attempts and do not unlock content or activate
+recommendations. Existing Activity inspection/downloads include them; filter
+by source `pcrs_transport` using search. Practice receipts stay in the practice
+stream. Untracked authoring previews remain untracked. New PCRS submission
+snapshots omit session/CSRF credentials while retaining the submitted code.
+No historical submissions can be reconstructed from these future receipts.
+
+Requests receive a server-generated `X-Request-ID`; UTC application logs include
+that ID and redact credential values. Leading duplicate slashes are normalized
+without redirecting POSTs or changing internal provider paths or query strings.
+An explicit activity ID with a different PCRS URL is rejected for progress
+mapping rather than applying a stale iframe result to replacement content.
+
+Course-authoring failures no longer log payloads/tokens/password fragments,
+forward raw remote errors, or automatically rotate a user's stored password.
+Credential rejection returns a safe 422 message; upstream HTTP failures return
+502 and connectivity failures return 503. Explicit reset remains available and
+requires remote synchronization. KnowledgeTree fallback uses the login form's
+cleaned username; passwords remain untouched. Rate-limit keys are bounded ASCII
+hashes of normalized usernames, including Unicode names.
+
 ## LTI 1.3 / Moodle And Canvas Advantage
 
 Copy these values from the LTI Setup modal into Moodle or Canvas:

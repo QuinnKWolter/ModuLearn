@@ -2,13 +2,81 @@ from __future__ import annotations
 
 import json
 import logging
-from urllib.parse import parse_qs, urlparse
+import time
+from uuid import uuid4
+from urllib.parse import parse_qs, urlparse, urlencode, urlunparse
 
 from django.http import HttpResponse, QueryDict
 
 logger = logging.getLogger(__name__)
 
 PCRS_HOST = "pcrs.utm.utoronto.ca"
+
+
+def record_pcrs_submission(request, host, path_rest):
+    """Durable transport receipt, separate from a scored attempt or completion.
+
+    Called before contacting PCRS. Preview requests remain untracked. Persistence
+    errors propagate so we do not silently send tracked work without saving it.
+    """
+    if request.method != 'POST' or not is_pcrs_run_path(host, path_rest):
+        return None
+    user = getattr(request, 'user', None)
+    params = _referer_query_params(request)
+    if not user or not user.is_authenticated or _first_query_value(params, 'usr') != user.username:
+        return None
+    from courses.models import Course, ModuleProgressEvent, RecommendationProgress
+    from .tracking_context import enrolled_tracking_session
+    from .recommendation_tracking import proxy_progress, practice_event
+    course = Course.objects.filter(pk=_first_query_value(params, 'cid')).first()
+    if course is None:
+        return None
+    instance = enrolled_tracking_session(course, user, params)
+    module = _find_pcrs_module(course, params, path_rest)
+    if instance is None or module is None:
+        return None
+    progress, _ = proxy_progress(request, params, user=user, module=module, course_instance=instance)
+    request_id = getattr(request, 'request_id', None) or uuid4().hex
+    request.request_id = request_id
+    payload = {'kind': 'submission_received', 'status': 'pending', 'request_id': request_id,
+               'pcrs_submission': _submission_snapshot(request, params, path_rest)}
+    if isinstance(progress, RecommendationProgress):
+        event = practice_event(progress, 'provider_event', source='pcrs_transport', payload=payload)
+    else:
+        event = ModuleProgressEvent.objects.create(
+            module_progress=progress, user=user, module=module, course_instance=instance,
+            event_type='provider_event', source='pcrs_transport', payload=payload,
+            progress=progress.progress, score=None, success=False,
+            study_participant_session=progress.study_participant_session,
+            study_condition=progress.study_condition,
+        )
+    logger.info('PCRS submission received request_id=%s user_id=%s instance_id=%s module_id=%s',
+                request_id, user.pk, instance.pk, module.pk)
+    return event, time.monotonic()
+
+
+def finish_pcrs_submission(receipt, response, recorded=False):
+    if receipt is None:
+        return
+    event, started = receipt
+    status = getattr(response, 'status_code', 500)
+    payload = dict(event.payload, http_status=status, elapsed_seconds=round(time.monotonic() - started, 3),
+                   status='recorded' if recorded else ('failed' if status >= 400 else 'ungraded_response'))
+    if status < 400 and not recorded:
+        try:
+            # Retain a returned result even if normal score persistence failed.
+            payload['pcrs_result'] = json.loads(response.content.decode('utf-8'))
+        except (ValueError, UnicodeDecodeError):
+            pass
+    # Updating this transport receipt never changes progress, scores, or attempts.
+    try:
+        type(event).objects.filter(pk=event.pk).update(payload=payload)
+    except Exception as exc:
+        logger.error('Could not finalize PCRS receipt request_id=%s error_type=%s; original receipt retained',
+                     payload['request_id'], type(exc).__name__)
+        return
+    logger.info('PCRS submission finished request_id=%s http_status=%s outcome=%s elapsed_seconds=%s',
+                payload['request_id'], status, payload['status'], payload['elapsed_seconds'])
 
 
 def is_pcrs_url(url: str) -> bool:
@@ -57,6 +125,9 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
     if not (course_id and username):
         logger.warning("[PCRS Tracking] Missing cid/usr in referer; cannot map local progress")
         return
+    authenticated_user = getattr(request, 'user', None)
+    if authenticated_user and authenticated_user.is_authenticated and authenticated_user.username != username:
+        return
 
     try:
         from django.contrib.auth import get_user_model
@@ -73,7 +144,7 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
         course_instance = enrolled_tracking_session(course, user, params)
         module = _find_pcrs_module(course, params, path_rest)
         if not course_instance or not module:
-            logger.warning(
+            logger.error(
                 "[PCRS Tracking] Could not map course session/module for cid=%s grp=%s module_id=%s sub=%s",
                 course_id,
                 group_name,
@@ -112,6 +183,7 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
             payload={
                 "pcrs_result": payload,
                 "pcrs_submission": _submission_snapshot(request, params, path_rest),
+                "request_id": getattr(request, 'request_id', ''),
                 "score": score,
                 "max_score": max_score,
                 "progress_percent": percent_score,
@@ -130,6 +202,7 @@ def capture_pcrs_result_if_possible(request, host: str, path_rest: str, response
             max_score,
             progress,
         )
+        return module_progress
     except Exception:
         logger.exception("[PCRS Tracking] Failed to record local progress")
 
@@ -184,17 +257,24 @@ def _submission_snapshot(request, referer_params: dict, path_rest: str) -> dict:
     if not form_payload and raw_body:
         form_payload = _query_dict_payload(QueryDict(raw_body, encoding="utf-8"))
 
+    private = {'sid', 'sessionid', 'jsessionid', 'csrftoken', 'csrfmiddlewaretoken',
+               'password', 'pwd', 'token', 'access_token', 'oauth_signature'}
+    form_payload = {key: value for key, value in form_payload.items() if key.lower() not in private}
+    referer_params = {key: value for key, value in referer_params.items() if key.lower() not in private}
+    referer = urlparse(request.META.get('HTTP_REFERER', ''))
+    safe_referer = urlunparse(referer._replace(query=urlencode(referer_params, doseq=True), fragment=''))
+
     return {
         "path": getattr(request, "path", "") or request.META.get("PATH_INFO", ""),
         "path_rest": path_rest,
         "content_type": request.META.get("CONTENT_TYPE") or request.META.get("HTTP_CONTENT_TYPE", ""),
-        "referer": request.META.get("HTTP_REFERER", ""),
+        "referer": safe_referer,
         "referer_params": {
             key: values[0] if len(values) == 1 else values
             for key, values in ((key, _query_values(value)) for key, value in referer_params.items())
         },
         "form": form_payload,
-        "raw_body": raw_body,
+        "raw_body": urlencode(form_payload, doseq=True),
     }
 
 
@@ -212,7 +292,12 @@ def _find_pcrs_module(course, params: dict, path_rest: str):
     if module_id:
         module = Module.objects.filter(id=module_id, unit__course=course).first()
         if module:
-            return module
+            parsed = urlparse(module.content_url or '')
+            run_path = '/' + path_rest.lstrip('/')
+            if parsed.hostname == PCRS_HOST and parsed.path.rstrip('/').removesuffix('/embed') + '/run' == run_path:
+                return module
+        # Do not apply a stale iframe result to a replacement activity.
+        return None
 
     sub = _first_query_value(params, "sub")
     act = _first_query_value(params, "act")

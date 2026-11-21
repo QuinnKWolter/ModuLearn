@@ -55,7 +55,7 @@ class KnowledgeTreeAuthService:
     
     def _check_rate_limit(self, username: str, max_attempts: int = 5, window_minutes: int = 15) -> None:
         """Check if user has exceeded rate limit for authentication attempts"""
-        cache_key = f"kt_auth_attempts_{username.lower()}"
+        cache_key = self._rate_limit_key(username)
         attempts = cache.get(cache_key, 0)
         
         if attempts >= max_attempts:
@@ -69,8 +69,14 @@ class KnowledgeTreeAuthService:
     
     def _reset_rate_limit(self, username: str) -> None:
         """Reset rate limit counter after successful authentication"""
-        cache_key = f"kt_auth_attempts_{username.lower()}"
+        cache_key = self._rate_limit_key(username)
         cache.delete(cache_key)
+
+    @staticmethod
+    def _rate_limit_key(username):
+        # Bounded ASCII keys work with Memcached, including Unicode usernames.
+        digest = hashlib.sha256(username.strip().casefold().encode('utf-8')).hexdigest()
+        return f'kt_auth_attempts_{digest}'
     
     # DEPRECATED: This method attempted to use j_security_check for server-side session establishment.
     # j_security_check is browser-only FORM auth and is NOT designed for programmatic use.
@@ -148,12 +154,11 @@ class KnowledgeTreeAuthService:
             # Parse JSON response
             try:
                 data = response.json()
-                logger.info(f"KT API authentication successful: user={data.get('usr', 'unknown')}, loggedin={data.get('loggedin', False)}")
+                logger.debug("KT API response parsed; checking authentication result")
             except ValueError as e:
                 # Try to parse as JavaScript object (might not be valid JSON)
                 response_text = response.text.strip()
-                logger.debug(f"Response text: {response_text[:500]}")
-                logger.info(f"KT API Response - Raw text (first 500 chars): {response_text[:500]}")
+                logger.debug("KT API returned a non-JSON response; trying legacy object format")
                 
                 # Sometimes the response might be JavaScript object notation, not JSON
                 # Try to extract values manually if JSON parsing fails
@@ -310,6 +315,7 @@ class KnowledgeTreeAuthService:
             return None
         
         # Check rate limiting
+        username = username.strip()
         try:
             self._check_rate_limit(username)
         except ValidationError:

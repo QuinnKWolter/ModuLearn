@@ -17,6 +17,7 @@ location /modulearn-static/ {
 
 location /modulearn/ {
     proxy_pass http://127.0.0.1:20600/;
+    proxy_read_timeout 60s;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -25,6 +26,12 @@ location /modulearn/ {
 ```
 
 The deploy script copies collected static files to the nginx alias above.
+PCRS submission handling uses a 30-second upstream read timeout; keep nginx's
+read timeout at least 60 seconds, matching the application worker budget. Deploy
+the rebuilt image to pick up `docker-entrypoint.sh`'s `--timeout 60`; restarting
+an old image does not change its worker settings. No database repair/migration is
+required for the submission-timeout fix. The existing CA bundle and host-gateway
+settings remain applicable.
 With `SERVE_MEDIA_FILES=True`, Django handles `/modulearn/media/` through the
 same proxy location. Keep existing nginx routes for PAWS, Aggregate, and other
 services on adapt2 separate from `/modulearn/`. If nginx is on another host,
@@ -88,3 +95,29 @@ sudo docker exec modulearn__webapp bash -c 'cd /modulearn && python manage.py ch
 The first check only connects; verify a known test account and KT-linked analytics separately. The second distinguishes catalog upstream/TLS/cache errors and uses temporary diagnostic cache keys. Catalog counts change over time. Never disable TLS verification as a workaround. See [integrations](integrations.md).
 
 Old SSH environment values are ignored. A manually stored Saltire registration is independent of the removed default: deactivate obsolete registrations in Admin without deleting identity history. Rebuild to remove obsolete dependencies. For LTI testing, follow [testing](testing.md); do not recreate an existing lab merely to inspect it.
+
+## Authoring connectivity and log follow-up (2026-11-21)
+
+The production excerpt contains a connection timeout to
+`proxy.personalized-learning.org`, separate from PCRS grading. An unauthenticated
+local check also timed out at that host on November 21. The public adapt2 catalog
+loads, but GET of its `api/auth/x-login-token` returns the HTML application shell;
+that is **not proof** that the legacy login API works there. Do not silently
+send credentials to another endpoint. Confirm the intended login/API deployment
+with the authoring maintainer, then set `COURSE_AUTHORING_BASE_URL` in the
+production environment if a different verified base is required. The code now
+reports this outage gracefully; it cannot repair the remote service/network.
+
+After deployment, open the instructor's course-authoring action and retain the
+response's `X-Request-ID` if it fails. For PCRS, use a test account to submit a
+while-loop activity and confirm its result in Activity. Logs now distinguish
+submission receipt from grader response and saved result. Keep old module IDs
+when diagnosing existing students; replacing an activity does not transfer its
+old credit automatically.
+
+The supplied historical log exposed authoring credentials and session keys.
+Stopping future logging does not revoke them or scrub old Docker/nginx logs.
+Coordinate affected authoring credential rotation with the external service and
+invalidate affected active sessions during an appropriate maintenance window;
+no production credentials or sessions were changed by this local repair.
+ACOS missing assets remain an upstream issue outside this repair.

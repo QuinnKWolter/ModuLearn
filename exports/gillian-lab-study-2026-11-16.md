@@ -1,5 +1,7 @@
 # Gillian lab study — November 2026
 
+**Latest administrative-content revision:** use [gillian-lab-study-2026-11-20.json](gillian-lab-study-2026-11-20.json) and its [revision guide](gillian-lab-study-2026-11-20.md). This November 16 package is retained as the original tested mapping and placeholder-content reference.
+
 Import `gillian-lab-study-2026-11-16.json` as a **study template**, not as a course or unit. It contains 8 units, 44 activities, 3 conditions, and 24 condition-specific failure connections. Recruitment is disabled and credit codes are blank. Existing courses and participant records are not changed by importing a new study.
 
 ## Sequence and mappings

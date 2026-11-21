@@ -141,6 +141,18 @@ def apply_progress_snapshot(
     if isinstance(module_progress, RecommendationProgress):
         return apply_practice_snapshot(module_progress, source=source, progress=progress, score=score,
             success=success, is_complete=is_complete, payload=payload, event_type=event_type)
+    if source in {'pcex_worked_example', 'acos_pcex_worked_example', 'pcrs'}:
+        # These providers retain best achievement. Callers may have loaded this
+        # object before another callback finished; compare against the row under
+        # lock, not against that stale object. Raw outcomes remain in payload.
+        current = type(module_progress).objects.select_for_update().get(pk=module_progress.pk)
+        for field in ('progress', 'score', 'success', 'is_complete', 'completed_at', 'attempts'):
+            setattr(module_progress, field, getattr(current, field))
+        progress = max(current.progress or 0, _coerce_progress(progress) or 0)
+        if score is not None:
+            score = max(current.score or 0, _coerce_score(score))
+        is_complete = bool(current.is_complete or is_complete or progress >= 1)
+        success = bool(current.success or success)
     from recruitment.services.flow import allows_activity
     if allows_activity(module_progress.enrollment, module_progress.module) is False:
         log_module_progress_event(module_progress, event_type='study_late_event', source=source,

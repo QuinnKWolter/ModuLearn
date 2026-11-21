@@ -54,5 +54,10 @@
   "Export a template first to keep a recoverable copy. Deletion removes its activities and associated branch rules; external unlock dependencies must be removed first.": "Exporta primero una plantilla para conservar una copia recuperable. La eliminación borra las actividades y sus reglas de ramificación; antes debes quitar las dependencias externas de desbloqueo.",
   "Copies its rules into another condition without replacing existing rules. Adjust the remediation targets in Flow Mapper afterward.": "Copia sus reglas a otra condición sin reemplazar las existentes. Después, ajusta los destinos de refuerzo en el mapa de flujo.",
   "Correct": "Correcto",
-  "Incorrect": "Incorrecto"
+  "Incorrect": "Incorrecto",
+  "Preview only. ModuLearn does not save responses or progress.": "Solo vista previa. ModuLearn no guarda respuestas ni progreso.",
+  "Preview completed. No responses were saved.": "Vista previa completada. No se ha guardado ninguna respuesta.",
+  "Restart Preview": "Reiniciar vista previa",
+  "Save this LTI activity before previewing its signed launch.": "Guarda esta actividad LTI antes de previsualizar su inicio firmado.",
+  "Add a content URL or choose a file to preview this activity.": "Añade una URL de contenido o elige un archivo para previsualizar esta actividad."
 }

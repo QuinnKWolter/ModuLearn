@@ -4,10 +4,20 @@
   {% if module.description %}<div class="study-prose activity-preview-description">{{ module.description|study_markdown }}</div>{% endif %}
   {% if is_form %}
     {% include 'courses/components/form_instructions.html' %}
-    <div class="student-form-stack">
+    <div class="student-form-stack" data-preview-form>
       {% include 'courses/components/form_questions.html' %}
     </div>
   {% else %}
-    <p class="activity-preview-note">{% ui "This preview shows authored text. External activities and files are opened separately." %}</p>
+    {% if preview_launch_url %}
+      <iframe class="activity-preview-frame" src="{{ preview_launch_url }}" title="{{ module.title }}" allow="clipboard-write *" allowfullscreen></iframe>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ preview_launch_url }}" target="_blank" rel="noopener">{% ui "Open In A New Window" %}</a>
+    {% elif file_url %}
+      <iframe class="activity-preview-frame" src="{{ file_url }}" title="{{ module.title }}"></iframe>
+      <a data-preview-file-link href="{{ file_url }}" target="_blank" rel="noopener">{% ui "Open In A New Window" %}</a>
+    {% elif launch_notice %}
+      <p class="activity-preview-note">{{ launch_notice|ui_text }}</p>
+    {% else %}
+      <p class="activity-preview-note" data-preview-missing>{% ui "Add a content URL or choose a file to preview this activity." %}</p>
+    {% endif %}
   {% endif %}
 </article>

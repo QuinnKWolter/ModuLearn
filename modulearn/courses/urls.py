@@ -3,12 +3,14 @@ from . import views
 from . import views_grading, views_units
 from . import views_catalog
 from . import views_recommendations
+from .authoring_preview import launch_authoring_preview
 from .views_integration_testing import integration_testing
 from .views import LTIOutcomesView, CaliperAnalyticsView
 
 app_name = 'courses'
 
 urlpatterns = [
+    path('authoring-preview/launch/', launch_authoring_preview, name='authoring_preview_launch'),
     path('instance/<int:instance_id>/configure/grading/', views_grading.grading, name='grading'),
     path('instance/<int:instance_id>/units/import/', views_units.upload, name='import_unit'),
     path('instance/<int:instance_id>/units/<int:unit_id>/export/', views_units.export, name='export_unit'),

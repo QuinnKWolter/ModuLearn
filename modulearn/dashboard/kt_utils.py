@@ -459,6 +459,19 @@ def get_course_ids_from_aggregate_db(group_logins: List[str]) -> Dict[str, List[
 
 
 def get_user_groups_with_course_ids(user) -> List[Dict[str, Any]]:
+    """Reuse one lookup per user instance, including empty results.
+
+    Return copies because MasteryGrids enriches these dictionaries in place.
+    A fresh request/user instance still checks current memberships.
+    """
+    from copy import deepcopy
+    key = '_kt_course_groups_snapshot'
+    if not hasattr(user, key):
+        setattr(user, key, _query_user_groups_with_course_ids(user))
+    return deepcopy(getattr(user, key))
+
+
+def _query_user_groups_with_course_ids(user) -> List[Dict[str, Any]]:
     """
     Get user's KnowledgeTree groups with Course IDs using DIRECT database queries.
     

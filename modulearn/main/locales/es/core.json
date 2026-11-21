@@ -1182,5 +1182,9 @@
   "Options": "Opciones",
   "I Consent": "Doy mi consentimiento",
   "English": "Inglés",
-  "Spanish": "Español"
+  "Spanish": "Español",
+  "PCRS is still checking your code. Please wait before submitting again.": "PCRS sigue comprobando tu código. Espera antes de volver a enviarlo.",
+  "No grading result was received. Your code is still in the editor. Please try submitting again shortly.": "No se recibió ningún resultado de evaluación. Tu código sigue en el editor. Intenta enviarlo de nuevo en unos momentos.",
+  "Course authoring rejected your account details. Check your profile email or contact support to synchronize your authoring account.": "El servicio de creación de cursos rechazó los datos de tu cuenta. Revisa el correo electrónico de tu perfil o contacta con soporte para sincronizar tu cuenta de creación de cursos.",
+  "Course authoring is temporarily unavailable. Please try again shortly.": "El servicio de creación de cursos no está disponible temporalmente. Inténtalo de nuevo en unos momentos."
 }

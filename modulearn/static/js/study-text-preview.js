@@ -1,4 +1,4 @@
-/* Uses the participant renderer; previews never submit answers or save edits. */
+/* Uses participant rendering; authoring previews never save course edits or responses. */
 (() => {
   const config = document.querySelector('[data-study-text-preview-url]');
   if (!config) return;

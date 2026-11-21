@@ -202,3 +202,11 @@ To reconcile historical **course activity** attempts, including ungraded classro
 ## Reusable CS0401 pre/post assessments
 
 The normalized legacy assessment package and provenance are in `courses/fixtures/legacy_cs0401/`. Use `build_legacy_assessment_course --output <directory>` to create a separate demo course and export its two unit packages; it never overwrites a course. `exports/legacy-cs0401/` contains the ready-to-import units and whole-course export. Students use ordinary ModuLearn enrollment, while the existing proxy supplies provider compatibility parameters. QuizJET/PCRS remain the external grading engines; the original archive does not include their graders or any pre/post survey instruments. See the package README for the exact logging scope and verification.
+
+## Interactive Activity Preview
+
+Activity Preview in an expanded activity or the new-activity builder renders unsaved authored text and form questions, and embeds interactive external content. Forms enforce required inputs and offer local completion/reset without posting answers. New image/PDF files are previewed locally before upload. Existing uploaded files can also be viewed. Closing the modal unloads its frames and releases local file URLs.
+
+External draft launches use short-lived, user-bound signed URLs and the normal instructor launch renderer. Saved activities require author access. Preview identities replace imported user/course/session parameters, including recommendation context, and the frame has no progress or session-event endpoint. LTI definitions must be saved before launch; their existing preview signing/callback context remains separate from enrollment progress. Providers may still record their own interactions, and providers that reject embedding can be opened in a new window. This activity preview does not simulate condition branching; use the separate Study Setup participant rehearsal for that.
+
+November 20 verification: a real Cupcake Q11 solution completed successfully inside the modal with no ModuLearn progress requests; close unloaded the frames. Native consent submission/reset also passed. Backend checks cover unchanged progress/enrollment/form-submission counts, unsaved content, token isolation, author permissions, and unsafe URL rejection.

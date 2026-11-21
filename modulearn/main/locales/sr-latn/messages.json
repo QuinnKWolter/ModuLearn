@@ -2152,5 +2152,14 @@
   "Connection copied to the builder. Adjust it, then choose Add Connection.": "Veza je kopirana u uređivač. Prilagodite je, pa izaberite Dodaj vezu.",
   "Unsaved changes": "Nesačuvane izmene",
   "Correct": "Tačno",
-  "Incorrect": "Netačno"
+  "Incorrect": "Netačno",
+  "Preview only. ModuLearn does not save responses or progress.": "Samo pregled. ModuLearn ne čuva odgovore ni napredak.",
+  "Preview completed. No responses were saved.": "Pregled je završen. Odgovori nisu sačuvani.",
+  "Restart Preview": "Ponovo pokreni pregled",
+  "Save this LTI activity before previewing its signed launch.": "Sačuvajte ovu LTI aktivnost pre pregleda njenog potpisanog pokretanja.",
+  "Add a content URL or choose a file to preview this activity.": "Dodajte URL sadržaja ili izaberite datoteku za pregled ove aktivnosti.",
+  "PCRS is still checking your code. Please wait before submitting again.": "PCRS još uvek proverava vaš kod. Sačekajte pre ponovnog slanja.",
+  "No grading result was received. Your code is still in the editor. Please try submitting again shortly.": "Rezultat ocenjivanja nije primljen. Vaš kod je i dalje u uređivaču. Pokušajte ponovo da ga pošaljete za nekoliko trenutaka.",
+  "Course authoring rejected your account details. Check your profile email or contact support to synchronize your authoring account.": "Servis za izradu kurseva je odbio podatke vašeg naloga. Proverite adresu e-pošte na profilu ili se obratite podršci radi sinhronizacije naloga za izradu kurseva.",
+  "Course authoring is temporarily unavailable. Please try again shortly.": "Servis za izradu kurseva je privremeno nedostupan. Pokušajte ponovo uskoro."
 }

@@ -917,231 +917,40 @@ def send_grade_to_canvas(xml_payload, outcome_service_url, consumer_key, consume
     )
 
 def reset_course_authoring_password(user):
-    """
-    Resets the course-authoring password for a user by generating a new UUID.
-    This is useful when there's a password mismatch with course-authoring.
-    
-    Returns:
-        str: The new password UUID that needs to be set in course-authoring
-    """
+    """Explicit local reset; the remote administrator must synchronize it."""
     new_password = str(uuid.uuid4())
     user.course_authoring_password = new_password
     user.save(update_fields=['course_authoring_password'])
-    logger.info(f"Reset course-authoring password for user {user.email}. New password: {new_password}")
+    logger.info("Course-authoring credential reset requested by user_id=%s", user.pk)
     return new_password
 
 
 def get_course_auth_token(user, retry_on_mismatch=False):
-    """
-    Generates an encrypted token for course authoring login.
-    
-    Args:
-        user: The authenticated user
-        retry_on_mismatch: If True and password mismatch occurs, reset password and retry once
-    
-    Raises:
-        ValueError: If user is not authenticated
-        requests.exceptions.HTTPError: If authentication fails with course-authoring
-        Exception: For other unexpected errors
+    """Obtain a token without logging credentials or rotating them on failure.
+
+    retry_on_mismatch is retained for caller compatibility; retries cannot repair
+    a remote password mismatch and must never silently change local credentials.
     """
     if not user.is_authenticated:
         raise ValueError("User not authenticated")
-
-    # Fetch user details
-    user_email = user.email
-    user_fullname = f"{user.full_name or user.get_full_name() or user.username}"
-
-    # Generate or retrieve stored password
     if not user.course_authoring_password:
-        user.course_authoring_password = str(uuid.uuid4())  # Generate a UUID password
-        user.save(update_fields=['course_authoring_password'])
-        logger.info(f"Generated new course-authoring password for user {user_email}: {user.course_authoring_password[:16]}...")
-    
-    password = user.course_authoring_password
-
-    # Create payload
-    payload = {
-        "fullname": user_fullname,
-        "email": user_email,
-        "password": password,
-    }
-
-    # Comprehensive logging of request
-    logger.info("=" * 80)
-    logger.info(f"COURSE-AUTHORING AUTH REQUEST for user: {user_email}")
-    logger.info(f"Request URL: {COURSE_AUTHORING_TOKEN_URL}")
-    logger.info(f"Request Method: POST")
-    logger.info(f"Request Headers: Content-Type: application/json")
-    logger.info(f"Request Payload (full): {json.dumps(payload, indent=2)}")
-    logger.info(f"Password (first 16 chars): {password[:16]}...")
-    logger.info(f"Password stored in DB: Yes")
-    logger.info(f"Full Name: {user_fullname}")
-    logger.info(f"Email: {user_email}")
-    logger.info("-" * 80)
-
-    # Make POST request to obtain the encrypted token
-    try:
-        response = requests.post(
-            COURSE_AUTHORING_TOKEN_URL,
-            json=payload,
-            timeout=10
-        )
-        
-        # Comprehensive logging of response
-        logger.info(f"Response Status Code: {response.status_code}")
-        logger.info(f"Response Headers: {dict(response.headers)}")
-        logger.info(f"Response Content-Type: {response.headers.get('Content-Type', 'N/A')}")
-        logger.info(f"Response Content Length: {len(response.content)} bytes")
-        
-        # Log response body (be careful with sensitive data)
-        try:
-            response_json = response.json()
-            logger.info(f"Response Body (JSON): {json.dumps(response_json, indent=2)}")
-        except (ValueError, json.JSONDecodeError):
-            # Not JSON, log as text (might be encrypted token)
-            response_text = response.text
-            if len(response_text) > 200:
-                logger.info(f"Response Body (Text, first 200 chars): {response_text[:200]}...")
-            else:
-                logger.info(f"Response Body (Text): {response_text}")
-        
-        response.raise_for_status()
-
-        # Extract token
-        token = response.text.strip()
-        logger.info(f"Successfully obtained x-login-token for user {user_email}")
-        logger.info(f"Token length: {len(token)} characters")
-        logger.info(f"Token (first 50 chars): {token[:50]}...")
-        logger.info("=" * 80)
-        return token
-        
-    except requests.exceptions.HTTPError as e:
-        # Comprehensive error logging
-        logger.error("=" * 80)
-        logger.error(f"COURSE-AUTHORING AUTH ERROR for user: {user_email}")
-        logger.error(f"Error Type: HTTPError")
-        logger.error(f"Response Status Code: {e.response.status_code if e.response else 'N/A'}")
-        
-        if e.response:
-            logger.error(f"Response Headers: {dict(e.response.headers)}")
-            logger.error(f"Response Content-Type: {e.response.headers.get('Content-Type', 'N/A')}")
-            
-            # Try to parse error response
-            try:
-                error_data = e.response.json()
-                logger.error(f"Response Body (JSON): {json.dumps(error_data, indent=2)}")
-                error_message = error_data.get('message', 'Unknown error')
-            except (ValueError, json.JSONDecodeError):
-                error_text = e.response.text
-                logger.error(f"Response Body (Text): {error_text}")
-                error_message = error_text or "Unknown error"
-        else:
-            error_message = str(e)
-            logger.error(f"Error Message: {error_message}")
-        
-        logger.error(f"Request that failed:")
-        logger.error(f"  URL: {COURSE_AUTHORING_TOKEN_URL}")
-        logger.error(f"  Method: POST")
-        logger.error(f"  Payload: {json.dumps(payload, indent=2)}")
-        logger.error("=" * 80)
-        
-        # Handle specific 422 error (password mismatch or invalid credentials)
-        if e.response and e.response.status_code == 422:
-            logger.warning(
-                f"Authentication failed for user {user_email}: {error_message}. "
-                f"This usually means the user exists in course-authoring with a different password. "
-                f"Password used: {password[:16]}..."
-            )
-            
-            # If retry_on_mismatch is enabled, reset password and try once more
-            if retry_on_mismatch:
-                logger.info(f"Retrying with new password for user {user_email}")
-                new_password = reset_course_authoring_password(user)
-                payload['password'] = new_password
-                
-                # Log retry attempt
-                logger.info("=" * 80)
-                logger.info(f"RETRY ATTEMPT for user: {user_email}")
-                logger.info(f"New Password (first 16 chars): {new_password[:16]}...")
-                logger.info(f"Retry Payload: {json.dumps(payload, indent=2)}")
-                logger.info("-" * 80)
-                
-                try:
-                    response = requests.post(
-                        COURSE_AUTHORING_TOKEN_URL,
-                        json=payload,
-                        timeout=10
-                    )
-                    
-                    # Log retry response
-                    logger.info(f"Retry Response Status: {response.status_code}")
-                    logger.info(f"Retry Response Headers: {dict(response.headers)}")
-                    try:
-                        retry_json = response.json()
-                        logger.info(f"Retry Response Body: {json.dumps(retry_json, indent=2)}")
-                    except:
-                        logger.info(f"Retry Response Body (Text): {response.text[:200]}...")
-                    
-                    response.raise_for_status()
-                    token = response.text.strip()
-                    logger.info(f"Successfully obtained x-login-token after password reset for user {user_email}")
-                    logger.info("=" * 80)
-                    return token
-                except requests.exceptions.HTTPError as retry_error:
-                    # Still failed after reset - user definitely exists with different password
-                    logger.error(f"Authentication still failed after password reset for user {user_email}")
-                    logger.error(f"Retry Error Status: {retry_error.response.status_code if retry_error.response else 'N/A'}")
-                    if retry_error.response:
-                        try:
-                            retry_error_data = retry_error.response.json()
-                            logger.error(f"Retry Error Body: {json.dumps(retry_error_data, indent=2)}")
-                        except:
-                            logger.error(f"Retry Error Body (Text): {retry_error.response.text}")
-                    logger.error("=" * 80)
-                    raise requests.exceptions.HTTPError(
-                        f"Password mismatch detected. The user exists in course-authoring with a different password. "
-                        f"A new password has been generated: {new_password}. "
-                        f"Please contact the course-authoring administrator to set this password for your account, "
-                        f"or use the 'Reset Course-Authoring Password' option in your profile.",
-                        response=retry_error.response if hasattr(retry_error, 'response') else e.response
-                    )
-            
-            # Create a more descriptive error with actionable instructions
-            current_password = user.course_authoring_password
-            raise requests.exceptions.HTTPError(
-                f"PASSWORD_MISMATCH: The user account exists in course-authoring but the password doesn't match. "
-                f"ModuLearn's stored password: {current_password}. "
-                f"To fix this, you can:\n"
-                f"1. Use the 'Reset Course-Authoring Password' option (generates a new password you can share with admin)\n"
-                f"2. Contact support to sync the password in course-authoring\n"
-                f"3. If you have course-authoring access, reset your password there to match: {current_password}",
-                response=e.response
-            )
-        else:
-            # Other HTTP errors
-            logger.error(
-                f"HTTP error {e.response.status_code if e.response else 'unknown'} "
-                f"when requesting x-login-token for user {user_email}: {e}"
-            )
-            logger.error("=" * 80)
-            raise
-            
-    except requests.exceptions.RequestException as e:
-        logger.error("=" * 80)
-        logger.error(f"REQUEST EXCEPTION when getting x-login-token for user {user_email}")
-        logger.error(f"Exception Type: {type(e).__name__}")
-        logger.error(f"Exception Message: {str(e)}")
-        logger.error(f"Request URL: {COURSE_AUTHORING_TOKEN_URL}")
-        logger.error(f"Request Payload: {json.dumps(payload, indent=2)}")
-        logger.error("=" * 80)
-        raise Exception(f"Failed to connect to course-authoring API: {str(e)}")
-        
-    except Exception as e:
-        logger.error("=" * 80)
-        logger.error(f"UNEXPECTED ERROR getting x-login-token for user {user_email}")
-        logger.error(f"Exception Type: {type(e).__name__}")
-        logger.error(f"Exception Message: {str(e)}")
-        logger.error(f"Traceback:")
-        logger.error(traceback.format_exc())
-        logger.error("=" * 80)
-        raise
+        # Concurrent initial requests must use the same credential. Update only
+        # this field, preserving concurrent role/profile changes.
+        from django.db.models import Q
+        type(user).objects.filter(pk=user.pk).filter(
+            Q(course_authoring_password='') | Q(course_authoring_password__isnull=True)
+        ).update(course_authoring_password=str(uuid.uuid4()))
+        user.refresh_from_db(fields=['course_authoring_password'])
+    response = requests.post(
+        COURSE_AUTHORING_TOKEN_URL,
+        json={"fullname": user.full_name or user.get_full_name() or user.username,
+              "email": user.email, "password": user.course_authoring_password},
+        timeout=(5, 10),
+        allow_redirects=False,
+    )
+    response.raise_for_status()
+    token = response.text.strip()
+    if response.is_redirect or not token or token.startswith('<'):
+        raise requests.exceptions.RequestException("Invalid authoring token response")
+    logger.info("Course-authoring token obtained for user_id=%s", user.pk)
+    return token

@@ -217,6 +217,7 @@ class AccountPageTests(TestCase):
         from courses.utils import get_course_auth_token, reset_course_authoring_password
 
         post.return_value.text = 'synthetic-token'
+        post.return_value.is_redirect = False
         post.return_value.json.return_value = {}
         for action in (get_course_auth_token, reset_course_authoring_password):
             with self.subTest(action=action.__name__):

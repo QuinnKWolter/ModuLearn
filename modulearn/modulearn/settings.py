@@ -76,6 +76,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'modulearn.request_diagnostics.RequestDiagnosticsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.gzip.GZipMiddleware',
@@ -158,7 +159,7 @@ MAX_ACTIVE_SESSIONS_PER_INSTRUCTOR = int(os.getenv('MAX_ACTIVE_SESSIONS_PER_INST
 # =============================================================================
 # STATIC & MEDIA ASSET MANAGEMENT
 # =============================================================================
-FORCE_SCRIPT_NAME = os.getenv('DJANGO_FORCE_SCRIPT_NAME', None)
+FORCE_SCRIPT_NAME = (os.getenv('DJANGO_FORCE_SCRIPT_NAME') or '').rstrip('/') or None
 
 STATIC_URL = os.getenv('STATIC_URL', '/modulearn-static/' if IS_PRODUCTION else '/static/')
 STATICFILES_DIRS = [BASE_DIR / 'static']
@@ -260,8 +261,8 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}', 'style': '{'},
-        'simple': {'format': '{levelname} {message}', 'style': '{'},
+        'verbose': {'()': 'modulearn.logging_utils.RedactingFormatter', 'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}', 'style': '{'},
+        'simple': {'()': 'modulearn.logging_utils.RedactingFormatter', 'format': '{asctime}Z {levelname} [{request_id}] {message}', 'style': '{'},
     },
     'handlers': {
         'console': {'class': 'logging.StreamHandler', 'formatter': 'simple'},
@@ -272,9 +273,10 @@ LOGGING = {
     },
     'loggers': {
         'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
-        'courses': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
-        'dashboard': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
-        'lti': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
+        'courses': {'handlers': ['console'], 'level': 'DEBUG' if DEBUG else 'INFO', 'propagate': False},
+        'dashboard': {'handlers': ['console'], 'level': 'DEBUG' if DEBUG else 'INFO', 'propagate': False},
+        'lti': {'handlers': ['console'], 'level': 'DEBUG' if DEBUG else 'INFO', 'propagate': False},
+        'django.server': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
     },
 }
 
@@ -384,6 +386,8 @@ PROXY_ALLOWED_HOSTS = {
     "127.0.0.1",
 }
 PROXY_MAX_BYTES = 5 * 1024 * 1024
+# Keep below the production worker's 60-second budget (connect timeout is 5s).
+PCRS_RUN_READ_TIMEOUT = min(45, max(8, int(os.getenv('PCRS_RUN_READ_TIMEOUT', '30'))))
 PROXY_CORS_ORIGIN = os.getenv(
     'PROXY_CORS_ORIGIN',
     'https://adapt2.sis.pitt.edu' if IS_PRODUCTION else '',
@@ -392,13 +396,4 @@ PROXY_CORS_ORIGIN = os.getenv(
 # =============================================================================
 # PRODUCTION PROXY ROUTING CORRECTION
 # =============================================================================
-if IS_PRODUCTION:
-    class FixProxySlashes:
-        def __init__(self, get_response):
-            self.get_response = get_response
-        def __call__(self, request):
-            if request.path_info.startswith('//'):
-                request.path_info = '/' + request.path_info.lstrip('/')
-            return self.get_response(request)
-            
-    MIDDLEWARE.insert(0, 'modulearn.settings.FixProxySlashes')
+# RequestDiagnosticsMiddleware handles this in every environment.

@@ -2152,5 +2152,14 @@
   "Connection copied to the builder. Adjust it, then choose Add Connection.": "Connexion copiée dans l’éditeur. Modifiez-la, puis choisissez Ajouter une connexion.",
   "Unsaved changes": "Modifications non enregistrées",
   "Correct": "Correct",
-  "Incorrect": "Incorrect"
+  "Incorrect": "Incorrect",
+  "Preview only. ModuLearn does not save responses or progress.": "Aperçu uniquement. ModuLearn n’enregistre ni les réponses ni la progression.",
+  "Preview completed. No responses were saved.": "Aperçu terminé. Aucune réponse n’a été enregistrée.",
+  "Restart Preview": "Recommencer l’aperçu",
+  "Save this LTI activity before previewing its signed launch.": "Enregistrez cette activité LTI avant de prévisualiser son lancement signé.",
+  "Add a content URL or choose a file to preview this activity.": "Ajoutez une URL de contenu ou choisissez un fichier pour prévisualiser cette activité.",
+  "PCRS is still checking your code. Please wait before submitting again.": "PCRS vérifie encore votre code. Veuillez patienter avant de le soumettre à nouveau.",
+  "No grading result was received. Your code is still in the editor. Please try submitting again shortly.": "Aucun résultat d’évaluation n’a été reçu. Votre code est toujours dans l’éditeur. Réessayez de le soumettre dans quelques instants.",
+  "Course authoring rejected your account details. Check your profile email or contact support to synchronize your authoring account.": "Le service de création de cours a refusé les informations de votre compte. Vérifiez l’adresse e-mail de votre profil ou contactez l’assistance pour synchroniser votre compte de création de cours.",
+  "Course authoring is temporarily unavailable. Please try again shortly.": "Le service de création de cours est temporairement indisponible. Veuillez réessayer dans un instant."
 }

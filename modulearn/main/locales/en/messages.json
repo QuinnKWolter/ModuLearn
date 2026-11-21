@@ -2152,5 +2152,14 @@
   "Connection copied to the builder. Adjust it, then choose Add Connection.": "Connection copied to the builder. Adjust it, then choose Add Connection.",
   "Unsaved changes": "Unsaved changes",
   "Correct": "Correct",
-  "Incorrect": "Incorrect"
+  "Incorrect": "Incorrect",
+  "Preview only. ModuLearn does not save responses or progress.": "Preview only. ModuLearn does not save responses or progress.",
+  "Preview completed. No responses were saved.": "Preview completed. No responses were saved.",
+  "Restart Preview": "Restart Preview",
+  "Save this LTI activity before previewing its signed launch.": "Save this LTI activity before previewing its signed launch.",
+  "Add a content URL or choose a file to preview this activity.": "Add a content URL or choose a file to preview this activity.",
+  "PCRS is still checking your code. Please wait before submitting again.": "PCRS is still checking your code. Please wait before submitting again.",
+  "No grading result was received. Your code is still in the editor. Please try submitting again shortly.": "No grading result was received. Your code is still in the editor. Please try submitting again shortly.",
+  "Course authoring rejected your account details. Check your profile email or contact support to synchronize your authoring account.": "Course authoring rejected your account details. Check your profile email or contact support to synchronize your authoring account.",
+  "Course authoring is temporarily unavailable. Please try again shortly.": "Course authoring is temporarily unavailable. Please try again shortly."
 }

@@ -9,6 +9,8 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.cache import never_cache
+from main.i18n import translate
 from courses.utils import get_course_auth_token, reset_course_authoring_password
 from courses.demo_courses import create_demo_course_for_key
 import json
@@ -924,165 +926,65 @@ def fetch_modulearn_student_engagement(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+def _authoring_failure(request, exc):
+    # Never return upstream bodies or exception text: they can contain credentials.
+    upstream = getattr(exc, 'response', None)
+    upstream_status = upstream.status_code if upstream is not None else None
+    rejected = upstream_status in (401, 403, 422)
+    status = 422 if rejected else (502 if upstream is not None else 503)
+    message = (
+        "Course authoring rejected your account details. Check your profile email or contact support to synchronize your authoring account."
+        if rejected else
+        "Course authoring is temporarily unavailable. Please try again shortly."
+    )
+    logger.warning("Course-authoring request failed user_id=%s upstream_status=%s error_type=%s",
+                   request.user.pk, upstream_status, type(exc).__name__)
+    response = JsonResponse({'error': translate(message), 'status_code': upstream_status,
+                             'request_id': getattr(request, 'request_id', '')}, status=status)
+    if status == 503:
+        response['Retry-After'] = '30'
+    return response
+
+
 @login_required
+@never_cache
+@require_POST
 def generate_course_auth_url(request):
-    """
-    Generates an encrypted token for course authoring login.
-    Uses stored password from database (user.course_authoring_password).
-    """
-    logger.info("=" * 80)
-    logger.info(f"generate_course_auth_url called for user: {request.user.email}")
-    logger.info(f"User ID: {request.user.id}")
-    logger.info(f"User Full Name: {request.user.full_name}")
-    logger.info(f"Stored Password (first 16 chars): {request.user.course_authoring_password[:16] if request.user.course_authoring_password else 'None'}...")
-    logger.info(f"Request Method: {request.method}")
-    logger.info(f"Request Path: {request.path}")
-    logger.info("-" * 80)
-    
     try:
-        # Use stored password from database
-        # If password doesn't exist, it will be generated and stored
-        token = get_course_auth_token(request.user, retry_on_mismatch=True)
-        
-        logger.info(f"Successfully generated token for user {request.user.email}")
-        logger.info("=" * 80)
-        return JsonResponse({"token": token})
-    except ValueError as e:
-        logger.error("=" * 80)
-        logger.error(f"ValueError in generate_course_auth_url: {e}")
-        logger.error(f"User: {request.user.email}")
-        logger.error("=" * 80)
-        return JsonResponse({"error": str(e)}, status=401)
-    except requests.exceptions.HTTPError as e:
-        # Handle specific HTTP errors (like 422 for password mismatch)
-        error_message = str(e)
-        status_code = e.response.status_code if e.response else 500
-        
-        logger.error("=" * 80)
-        logger.error(f"HTTPError in generate_course_auth_url")
-        logger.error(f"Status Code: {status_code}")
-        logger.error(f"User: {request.user.email}")
-        
-        # Check if it's a password mismatch error
-        is_password_mismatch = (
-            status_code == 422 and 
-            ("PASSWORD_MISMATCH" in error_message or "password doesn't match" in error_message.lower() or "Invalid email or password" in error_message)
-        )
-        
-        # Extract more specific error message if available
-        if e.response:
-            try:
-                error_data = e.response.json()
-                error_message = error_data.get('message', error_message)
-                logger.error(f"Error Response (JSON): {json.dumps(error_data, indent=2)}")
-            except (ValueError, KeyError):
-                logger.error(f"Error Response (Text): {e.response.text[:500]}")
-        
-        logger.error(f"Error Message: {error_message}")
-        logger.error(f"Is Password Mismatch: {is_password_mismatch}")
-        logger.error("=" * 80)
-        
-        response_data = {
-            "error": error_message,
-            "status_code": status_code
-        }
-        
-        # Add helpful information for password mismatches
-        if is_password_mismatch:
-            response_data["password_mismatch"] = True
-            response_data["suggestion"] = (
-                "Your account exists in course-authoring with a different password. "
-                "The system has attempted to reset your password and retry. "
-                "If this error persists, you may need to contact support to sync your password in course-authoring."
-            )
-        
-        return JsonResponse(response_data, status=status_code)
-    except requests.exceptions.RequestException as e:
-        logger.error("=" * 80)
-        logger.error(f"RequestException in generate_course_auth_url: {e}")
-        logger.error(f"User: {request.user.email}")
-        logger.error(f"Exception Type: {type(e).__name__}")
-        logger.error("=" * 80)
-        return JsonResponse({
-            "error": f"Failed to connect to course-authoring service: {str(e)}"
-        }, status=500)
-    except Exception as e:
-        logger.error("=" * 80)
-        logger.error(f"Unexpected error in generate_course_auth_url: {e}")
-        logger.error(f"User: {request.user.email}")
-        logger.error(f"Exception Type: {type(e).__name__}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        logger.error("=" * 80)
-        return JsonResponse({
-            "error": f"An unexpected error occurred: {str(e)}"
-        }, status=500)
+        return JsonResponse({"token": get_course_auth_token(request.user)})
+    except requests.exceptions.RequestException as exc:
+        return _authoring_failure(request, exc)
+    except Exception as exc:
+        return _authoring_failure(request, exc)
 
 
 @login_required
+@never_cache
+@require_POST
 def proxy_course_authoring_x_login(request):
-    """
-    Proxies the x-login request to course-authoring to avoid CORS issues.
-    The token is sent from the frontend, and we forward it to course-authoring.
-    """
-    if request.method != 'POST':
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-    
     try:
-        import json
         data = json.loads(request.body)
-        token = data.get('token')
-        
-        if not token:
-            return JsonResponse({"error": "Token is required"}, status=400)
-        
-        logger.info("=" * 80)
-        logger.info(f"PROXY X-LOGIN REQUEST for user: {request.user.email}")
-        logger.info(f"Token (first 50 chars): {token[:50] if token else 'None'}...")
-        logger.info("-" * 80)
-        
-        # Forward the request to course-authoring
-        response = requests.post(
-            build_x_login_url(),
-            json={"token": token},
-            timeout=10,
-            allow_redirects=False
-        )
-        
-        # Log the response
-        logger.info(f"X-Login Response Status: {response.status_code}")
-        logger.info(f"X-Login Response Headers: {dict(response.headers)}")
-        
-        try:
-            response_data = response.json()
-            logger.info(f"X-Login Response Body: {json.dumps(response_data, indent=2)}")
-        except:
-            logger.info(f"X-Login Response Body (Text): {response.text[:200]}...")
-        
-        logger.info("=" * 80)
-        
-        # Forward the response to the client
-        if response.status_code == 200:
-            return JsonResponse(response.json(), status=200)
-        else:
-            # Forward error response
-            try:
-                error_data = response.json()
-                return JsonResponse(error_data, status=response.status_code)
-            except:
-                return JsonResponse(
-                    {"error": response.text or "Unknown error"},
-                    status=response.status_code
-                )
-                
-    except Exception as e:
-        logger.error(f"Error proxying x-login request: {e}", exc_info=True)
-        return JsonResponse({
-            "error": f"Failed to proxy request: {str(e)}"
-        }, status=500)
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid request.'}, status=400)
+    token = data.get('token') if isinstance(data, dict) else None
+    if not isinstance(token, str) or not token.strip() or len(token) > 32768:
+        return JsonResponse({'error': 'Token is required.'}, status=400)
+    try:
+        response = requests.post(build_x_login_url(), json={'token': token},
+                                 timeout=(5, 10), allow_redirects=False)
+        response.raise_for_status()
+        if response.status_code != 200:
+            raise requests.exceptions.HTTPError(response=response)
+        result = response.json()
+        if not isinstance(result, dict):
+            raise ValueError('Invalid authoring response')
+        return JsonResponse(result)
+    except Exception as exc:
+        return _authoring_failure(request, exc)
 
 
 @login_required
+@never_cache
 def reset_course_authoring_password_view(request):
     """
     API endpoint to reset the course-authoring password for the current user.
@@ -1105,9 +1007,9 @@ def reset_course_authoring_password_view(request):
             )
         })
     except Exception as e:
-        logger.error(f"Error resetting course-authoring password for user {request.user.email}: {e}", exc_info=True)
+        logger.error("Course-authoring reset failed user_id=%s error_type=%s", request.user.pk, type(e).__name__)
         return JsonResponse({
-            "error": f"Failed to reset password: {str(e)}"
+            "error": "Failed to reset password. Please try again later."
         }, status=500)
 
 @login_required

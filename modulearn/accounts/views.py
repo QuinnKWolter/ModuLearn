@@ -145,7 +145,7 @@ def login_view(request):
     """
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
-        username = request.POST.get('username', '')
+        username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         
         if form.is_valid():
@@ -160,6 +160,7 @@ def login_view(request):
             return redirect('main:home')
         else:
             # Standard Django authentication failed - try KnowledgeTree automatically
+            username = form.cleaned_data.get('username', username)
             kt_config = getattr(settings, 'KNOWLEDGETREE', {})
             if kt_config.get('AUTH_ENABLED', True):
                 try:

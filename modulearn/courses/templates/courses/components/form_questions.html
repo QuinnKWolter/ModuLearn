@@ -1,6 +1,6 @@
 {% load ui_i18n study_text %}
           {% for question in questions %}
-            <fieldset class="student-question" data-no-ui-translate>
+            <fieldset class="student-question" data-no-ui-translate{% if preview_only and question.required and question.question_type == 'multiple_choice' %} data-preview-require-choice{% endif %}>
               <legend class="font-bold text-lg" id="question_prompt_{{ question.id }}">
                 <span class="study-prose" data-no-ui-translate>{{ question.prompt|study_markdown }}</span>
                 {% if question.required %}<span class="text-red-500">*</span>{% endif %}

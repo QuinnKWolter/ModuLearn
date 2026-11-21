@@ -1,0 +1,2318 @@
+{
+  "schema": "modulearn-study-export-v1",
+  "study": {
+    "title": "Python Remediation Lab Study — November 2026",
+    "slug": "python-remediation-lab-november-2026",
+    "description": "Three-condition, individually randomized experiment comparing additional practice, similar worked examples, and matched worked examples after incorrect Python code-writing submissions.",
+    "version_label": "lab-2026-11-20",
+    "status": "draft",
+    "notes": "DRAFT FOR RESEARCHER REVIEW. Updated from Gillian/Abigail diagram and supplied activity URLs on 2026-11-16. Pre-test: Q09 Q10 Q13 Q14. Main/remediation pairs: Q11/M03, Q12/M04, M05/M10, Q15/H03, Q16/H04, H05/H09, H06/H10, H07/H08. Repeated Q11/M03 and H06/H10 diagram rows are treated as duplicates (one occurrence each); confirm with researchers. Post-test: M01 M02 H01 H02 in the displayed order. This replaces the previous two-item randomized transfer-test placeholder. Owner explicitly requested retry after remediation on 2026-11-16. Wrong original -> condition target -> retry original; correct original -> next main. Practice requires one submission, irrespective of correctness. Examples allow Next after opening, without an assessment score. Feedback persists until Next. Further failed original attempts repeat remediation, with no imposed attempt cap. Pre/post tests advance after a submission, correct or incorrect. Provider feedback is not hidden by this package; confirm the assessment feedback policy. Administrative content updated 2026-11-20 from the researcher draft code-writing-remediations-modulearn-study-export.json. Consent, Instructions, six baseline motivation questions (titled Pretest in that draft), fifteen post-study motivation questions, and Debrief mirror the source text/forms. Instructions is inserted after Consent. Conditions and all 24 branch condition references now use more_practice / similar_example / matched_example. Smart activities and their ordering, targets, Next pacing and original retries are unchanged. Material review remains required: consent contains unresolved screening, duration and payment alternatives; instructions/debrief are generic; baseline enjoyment options still contain [interested/excited]; all 21 motivation scales retain the source multiple-answer controls. No extra screening or compensation logic is inferred from consent prose. The source posttest placeholder is not imported over the real coding post-test. The source does not supply the prior estimated-test-score/second-order-confidence items. Obtain researcher decisions before recruitment. All section limits are zero: elapsed visit timing is recorded without expiry. Set only approved limits. Recruitment disabled and completion codes blank. Confirm all materials, assignment method, repeat-failure policy, assessment order/feedback and payment before recruitment. Coding activities use the catalog SPLICE URLs. Worked examples use the exact supplied ACOS HTML URLs, whose pages include the SPLICE event script. Do not infer active attention from elapsed time or cheating from input summaries alone.",
+    "guided_flow": true,
+    "conditions": [
+      {
+        "label": "more_practice",
+        "name": "More Practice",
+        "description": "After an incorrect original submission, attempt a different code-writing problem targeting the same knowledge component, then retry the original.",
+        "order": 10,
+        "is_active": true
+      },
+      {
+        "label": "similar_example",
+        "name": "Similar Example",
+        "description": "Study a different worked example targeting the same knowledge component, then retry the original.",
+        "order": 20,
+        "is_active": true
+      },
+      {
+        "label": "matched_example",
+        "name": "Matched Example",
+        "description": "Study the original problem solution with line-by-line explanation, then retry the original.",
+        "order": 30,
+        "is_active": true
+      }
+    ],
+    "participant_paced": true,
+    "retry_after_remediation": true
+  },
+  "course_instance": {
+    "group_name": "Python Remediation Lab Study — November 2026 Participants",
+    "active": true
+  },
+  "course": {
+    "schema": "modulearn-course-export-v2",
+    "id": "python-remediation-lab-november-2026",
+    "name": "Python Remediation Lab Study — November 2026",
+    "title": "Python Remediation Lab Study — November 2026",
+    "description": "Three-condition, individually randomized experiment comparing additional practice, similar worked examples, and matched worked examples after incorrect Python code-writing submissions.",
+    "is_locked_for_research": true,
+    "plugin_config": {
+      "plugins": {
+        "guided_sequence": {
+          "enabled": false,
+          "settings": {}
+        },
+        "adaptive_branching": {
+          "enabled": true,
+          "settings": {}
+        },
+        "static_recommendations": {
+          "enabled": false,
+          "settings": {}
+        },
+        "dynamic_recommendations": {
+          "enabled": false,
+          "settings": {}
+        }
+      }
+    },
+    "schedule_timezone": "",
+    "provider_protocols": {},
+    "instructors": [],
+    "branch_rules": [
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 01",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 01.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 01",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 01.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 01",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 01.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 02",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 02.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 02",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 02.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 02",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 02.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 03",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 03.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 03",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 03.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 03",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 03.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 04",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 04.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 04",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 04.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 04",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 04.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 05",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 05.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 05",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 05.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 05",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 05.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 06",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 06.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 06",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 06.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 06",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 06.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 07",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 07.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 07",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 07.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 07",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 07.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 08",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 08.1",
+        "condition_type": "failure",
+        "required_study_condition": "more_practice",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 08",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 08.2",
+        "condition_type": "failure",
+        "required_study_condition": "similar_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      },
+      {
+        "source_unit": "04 Learning Session",
+        "source_module": "Learning Problem 08",
+        "target_unit": "05 Remediation Library",
+        "target_module": "Learning Activity 08.3",
+        "condition_type": "failure",
+        "required_study_condition": "matched_example",
+        "priority": 0,
+        "active": true,
+        "threshold": null
+      }
+    ],
+    "units": [
+      {
+        "title": "01 Consent",
+        "name": "01 Consent",
+        "order": 10,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "name": "Consent",
+            "title": "Consent",
+            "description": "**Online Consent**\n\nStudy Title:  What remediations should be taken after a mistake? Comparing the effects of additional practice vs. worked examples for performance and motivation in introductory programming.\n\nPrincipal Investigator: Paulo Carvalho, Ph.D. \nHuman-Computer Interaction Institute, 5000 Forbes Ave, Pittsburgh, PA, 15213, 412-268-4543, pcarvalh@cs.cmu.edu\n\nSponsor(s): National Science Foundation, Walton Foundation, Schmidt Futures, and Google.\n______________________________________________________________________________\n\nPurpose of this Study\nThis study looks at how to best help students learn how to write computer code. New programmers often make mistakes when learning how to code, and we want to understand what kind of help after a mistake best supports learning and motivation. \n\nSummary\nThis study involves learning new programming language concepts. [The study will begin with a single screening question, which should take no more than 5 minutes. If you do not meet the screening criteria, the study will end and you will be paid $1. If you meet the screening criteria,] You will learn these concepts through a series of online activities. You will not be asked any private information and the entire study should take no longer than (10) (20) (30) (40) (50) minutes. There are no risks for you, but the knowledge received may be of value to humanity.\n\nProcedures  \nYou will be asked to complete a series of activities regarding introductory python programming. The whole study should take no longer than (10) (20) (30) (40) (50) minutes across 1 session.\n\nAs part of the study, we will use internal checks to ensure you followed the instructions. These might include time-based checks, attention checks, completeness checks, or checks for generative AI use. Failure in one or more of these might result in rejection of your task.\n\nParticipant Requirements  \nParticipation in this study is limited to individuals age 18 and older currently located in the U.S. at the time of participation.\n\nRisks\nThe risks and discomfort associated with participation in this study are no greater than those ordinarily encountered in daily life or during computer use. There is a potential risk of breach of confidentiality.\n\nThe research team takes every precaution to avoid this from happening.\n\nBenefits\nThere may be no personal benefit from your participation in the study, but the knowledge received may contribute to insights about how humans acquire knowledge and how learning activities can be designed to improve education.\n\nCompensation & Costs\n\n[If you do not meet the screening criterial, you will be paid $1 in one payment]\n\n[If you meet the screening criteria,] You will be paid ($2) ($3) ($4) ($5) ($6) ($7) ($8) ($9) ($10) ($11) ($12) ($13) ($14) ($15) ($17) in (one)(several) payments. \n\n[You will be paid ($2) ($4) ($6) ($8) ($10) upon completion of the study.] \n\n[You will be paid ($3) ($4) ($5) upon completion of the first part of the study today, ($1) ($3) ($4) ($5) upon completion of the second part in (24h)(48h)(72h), [($1) ($3) ($4) ($5) upon completion of the third part in (48h)(72h)]].\n\nIf you fail the internal checks for compliance with the study instructions, your submission might be rejected, and you may not receive any compensation.\n\nThere will be no cost to you if you participate in this study.\n\nFuture Use of Information\nIn the future, once we have removed all identifiable information from your data, we may use the data for our future research studies, or we may distribute the data to other investigators for their research studies.  We would do this without getting additional informed consent from you (or your legally authorized representative).  Sharing of data with other researchers will only be done in such a manner that you will not be identified.\n\nConfidentiality\nBy participating in this research, you understand and agree that Carnegie Mellon may be required to disclose your consent form, data and other personally identifiable information as required by law, regulation, subpoena or court order.  Otherwise, your confidentiality will be maintained in the following manner:\n\nYour data and consent form will be kept separate. Your research data will be stored in a secure location on CMU property or via secure electronic means and in the control of CMU and will not be disclosed to third parties. By participating, you understand and agree that the data and information gathered during this study may be used by Carnegie Mellon and published and/or disclosed by Carnegie Mellon to others outside of Carnegie Mellon.  However, your name, address, contact information and other direct personal identifiers will not be mentioned in any such publication or dissemination of the research data and/or results by Carnegie Mellon. Note that per regulation all research data must be kept for a minimum of 3 years.\n\nThe researchers will take the following steps to protect participants’ identities during this study: (1)\nEach participant will be assigned a number; (2) The researchers will record any data collected during the study by number, not by name; (3) Any original recordings or data files will be stored in a secured location accessed only by authorized researchers.\n\nThe study sponsors may have access to research records.\n\nRights\nYour participation is voluntary.  You are free to stop your participation at any point.  Refusal to participate or withdrawal of your consent or discontinued participation in the study will not result in any penalty or loss of benefits or rights to which you might otherwise be entitled.  The Principal Investigator may at his/her discretion remove you from the study for any of a number of reasons.  In such an event, you will not suffer any penalty or loss of benefits or rights which you might otherwise be entitled.\n\nRight to Ask Questions & Contact Information\nIf you have any questions about this study, you should feel free to ask them by contacting the Principal Investigator now at Dr. Paulo Carvalho, Human-Computer Interaction Institute, 5000 Forbes Ave., Pittsburgh, PA, 15213, pcarvalh@andrew.cmu.edu.  If you have questions later, desire additional information, or wish to withdraw your participation please contact the Principal Investigator by mail, phone or e-mail in accordance with the contact information listed above.  \n\nIf you have questions pertaining to your rights as a research participant; or to report concerns to this study, you should contact the Office of Research integrity and Compliance at Carnegie Mellon University.  Email: irb-review@andrew.cmu.edu . Phone:  412-268-4721.\n\nVoluntary Participation\nYour participation in this research is voluntary.  You may discontinue participation at any time during the research activity.  You may print a copy of this consent form for your records. ",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": false,
+            "is_locked": false,
+            "allow_resubmission": false,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "study_template_role": "consent",
+              "requires_material_replacement": true,
+              "study_shuffle_questions": false,
+              "material_source": "code-writing-remediations-modulearn-study-export.json"
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Review the study information carefully. Submit this form only if you agree to participate.\n\n**Online Consent**",
+              "allow_resubmission": false,
+              "submit_button_label": "I Consent",
+              "questions": [
+                {
+                  "prompt": "I have read the study information and agree to participate.",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 10,
+                  "options": [
+                    "I agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Instructions",
+            "title": "Instructions",
+            "description": "Study instructions shown before the task sequence begins.",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 20,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": false,
+            "is_locked": false,
+            "allow_resubmission": false,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "study_template_role": "instructions",
+              "requires_material_replacement": true,
+              "study_shuffle_questions": false,
+              "material_source": "code-writing-remediations-modulearn-study-export.json"
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Read the instructions for this study. Submit when you are ready to continue.",
+              "allow_resubmission": false,
+              "submit_button_label": "Continue",
+              "questions": [
+                {
+                  "prompt": "I understand the instructions and am ready to begin.",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 10,
+                  "options": [
+                    "Ready"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "title": "02 Baseline",
+        "name": "02 Baseline",
+        "order": 20,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "name": "Pretest",
+            "title": "Pretest",
+            "description": "Baseline questions or an external pretest placeholder.",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": false,
+            "is_locked": false,
+            "allow_resubmission": false,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "study_template_role": "baseline",
+              "requires_material_replacement": true,
+              "study_shuffle_questions": false,
+              "material_source": "code-writing-remediations-modulearn-study-export.json"
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Pre-test motivation Questions",
+              "allow_resubmission": false,
+              "submit_button_label": "Submit Pretest",
+              "questions": [
+                {
+                  "prompt": "How interesting do you find programming?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 10,
+                  "options": [
+                    "Not interested at all",
+                    "Slightly interested",
+                    "Somewhat interested",
+                    "Very interested",
+                    "Extremely interested"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How much do you enjoy learning about programming?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 20,
+                  "options": [
+                    "Not [interested/excited] at all",
+                    "Slightly [interested/excited]",
+                    "Somewhat [interested/excited]",
+                    "Very [interested/excited]",
+                    "Extremely [interested/excited]"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How excited are you to learn about programming?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 30,
+                  "options": [
+                    "Not excited at all",
+                    "Slightly excited",
+                    "Somewhat excited",
+                    "Very excited",
+                    "Extremely excited"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How good are you at coding?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 40,
+                  "options": [
+                    "Not good at all",
+                    "Slightly good",
+                    "Somewhat good",
+                    "Very good",
+                    "Extremely good"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How comfortable do you feel doing coding problems?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 50,
+                  "options": [
+                    "Not comfortable at all",
+                    "Slightly comfortable",
+                    "Somewhat comfortable",
+                    "Very comfortable",
+                    "Extremely comfortable"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How strong is your background in coding?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 60,
+                  "options": [
+                    "Not strong at all",
+                    "Slightly strong",
+                    "Somewhat strong",
+                    "Very strong",
+                    "Extremely strong"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "title": "03 Pre-Test",
+        "name": "03 Pre-Test",
+        "order": 30,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "title": "Pre-Test 1",
+            "name": "Pre-Test 1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q09.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q09.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 10,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "Q09",
+              "catalog_id": "6ae26f53ef8fad3082c3a6d1",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q09",
+              "catalog_title": "Arithmetic expression (addition) evaluated inside if condition",
+              "study_template_role": "pretest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Pre-Test 2",
+            "name": "Pre-Test 2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q10.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q10.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 20,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "Q10",
+              "catalog_id": "6ae26f53ef8fad3082c3a6d3",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q10",
+              "catalog_title": "Arithmetic expression (subtraction) evaluated inside if condition",
+              "study_template_role": "pretest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Pre-Test 3",
+            "name": "Pre-Test 3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q13.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q13.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 30,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "Q13",
+              "catalog_id": "6ae26f53ef8fad3082c3a6d9",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q13",
+              "catalog_title": "Single variable updated inside if/else branch",
+              "study_template_role": "pretest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Pre-Test 4",
+            "name": "Pre-Test 4",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q14.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q14.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 40,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "Q14",
+              "catalog_id": "6ae26f54ef8fad3082c3a6db",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q14",
+              "catalog_title": "Two variables both updated inside the if-branch",
+              "study_template_role": "pretest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          }
+        ]
+      },
+      {
+        "title": "04 Learning Session",
+        "name": "04 Learning Session",
+        "order": 40,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "title": "Learning Problem 01",
+            "name": "Learning Problem 01",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q11.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q11.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 10,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q11",
+              "catalog_id": "6ae26f53ef8fad3082c3a6d5",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q11",
+              "catalog_title": "Arithmetic expression (multiplication) evaluated inside if condition",
+              "study_template_role": "original",
+              "study_template_slot": "L01",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 02",
+            "name": "Learning Problem 02",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q12.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q12.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 20,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q12",
+              "catalog_id": "6ae26f53ef8fad3082c3a6d7",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q12",
+              "catalog_title": "Arithmetic expression (division) evaluated inside if condition",
+              "study_template_role": "original",
+              "study_template_slot": "L02",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 03",
+            "name": "Learning Problem 03",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m05.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m05.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 30,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M05",
+              "catalog_id": "6ae26f52ef8fad3082c3a6c5",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_m05",
+              "catalog_title": "Multiplication in an if/elif/else chain",
+              "study_template_role": "original",
+              "study_template_slot": "L03",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 04",
+            "name": "Learning Problem 04",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q15.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q15.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 40,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q15",
+              "catalog_id": "6ae26f54ef8fad3082c3a6dd",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q15",
+              "catalog_title": "Arithmetic in condition must be evaluated first to select branch",
+              "study_template_role": "original",
+              "study_template_slot": "L04",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 05",
+            "name": "Learning Problem 05",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q16.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_q16.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 50,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q16",
+              "catalog_id": "6ae26f54ef8fad3082c3a6df",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_q16",
+              "catalog_title": "Two sequential independent if/else blocks",
+              "study_template_role": "original",
+              "study_template_slot": "L05",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 06",
+            "name": "Learning Problem 06",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h05.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h05.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 60,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H05",
+              "catalog_id": "6ae26f51ef8fad3082c3a6b1",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h05",
+              "catalog_title": "Division in the condition",
+              "study_template_role": "original",
+              "study_template_slot": "L06",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 07",
+            "name": "Learning Problem 07",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h06.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h06.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 70,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H06",
+              "catalog_id": "6ae26f51ef8fad3082c3a6b3",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h06",
+              "catalog_title": "State updates inside an if/elif/else chain",
+              "study_template_role": "original",
+              "study_template_slot": "L07",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Problem 08",
+            "name": "Learning Problem 08",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h07.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h07.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 80,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H07",
+              "catalog_id": "6ae26f51ef8fad3082c3a6b5",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h07",
+              "catalog_title": "Swapping two values with a temporary variable inside a branch",
+              "study_template_role": "original",
+              "study_template_slot": "L08",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          }
+        ]
+      },
+      {
+        "title": "05 Remediation Library",
+        "name": "05 Remediation Library",
+        "order": 50,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "title": "Learning Activity 01.1",
+            "name": "Learning Activity 01.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m03.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m03.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 31,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M03",
+              "catalog_id": "6ae26f52ef8fad3082c3a6c1",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_m03",
+              "catalog_title": "Multiplication inside an equality comparison (==) vs. assignment (=)",
+              "study_template_role": "practice",
+              "study_template_slot": "L01",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 01.2",
+            "name": "Learning Activity 01.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m03__6af121974adff907a4b2a93e",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m03__6af121974adff907a4b2a93e",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 32,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M03",
+              "study_template_role": "similar",
+              "study_template_slot": "L01",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 01.3",
+            "name": "Learning Activity 01.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q11__6af1208f4adff907a4b2a6a9",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q11__6af1208f4adff907a4b2a6a9",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 33,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q11",
+              "study_template_role": "matched",
+              "study_template_slot": "L01",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 02.1",
+            "name": "Learning Activity 02.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m04.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m04.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 61,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M04",
+              "catalog_id": "6ae26f52ef8fad3082c3a6c3",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_m04",
+              "catalog_title": "Division producing a decimal inside a comparison",
+              "study_template_role": "practice",
+              "study_template_slot": "L02",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 02.2",
+            "name": "Learning Activity 02.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m04__6af121d74adff907a4b2a97c",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m04__6af121d74adff907a4b2a97c",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 62,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M04",
+              "study_template_role": "similar",
+              "study_template_slot": "L02",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 02.3",
+            "name": "Learning Activity 02.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q12__6af120cc4adff907a4b2a70f",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q12__6af120cc4adff907a4b2a70f",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 63,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q12",
+              "study_template_role": "matched",
+              "study_template_slot": "L02",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 03.1",
+            "name": "Learning Activity 03.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m10.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m10.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 91,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M10",
+              "catalog_id": "6ae26f53ef8fad3082c3a6cf",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_m10",
+              "catalog_title": "Division repeated in an if/elif/else chain",
+              "study_template_role": "practice",
+              "study_template_slot": "L03",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 03.2",
+            "name": "Learning Activity 03.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m10__6af122534adff907a4b2b555",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m10__6af122534adff907a4b2b555",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 92,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M10",
+              "study_template_role": "similar",
+              "study_template_slot": "L03",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 03.3",
+            "name": "Learning Activity 03.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m05__6af121e54adff907a4b2a98f",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/m05__6af121e54adff907a4b2a98f",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 93,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "M05",
+              "study_template_role": "matched",
+              "study_template_slot": "L03",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 04.1",
+            "name": "Learning Activity 04.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h03.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h03.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 121,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H03",
+              "catalog_id": "6ae26f51ef8fad3082c3a6ad",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h03",
+              "catalog_title": "Arithmetic condition decides whether a second variable is reassigned before it is used",
+              "study_template_role": "practice",
+              "study_template_slot": "L04",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 04.2",
+            "name": "Learning Activity 04.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h03__6af122c24adff907a4b2b62d",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h03__6af122c24adff907a4b2b62d",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 122,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H03",
+              "study_template_role": "similar",
+              "study_template_slot": "L04",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 04.3",
+            "name": "Learning Activity 04.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q15__6af121274adff907a4b2a896",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q15__6af121274adff907a4b2a896",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 123,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q15",
+              "study_template_role": "matched",
+              "study_template_slot": "L04",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 05.1",
+            "name": "Learning Activity 05.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h04.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h04.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 151,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H04",
+              "catalog_id": "6ae26f51ef8fad3082c3a6af",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h04",
+              "catalog_title": "Two sequential if statements where the first update changes the second decision",
+              "study_template_role": "practice",
+              "study_template_slot": "L05",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 05.2",
+            "name": "Learning Activity 05.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h04__6af122cb4adff907a4b2b640",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h04__6af122cb4adff907a4b2b640",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 152,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H04",
+              "study_template_role": "similar",
+              "study_template_slot": "L05",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 05.3",
+            "name": "Learning Activity 05.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q16__6af121344adff907a4b2a8a9",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/q16__6af121344adff907a4b2a8a9",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 153,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "Q16",
+              "study_template_role": "matched",
+              "study_template_slot": "L05",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 06.1",
+            "name": "Learning Activity 06.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h09.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h09.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 181,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H09",
+              "catalog_id": "6ae26f51ef8fad3082c3a6b9",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h09",
+              "catalog_title": "Multiple sequential updates to one variable plus a string assignment within a branch",
+              "study_template_role": "practice",
+              "study_template_slot": "L06",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 06.2",
+            "name": "Learning Activity 06.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h09__6af1232e4adff907a4b2b6f7",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h09__6af1232e4adff907a4b2b6f7",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 182,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H09",
+              "study_template_role": "similar",
+              "study_template_slot": "L06",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 06.3",
+            "name": "Learning Activity 06.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h05__6af122d54adff907a4b2b653",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h05__6af122d54adff907a4b2b653",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 183,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H05",
+              "study_template_role": "matched",
+              "study_template_slot": "L06",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 07.1",
+            "name": "Learning Activity 07.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h10.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h10.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 211,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H10",
+              "catalog_id": "6ae26f52ef8fad3082c3a6bb",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h10",
+              "catalog_title": "Integration: conditional update followed by an if/elif/else on the updated values",
+              "study_template_role": "practice",
+              "study_template_slot": "L07",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 07.2",
+            "name": "Learning Activity 07.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h10__6af123374adff907a4b2b70a",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h10__6af123374adff907a4b2b70a",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 212,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H10",
+              "study_template_role": "similar",
+              "study_template_slot": "L07",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 07.3",
+            "name": "Learning Activity 07.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h06__6af122e34adff907a4b2b666",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h06__6af122e34adff907a4b2b666",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 213,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H06",
+              "study_template_role": "matched",
+              "study_template_slot": "L07",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 08.1",
+            "name": "Learning Activity 08.1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h08.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h08.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 241,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H08",
+              "catalog_id": "6ae26f51ef8fad3082c3a6b7",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h08",
+              "catalog_title": "Equality check with arithmetic, then a second if/else that depends on the updated value",
+              "study_template_role": "practice",
+              "study_template_slot": "L08",
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Learning Activity 08.2",
+            "name": "Learning Activity 08.2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h08__6af123254adff907a4b2b6e4",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h08__6af123254adff907a4b2b6e4",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 242,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H08",
+              "study_template_role": "similar",
+              "study_template_slot": "L08",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          },
+          {
+            "title": "Learning Activity 08.3",
+            "name": "Learning Activity 08.3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h07__6af1231c4adff907a4b2b6d1",
+            "url": "https://acos.cs.vt.edu/html/acos-pcex/acos-pcex-examples/h07__6af1231c4adff907a4b2b6d1",
+            "provider_id": "pcex",
+            "resource_id": "CodeConstruction",
+            "display_type_label": "Worked Examples",
+            "supported_protocols": [
+              "html"
+            ],
+            "order": 243,
+            "is_visible": true,
+            "is_locked": true,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "provider",
+            "content_data": {
+              "study_item_id": "H07",
+              "study_template_role": "matched",
+              "study_template_slot": "L08",
+              "requires_material_replacement": false,
+              "study_allow_next": true
+            }
+          }
+        ]
+      },
+      {
+        "title": "06 Post-session Questionnaire",
+        "name": "06 Post-session Questionnaire",
+        "order": 60,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "name": "Post-study motivation questions",
+            "title": "Post-study motivation questions",
+            "description": "",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": false,
+            "is_locked": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "study_template_role": "post_questionnaire",
+              "requires_material_replacement": true,
+              "study_shuffle_questions": false,
+              "material_source": "code-writing-remediations-modulearn-study-export.json"
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "",
+              "allow_resubmission": true,
+              "submit_button_label": "Submit",
+              "questions": [
+                {
+                  "prompt": "I got distracted as I learned during this session.",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 10,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "My mind wandered as I learned today",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 20,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "The programming activities have been interesting.",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 30,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "I've enjoyed learning about programming.",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 40,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "These programming activities have been fun.",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 50,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "It's been fun to learn about programming this way.",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 60,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How much would you like to learn more about programming?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 70,
+                  "options": [
+                    "Not interested at all",
+                    "Slightly interested",
+                    "Somewhat interested",
+                    "Very interested",
+                    "Extremely interested"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How much would you enjoy learning more about programming in the future?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 80,
+                  "options": [
+                    "Not interested at all",
+                    "Slightly interested",
+                    "Somewhat interested",
+                    "Very interested",
+                    "Extremely interested"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How interesting do you find programming?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 90,
+                  "options": [
+                    "Not interesting at all",
+                    "Slightly interesting",
+                    "Somewhat interesting",
+                    "Very interesting",
+                    "Extremely interesting"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "Even if it weren't required, how interested would you be in taking another programming course?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 100,
+                  "options": [
+                    "Not interested at all",
+                    "Slightly interested",
+                    "Somewhat interested",
+                    "Very interested",
+                    "Extremely interested"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "The instruction I just received prepared me well to solve programming problems.",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 110,
+                  "options": [
+                    "Strongly disagree",
+                    "Disagree",
+                    "Slightly disagree",
+                    "Slightly agree",
+                    "Agree",
+                    "Strongly Agree"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How prepared are you for the final test?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 120,
+                  "options": [
+                    "Not prepared at all",
+                    "Slightly prepared",
+                    "Somewhat prepared",
+                    "Very prepared",
+                    "Extremely prepared"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How confident are you in your ability to learn how to program?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 130,
+                  "options": [
+                    "Not confident at all",
+                    "Slightly confident",
+                    "Somewhat confident",
+                    "Very confident",
+                    "Extremely confident"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How confident are you that you could learn to program correctly, with practice?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 140,
+                  "options": [
+                    "Not confident at all",
+                    "Slightly confident",
+                    "Somewhat confident",
+                    "Very confident",
+                    "Extremely confident"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                },
+                {
+                  "prompt": "How well do you think you would do in a future programming course?",
+                  "help_text": "",
+                  "question_type": "multiple_choice",
+                  "question_type_label": "Multiple Choice - Multiple Answers",
+                  "required": true,
+                  "order": 150,
+                  "options": [
+                    "Not well at all",
+                    "Slightly well",
+                    "Somewhat well",
+                    "Very well",
+                    "Extremely well"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "title": "07 Post-Test",
+        "name": "07 Post-Test",
+        "order": 70,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "title": "Post-Test 1",
+            "name": "Post-Test 1",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m01.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m01.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 10,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "M01",
+              "catalog_id": "6ae26f52ef8fad3082c3a6bd",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_m01",
+              "catalog_title": "Addition inside a comparison",
+              "study_template_role": "posttest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Post-Test 2",
+            "name": "Post-Test 2",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m02.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_m02.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 20,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "M02",
+              "catalog_id": "6ae26f52ef8fad3082c3a6bf",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_m02",
+              "catalog_title": "Subtraction inside a comparison",
+              "study_template_role": "posttest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Post-Test 3",
+            "name": "Post-Test 3",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h01.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h01.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 30,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "H01",
+              "catalog_id": "6ae26f50ef8fad3082c3a6a9",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h01",
+              "catalog_title": "Updating a variable using its own value (x = x + n) inside a branch",
+              "study_template_role": "posttest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          },
+          {
+            "title": "Post-Test 4",
+            "name": "Post-Test 4",
+            "description": "",
+            "module_type": "splice_smart_content",
+            "content_url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h02.yaml?protocol=splice",
+            "url": "https://adapt2.sis.pitt.edu/cupcake/#/activities/gillian-python/free_coding_h02.yaml?protocol=splice",
+            "provider_id": "Cupcake",
+            "resource_id": "FreeCodingProblems",
+            "display_type_label": "Coding Problems",
+            "supported_protocols": [
+              "splice",
+              "html"
+            ],
+            "order": 40,
+            "is_visible": true,
+            "is_locked": false,
+            "is_graded": false,
+            "is_recommendation_only": false,
+            "allow_resubmission": true,
+            "unlock_rule": {},
+            "completion_rule": "submission",
+            "content_data": {
+              "study_item_id": "H02",
+              "catalog_id": "6ae26f51ef8fad3082c3a6ab",
+              "catalog_activity_id": "cupcake/gillian-python/free_coding_h02",
+              "catalog_title": "Two dependent state updates in a branch",
+              "study_template_role": "posttest",
+              "study_template_slot": null,
+              "requires_material_replacement": false,
+              "study_allow_next": false
+            }
+          }
+        ]
+      },
+      {
+        "title": "08 Debrief",
+        "name": "08 Debrief",
+        "order": 80,
+        "description": "",
+        "is_visible": true,
+        "is_locked": false,
+        "unlock_rule": {},
+        "time_limit_seconds": 0,
+        "modules": [
+          {
+            "name": "Debrief",
+            "title": "Debrief",
+            "description": "Final debrief and completion instructions.",
+            "url": "",
+            "content_url": "",
+            "module_type": "form",
+            "module_type_label": "Form / Survey",
+            "display_type_label": "Form / Survey",
+            "resource_id": "Form / Survey",
+            "provider_id": "Form / Survey",
+            "platform_name": "",
+            "author_id": "",
+            "author": "",
+            "order": 10,
+            "is_visible": true,
+            "is_recommendation_only": false,
+            "is_graded": false,
+            "is_locked": false,
+            "allow_resubmission": false,
+            "unlock_rule": {},
+            "unlock_rule_portable": {},
+            "content_data": {
+              "study_template_role": "debrief",
+              "requires_material_replacement": true,
+              "study_shuffle_questions": false,
+              "material_source": "code-writing-remediations-modulearn-study-export.json"
+            },
+            "content_file": null,
+            "keywords": "",
+            "resource_link_id": null,
+            "supported_protocols": [],
+            "form": {
+              "instructions": "Read the debrief. The final study link can return you to Prolific for credit.",
+              "allow_resubmission": false,
+              "submit_button_label": "Finish Debrief",
+              "questions": [
+                {
+                  "prompt": "I have read the debrief.",
+                  "help_text": "",
+                  "question_type": "single_choice",
+                  "question_type_label": "Multiple Choice - One Answer",
+                  "required": true,
+                  "order": 10,
+                  "options": [
+                    "Complete"
+                  ],
+                  "likert_min_label": "Strongly disagree",
+                  "likert_max_label": "Strongly agree"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "course_instance": {
+      "group_name": "Python Remediation Lab Study — November 2026 Participants",
+      "active": true,
+      "instructors": []
+    }
+  },
+  "recruitment_sources": [
+    {
+      "platform": "prolific",
+      "label": "Prolific",
+      "is_active": false,
+      "max_participants": null,
+      "condition_strategy": "random",
+      "condition_labels": "",
+      "prolific_study_id": "",
+      "prolific_completion_code_complete": "",
+      "prolific_completion_code_screened_out": "",
+      "prolific_completion_code_attention_failed": "",
+      "prolific_use_secured_url": false,
+      "sona_base_url": "",
+      "sona_experiment_id": "",
+      "sona_grant_server_side": true
+    }
+  ]
+}

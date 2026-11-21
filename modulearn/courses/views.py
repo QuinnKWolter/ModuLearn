@@ -1485,8 +1485,8 @@ def launch_iframe_module(request, instance_id, module_id):
     original_content_url = module.content_url  # Keep original for logging
     selected_protocol = module.select_launch_protocol()
     
-    logger.info(f"Activity {module.id}: Original content_url: {original_content_url}")
-    logger.info(f"Activity {module.id}: Provider ID: {module.provider_id}")
+    logger.debug(f"Activity {module.id}: Original content_url: {original_content_url}")
+    logger.debug(f"Activity {module.id}: Provider ID: {module.provider_id}")
     
     # Parse URL for LTI parameters
     parsed_url = urlparse(content_url) if content_url else None
@@ -1496,7 +1496,7 @@ def launch_iframe_module(request, instance_id, module_id):
     url_tool = query_params.get('tool', [''])[0]
     url_sub = query_params.get('sub', [''])[0]
     
-    logger.info(f"Activity {module.id}: Parsed URL - tool={url_tool}, sub={url_sub}, path={parsed_url.path if parsed_url else 'None'}")
+    logger.debug(f"Activity {module.id}: Parsed URL - tool={url_tool}, sub={url_sub}, path={parsed_url.path if parsed_url else 'None'}")
     
     # SPECIAL HANDLING: CodeCheck exercises should load directly from their activity URL
     # instead of going through LTI launch. Detect CodeCheck by provider_id or tool parameter.
@@ -1535,7 +1535,7 @@ def launch_iframe_module(request, instance_id, module_id):
                 '',  # Remove query string
                 parsed.fragment
             ))
-            logger.info(f"Activity {module.id}: Transformed JSVEE URL from {parsed.path}?{parsed.query} to: {content_url}")
+            logger.debug(f"Activity {module.id}: Transformed JSVEE URL from {parsed.path}?{parsed.query} to: {content_url}")
     
     # SPECIAL HANDLING: Parson's Problems URL transformation
     # Transform from: http://adapt2.sis.pitt.edu/acos/pitt/jsparsons/jsparsons-python/ps?example-id=ps_python_for_odd_or_even
@@ -1555,7 +1555,7 @@ def launch_iframe_module(request, instance_id, module_id):
                 '',  # Remove query string
                 ''   # No fragment
             ))
-            logger.info(f"Activity {module.id}: Transformed Parson's Problems URL from {parsed.geturl()} to: {content_url}")
+            logger.debug(f"Activity {module.id}: Transformed Parson's Problems URL from {parsed.geturl()} to: {content_url}")
     
     # SPECIAL HANDLING: WebEx exercises URL transformation
     # Preserve the exact activity identifier; never substitute another exercise.
@@ -1582,7 +1582,7 @@ def launch_iframe_module(request, instance_id, module_id):
                 new_query,
                 parsed.fragment
             ))
-            logger.info(f"Activity {module.id}: Transformed WebEx URL from {parsed.geturl()} to: {content_url}")
+            logger.debug(f"Activity {module.id}: Transformed WebEx URL from {parsed.geturl()} to: {content_url}")
     
     if is_codecheck:
         # CodeCheck demos and manually created modules may already carry a real
@@ -1590,14 +1590,14 @@ def launch_iframe_module(request, instance_id, module_id):
         # Wiley path when the module came from an LTI-style URL with a sub value.
         if is_direct_codecheck_file:
             content_url = force_https_url(content_url)
-            logger.info(f"Activity {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
+            logger.debug(f"Activity {module.id}: CodeCheck detected - preserving direct file URL: {content_url}")
             parsed_url = urlparse(content_url)
             query_params = parse_qs(parsed_url.query) if parsed_url else {}
             selected_protocol = 'splice'
             is_lti_launch_url = False
         elif url_sub:
             content_url = f"https://codecheck.io/files/wiley/{url_sub}"
-            logger.info(f"Activity {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
+            logger.debug(f"Activity {module.id}: CodeCheck detected - constructing direct URL: {content_url}")
             # Re-parse the new URL
             parsed_url = urlparse(content_url)
             query_params = parse_qs(parsed_url.query) if parsed_url else {}
@@ -1633,7 +1633,7 @@ def launch_iframe_module(request, instance_id, module_id):
     # Skip for CodeCheck since we're loading directly
     if not is_codecheck and selected_protocol is None and is_lti_launch_url:
         selected_protocol = 'lti'
-        logger.info(f"Activity {module.id}: Auto-detected LTI protocol from URL pattern")
+        logger.debug(f"Activity {module.id}: Auto-detected LTI protocol from URL pattern")
     
     # For LTI protocol, extract the sub parameter for our LTI consumer
     lti_sub = url_sub if url_sub else None
@@ -1643,12 +1643,12 @@ def launch_iframe_module(request, instance_id, module_id):
     if not is_codecheck:
         if is_paws_url and url_tool:
             lti_tool = f"paws_{url_tool}"
-            logger.info(f"Activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+            logger.debug(f"Activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
         else:
             lti_tool = url_tool if url_tool else module.provider_id
     elif is_paws_url and url_tool:
         lti_tool = f"paws_{url_tool}"
-        logger.info(f"Activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
+        logger.debug(f"Activity {module.id}: PAWS-mediated tool detected, using '{lti_tool}'")
     else:
         lti_tool = url_tool if url_tool else module.provider_id
     
@@ -1704,9 +1704,9 @@ def launch_iframe_module(request, instance_id, module_id):
             parsed.fragment
         ))
         
-        logger.info(
+        logger.debug(
             f"Activity {module.id}: Built activity URL with session params: "
-            f"grp={grp}, usr={usr}, sid={sid[:10]}..., cid={cid}"
+            f"instance={course_instance.pk}, cid={cid}"
         )
         
         if should_proxy_intercepted_activity_url(activity_url_with_params):
@@ -1716,11 +1716,11 @@ def launch_iframe_module(request, instance_id, module_id):
             # proxying same-origin PCEX activity APIs.
             activity_url_with_params = force_https_url(activity_url_with_params)
     
-    logger.info(f"Activity {module.id} '{module.title}' selected protocol: {selected_protocol}")
-    logger.info(f"Activity {module.id} - Original content_url: {original_content_url}")
-    logger.info(f"Activity {module.id} - Final content_url: {content_url}")
-    logger.info(f"Activity {module.id} - Activity URL with params: {activity_url_with_params}")
-    logger.info(f"Activity {module.id} - Use proxy: {use_proxy}, Is LTI URL: {is_lti_launch_url}, Is CodeCheck: {is_codecheck}")
+    logger.debug(f"Activity {module.id} '{module.title}' selected protocol: {selected_protocol}")
+    logger.debug(f"Activity {module.id} - Original content_url: {original_content_url}")
+    logger.debug(f"Activity {module.id} - Final content_url: {content_url}")
+    logger.debug(f"Activity {module.id} - Activity URL with params: {activity_url_with_params}")
+    logger.debug(f"Activity {module.id} - Use proxy: {use_proxy}, Is LTI URL: {is_lti_launch_url}, Is CodeCheck: {bool(is_codecheck)}")
     
     # Check if tool is known to refuse iframe embedding
     refuses_iframe = False
@@ -1747,18 +1747,18 @@ def launch_iframe_module(request, instance_id, module_id):
             'tool': lti_tool, 'sub': lti_sub or content_url,
             'usr': request.user.id, 'grp': grp_id, 'module_id': module.id,
         })
-        logger.info(
+        logger.debug(
             f"LTI Launch URL generated: activity={module.id}, tool={lti_tool}, "
             f"sub={lti_sub}, user={request.user.id}, instance={grp_id}"
         )
     else:
         if use_proxy:
             iframe_src = to_path_style_proxy(activity_url_with_params)
-            logger.info(f"Activity {module.id}: Final iframe_src (proxied): {iframe_src}")
+            logger.debug(f"Activity {module.id}: Final iframe_src (proxied): {iframe_src}")
         else:
             # Use the URL with session parameters directly, forcing HTTPS if needed
             iframe_src = force_https_url(activity_url_with_params)
-            logger.info(f"Activity {module.id}: Final iframe_src (direct, https): {iframe_src}")
+            logger.debug(f"Activity {module.id}: Final iframe_src (direct, https): {iframe_src}")
 
     context = {
         'recommendation_practice': practice,
@@ -1993,6 +1993,11 @@ def preview_iframe_module(request, module_id):
     if not get_user_role_snapshot(request.user)["effective_is_instructor"]:
         return HttpResponseForbidden("Preview is limited to instructors")
 
+    return render_instructor_activity_preview(request, module)
+
+
+def render_instructor_activity_preview(request, module):
+    """Shared launch renderer for saved activities and authorized unsaved drafts."""
     # Get the module's content URL and selected protocol
     content_url = normalize_activity_launch_url(module.content_url)
     selected_protocol = module.select_launch_protocol()
@@ -2095,16 +2100,22 @@ def preview_iframe_module(request, module_id):
         # Build session parameters for preview (minimal since no course session)
         # grp: 'preview' for instructor previews
         grp = 'preview'
-        # usr: username
-        usr = request.user.username
-        # sid: Django session key
-        sid = request.session.session_key or ''
-        # cid: course.id if available
-        cid = str(module.course.id) if module.course else ''
+        # usr: disposable provider identity
+        usr = 'preview-' + uuid.uuid4().hex
+        # sid: disposable launch identity, never the instructor login session
+        sid = uuid.uuid4().hex
+        # cid: cannot resolve to a real course
+        cid = 'preview'
         
         # Parse the base URL and append parameters
         parsed = urlparse(content_url)
         existing_params = parse_qs(parsed.query)
+
+        # Imported URLs can carry stale real-course tracking parameters. Never
+        # reuse them for an instructor rehearsal, even when the teacher is enrolled.
+        for key in ('module_id', 'course_instance_id', 'practice_id', 'recommendation', 'recommendation_context',
+                    'recommendation_practice_id', 'usr', 'grp', 'sid', 'cid'):
+            existing_params.pop(key, None)
         
         # Add session parameters (don't overwrite if already present)
         if 'grp' not in existing_params:
