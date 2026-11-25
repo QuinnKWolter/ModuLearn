@@ -3,22 +3,22 @@
   "coverage_note": "Catalog parity and source references are automated. Runtime dialogs and new unmarked text still require browser review.",
   "languages": {
     "en": {
-      "messages": 2225,
+      "messages": 2228,
       "missing": 0,
       "invalid": 0
     },
     "es": {
-      "messages": 2225,
+      "messages": 2228,
       "missing": 0,
       "invalid": 0
     },
     "fr": {
-      "messages": 2225,
+      "messages": 2228,
       "missing": 0,
       "invalid": 0
     },
     "sr-latn": {
-      "messages": 2225,
+      "messages": 2228,
       "missing": 0,
       "invalid": 0
     }
@@ -5382,9 +5382,13 @@
       "This recruitment link cannot be used right now."
     ],
     "recruitment/templates/recruitment/player_controls.html": [
+      "Next",
+      "form",
+      "if"
+    ],
+    "recruitment/templates/recruitment/preview_exit.html": [
       "Exit",
       "Exit Preview",
-      "Next",
       "Preview",
       "form",
       "if",
@@ -6296,18 +6300,24 @@
       "question"
     ],
     "static/js/form-validation.js": [
-      ", and",
+      "Back",
+      "Connected",
+      "Default",
+      "Enter an answer.",
       "Event",
       "Learn",
       "ModuLearn",
-      "Please answer every required question.",
-      "Refresh",
+      "Name",
+      "No",
+      "Q",
+      "Question",
+      "Select at least one answer.",
+      "Select one answer.",
       "Time",
+      "event",
       "form",
       "if",
-      "incorrect",
-      "question",
-      "tracked"
+      "question"
     ],
     "static/js/i18n.js": [
       "Complete",

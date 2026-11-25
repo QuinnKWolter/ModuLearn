@@ -42,3 +42,27 @@
     border-color: rgba(71, 85, 105, 0.65);
     background: rgba(30, 41, 59, 0.65);
   }
+
+/* Highlight the unanswered question, never an arbitrarily chosen option. */
+.form-question-invalid {
+  border-color: #b45309 !important;
+  outline: 2px solid #b45309 !important;
+  outline-offset: 4px;
+  background: #fffbeb !important;
+  scroll-margin-block: 6rem;
+}
+.dark .form-question-invalid {
+  border-color: #fbbf24 !important;
+  outline-color: #fbbf24 !important;
+  background: #332b1d !important;
+  color: #f1f5f9;
+}
+.form-question-error {
+  margin: .75rem 0 0;
+  color: #92400e;
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.dark .form-question-error { color: #fde68a; }
+.form-question-error[hidden] { display: none; }

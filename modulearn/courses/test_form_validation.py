@@ -4,7 +4,7 @@ from unittest import skipUnless
 
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.test import TestCase, override_settings
+from django.test import TestCase, RequestFactory, override_settings
 from django.urls import reverse
 
 from accounts.models import User
@@ -64,6 +64,27 @@ class FormValidationTests(TestCase):
         self.assertEqual(ModuleFormSubmission.objects.count(), 1)
         self.assertTrue(ModuleProgress.objects.get(module=self.module).is_complete)
 
+    def test_question_can_switch_between_radio_and_checkboxes_without_losing_answers(self):
+        from courses.views import _update_module_form_configuration
+        self.client.post(self.url, self.payload)
+        question = self.questions['multiple_choice']
+        saved_answer = ModuleFormSubmission.objects.get().answers.get(question=question)
+        prefix = f'module_{self.module.pk}_question_{question.pk}'
+        for kind, control in [('single_choice', 'radio'), ('multiple_choice', 'checkbox')]:
+            with self.subTest(kind=kind):
+                request = RequestFactory().post('/', {
+                    f'{prefix}_question_type': kind, f'{prefix}_required': 'on',
+                    f'{prefix}_options': '\n'.join(question.options),
+                })
+                _update_module_form_configuration(request, self.module)
+                question.refresh_from_db()
+                self.assertEqual(question.question_type, kind)
+                self.assertEqual(question.options, ['First', 'Second', 'Third'])
+                saved_answer.refresh_from_db()
+                self.assertEqual(saved_answer.value, {'answer': ['First', 'Third']})
+                response = self.client.get(self.url)
+                self.assertContains(response, f'type="{control}" name="question_{question.pk}"')
+
 
 @skipUnless(os.environ.get('FORM_VALIDATION_BROWSER') == '1', 'Opt-in Chrome integration test')
 @override_settings(STORAGES=STORAGES)
@@ -84,27 +105,45 @@ class FormValidationBrowserTests(StaticLiveServerTestCase):
             page.goto(self.live_server_url + self.url)
             page.wait_for_function('!!window.ModuLearnFormValidation')
             field = lambda kind: page.locator(f'[name="{names[kind]}"]')
+            page.get_by_role('button', name='Submit', exact=True).click()
+            expect(page.locator('.form-question-invalid')).to_have_count(5)
+            expect(page.get_by_text('Select one answer.', exact=True)).to_have_count(2)
+            expect(page.get_by_text('Enter an answer.', exact=True)).to_have_count(2)
+            self.assertEqual(posts, [])
             field('single_choice').nth(1).check()
             field('likert').nth(3).check()
             field('short_answer').fill('Keep my answer')
             field('long_answer').fill('First line\nSecond line')
             page.get_by_role('button', name='Submit', exact=True).click()
-            expect(field('multiple_choice').first).to_be_focused()
+            expect(field('multiple_choice').first.locator('xpath=ancestor::fieldset')).to_be_focused()
+            expect(page.get_by_text('Select at least one answer.', exact=True)).to_be_visible()
+            expect(field('multiple_choice').first).not_to_have_attribute('required', '')
+            expect(page.locator('.form-question-invalid')).to_have_count(1)
+            if os.environ.get('FORM_VALIDATION_SCREENSHOTS'):
+                from pathlib import Path
+                output = Path(os.environ['FORM_VALIDATION_SCREENSHOTS'])
+                output.mkdir(parents=True, exist_ok=True)
+                group = field('multiple_choice').first.locator('xpath=ancestor::fieldset')
+                for theme in ['light', 'dark']:
+                    page.evaluate('(dark) => document.documentElement.classList.toggle("dark", dark)', theme == 'dark')
+                    group.screenshot(path=str(output / f'validation-{theme}.png'))
             expect(field('single_choice').nth(1)).to_be_checked()
             expect(field('likert').nth(3)).to_be_checked()
             expect(field('long_answer')).to_have_value('First line\nSecond line')
             self.assertEqual(posts, [])
             field('multiple_choice').nth(2).check()
+            expect(page.locator('.form-question-invalid')).to_have_count(0)
             field('short_answer').fill('   ')
             page.get_by_role('button', name='Submit', exact=True).click()
-            expect(field('short_answer')).to_be_focused()
+            expect(field('short_answer').locator('xpath=ancestor::fieldset')).to_be_focused()
+            expect(page.get_by_text('Enter an answer.', exact=True)).to_be_visible()
             self.assertEqual(posts, [])
             field('short_answer').fill('Keep my answer')
             # Also exercise the server fallback and its rendered checked/value states.
-            page.evaluate('document.querySelector("[data-study-form]").noValidate = true')
+            # Native submit() bypasses JS validation, as a non-JS client would.
             field('multiple_choice').nth(2).uncheck()
             with page.expect_navigation():
-                page.get_by_role('button', name='Submit', exact=True).click()
+                page.evaluate('HTMLFormElement.prototype.submit.call(document.querySelector("[data-study-form]"))')
             expect(field('single_choice').nth(1)).to_be_checked()
             expect(field('likert').nth(3)).to_be_checked()
             expect(field('short_answer')).to_have_value('Keep my answer')

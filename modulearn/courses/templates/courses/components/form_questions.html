@@ -47,7 +47,7 @@
                   <input name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" class="form-control" value="{{ question.response_value|default_if_none:'' }}" {% if question.required %}required{% endif %}>
                 {% endif %}
               </div>
-              {% if question.response_missing %}<p class="text-red-500" role="alert">{% ui "Please answer every required question." %}</p>{% endif %}
+              {% if question.response_missing %}<p class="form-question-error" data-form-error role="alert">{% ui "Please answer every required question." %}</p>{% endif %}
             </fieldset>
           {% empty %}
             {% if not participant_mode %}<div class="empty-state">{% ui "This form does not have any questions yet." %}</div>{% endif %}

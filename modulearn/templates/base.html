@@ -34,6 +34,7 @@
     {% block extra_css %}{% endblock %}
   </head>
   <body class="{% if study_shell %}study-shell {% if study_preview %}study-preview {% endif %}{% endif %}app-shell-body min-h-screen {% block body_class %}{% endblock %}">
+    {% include 'recruitment/preview_exit.html' %}
     {% if not study_shell %}<div class="shell-background"></div>{% endif %}
     {% if not study_shell %}{% include 'includes/app_nav.html' %}{% endif %}
 

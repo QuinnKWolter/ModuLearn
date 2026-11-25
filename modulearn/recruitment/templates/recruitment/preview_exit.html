@@ -1,0 +1,16 @@
+{% load ui_i18n %}
+{% if study_preview_exit %}
+<style>
+  .study-exit { position: fixed; top: max(.75rem, env(safe-area-inset-top)); right: max(.75rem, env(safe-area-inset-right)); z-index: 10000; margin: 0; }
+  .study-exit button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 2px solid #fff; border-radius: .6rem; background: #b91c1c; color: #fff; box-shadow: 0 2px 10px #0004; cursor: pointer; }
+  .study-exit button:hover { background: #991b1b; }
+  .study-exit button:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
+  .content-embedded .study-exit { display: none; }
+</style>
+<form class="study-exit" method="post" action="{% url 'recruitment:exit_preview' %}" target="_top">
+  {% csrf_token %}
+  <button type="submit" aria-label="{% ui 'Exit Preview' %}" title="{% ui 'Exit Preview' %}">
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+  </button>
+</form>
+{% endif %}

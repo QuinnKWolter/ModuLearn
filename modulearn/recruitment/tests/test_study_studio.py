@@ -1,8 +1,10 @@
+import os
 from datetime import timedelta
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -294,6 +296,7 @@ class StudyStudioTests(TestCase):
         self.study.save(update_fields=['preview_of'])
         self.session.status = 'completed'
         self.session.save(update_fields=['status'])
+        request.session['study_preview_return'] = [self.teacher.pk, self.teacher.get_session_auth_hash(), original.pk, self.study.pk]
         context = study_player(request)
         self.assertTrue(context['study_preview'])
         self.assertNotIn('study_player', context)
@@ -301,3 +304,60 @@ class StudyStudioTests(TestCase):
         self.assertIn('class="study-exit"', html)
         self.assertNotIn('footer-shell', html)
         self.assertNotIn('study-player-config', html)
+
+    def test_exit_preview_available_for_all_preview_states_and_restores_researcher(self):
+        from django.template.loader import render_to_string
+        from django.test import RequestFactory
+        from recruitment.context_processors import study_player
+        self.client.force_login(self.teacher)
+        self.client.post(reverse('recruitment:preview', args=[self.study.pk]), {'condition': 'similar'})
+        identity = self.client.session['study_preview_return']
+        clone = Study.objects.get(pk=identity[3])
+        participant = ParticipantSession.objects.get(recruitment_source__study=clone)
+        request = RequestFactory().get('/')
+        request.user = participant.user
+        request.session = self.client.session
+        for status in ['active', 'completed', 'rejected', 'abandoned']:
+            participant.status = status
+            participant.save(update_fields=['status'])
+            for template in ['base.html', 'content_base.html']:
+                html = render_to_string(template, study_player(request), request=request)
+                self.assertEqual(html.count('class="study-exit"'), 1)
+                self.assertIn('aria-label="Exit Preview"', html)
+                # Outside the activity main's overflow/transform/stacking context.
+                self.assertLess(html.index('class="study-exit"'), html.index('<main'))
+        response = self.client.post(reverse('recruitment:exit_preview'))
+        self.assertRedirects(response, reverse('recruitment:studio', args=[self.study.pk]), fetch_redirect_response=False)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.teacher.pk)
+        self.assertNotIn('study_preview_return', self.client.session)
+        self.assertFalse(Study.objects.filter(pk=clone.pk).exists())
+
+    def test_real_participant_cannot_exit_researcher_preview(self):
+        self.client.force_login(self.student)
+        response = self.client.post(reverse('recruitment:exit_preview'))
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Study.objects.filter(pk=self.study.pk).exists())
+
+
+class PreviewExitBrowserTests(SimpleTestCase):
+    @skipUnless(os.environ.get('PREVIEW_EXIT_BROWSER') == '1', 'Opt-in Chrome check')
+    def test_corner_control_stays_visible_while_content_scrolls(self):
+        from django.template.loader import render_to_string
+        from playwright.sync_api import sync_playwright, expect
+        control = render_to_string('recruitment/preview_exit.html', {'study_preview_exit': True})
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel='chrome', headless=True)
+            page = browser.new_page()
+            for width, height in [(1280, 800), (375, 667)]:
+                page.set_viewport_size({'width': width, 'height': height})
+                page.set_content('<body>' + control + '<main style="transform:translateZ(0);overflow:hidden;height:3000px">Study content</main></body>')
+                page.evaluate('window.scrollTo(0, 1500)')
+                button = page.get_by_role('button', name='Exit Preview')
+                expect(button).to_be_visible()
+                box = button.bounding_box()
+                self.assertAlmostEqual(box['y'], 12, delta=1)
+                self.assertAlmostEqual(box['x'] + box['width'], width - 12, delta=1)
+                button.focus()
+                expect(button).to_be_focused()
+                self.assertTrue(button.evaluate('(el) => { const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)); }'))
+            browser.close()
