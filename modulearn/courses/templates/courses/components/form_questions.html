@@ -1,6 +1,6 @@
 {% load ui_i18n study_text %}
           {% for question in questions %}
-            <fieldset class="student-question" data-no-ui-translate{% if preview_only and question.required and question.question_type == 'multiple_choice' %} data-preview-require-choice{% endif %}>
+            <fieldset class="student-question" data-no-ui-translate{% if question.required and question.question_type == 'multiple_choice' %} data-require-choice{% endif %}>
               <legend class="font-bold text-lg" id="question_prompt_{{ question.id }}">
                 <span class="study-prose" data-no-ui-translate>{{ question.prompt|study_markdown }}</span>
                 {% if question.required %}<span class="text-red-500">*</span>{% endif %}
@@ -14,7 +14,7 @@
                   <div class="grid gap-3 md:grid-cols-5">
                     {% for value in '12345' %}
                       <label class="choice-chip justify-center">
-                        <input type="radio" name="question_{{ question.id }}" value="{{ value }}" {% if question.required %}required{% endif %}>
+                        <input type="radio" name="question_{{ question.id }}" value="{{ value }}" {% if question.required %}required{% endif %} {% if question.response_value == value %}checked{% endif %}>
                         <span>{{ value }}</span>
                       </label>
                     {% endfor %}
@@ -27,7 +27,7 @@
                   <div class="choice-stack">
                     {% for option in question.options %}
                       <label class="choice-chip">
-                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" {% if question.required %}required{% endif %}>
+                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" {% if question.required %}required{% endif %} {% if question.response_value == option %}checked{% endif %}>
                         <span>{{ option }}</span>
                       </label>
                     {% endfor %}
@@ -36,17 +36,18 @@
                   <div class="choice-stack">
                     {% for option in question.options %}
                       <label class="choice-chip">
-                        <input type="checkbox" name="question_{{ question.id }}" value="{{ option }}">
+                        <input type="checkbox" name="question_{{ question.id }}" value="{{ option }}" {% if option in question.response_value %}checked{% endif %}>
                         <span>{{ option }}</span>
                       </label>
                     {% endfor %}
                   </div>
                 {% elif question.question_type == 'long_answer' %}
-                  <textarea name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" rows="6" class="form-control" {% if question.required %}required{% endif %}></textarea>
+                  <textarea name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" rows="6" class="form-control" {% if question.required %}required{% endif %}>{{ question.response_value|default_if_none:'' }}</textarea>
                 {% else %}
-                  <input name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" class="form-control" {% if question.required %}required{% endif %}>
+                  <input name="question_{{ question.id }}" aria-labelledby="question_prompt_{{ question.id }}" class="form-control" value="{{ question.response_value|default_if_none:'' }}" {% if question.required %}required{% endif %}>
                 {% endif %}
               </div>
+              {% if question.response_missing %}<p class="text-red-500" role="alert">{% ui "Please answer every required question." %}</p>{% endif %}
             </fieldset>
           {% empty %}
             {% if not participant_mode %}<div class="empty-state">{% ui "This form does not have any questions yet." %}</div>{% endif %}

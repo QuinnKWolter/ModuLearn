@@ -1,0 +1,9 @@
+{% load static ui_i18n %}
+<dialog id="page-guide-dialog" class="page-guide-dialog" aria-labelledby="page-guide-title" data-guide="{{ guided_tour.id }}" data-guide-user="{{ guided_tour.identity }}" data-guide-script="{% static 'js/tours.generated.js' %}" data-guide-css="{% static 'js/tours.generated.css' %}">
+  <div class="page-guide-heading"><h2 id="page-guide-title">{% ui 'Explore this page' %}</h2><button type="button" data-guide-close aria-label="{% ui 'Close' %}">×</button></div>
+  <p>{% ui 'A short, read-only walkthrough. Nothing will be saved or submitted.' %}</p>
+  <p class="page-guide-status" data-guide-status role="status" aria-live="polite"></p>
+  <div class="page-guide-actions"><button type="button" class="btn btn-primary" data-guide-start>{% ui 'Start guide' %}</button><button type="button" class="btn btn-outline-secondary" data-guide-restart hidden>{% ui 'Start again' %}</button></div>
+  <a class="page-guide-overview" href="{% url 'main:info' %}">{% ui 'Explore learning, teaching, and research' %} →</a>
+</dialog>
+<script src="{% static 'js/page-guide.js' %}" defer></script>

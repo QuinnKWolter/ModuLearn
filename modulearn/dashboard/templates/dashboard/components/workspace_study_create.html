@@ -1,0 +1,43 @@
+{% load ui_i18n %}
+<section id="createStudyPanel" class="study-create-panel">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-bold text-slate-900 dark:text-white mb-0">{% ui "New Study" %}</h3>
+              <span class="badge badge-primary">{% ui "Activity-ready" %}</span>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">{% ui "Creates a dedicated study session with default Consent, Instructions, Pretest, Main Task, Posttest, and Debrief activities." %}</p>
+          </div>
+          <form method="post" action="{% url 'recruitment:create_study' %}" class="study-create-form" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="study-create-fields">
+              <label class="study-field">
+                <span class="study-field-label">{% ui "Study Title" %} <span class="study-field-required">{% ui "Required" %}</span></span>
+                <input class="form-control" type="text" name="title" placeholder="{% ui "Example: Python Branching Pilot" %}" required>
+              </label>
+              <label class="study-field">
+                <span class="study-field-label">{% ui "Version" %}</span>
+                <input class="form-control" type="text" name="version_label" value="v1.0" placeholder="{% ui "v1.0" %}">
+                <span class="study-field-help">{% ui "Optional label for protocol revisions." %}</span>
+              </label>
+              <label class="study-field">
+                <span class="study-field-label">{% ui "Conditions" %}</span>
+                <input class="form-control" type="text" name="condition_labels" value="control,treatment" placeholder="{% ui "control,treatment" %}">
+                <span class="study-field-help">{% ui "Comma-separated; editable before participants enter." %}</span>
+              </label>
+              <label class="study-field study-field-description">
+                <span class="study-field-label">{% ui "Description" %}</span>
+                <textarea class="form-control" name="description" rows="2" placeholder="Briefly describe the research task, participant population, or purpose."></textarea>
+              </label>
+              <label class="study-field study-field-description">
+                <span class="study-field-label">{% ui "Optional Template JSON" %}</span>
+                <input class="form-control" type="file" name="study_template_json" accept=".json,application/json">
+                <span class="study-field-help">{% ui "Use a ModuLearn study export or course export to clone its activities, forms, rules, and setup. Leave blank for the default study scaffold." %}</span>
+              </label>
+            </div>
+            <div class="study-create-actions">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-plus-circle mr-1" aria-hidden="true"></i>{% ui "Create Study" %}
+              </button>
+            </div>
+          </form>
+        </section>

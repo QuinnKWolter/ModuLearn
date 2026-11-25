@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from hashlib import sha256
+
 from courses.models import Course, CourseInstance, Enrollment
 from courses.demo_courses import available_demo_course_options
 from recruitment.models import ParticipantSession, Study
@@ -54,6 +56,16 @@ def build_instructor_dashboard_context(user):
         )
         .order_by("course__title", "-created_at")
     )
+    # A session instructor may not own its reusable course structure. Keep that
+    # session visible without offering structure-wide create/delete controls.
+    owned_course_ids = {course.id for course in courses}
+    courses_by_id = {course.id: course for course in courses}
+    for instance in course_instances:
+        courses_by_id.setdefault(instance.course_id, instance.course)
+    courses = sorted(courses_by_id.values(), key=lambda course: (course.title.casefold(), course.id))
+    for course in courses:
+        course.dashboard_key = sha256(str(course.pk).encode()).hexdigest()[:20]
+        course.dashboard_can_manage_structure = course.pk in owned_course_ids
     studies = (
         Study.objects.filter(instructors=user, preview_of__isnull=True)
         .select_related("course_instance", "course_instance__course")

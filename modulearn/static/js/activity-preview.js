@@ -53,11 +53,7 @@
     const form=document.createElement('form');
     stack.replaceWith(form);form.append(stack);
     stack.querySelector('button').type='submit';
-    form.querySelectorAll('[data-preview-require-choice]').forEach(group=>{
-      const choices=[...group.querySelectorAll('input[type=checkbox]')];
-      const validate=()=>{if(choices[0])choices[0].required=!choices.some(choice=>choice.checked);};
-      group.addEventListener('change',validate);form.addEventListener('reset',()=>setTimeout(validate,0));validate();
-    });
+    window.ModuLearnFormValidation.init(form);
     form.addEventListener('submit',event=>{
       event.preventDefault();
       if(!form.reportValidity())return;

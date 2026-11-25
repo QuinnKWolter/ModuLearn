@@ -2657,7 +2657,7 @@
   {% endif %}
 
   <div class="cfg-layout" data-structure-workbench>
-    <aside class="cfg-structure-sidebar" data-structure-sidebar aria-label="{% ui "Course structure explorer" %}">
+    <aside class="cfg-structure-sidebar" data-tour="config-units" data-structure-sidebar aria-label="{% ui "Course structure explorer" %}">
       <div class="cfg-sidebar-top">
         <button type="button" class="cfg-icon-button" id="toggleStructureSidebar" title="{% ui "Collapse structure explorer" %}" aria-label="{% ui "Collapse structure explorer" %}" aria-expanded="true">
           <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i>
@@ -2743,10 +2743,10 @@
           </div>
         </div>
         <div class="cfg-toolbar-actions">
-          <button type="submit" form="structureControlsForm" class="btn btn-primary btn-sm cfg-save-button">
+          <button data-tour="config-save" type="submit" form="structureControlsForm" class="btn btn-primary btn-sm cfg-save-button">
             <i class="bi bi-check2-circle mr-1" aria-hidden="true"></i>{% ui "Save Configuration" %}
           </button>
-          <div class="cfg-utility-actions" aria-label="{% ui "Configuration utilities" %}">
+          <div data-tour="config-tools" class="cfg-utility-actions" aria-label="{% ui "Configuration utilities" %}">
             {% if course_instance.study %}<a href="{% url 'recruitment:studio' course_instance.study.id %}" class="cfg-icon-button" title="{% ui "Study Setup & Participant Preview" %}" aria-label="{% ui "Study Setup & Participant Preview" %}"><i class="bi bi-flask" aria-hidden="true"></i></a>{% endif %}
             <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseGradesModal" title="{% ui "Grades" %}" aria-label="{% ui "Grades" %}"><i class="bi bi-mortarboard" aria-hidden="true"></i></button>
             <button type="button" class="cfg-icon-button" data-bs-toggle="modal" data-bs-target="#courseTimezoneModal" title="{% ui "Course Timezone" %}" aria-label="{% ui "Course Timezone" %}"><i class="bi bi-clock" aria-hidden="true"></i></button>
@@ -2760,7 +2760,7 @@
             <a href="{% url 'courses:export_course' course_instance.id %}" class="cfg-icon-button" title="{% ui "Export structure" %}" aria-label="{% ui "Export structure" %}">
               <i class="bi bi-download" aria-hidden="true"></i>
             </a>
-            <a href="{% url 'courses:course_detail' course_instance.id %}" class="cfg-icon-button" title="{% ui "Preview" %}" aria-label="{% ui "Preview" %}">
+            <a href="{% url 'courses:course_detail' course_instance.id %}" class="cfg-icon-button" data-tour="config-preview" title="{% ui "Preview" %}" aria-label="{% ui "Preview" %}">
               <i class="bi bi-eye" aria-hidden="true"></i>
             </a>
             <a href="{% url 'dashboard:instructor_dashboard' %}" class="cfg-icon-button" title="{% ui "Instructor dashboard" %}" aria-label="{% ui "Instructor dashboard" %}">
@@ -3237,7 +3237,7 @@
   </div>
   <div id="courseGradesModal" class="modal-overlay hidden fixed inset-0 z-[60] items-center justify-center bg-black/50 p-4" aria-hidden="true" role="dialog" aria-labelledby="courseGradesTitle">
     <div class="modal-backdrop-close absolute inset-0"></div>
-    <section class="relative card p-5 w-full max-w-lg cfg-settings-modal">
+    <section data-tour="config-grades" class="relative card p-5 w-full max-w-lg cfg-settings-modal">
       <header><h2 id="courseGradesTitle">{% ui "Grades" %}</h2><button type="button" data-bs-dismiss="modal" aria-label="{% ui "Close" %}">×</button></header>
       <div id="gradingBulkControls">
         <p>{% ui "Choose which activities count toward course completion." %}</p>
@@ -3765,6 +3765,7 @@
 <link rel="stylesheet" href="{% static 'css/form-authoring.css' %}">
 {% include 'includes/markdown_editor_assets.html' %}
 <script defer src="{% static 'js/form-authoring.js' %}"></script>
+<script defer src="{% static 'js/form-validation.js' %}"></script>
 <script defer src="{% static 'js/activity-preview.js' %}"></script>
 <script defer src="{% static 'js/flow-viewport.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/flow-mapper.css' %}">

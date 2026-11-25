@@ -72,46 +72,6 @@
       resourcesClient.bindTriggers(app);
     }
 
-    function initializeSessionActionRows() {
-      document.querySelectorAll('.session-action-row').forEach((row) => {
-        const buttons = Array.from(row.querySelectorAll('.session-action-btn'));
-        if (!buttons.length) return;
-
-        let resetTimer = null;
-
-        const clearReset = () => {
-          if (resetTimer) {
-            window.clearTimeout(resetTimer);
-            resetTimer = null;
-          }
-        };
-
-        const expandButton = (button) => {
-          clearReset();
-          row.classList.add('is-interacting');
-          buttons.forEach((item) => item.classList.toggle('is-action-expanded', item === button));
-        };
-
-        const scheduleIdleState = () => {
-          clearReset();
-          resetTimer = window.setTimeout(() => {
-            if (row.matches(':hover') || row.contains(document.activeElement)) return;
-            row.classList.remove('is-interacting');
-            buttons.forEach((item) => item.classList.remove('is-action-expanded'));
-          }, 180);
-        };
-
-        row.addEventListener('pointerenter', clearReset);
-        row.addEventListener('pointerleave', scheduleIdleState);
-
-        buttons.forEach((button) => {
-          button.addEventListener('pointerenter', () => expandButton(button));
-          button.addEventListener('focusin', () => expandButton(button));
-          button.addEventListener('focusout', scheduleIdleState);
-        });
-      });
-    }
-
     app.addEventListener('click', async function handleDashboardCopy(event) {
       const button = event.target.closest('[data-copy-from]');
       if (!button) return;
@@ -930,7 +890,6 @@
       });
     }
 
-    initializeSessionActionRows();
 
     document.querySelectorAll('.new-session-btn').forEach((button) => {
       button.addEventListener('click', function () {
@@ -1019,38 +978,11 @@
       });
     }
 
-    const legacySearchInput = document.getElementById('legacyGroupsSearch');
-    const legacyClearBtn = document.getElementById('clearLegacySearch');
-    const legacyEmptyMsg = document.getElementById('legacyGroupsEmpty');
     const legacyContainer = document.getElementById('legacyGroupsContainer');
     const legacyLoading = document.getElementById('legacyGroupsLoading');
     const legacyMeta = document.getElementById('legacyGroupsMeta');
     const legacyCount = document.getElementById('legacyGroupsCount');
     const legacySection = document.getElementById('legacyGroupsSection');
-
-    function filterLegacyGroups() {
-      if (!legacySearchInput || !legacyContainer) return;
-
-      const searchTerm = legacySearchInput.value.toLowerCase().trim();
-      const legacyCards = Array.from(legacyContainer.querySelectorAll('.legacy-group-card'));
-      let visibleCount = 0;
-
-      legacyCards.forEach((card) => {
-        const groupName = card.dataset.groupName || '';
-        const groupLogin = card.dataset.groupLogin || '';
-        const matches = !searchTerm || groupName.includes(searchTerm) || groupLogin.includes(searchTerm);
-        card.style.display = matches ? '' : 'none';
-        if (matches) visibleCount += 1;
-      });
-
-      if (legacyEmptyMsg) {
-        legacyEmptyMsg.classList.toggle('hidden', visibleCount !== 0);
-      }
-      legacyContainer.classList.toggle('hidden', visibleCount === 0);
-      if (legacyClearBtn) {
-        legacyClearBtn.classList.toggle('hidden', !searchTerm);
-      }
-    }
 
     function renderLegacyGroups(groups) {
       if (!legacyContainer) return;
@@ -1079,12 +1011,8 @@
         if (legacySection) legacySection.classList.add('hidden');
         legacyContainer.innerHTML = '';
         legacyContainer.classList.add('hidden');
-        if (legacyEmptyMsg) legacyEmptyMsg.classList.add('hidden');
-        if (legacySearchInput) {
-          legacySearchInput.value = '';
-          legacySearchInput.disabled = true;
-        }
-        if (legacyClearBtn) legacyClearBtn.classList.add('hidden');
+
+        window.ModuLearnInstructorWorkspace?.legacyLoaded([]);
         return;
       }
 
@@ -1097,19 +1025,19 @@
             <div class="flex-1 mb-3">
               ${group.groupLogin ? `
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                  <span class="font-medium">Group ID:</span>
+                  <span class="font-medium">${escapeHtml(t('Group ID:'))}</span>
                   <code class="text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">${escapeHtml(group.groupLogin)}</code>
                 </p>
               ` : ''}
               ${group.courseIds.length ? `
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-0">
-                  <span class="font-medium">Course IDs:</span> ${escapeHtml(group.courseIds.join(', '))}
+                  <span class="font-medium">${escapeHtml(t('Course IDs:'))}</span> ${escapeHtml(group.courseIds.join(', '))}
                 </p>
               ` : ''}
             </div>
-            <div class="flex flex-col gap-2 mt-auto">
+            <div class="workspace-actions workspace-legacy-actions mt-auto">
               <a href="${escapeHtml(buildLegacyDashboardUrl(group))}" class="btn btn-sm btn-primary w-full">
-                <i class="bi bi-graph-up-arrow mr-1"></i>View Dashboard
+                <i class="bi bi-graph-up-arrow mr-1"></i>${escapeHtml(t('View Dashboard'))}
               </a>
               ${group.groupLogin ? `
                 <button type="button"
@@ -1117,11 +1045,11 @@
                         data-course-resources-trigger
                         data-group-login="${escapeHtml(group.groupLogin)}"
                         data-group-name="${escapeHtml(group.groupName)}">
-                  <i class="bi bi-folder mr-1"></i>View Resources
+                  <i class="bi bi-folder mr-1"></i>${escapeHtml(t('View Resources'))}
                 </button>
               ` : `
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Group login metadata is unavailable here. Open the dashboard and enter IDs manually if needed.
+                  ${escapeHtml(t('Group login metadata is unavailable here. Open the dashboard and enter IDs manually if needed.'))}
                 </p>
               `}
             </div>
@@ -1130,10 +1058,8 @@
       `).join('');
 
       legacyContainer.classList.remove('hidden');
-      if (legacyEmptyMsg) legacyEmptyMsg.classList.add('hidden');
-      if (legacySearchInput) legacySearchInput.disabled = false;
       if (resourcesClient) resourcesClient.bindTriggers(legacyContainer);
-      filterLegacyGroups();
+      window.ModuLearnInstructorWorkspace?.legacyLoaded(normalizedGroups);
     }
 
     async function loadLegacyGroups() {
@@ -1141,16 +1067,19 @@
         return;
       }
 
+      const retry = document.getElementById('legacyGroupsRetry');
+      if (retry) { retry.disabled = true; retry.classList.add('hidden'); }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
       if (legacyLoading) legacyLoading.classList.remove('hidden');
       if (legacyMeta) legacyMeta.textContent = t('Loading linked legacy courses...');
-      if (legacySearchInput) legacySearchInput.disabled = true;
 
       console.info('[ModuLearn Legacy] Loading instructor legacy groups', {
         endpoint: config.legacyGroupsUrl,
       });
 
       try {
-        const response = await fetch(config.legacyGroupsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const response = await fetch(config.legacyGroupsUrl, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         const data = await parseJsonResponse(response);
 
         console.info('[ModuLearn Legacy] Instructor legacy groups response', {
@@ -1168,26 +1097,17 @@
         console.error('Error loading instructor legacy groups:', error);
         if (legacyLoading) legacyLoading.classList.add('hidden');
         if (legacyContainer) legacyContainer.classList.add('hidden');
-        if (legacyMeta) legacyMeta.textContent = error.message || t('Failed to load linked legacy courses.');
-        if (legacyEmptyMsg) {
-          legacyEmptyMsg.classList.remove('hidden');
-          legacyEmptyMsg.querySelector('p').textContent = error.message || t('Failed to load linked legacy courses.');
-        }
-        if (legacyCount) legacyCount.textContent = '0';
+        if (legacyMeta) legacyMeta.textContent = t('Failed to load linked legacy courses.');
+        if (retry) retry.classList.remove('hidden');
+
+        if (legacyCount) legacyCount.textContent = '';
+      } finally {
+        clearTimeout(timeout);
+        if (retry) retry.disabled = false;
       }
     }
 
-    if (legacySearchInput) {
-      legacySearchInput.addEventListener('input', filterLegacyGroups);
-    }
-    if (legacyClearBtn) {
-      legacyClearBtn.addEventListener('click', () => {
-        if (!legacySearchInput) return;
-        legacySearchInput.value = '';
-        filterLegacyGroups();
-        legacySearchInput.focus();
-      });
-    }
+    document.getElementById('legacyGroupsRetry')?.addEventListener('click', loadLegacyGroups);
 
     loadLegacyGroups().catch((error) => console.error('Unexpected legacy group hydration failure:', error));
 

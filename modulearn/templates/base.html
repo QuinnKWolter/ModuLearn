@@ -1,6 +1,7 @@
 <!doctype html>
 {% load i18n %}
 {% load ui_i18n %}
+{% load tours %}{% page_guide as guided_tour %}
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
   <head>
     {% load static %}
@@ -29,6 +30,7 @@
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
     <link href="{% static 'css/study-markdown.css' %}" rel="stylesheet">
     <link href="{% static 'css/language-menu.css' %}" rel="stylesheet">
+    {% if guided_tour %}<link href="{% static 'css/page-guide.css' %}" rel="stylesheet">{% endif %}
     {% block extra_css %}{% endblock %}
   </head>
   <body class="{% if study_shell %}study-shell {% if study_preview %}study-preview {% endif %}{% endif %}app-shell-body min-h-screen {% block body_class %}{% endblock %}">
@@ -71,6 +73,7 @@
     <script src="{% static 'js/bootstrap-compat.js' %}"></script>
     <script src="{% static 'js/app-shell.js' %}"></script>
     <script src="{% static 'js/language-menu.js' %}"></script>
+    {% if guided_tour %}{% include 'includes/page_guide.html' %}{% endif %}
     {% block extra_js %}{% endblock %}
   </body>
 </html>

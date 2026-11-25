@@ -30,7 +30,7 @@ The native class-average grid opens details for one unit/type intersection. Sear
 
 Per-student and aggregate views share status semantics. Instructor testing and recommendation-only content stay out of student class aggregates. Legacy KT analytics is a separate data path.
 
-The session **Activity** button in Instructor Dashboard → Manage Courses opens a server-filtered browser: search students, email, activity titles, event names or sources; filter by event and UTC date range; switch among course, recommendation-practice and access events. Pages load 50 records, newest recorded IDs first, with signed cursors rather than growing offsets. Opening event details fetches the full payload separately. No event data is embedded in the dashboard. The collapsed recommendations section links to assignments/feedback (including unvisited recommendations) and provides a practice-summary download.
+The session **Activity** button in Instructor Dashboard → select a course session opens a server-filtered browser: search students, email, activity titles, event names or sources; filter by event and UTC date range; switch among course, recommendation-practice and access events. Pages load 50 records, newest recorded IDs first, with signed cursors rather than growing offsets. Opening event details fetches the full payload separately. No event data is embedded in the dashboard. The collapsed recommendations section links to assignments/feedback (including unvisited recommendations) and provides a practice-summary download.
 
 **Download filtered CSV** exports every matching record in the selected stream, not just the visible page. **Download all interactions** ignores the filters and includes all three event streams, distinguished by `context` and event ID. These are interaction logs, not a database backup: separate form-answer tables, Caliper records, admin audit records and upstream provider logs are not bundled. Course progress/attempt scores and raw event payloads are included; recommendation events retain original/target activity IDs, rank and provider. Practice summaries include visits, impressions, submissions, score, completion and feedback. Instructor test records are excluded. All endpoints recheck session ownership; expiring download tokens are also tied to the requesting user.
 
@@ -47,7 +47,7 @@ ModuLearn research recruitment is Study-owned. A `Study` has a backing course se
 Instructors create and manage studies from:
 
 ```text
-Instructor Dashboard -> Studies -> Create Study
+Instructor Dashboard -> Create New Study
 ```
 
 Creating a study also creates a dedicated backing course/session with default modules:
@@ -59,11 +59,11 @@ Creating a study also creates a dedicated backing course/session with default mo
 - Posttest
 - Debrief
 
-Those modules are edited from the study row's **Modules** button, which opens the normal course-structure editor for the backing study session.
+Those modules are edited from the selected study's **Configure Activities** button, which opens the normal course-structure editor for the backing study session.
 
 ### Prolific entry
 
-Prolific settings live in the Instructor Dashboard **Studies** modal. A Prolific Study ID is not required to generate the ModuLearn URL; leave it blank until Prolific creates the study if needed.
+Prolific settings live in the Instructor Dashboard: select a study under **Studies**, then open **Prolific Settings**. A Prolific Study ID is not required to generate the ModuLearn URL; leave it blank until Prolific creates the study if needed.
 
 The generated external study URL has this shape:
 
@@ -210,3 +210,14 @@ Activity Preview in an expanded activity or the new-activity builder renders uns
 External draft launches use short-lived, user-bound signed URLs and the normal instructor launch renderer. Saved activities require author access. Preview identities replace imported user/course/session parameters, including recommendation context, and the frame has no progress or session-event endpoint. LTI definitions must be saved before launch; their existing preview signing/callback context remains separate from enrollment progress. Providers may still record their own interactions, and providers that reject embedding can be opened in a new window. This activity preview does not simulate condition branching; use the separate Study Setup participant rehearsal for that.
 
 November 20 verification: a real Cupcake Q11 solution completed successfully inside the modal with no ModuLearn progress requests; close unloaded the frames. Native consent submission/reset also passed. Backend checks cover unchanged progress/enrollment/form-submission counts, unsaved content, token isolation, author permissions, and unsafe URL rejection.
+
+
+## Instructor workspace
+
+The dashboard groups reusable course structures and their teaching sessions, studies, and linked legacy courses in one searchable sidebar. Selecting an item displays its existing controls directly in the main panel. The toolbar provides custom session creation, study creation/template import, authoring/JSON imports, and demo creation when eligible. Course-level creation/deletion remains restricted to course owners; session-only instructors can see and manage their assigned sessions.
+
+Selection and search are remembered in sessionStorage, scoped by user and deployment path. URL fragments identify panels and support browser Back; course keys are stable hashes rather than list positions. Search filters navigation, not the active panel, and changing panels retains unsaved form inputs. On narrow screens, Browse courses and studies opens navigation; choosing an item returns focus to its panel heading. Native links provide a no-JavaScript fallback. Dialogs retain keyboard focus, support Escape, and return focus to their invoking control; existing confirmation and submission handlers remain authoritative.
+
+Legacy groups load once asynchronously through the existing authorized endpoint, with a bounded wait and retry on failure. Empty legacy accounts have no legacy section. Selecting a legacy item reveals its dashboard/resource controls without another group fetch. Analytics, rosters, resources, and event payloads still load on demand. No participant data, enrollments, grades, or studies are changed by navigation.
+
+Regression checks: `python manage.py test dashboard.tests dashboard.test_workspace`. Set `PAGE_GUIDE_BROWSER=1` to also run Chrome checks against the isolated test database (Playwright/Chrome required). The shared page guide reflects the workspace layout.

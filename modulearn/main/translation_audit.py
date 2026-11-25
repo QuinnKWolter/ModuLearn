@@ -73,6 +73,9 @@ def build_inventory(root, languages):
     for path in sorted(Path(root).rglob('*')):
         relative = path.relative_to(root)
         if path.suffix not in ('.html', '.js', '.py') or any(part in SKIP_DIRS for part in relative.parts): continue
+        # Audit maintained sources, not minified bundles whose renamed functions
+        # can look like translation calls (for example t('config-grades')).
+        if path.name.endswith('.generated.js'): continue
         if path.name.startswith('test') or path.name in ('translation_audit.py', 'i18n.py', 'ui_i18n.py'): continue
         text = path.read_text(encoding='utf-8')
         source = relative.as_posix()

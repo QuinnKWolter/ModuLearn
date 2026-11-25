@@ -1837,6 +1837,11 @@ def _handle_form_module(request, course_instance, module, module_progress, is_in
                 value = request.POST.get(field_name, "").strip()
                 text_value = value
 
+            # Bind the rejected POST back to the form; never discard other answers
+            # when a required question is missing (including with JS disabled).
+            question.response_value = (value if isinstance(value, list)
+                                       else request.POST.get(field_name, ""))
+            question.response_missing = question.required and not value
             if question.required and not value:
                 missing_required.append(question.prompt)
             answers_payload[str(question.id)] = {

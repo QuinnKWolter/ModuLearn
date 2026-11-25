@@ -8,6 +8,10 @@
   {% if not participant_mode %}{{ block.super }}{% endif %}
 {% endblock %}
 
+{% block extra_js %}{{ block.super }}
+<script defer src="{% static 'js/form-validation.js' %}"></script>
+{% endblock %}
+
 {% block breadcrumbs %}
   <li><a href="{% url 'courses:course_detail' course_instance.id %}"><span data-no-ui-translate>{{ course_instance.course.title }}</span></a></li>
   <li>/</li>

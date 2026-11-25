@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "build:tours": "node static_src/build-tours.mjs",
     "build:editor": "node static_src/build-editor.mjs",
     "build:css": "npx tailwindcss -i ./static_src/tailwind.css -o ./static/css/tailwind.generated.css --minify",
     "watch:css": "npx tailwindcss -i ./static_src/tailwind.css -o ./static/css/tailwind.generated.css --watch"
@@ -14,6 +15,7 @@
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.15",
     "@lezer/markdown": "1.8.1",
+    "driver.js": "1.14.0",
     "esbuild": "0.28.2",
     "markdown-it": "15.0.3",
     "tailwindcss": "^3.4.17"

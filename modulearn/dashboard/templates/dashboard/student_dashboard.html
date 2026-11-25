@@ -181,7 +181,7 @@
           </div>
         </div>
 
-        <div class="student-session-list">
+        <div data-tour="student-sessions" class="student-session-list">
           {% for course_instance in course_instances %}
             {% with progress=course_instance.user_enrollment.course_progress %}
               <details class="student-session" {% if course_instance.is_expanded %}open{% endif %}>
@@ -258,7 +258,7 @@
                     </div>
 
                     <div class="flex flex-col gap-3">
-                      <a href="{% url 'courses:course_detail' instance_id=course_instance.id %}" class="btn btn-primary w-full">{% ui "Open Session" %}</a>
+                      <a href="{% url 'courses:course_detail' instance_id=course_instance.id %}" data-tour="student-open" class="btn btn-primary w-full">{% ui "Open Session" %}</a>
                       <a href="{% url 'courses:enroll_with_code' %}" class="btn btn-outline-secondary w-full">{% ui "Add Another Code" %}</a>
                     </div>
                   </div>

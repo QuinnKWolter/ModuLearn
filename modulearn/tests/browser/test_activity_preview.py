@@ -26,9 +26,10 @@ class ActivityPreviewTests(unittest.TestCase):
           window.sent=[];
           window.ModuLearnMarkdown={renderActivity:async data=>{
             sent.push(data);
-            return '<div data-preview-form><fieldset data-preview-require-choice><input type="checkbox" aria-label="Agree"></fieldset><button>Continue</button></div>';
+            return '<div data-preview-form><fieldset data-require-choice><input type="checkbox" aria-label="Agree"></fieldset><button>Continue</button></div>';
           }};
         }''')
+        self.page.add_script_tag(path=str(ROOT/'static/js/form-validation.js'))
         self.page.add_script_tag(path=str(ROOT/'static/js/activity-preview.js'))
 
     def tearDown(self):

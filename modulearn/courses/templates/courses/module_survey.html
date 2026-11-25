@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load ui_i18n %}
-{% load study_text %}
+{% load study_text static %}
 {% block title %}{{ module.title }} {% ui "· ModuLearn" %}{% endblock %}
 {% block body_class %}survey-page{% endblock %}
 {% block breadcrumbs_wrapper %}{% endblock %}
@@ -41,7 +41,7 @@
       {% for option in row.options %}<td><label><input type="radio" name="{{ row.key }}" value="{{ option.id }}" aria-labelledby="{{ row.key }} scale-{{ forloop.counter }}" {% if option.checked %}checked{% endif %} {% if row.required %}required{% endif %}></label></td>{% endfor %}</tr>{% endfor %}</tbody>
     </table></div>
     {% else %}
-      {% for row in page.rows %}<fieldset data-no-ui-translate><legend class="sr-only" data-no-ui-translate>{{ row.prompt }}</legend><div class="survey-options">
+      {% for row in page.rows %}<fieldset data-no-ui-translate{% if row.required and row.multiple %} data-require-choice{% endif %}><legend class="sr-only" data-no-ui-translate>{{ row.prompt }}</legend><div class="survey-options">
       {% for option in row.options %}<div>
         <label class="survey-choice"><input {% if row.multiple %}type="checkbox"{% else %}type="radio"{% endif %} name="{{ row.key }}" value="{{ option.id }}" {% if option.checked %}checked{% endif %} {% if row.required and not row.multiple %}required{% endif %} {% if option.text_entry %}data-text-target="text-{{ row.key }}-{{ option.id }}"{% endif %}><span>{{ option.label }}</span></label>
         {% if option.text_entry %}<div id="text-{{ row.key }}-{{ option.id }}" {% if not option.checked %}hidden{% endif %}><label class="sr-only" for="entry-{{ row.key }}-{{ option.id }}">{{ option.label }}</label><input type="text" id="entry-{{ row.key }}-{{ option.id }}" name="{{ row.key }}_text_{{ option.id }}" value="{{ option.text }}" maxlength="4000"></div>{% endif %}
@@ -53,6 +53,7 @@
 </section>
 {% endblock %}
 {% block extra_js %}{{ block.super }}
+<script defer src="{% static 'js/form-validation.js' %}"></script>
 <script>
 document.querySelectorAll('.survey input').forEach(input => input.addEventListener('change', () => {
   document.querySelectorAll('[data-text-target]').forEach(choice => {

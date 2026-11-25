@@ -1,0 +1,80 @@
+{% load ui_i18n %}
+<header class="workspace-toolbar" data-tour="instructor-structures">
+  <div><h1>{% ui "Instructor Dashboard" %}</h1><p>{% ui "Select a session or study to manage its activities, people, and results." %}</p></div>
+  <div class="workspace-actions" aria-label="{% ui 'Create and import' %}">
+    <a class="btn btn-primary" href="{% url 'courses:create_semester_course' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i>{% ui "Create Custom Session" %}</a>
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createStudyModal"><i class="bi bi-flask" aria-hidden="true"></i>{% ui "Create New Study" %}</button>
+    <details class="workspace-import"><summary class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i>{% ui "Import" %}</summary><div class="workspace-import-menu">
+      <button type="button" class="btn btn-outline-secondary" id="importCourseButton">{% ui "Import From Authoring" %}</button>
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importJsonCourseModal">{% ui "Import JSON" %}</button>
+      {% if show_create_demo_course %}<button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#demoCourseModal">{% ui "Create Demo" %}</button>{% endif %}
+    </div></details>
+  </div>
+</header>
+<button type="button" class="btn btn-outline-secondary workspace-mobile-toggle" data-workspace-browse aria-expanded="false" aria-controls="workspaceSidebar">{% ui "Browse courses and studies" %}</button>
+<div class="instructor-workspace" data-workspace data-mobile-nav="closed">
+  <aside id="workspaceSidebar" class="workspace-sidebar" aria-label="{% ui 'Courses and studies' %}" data-tour="instructor-courses">
+    <label for="workspaceSearch" class="workspace-search-label">{% ui "Find a course or study" %}</label>
+    <div class="workspace-search"><input id="workspaceSearch" type="search" class="form-control" autocomplete="off" placeholder="{% ui 'Search by name or session' %}" aria-controls="workspaceNavigation"><button type="button" data-workspace-clear title="{% ui 'Clear search' %}" aria-label="{% ui 'Clear search' %}">×</button></div>
+    <nav id="workspaceNavigation" aria-label="{% ui 'Courses and studies' %}">
+      <section class="workspace-group" data-workspace-group>
+        <h2>{% ui "Courses" %}<span>{{ courses|length }}</span></h2>
+        {% for course in courses %}
+          <div class="workspace-course" data-workspace-course>
+            <a class="workspace-course-title" href="#workspace-course-{{ course.dashboard_key }}" data-workspace-select data-workspace-search="{{ course.title }} {{ course.id }}" aria-controls="workspace-course-{{ course.dashboard_key }}" title="{{ course.title }}"><i class="bi bi-journals" aria-hidden="true"></i><span data-no-ui-translate>{{ course.title }}</span></a>
+            {% for session in course.dashboard_sessions %}
+              <a class="workspace-session" href="#workspace-session-{{ session.pk }}" data-workspace-select data-workspace-default data-workspace-search="{{ course.title }} {{ session.group_name }}" aria-controls="workspace-session-{{ session.pk }}" title="{{ session.group_name }}"><i class="bi bi-book" aria-hidden="true"></i><span data-no-ui-translate>{{ session.group_name }}</span></a>
+            {% empty %}<small>{% ui "No sessions yet" %}</small>{% endfor %}
+          </div>
+        {% empty %}<p class="workspace-hint">{% ui "No reusable course structures yet. Import JSON, use Course Authoring, or create a custom session." %}</p>{% endfor %}
+      </section>
+      <section class="workspace-group" data-workspace-group data-tour="instructor-studies">
+        <h2>{% ui "Studies" %}<span>{{ studies|length }}</span></h2>
+        {% for study in studies %}<a href="#workspace-study-{{ study.pk }}" data-workspace-select data-workspace-search="{{ study.title }} {{ study.version_label }}" aria-controls="workspace-study-{{ study.pk }}" title="{{ study.title }}"><i class="bi bi-flask" aria-hidden="true"></i><span><strong data-no-ui-translate>{{ study.title }}</strong><small>{{ study.version_label }} · {{ study.get_status_display|ui_text }}</small></span></a>
+        {% empty %}<p class="workspace-hint">{% ui "Create a study to organize participant conditions and activities." %}</p>{% endfor %}
+      </section>
+      {% if show_legacy_groups_section %}
+        <section class="workspace-group" id="legacyGroupsSection" data-workspace-group>
+          <h2>{% ui "Legacy Courses (MasteryGrids)" %}<span id="legacyGroupsCount"></span></h2>
+          <p id="legacyGroupsMeta" class="workspace-hint" role="status">{% ui "Loading linked legacy courses..." %}</p>
+          <div id="legacyGroupsLoading" class="workspace-hint">{% ui "Loading legacy courses" %}…</div>
+          <div data-workspace-legacy-nav></div>
+          <button type="button" id="legacyGroupsRetry" class="btn btn-sm btn-outline-secondary hidden">{% ui "Retry" %}</button>
+        </section>
+      {% endif %}
+    </nav>
+    <p data-workspace-no-results hidden class="workspace-hint" role="status">{% ui "No matching courses or studies. Clear the search to see everything." %}</p>
+  </aside>
+  <div class="workspace-main" data-workspace-main data-tour="instructor-panel">
+    <p class="sr-only" data-workspace-status role="status" aria-live="polite" data-no-ui-translate></p>
+    <section id="workspace-welcome" data-workspace-panel class="workspace-panel" aria-labelledby="workspaceWelcomeTitle">
+      <h2 id="workspaceWelcomeTitle" tabindex="-1">{% ui "Your teaching workspace" %}</h2>
+      <p>{% ui "Choose an item from the sidebar, or create your first session or study above." %}</p>
+      <noscript><p>{% ui "All items are listed below. Sidebar links jump to their controls." %}</p></noscript>
+    </section>
+    {% for course in courses %}
+      <section id="workspace-course-{{ course.dashboard_key }}" data-workspace-panel class="workspace-panel" aria-labelledby="workspaceCourseTitle{{ forloop.counter }}">
+        <header class="workspace-panel-heading"><div><span class="stat-kicker">{% ui "Course structure" %}</span><h2 id="workspaceCourseTitle{{ forloop.counter }}" tabindex="-1" data-no-ui-translate>{{ course.title }}</h2></div></header>
+        {% if course.description %}<p data-no-ui-translate>{{ course.description }}</p>{% endif %}
+        {% if course.dashboard_can_manage_structure %}<div class="workspace-actions"><button type="button" class="btn btn-primary new-session-btn" data-course-id="{{ course.id }}"><i class="bi bi-plus-circle" aria-hidden="true"></i>{% ui "New Session" %}</button><button type="button" class="btn btn-outline-danger delete-course-btn" data-course-id="{{ course.id }}">{% ui "Delete Structure" %}</button></div>{% endif %}
+        <h3 class="workspace-section-title">{% ui "Sessions" %}</h3>
+        <div class="workspace-session-index">{% for session in course.dashboard_sessions %}<a href="#workspace-session-{{ session.pk }}" data-workspace-jump><span data-no-ui-translate>{{ session.group_name }}</span><span>{% ui_count "student" "students" session.enrollments.count %} →</span></a>{% empty %}<p>{% ui "No sessions yet. Create one from this structure when you are ready to teach with it." %}</p>{% endfor %}</div>
+      </section>
+      {% for course_instance in course.dashboard_sessions %}
+        <section id="workspace-session-{{ course_instance.pk }}" data-workspace-panel class="workspace-panel workspace-session-panel" aria-labelledby="workspaceSessionTitle{{ course_instance.pk }}">
+          <header class="workspace-panel-heading"><div><span class="stat-kicker">{% ui "Course session" %}</span><h2 id="workspaceSessionTitle{{ course_instance.pk }}" tabindex="-1" data-no-ui-translate>{{ course_instance.group_name }}</h2><p data-no-ui-translate>{{ course.title }}</p></div><a class="workspace-text-link" href="#workspace-course-{{ course.dashboard_key }}" data-workspace-jump>{% ui "Course structure" %} ↗</a></header>
+          {% include 'dashboard/components/session_controls.html' %}
+        </section>
+      {% endfor %}
+    {% endfor %}
+    {% for study in studies %}
+      <section id="workspace-study-{{ study.pk }}" data-workspace-panel class="workspace-panel" aria-labelledby="workspaceStudyTitle{{ study.pk }}">
+        <header class="workspace-panel-heading"><div><span class="stat-kicker">{% ui "Study" %} · {{ study.version_label }} · {{ study.get_status_display|ui_text }}</span><h2 id="workspaceStudyTitle{{ study.pk }}" tabindex="-1" data-no-ui-translate>{{ study.title }}</h2></div></header>
+        {% if study.description %}<p data-no-ui-translate>{{ study.description }}</p>{% endif %}
+        <div class="workspace-study-summary"><span>{% ui "Conditions" %}: <strong data-no-ui-translate>{{ study.condition_labels }}</strong></span><span>{% ui_count "participant" "participants" study.participant_total %}</span><span>{% if study.prolific_source %}{% if study.prolific_source.is_active %}{% ui "Prolific active" %}{% else %}{% ui "Prolific paused" %}{% endif %}{% else %}{% ui "No Prolific link" %}{% endif %}</span></div>
+        {% include 'dashboard/components/workspace_study_controls.html' %}
+      </section>
+    {% endfor %}
+    {% if show_legacy_groups_section %}<div id="legacyGroupsContainer" data-workspace-legacy-panels class="hidden"></div>{% endif %}
+  </div>
+</div>

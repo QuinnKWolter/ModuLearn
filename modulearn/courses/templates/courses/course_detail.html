@@ -450,7 +450,7 @@
 
   <div class="grid gap-8 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,1fr)]">
     <section class="space-y-6">
-      <div class="card p-6">
+      <div data-tour="course-progress" class="card p-6">
         <div class="grid gap-4 md:grid-cols-3">
           <div class="shell-surface p-5 rounded-2xl">
             <div class="stat-kicker">{% ui "Session" %}</div>
@@ -539,7 +539,7 @@
         {% endif %}
 
         <div class="course-view-panel" data-course-view-panel="sequence">
-          <div class="course-unit-list">
+          <div data-tour="course-units" class="course-unit-list">
           {% for card in unit_cards %}
             <details class="course-unit">
               <summary class="course-unit-summary">
@@ -580,7 +580,7 @@
                 {% if card.modules %}
                   <div class="course-module-list">
                     {% for module in card.modules %}
-                      <article class="course-module-row {% if module.is_complete %}is-completed{% endif %} {% if not module.can_access %}is-locked{% endif %}">
+                      <article data-tour="course-activity" class="course-module-row {% if module.is_complete %}is-completed{% endif %} {% if not module.can_access %}is-locked{% endif %}">
                         <span class="{% if module.is_complete %}text-green-600{% else %}text-slate-400{% endif %}" aria-hidden="true">
                           <i class="{{ module.icon_class }}"></i>
                         </span>

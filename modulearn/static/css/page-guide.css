@@ -1,0 +1,16 @@
+.page-guide-dialog {margin:auto; width:min(30rem,calc(100vw - 2rem)); max-height:calc(100dvh - 2rem); overflow:auto; padding:1.5rem; border:1px solid #cbd5e1; border-radius:12px; background:#fff; color:#15243b; box-shadow:0 24px 80px #0004;}
+.page-guide-dialog::backdrop {background:#0f172a99;}
+.page-guide-dialog .page-guide-heading {display:flex; align-items:center; justify-content:space-between; gap:1rem;}
+.page-guide-dialog h2 {font-size:1.25rem; font-weight:700;}
+.page-guide-dialog p {margin:1rem 0; font-size:1rem; line-height:1.6;}
+.page-guide-dialog [data-guide-close] {font-size:1.5rem; width:2.5rem; height:2.5rem;}
+.page-guide-dialog [data-guide-status]:empty {display:none;}
+.page-guide-dialog .page-guide-actions {display:flex; flex-wrap:wrap; gap:.75rem; margin:1rem 0;}
+.page-guide-dialog [hidden] {display:none;}
+.page-guide-dialog a {display:block; margin-top:1rem; text-decoration:underline; text-underline-offset:.2em;}
+.page-guide-dialog :focus-visible {outline:3px solid #3b82f6; outline-offset:3px;}
+.dark .page-guide-dialog {background:#18263c; color:#edf3ff; border-color:#42516a;}
+@media(max-width:420px) {
+  /* Leave space for navigation, language, theme, and the guide on narrow phones. */
+  .site-header .site-brand > span:last-child {display:none;}
+}

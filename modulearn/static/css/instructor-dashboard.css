@@ -1,0 +1,194 @@
+.instructor-dashboard-tight .card {
+    border-radius: 0.55rem;
+  }
+
+  .instructor-dashboard-tight .btn {
+    border-radius: 0.35rem;
+    font-weight: 700;
+  }
+
+  .instructor-dashboard-tight .badge {
+    border-radius: 0.3rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.01em;
+  }
+
+  .enrollment-tool-card {
+    --enrollment-card-rgb: 37, 99, 235;
+    border: 1px solid rgba(var(--enrollment-card-rgb), 0.18);
+    border-radius: 0.65rem;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(var(--enrollment-card-rgb), 0.06)),
+      rgba(248, 250, 252, 0.84);
+    padding: 1rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  .enrollment-tool-card.is-anonymous {
+    --enrollment-card-rgb: 16, 185, 129;
+  }
+
+  .enrollment-tool-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 0.55rem;
+    color: rgb(var(--enrollment-card-rgb));
+    background: rgba(var(--enrollment-card-rgb), 0.12);
+    border: 1px solid rgba(var(--enrollment-card-rgb), 0.18);
+  }
+
+  .dark .enrollment-tool-card {
+    border-color: rgba(var(--enrollment-card-rgb), 0.34);
+    background:
+      linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(var(--enrollment-card-rgb), 0.12)),
+      rgba(15, 23, 42, 0.72);
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
+  }
+
+  .dark .enrollment-tool-icon {
+    color: rgb(var(--enrollment-card-rgb));
+    background: rgba(var(--enrollment-card-rgb), 0.18);
+    border-color: rgba(var(--enrollment-card-rgb), 0.28);
+  }
+
+  .study-source-panel {
+    border: 1px solid rgba(16, 185, 129, 0.24);
+    border-radius: 0.55rem;
+    background: rgba(236, 253, 245, 0.65);
+    padding: 0.85rem;
+  }
+
+  .dark .study-source-panel {
+    border-color: rgba(16, 185, 129, 0.24);
+    background: rgba(6, 78, 59, 0.16);
+  }
+
+  .study-danger-header {
+    background: #fef2f2;
+    border-bottom: 1px solid rgba(220, 38, 38, 0.22);
+    color: #7f1d1d;
+  }
+
+  .dark .study-danger-header {
+    background: #450a0a;
+    border-bottom-color: rgba(248, 113, 113, 0.45);
+    color: #fee2e2;
+  }
+
+  .study-create-panel {
+    border: 1px solid rgba(37, 99, 235, 0.24);
+    border-radius: 0.6rem;
+    background: rgba(239, 246, 255, 0.74);
+    padding: 1rem;
+  }
+
+  .dark .study-create-panel {
+    border-color: rgba(96, 165, 250, 0.22);
+    background: rgba(37, 99, 235, 0.12);
+  }
+
+  .study-create-form {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 1rem;
+  }
+
+  .study-create-fields {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .study-field {
+    display: grid;
+    gap: 0.32rem;
+  }
+
+  .study-field-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .study-field-required {
+    color: #dc2626;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: none;
+  }
+
+  .study-field-help {
+    color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+
+  .dark .study-field-label {
+    color: #cbd5e1;
+  }
+
+  .dark .study-field-help {
+    color: #94a3b8;
+  }
+
+  @media (min-width: 1024px) {
+    .study-create-fields {
+      grid-template-columns: minmax(0, 1fr) minmax(9rem, 0.35fr) minmax(13rem, 0.55fr);
+    }
+
+    .study-field-description {
+      grid-column: 1 / -1;
+    }
+
+    .study-create-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
+  .instructor-dashboard-tight .table th,
+  .instructor-dashboard-tight .table td {
+    padding: 0.42rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .demo-course-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .demo-course-option {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(248, 250, 252, 0.78);
+  }
+
+  .dark .demo-course-option {
+    border-color: rgba(71, 85, 105, 0.64);
+    background: rgba(15, 23, 42, 0.44);
+  }
+
+  .demo-course-icon {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.45rem;
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.1);
+  }
+

@@ -1,0 +1,102 @@
+{% load ui_i18n %}
+<div class="course-structure-body">
+                    <div class="flex flex-wrap gap-2">
+                      <a class="btn btn-sm btn-outline-primary" href="{% url 'courses:course_configuration' study.course_instance.id %}">
+                        <i class="bi bi-sliders mr-1"></i>{% ui "Configure Activities" %}
+                      </a>
+                      <a class="btn btn-sm btn-outline-primary" href="{% url 'recruitment:studio' study.id %}">{% ui "Study Setup" %} &amp; {% ui "Preview" %}</a>
+                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'courses:course_detail' study.course_instance.id %}">
+                        <i class="bi bi-eye mr-1"></i>{% ui "Preview" %}
+                      </a>
+                      <a class="btn btn-sm btn-outline-info" href="{% url 'dashboard:study_analytics_dashboard' study.id %}">
+                        <i class="bi bi-bar-chart-line mr-1" aria-hidden="true"></i>{% ui "Analytics" %}
+                      </a>
+                      <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#studyProlific{{ study.id }}" aria-expanded="false" aria-controls="studyProlific{{ study.id }}">
+                        <i class="bi bi-person-badge mr-1" aria-hidden="true"></i>{% ui "Prolific Settings" %}
+                      </button>
+                      <a class="btn btn-sm btn-outline-secondary" href="{% url 'recruitment:export_study' study.id %}">
+                        <i class="bi bi-download mr-1" aria-hidden="true"></i>{% ui "Export Study" %}
+                      </a>
+                      <details class="workspace-more"><summary class="btn btn-sm btn-outline-secondary">{% ui "More actions" %}</summary><div class="workspace-actions"><button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#studyResetModal{{ study.id }}">
+                        <i class="bi bi-arrow-counterclockwise mr-1" aria-hidden="true"></i>{% ui "Clear" %} &amp; {% ui "Reset" %}
+                      </button>
+                      <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#studyDeleteModal{{ study.id }}">
+                        <i class="bi bi-trash3 mr-1" aria-hidden="true"></i>{% ui "Delete Study" %}
+                      </button></div></details>
+                    </div>
+
+                    <div id="studyProlific{{ study.id }}" class="study-source-panel hidden mt-3">
+                      {% with source=study.prolific_source %}
+                        <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
+                          <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                              <strong class="text-slate-900 dark:text-white">{% ui "Prolific Recruitment" %}</strong>
+                              {% if source %}
+                                <span class="badge {% if source.is_active %}bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200{% else %}badge-secondary{% endif %}">{% if source.is_active %}{% ui "Active" %}{% else %}{% ui "Paused" %}{% endif %}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{% if source.prolific_completion_code_complete %}{% ui "Completion code ready" %}{% else %}{% ui "Needs completion code" %}{% endif %}</span>
+                              {% else %}
+                                <span class="badge badge-secondary">{% ui "Not configured" %}</span>
+                              {% endif %}
+                            </div>
+                            {% if source %}
+                              <label class="study-field mt-3">
+                                <span class="study-field-label">{% ui "Entry URL" %}</span>
+                                <textarea class="form-control text-xs" rows="2" readonly data-copy-target="study-entry-url-{{ study.id }}">{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:study_launch' study.slug %}?PROLIFIC_PID={% templatetag openvariable %}%PROLIFIC_PID%{% templatetag closevariable %}&STUDY_ID={% templatetag openvariable %}%STUDY_ID%{% templatetag closevariable %}&SESSION_ID={% templatetag openvariable %}%SESSION_ID%{% templatetag closevariable %}</textarea>
+                              </label>
+                              <label class="study-field mt-2">
+                                <span class="study-field-label">{% ui "Completion URL" %}</span>
+                                <textarea class="form-control text-xs" rows="1" readonly data-copy-target="study-completion-url-{{ study.id }}">{{ request.scheme }}://{{ request.get_host }}{% url 'recruitment:complete_current_study' study.id %}</textarea>
+                              </label>
+                            {% endif %}
+                          </div>
+                          {% if source %}
+                            <div class="flex flex-row xl:flex-col gap-2">
+                              <button type="button" class="btn btn-sm btn-outline-primary" data-copy-from="study-entry-url-{{ study.id }}">{% ui "Copy Entry" %}</button>
+                              <button type="button" class="btn btn-sm btn-outline-primary" data-copy-from="study-completion-url-{{ study.id }}">{% ui "Copy Credit" %}</button>
+                              <a class="btn btn-sm btn-outline-secondary" href="{% url 'recruitment:export_sessions' source.id %}">{% ui "Export" %}</a>
+                            </div>
+                          {% endif %}
+                        </div>
+
+                        <form method="post" action="{% url 'recruitment:create_study_source' study.id %}" class="grid gap-3 md:grid-cols-2 xl:grid-cols-4 mt-4">
+                          {% csrf_token %}
+                          <input type="hidden" name="platform" value="prolific">
+                          <input type="hidden" name="label" value="{{ source.label|default:'Prolific' }}">
+                          <label class="study-field">
+                            <span class="study-field-label">{% ui "Participant Cap" %}</span>
+                            <input class="form-control" type="number" min="1" name="max_participants" placeholder="{% ui "Optional" %}" value="{{ source.max_participants|default:'' }}">
+                          </label>
+                          <label class="study-field">
+                            <span class="study-field-label">{% ui "Conditions" %}</span>
+                            <input class="form-control" type="text" name="condition_labels" readonly value="{{ study.condition_labels|default:'control,treatment' }}"><a href="{% url 'recruitment:studio' study.id %}" class="text-xs">{% ui "Edit In Study Setup" %}</a>
+                          </label>
+                          <label class="study-field">
+                            <span class="study-field-label">{% ui "Assignment" %}</span>
+                            <select class="form-control" name="condition_strategy">
+                              <option value="random" {% if source.condition_strategy == 'random' %}selected{% endif %}>{% ui "Independent Random" %}</option>
+                              <option value="balanced" {% if not source or source.condition_strategy == 'balanced' %}selected{% endif %}>{% ui "Balanced" %}</option>
+                              <option value="hash" {% if source.condition_strategy == 'hash' %}selected{% endif %}>{% ui "Hash" %}</option>
+                              <option value="schedule" {% if source.condition_strategy == 'schedule' %}selected{% endif %}>{% ui "Schedule" %}</option>
+                            </select>
+                          </label>
+                          <input type="hidden" name="prolific_study_id" value="{{ source.prolific_study_id|default:'' }}">
+                          <label class="study-field">
+                            <span class="study-field-label">{% ui "Completion Code" %}</span>
+                            <input class="form-control" type="text" name="prolific_completion_code_complete" placeholder="{% ui "Complete code" %}" value="{{ source.prolific_completion_code_complete|default:'' }}">
+                          </label>
+                          <label class="study-field">
+                            <span class="study-field-label">{% ui "Screen-Out Code" %}</span>
+                            <input class="form-control" type="text" name="prolific_completion_code_screened_out" placeholder="{% ui "Optional" %}" value="{{ source.prolific_completion_code_screened_out|default:'' }}">
+                          </label>
+                          <label class="study-field">
+                            <span class="study-field-label">{% ui "Attention-Fail Code" %}</span>
+                            <input class="form-control" type="text" name="prolific_completion_code_attention_failed" placeholder="{% ui "Optional" %}" value="{{ source.prolific_completion_code_attention_failed|default:'' }}">
+                          </label>
+                          <label class="inline-flex items-center gap-2 text-sm font-semibold xl:col-span-1">
+                            <input type="checkbox" name="is_active" {% if not source or source.is_active %}checked{% endif %}> {% ui "Active link" %}
+                          </label>
+                          <button class="btn btn-primary md:col-span-2 xl:col-span-3" type="submit">{% ui "Save Prolific Settings" %}</button>
+                        </form>
+                      {% endwith %}
+                    </div>
+                  </div>
